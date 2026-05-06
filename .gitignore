@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Runtime data
+data/*
+!data/.gitkeep
+
+# SQLite sidecar files
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Test and coverage output
+coverage/
+.nyc_output/
+
+# Build/cache output
+dist/
+build/
+.cache/
+.parcel-cache/
+.vite/
+
+# Local tool/runtime state
+.omx/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
