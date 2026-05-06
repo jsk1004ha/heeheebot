@@ -1,6 +1,7 @@
 import { REST, Routes } from 'discord.js';
 import { getCasinoCommandPayloads } from './commands/casino.js';
 import { getEconomyCommandPayloads } from './commands/economy.js';
+import { getFortuneCommandPayloads } from './commands/fortune.js';
 import { getModerationCommandPayloads } from './commands/moderation.js';
 import { loadConfig, requireBotConfig } from './config.js';
 
@@ -10,6 +11,7 @@ requireBotConfig(config);
 const rest = new REST({ version: '10' }).setToken(config.token);
 const commands = [
   ...getEconomyCommandPayloads(),
+  ...getFortuneCommandPayloads(),
   ...getModerationCommandPayloads(),
   ...getCasinoCommandPayloads()
 ];

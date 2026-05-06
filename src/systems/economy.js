@@ -16,9 +16,13 @@ const DEFAULT_OPTIONS = Object.freeze({
   wordChainWinXp: 80,
   rpgBattleWinXpMin: 50,
   rpgBattleWinXpMax: 200,
+  fortuneXpReward: 10,
+  fortuneXpDayOffsetMs: 9 * 60 * 60 * 1000,
   levelBaseXp: 100,
   levelXpExponent: 1.5
 });
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export class EconomyService {
   constructor(store, options = {}) {
@@ -143,6 +147,32 @@ export class EconomyService {
       username,
       xp: this.randomInt(this.options.rpgBattleWinXpMin, this.options.rpgBattleWinXpMax),
       source: 'RPG 전투 승리'
+    });
+  }
+
+  async claimFortuneXp({ guildId, userId, username, now = Date.now() }) {
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username);
+      const today = getDayIndex(now, this.options.fortuneXpDayOffsetMs);
+
+      if (profile.lastFortuneXpDay === today) {
+        return {
+          claimed: false,
+          remainingMs: getNextDayStartMs(now, this.options.fortuneXpDayOffsetMs) - now,
+          xpGained: 0,
+          profile: cloneProfile(profile)
+        };
+      }
+
+      profile.lastFortuneXpDay = today;
+      const levelResult = addXp(profile, this.options.fortuneXpReward, this);
+
+      return {
+        claimed: true,
+        xpGained: this.options.fortuneXpReward,
+        ...levelResult,
+        profile: cloneProfile(profile)
+      };
     });
   }
 
@@ -321,6 +351,7 @@ function getOrCreateProfile(data, guildId, userId, username) {
     lastDailyDay: null,
     dailyStreak: 0,
     lastFirstMessageBonusDay: null,
+    lastFortuneXpDay: null,
     createdAt: Date.now()
   };
 
@@ -329,6 +360,7 @@ function getOrCreateProfile(data, guildId, userId, username) {
     : null;
   guild.users[userId].dailyStreak ??= 0;
   guild.users[userId].lastFirstMessageBonusDay ??= null;
+  guild.users[userId].lastFortuneXpDay ??= null;
   guild.users[userId].username = username || guild.users[userId].username;
   return guild.users[userId];
 }
@@ -346,6 +378,7 @@ function cloneProfile(profile) {
     lastDailyDay: profile.lastDailyDay,
     dailyStreak: profile.dailyStreak,
     lastFirstMessageBonusDay: profile.lastFirstMessageBonusDay,
+    lastFortuneXpDay: profile.lastFortuneXpDay,
     createdAt: profile.createdAt
   };
 }
@@ -379,12 +412,12 @@ function getStreakBonuses(streak, configuredBonuses) {
     .sort((a, b) => a.days - b.days);
 }
 
-function getDayIndex(now) {
-  return Math.floor(now / (24 * 60 * 60 * 1000));
+function getDayIndex(now, dayOffsetMs = 0) {
+  return Math.floor((now + dayOffsetMs) / DAY_MS);
 }
 
-function getNextDayStartMs(now) {
-  return (getDayIndex(now) + 1) * 24 * 60 * 60 * 1000;
+function getNextDayStartMs(now, dayOffsetMs = 0) {
+  return (getDayIndex(now, dayOffsetMs) + 1) * DAY_MS - dayOffsetMs;
 }
 
 function getLevelReward(level) {

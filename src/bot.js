@@ -1,6 +1,7 @@
 import { Client, Events, GatewayIntentBits } from 'discord.js';
 import { handleCasinoCommand } from './commands/casino.js';
 import { handleEconomyCommand } from './commands/economy.js';
+import { handleFortuneCommand } from './commands/fortune.js';
 import {
   handleModerationCommand,
   inspectMessageForModeration
@@ -8,6 +9,7 @@ import {
 import { ModerationService } from './systems/moderation.js';
 import { createSqliteStore } from './storage/sqlite-store.js';
 import { EconomyService } from './systems/economy.js';
+import { FortuneService } from './systems/fortune.js';
 
 export function createBot({
   databasePath = 'data/profiles.sqlite',
@@ -26,6 +28,7 @@ export function createBot({
     migrateFromJsonPath: legacyJsonPath
   });
   const economy = new EconomyService(store);
+  const fortune = new FortuneService();
   const moderation = new ModerationService(store);
 
   client.once(Events.ClientReady, (readyClient) => {
@@ -38,6 +41,7 @@ export function createBot({
     try {
       const handled = await handleCasinoCommand(interaction, economy, logger)
         || await handleModerationCommand(interaction, moderation, logger)
+        || await handleFortuneCommand(interaction, fortune, economy)
         || await handleEconomyCommand(interaction, economy);
 
       if (!handled) {
@@ -88,6 +92,7 @@ export function createBot({
   return {
     client,
     economy,
+    fortune,
     moderation,
     async start(token) {
       await client.login(token);

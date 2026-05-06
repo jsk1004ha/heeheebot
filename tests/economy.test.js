@@ -210,6 +210,46 @@ test('끝말잇기와 RPG 승리 경험치를 지급한다', async () => {
   }
 });
 
+test('운세 확인 경험치는 한국시간 기준 하루 한 번만 지급한다', async () => {
+  const fixture = await createFixture({
+    fortuneXpReward: 12
+  });
+
+  try {
+    const first = await fixture.economy.claimFortuneXp({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '테스터',
+      now: 1_000
+    });
+    const repeated = await fixture.economy.claimFortuneXp({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '테스터',
+      now: 2_000
+    });
+    const nextKoreaDay = await fixture.economy.claimFortuneXp({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '테스터',
+      now: 15 * 60 * 60 * 1000 + 1
+    });
+
+    assert.equal(first.claimed, true);
+    assert.equal(first.xpGained, 12);
+    assert.equal(first.profile.totalXp, 12);
+
+    assert.equal(repeated.claimed, false);
+    assert.equal(repeated.xpGained, 0);
+    assert.equal(repeated.profile.totalXp, 12);
+
+    assert.equal(nextKoreaDay.claimed, true);
+    assert.equal(nextKoreaDay.profile.totalXp, 24);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 test('송금은 잔액을 이동하고 랭킹은 레벨/누적 경험치 순으로 정렬한다', async () => {
   const fixture = await createFixture({
     dailyCoinReward: 1_000,
