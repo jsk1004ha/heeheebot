@@ -142,7 +142,7 @@ export class EconomyService {
     });
   }
 
-  async awardWordChainResults({ guildId, participants, winnerUserId = null }) {
+  async awardWordChainResults({ guildId, participants, winnerUserId = null, prizeUserId = winnerUserId }) {
     const normalizedParticipants = normalizeWordChainParticipants(participants);
 
     return this.store.update((data) => {
@@ -157,7 +157,7 @@ export class EconomyService {
           : Math.round(this.options.wordChainParticipationXpMin + (xpRange * index) / lastHumanIndex);
         const profile = getOrCreateProfile(data, guildId, participant.userId, participant.username);
         const levelResult = addXp(profile, xpGained, this);
-        const moneyGained = participant.userId === winnerUserId
+        const moneyGained = participant.userId === prizeUserId
           ? this.options.wordChainWinnerMoney
           : 0;
 
@@ -175,12 +175,16 @@ export class EconomyService {
         };
       });
       const winner = results.find((result) => result.userId === winnerUserId) ?? null;
+      const prizeRecipient = results.find((result) => result.userId === prizeUserId) ?? null;
 
       return {
         source: '끝말잇기 결과',
         winner,
         winnerUserId: winner?.userId ?? null,
-        winnerMoney: winner?.moneyGained ?? 0,
+        prizeRecipient,
+        prizeUserId: prizeRecipient?.userId ?? null,
+        prizeMoney: prizeRecipient?.moneyGained ?? 0,
+        winnerMoney: prizeRecipient?.moneyGained ?? 0,
         participants: results
       };
     });

@@ -49,11 +49,11 @@ let defaultDictionary = null;
 export const wordChainCommands = [
   new SlashCommandBuilder()
     .setName('끝말잇기')
-    .setDescription('희희봇 AI와 함께 끝말잇기를 합니다.')
+    .setDescription('희희봇 AI와 함께 또는 유저끼리 끝말잇기를 합니다.')
     .addSubcommand((subcommand) =>
       subcommand
         .setName('시작')
-        .setDescription('1분 동안 참가자를 모집한 뒤 희희봇 포함 순서대로 진행합니다.')
+        .setDescription('1분 동안 참가자를 모집한 뒤 순서대로 진행합니다.')
         .addStringOption((option) =>
           option
             .setName('모드')
@@ -63,6 +63,11 @@ export const wordChainCommands = [
               { name: '매너(한방단어 금지)', value: 'manner' },
               { name: '쿵쿵따(3글자만)', value: 'kungkungtta' }
             )
+        )
+        .addBooleanOption((option) =>
+          option
+            .setName('희희봇참가')
+            .setDescription('희희봇 AI를 참가시킬지 선택합니다. 기본값은 참가입니다.')
         )
     )
 ];
@@ -164,6 +169,7 @@ async function createWordChainLobby(interaction, economy, logger, options) {
     status: 'collecting',
     hostUserId: interaction.user.id,
     mode: getWordChainMode(interaction.options.getString?.('모드') ?? options.mode),
+    includeBot: interaction.options.getBoolean?.('희희봇참가') ?? options.includeBot ?? true,
     participants: new Map(),
     dictionary: options.dictionary ?? getDefaultDictionary(),
     collectionMs: options.collectionMs ?? WORDCHAIN_COLLECTION_MS,
@@ -263,9 +269,21 @@ async function beginWordChainGame(state, economy, logger) {
   state.status = 'playing';
 
   const humanPlayers = [...state.participants.values()];
+  const minimumHumanPlayers = getMinimumHumanPlayers(state);
+
+  if (humanPlayers.length < minimumHumanPlayers) {
+    state.status = 'ended';
+    clearAllTimers(state);
+    activeGamesByChannel.delete(state.key);
+    activeGamesById.delete(state.id);
+    await state.channel.send(`⏹️ 끝말잇기 시작 취소: ${formatMinimumPlayerMode(state)}은 참가자가 최소 ${minimumHumanPlayers}명 필요합니다.`);
+    return;
+  }
+
   const players = createWordChainPlayers(humanPlayers, {
     botPlayerId: state.botPlayerId,
-    botUsername: state.botUsername
+    botUsername: state.botUsername,
+    includeBot: state.includeBot
   });
 
   state.game = new WordChainGame({
@@ -354,15 +372,21 @@ async function finishWordChainGame(state, economy, logger) {
   activeGamesById.delete(state.id);
 
   const winner = state.game.winner;
+  const humanFinishOrder = state.game.getHumanFinishOrder();
   const humanWinnerUserId = winner && !state.game.isBotPlayer(winner)
     ? winner.userId
     : null;
+  const prizeUserId = humanWinnerUserId
+    ?? (winner && state.game.isBotPlayer(winner)
+      ? humanFinishOrder.at(-1)?.userId ?? null
+      : null);
 
   try {
     const rewards = await economy.awardWordChainResults({
       guildId: state.guildId,
-      participants: state.game.getHumanFinishOrder(),
-      winnerUserId: humanWinnerUserId
+      participants: humanFinishOrder,
+      winnerUserId: humanWinnerUserId,
+      prizeUserId
     });
 
     await state.channel.send(formatFinishMessage(state, rewards));
@@ -380,8 +404,9 @@ function formatLobbyMessage(state) {
   return [
     '🔤 **끝말잇기 참가자 모집**',
     `모드: **${state.mode.label}** — ${state.mode.description}`,
+    `희희봇: **${state.includeBot ? '참가' : '미참가'}**`,
     `모집 시간: **${formatSeconds(state.collectionMs)}**`,
-    `진행: 참가자 + **${state.botUsername} AI**가 순서대로 진행`,
+    `진행: ${formatProgressMode(state)} 순서대로 진행`,
     `규칙: 자기 차례에 ${formatSeconds(state.turnTimeoutMs)} 안에 DB에 있는 한국어 단어를 입력하세요. 성공 단어마다 제한시간이 ${formatSeconds(state.turnTimeoutDecreaseMs)}씩 줄고 최소 ${formatSeconds(state.minTurnTimeoutMs)}까지 내려갑니다. 답을 못하면 탈락합니다.`,
     '',
     `참가자 (${state.participants.size}명):`,
@@ -397,6 +422,7 @@ function formatStartMessage(state) {
   return [
     '🔤 **끝말잇기 시작!**',
     `모드: **${state.mode.label}** — ${state.mode.description}`,
+    `희희봇: **${state.includeBot ? '참가' : '미참가'}**`,
     '단어 DB: AutoKkutu KkutuDbDump 한국어 단어 357,644개',
     '',
     '순서:',
@@ -443,15 +469,16 @@ function formatFinishMessage(state, rewards) {
   const winner = state.game.winner;
   const winnerText = winner
     ? state.game.isBotPlayer(winner)
-      ? `🤖 **${winner.username}** 승리!`
-      : `🏆 ${formatPlayerMention(winner)}님 승리! +${rewards.winnerMoney.toLocaleString()}원`
+      ? formatBotWinnerText(winner, rewards)
+      : `🏆 ${formatPlayerMention(winner)}님 승리! +${rewards.prizeMoney.toLocaleString()}원`
     : '승자 없이 종료되었습니다.';
   const rewardLines = rewards.participants.length > 0
     ? rewards.participants
         .map((result) => {
-          const money = result.moneyGained > 0 ? ` / +${result.moneyGained.toLocaleString()}원` : '';
+          const prize = result.moneyGained > 0 ? ` / 상금 +${result.moneyGained.toLocaleString()}원` : '';
+          const levelReward = result.levelReward > 0 ? ` / 레벨업 보너스 +${result.levelReward.toLocaleString()}원` : '';
           const level = result.leveledUp ? ` / Lv.${result.profile.level} 달성` : '';
-          return `- <@${result.userId}>: +${result.xpGained.toLocaleString()} XP${money}${level}`;
+          return `- <@${result.userId}>: +${result.xpGained.toLocaleString()} XP${prize}${levelReward}${level}`;
         })
         .join('\n')
     : '- 보상 대상 유저 없음';
@@ -463,6 +490,30 @@ function formatFinishMessage(state, rewards) {
     '보상:',
     rewardLines
   ].join('\n');
+}
+
+function formatBotWinnerText(winner, rewards) {
+  if (!rewards.prizeRecipient) {
+    return `🤖 **${winner.username}** 승리!`;
+  }
+
+  return `🤖 **${winner.username}** 승리! 상금은 준우승자 <@${rewards.prizeRecipient.userId}>님에게 +${rewards.prizeMoney.toLocaleString()}원`;
+}
+
+function formatProgressMode(state) {
+  return state.includeBot
+    ? `참가자 + **${state.botUsername} AI**가`
+    : '참가자끼리';
+}
+
+function formatMinimumPlayerMode(state) {
+  return state.includeBot
+    ? '희희봇 참가 게임'
+    : '희희봇 미참가 게임';
+}
+
+function getMinimumHumanPlayers(state) {
+  return state.includeBot ? 1 : 2;
 }
 
 function createLobbyActionRow(state) {

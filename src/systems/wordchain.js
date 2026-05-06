@@ -151,7 +151,7 @@ export class WordChainGame {
     const normalizedPlayers = normalizePlayers(players);
 
     if (normalizedPlayers.length < 2) {
-      throw new Error('끝말잇기는 희희봇을 포함해 2명 이상이어야 합니다.');
+      throw new Error('끝말잇기는 2명 이상이어야 합니다.');
     }
 
     this.players = normalizedPlayers;
@@ -364,9 +364,12 @@ export class WordChainGame {
 
 export function createWordChainPlayers(humans, {
   botPlayerId = BOT_WORDCHAIN_PLAYER_ID,
-  botUsername = BOT_WORDCHAIN_PLAYER_NAME
+  botUsername = BOT_WORDCHAIN_PLAYER_NAME,
+  includeBot = true
 } = {}) {
   const uniqueHumans = normalizePlayers(humans.filter((player) => !player.bot));
+
+  if (!includeBot) return uniqueHumans;
 
   return [
     ...uniqueHumans,
