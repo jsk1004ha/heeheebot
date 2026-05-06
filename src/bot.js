@@ -1,11 +1,15 @@
 import { Client, Events, GatewayIntentBits } from 'discord.js';
 import { handleCasinoCommand } from './commands/casino.js';
 import { handleEconomyCommand } from './commands/economy.js';
+import { handleFishingCommand } from './commands/fishing.js';
 import { handleFortuneCommand } from './commands/fortune.js';
 import {
   handleModerationCommand,
   inspectMessageForModeration
 } from './commands/moderation.js';
+import { handleRpgCommand } from './commands/rpg.js';
+import { handleSwordCommand } from './commands/sword.js';
+import { handleStockCommand } from './commands/stocks.js';
 import {
   handleWordChainCommand,
   handleWordChainMessage
@@ -13,7 +17,9 @@ import {
 import { ModerationService } from './systems/moderation.js';
 import { createSqliteStore } from './storage/sqlite-store.js';
 import { EconomyService } from './systems/economy.js';
+import { FishingService } from './systems/fishing.js';
 import { FortuneService } from './systems/fortune.js';
+import { StockService } from './systems/stocks.js';
 
 export function createBot({
   databasePath = 'data/profiles.sqlite',
@@ -32,7 +38,9 @@ export function createBot({
     migrateFromJsonPath: legacyJsonPath
   });
   const economy = new EconomyService(store);
+  const fishing = new FishingService(store);
   const fortune = new FortuneService();
+  const stocks = new StockService(store);
   const moderation = new ModerationService(store);
 
   client.once(Events.ClientReady, (readyClient) => {
@@ -47,6 +55,10 @@ export function createBot({
         || await handleModerationCommand(interaction, moderation, logger)
         || await handleWordChainCommand(interaction, economy, logger)
         || await handleFortuneCommand(interaction, fortune, economy)
+        || await handleStockCommand(interaction, stocks)
+        || await handleFishingCommand(interaction, fishing)
+        || await handleSwordCommand(interaction, economy, logger)
+        || await handleRpgCommand(interaction, economy)
         || await handleEconomyCommand(interaction, economy);
 
       if (!handled) {
@@ -100,7 +112,9 @@ export function createBot({
   return {
     client,
     economy,
+    fishing,
     fortune,
+    stocks,
     moderation,
     async start(token) {
       await client.login(token);

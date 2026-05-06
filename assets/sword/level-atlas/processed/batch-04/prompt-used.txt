@@ -1,0 +1,29 @@
+Use $generate2dsprite / agent-sprite-forge style to create a clean HD 2D fantasy RPG sword icon atlas: exact 5 rows by 5 columns, 25 separate sword icons for enhancement levels +76 through +100. Solid #FF00FF background only. No text, no numbers, no labels, no UI frames. Each cell contains exactly one centered sword, same diagonal display angle, consistent icon scale, generous padding, nothing crosses cell edges. Cell order left-to-right, top-to-bottom is +76, +77, +78 ... +100.
+CRITICAL VARIATION RULE: Every sword must have a unique silhouette, blade geometry, guard shape, grip, pommel, material language, and fantasy identity. Do not reuse the same sword with only stronger glow or color changes. Effects must be secondary; the physical sword form must change every level.
+Power curve: cosmic endgame weapons. Use zodiac orbit sword, supergravity blade, scripture sword, dimensional wing sword, celestial bow-shaped guard, dragon-celestial sword, forbidden god-name sword, causality blade, origin sword, void law sword, transcendence sword, absolute law sword. +100 is 희희검 and must be the most iconic final sword: unmistakably unique, god-tier, elegant, funny-name-but-serious ultimate weapon. No text on the image.
+Level concepts in exact cell order, use as visual inspiration only, do not draw the Korean text:
++76: 태양계의 궤도를 베어내는 황도검
++77: 은하의 중심핵에서 울리는 초중력검
++78: 별의 탄생과 죽음을 기록한 성서검
++79: 시간의 왕관과 공간의 날개를 지닌 차원검
++80: 모든 별자리의 축복을 받은 천궁검
++81: 우주 용맥을 따라 흐르는 창천용검
++82: 빛과 어둠의 균형을 심판하는 양극검
++83: 멸망한 신들의 이름을 새긴 금기검
++84: 무한한 평행세계의 운명을 묶은 인과검
++85: 태초의 불꽃과 최후의 서리를 품은 원초검
++86: 별의 왕좌 위에 꽂힌 절대 군림검
++87: 시간의 종말에서 피어난 영원의 검
++88: 생명과 죽음의 경계를 지우는 윤회섭리검
++89: 우주의 심장박동을 따라 진동하는 창성검
++90: 태초와 종언의 절대 섭리, 모든 시공간의 근원
++91: 만물의 기원과 종언을 품은 우주 생명의 절대 섭리
++92: 무한 차원과 모든 별의 이름을 삼킨 근원검
++93: 존재와 무존재의 법칙을 동시에 베어내는 공허검
++94: 시작 이전의 침묵과 끝 이후의 빛을 품은 검
++95: 모든 세계선의 왕좌 위에 군림하는 초월검
++96: 우주 탄생의 첫 숨결과 종말의 마지막 눈물
++97: 신조차 기억하지 못한 태초의 근원 섭리검
++98: 모든 시간축과 차원문을 관통하는 절대 인과율검
++99: 만상, 윤회, 창조, 소멸을 명령하는 최후의 검
++100: 희희검

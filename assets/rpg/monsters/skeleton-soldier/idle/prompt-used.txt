@@ -1,0 +1,1 @@
+Use $generate2dsprite to create a clean HD skeleton soldier idle animation, 2x2 grid, full body centered, same scale, rusty sword and small shield kept inside cell, solid #FF00FF background, no text.

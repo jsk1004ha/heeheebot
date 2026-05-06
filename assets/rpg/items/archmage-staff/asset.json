@@ -1,0 +1,13 @@
+{
+  "id": "item_archmage_staff_icon",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb433bdd188191a39e68f307b42266.png",
+  "raw": "assets/rpg/items/archmage-staff/raw/raw-sheet.png",
+  "prompt": "assets/rpg/items/archmage-staff/prompt-used.txt",
+  "processedDir": "assets/rpg/items/archmage-staff/processed",
+  "status": "processed",
+  "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/archmage-staff/processed",
+  "meta": "assets/rpg/items/archmage-staff/processed/pipeline-meta.json"
+}

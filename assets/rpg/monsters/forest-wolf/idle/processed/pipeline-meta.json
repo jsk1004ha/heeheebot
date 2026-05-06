@@ -1,0 +1,155 @@
+{
+  "target": "asset",
+  "mode": "idle",
+  "prompt": "",
+  "role": "",
+  "input": "/home/jio/code/heeheebot/heeheebot/assets/rpg/monsters/forest-wolf/idle/raw/raw-sheet.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 160,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 128,
+  "fit_scale": 0.85,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "bottom",
+  "shared_scale": true,
+  "component_mode": "all",
+  "component_padding": 8,
+  "min_component_area": 1,
+  "edge_touch_margin": 0,
+  "frame_labels": [
+    "monster_forest_wolf_idle-1",
+    "monster_forest_wolf_idle-2",
+    "monster_forest_wolf_idle-3",
+    "monster_forest_wolf_idle-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        39,
+        158,
+        585,
+        492
+      ],
+      "edge_touch": false,
+      "output_size": [
+        108,
+        66
+      ],
+      "paste_position": [
+        10,
+        53
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        35,
+        152,
+        584,
+        492
+      ],
+      "edge_touch": false,
+      "output_size": [
+        108,
+        67
+      ],
+      "paste_position": [
+        10,
+        52
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        38,
+        145,
+        585,
+        490
+      ],
+      "edge_touch": false,
+      "output_size": [
+        108,
+        68
+      ],
+      "paste_position": [
+        10,
+        51
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        34,
+        169,
+        584,
+        492
+      ],
+      "edge_touch": false,
+      "output_size": [
+        108,
+        63
+      ],
+      "paste_position": [
+        10,
+        56
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

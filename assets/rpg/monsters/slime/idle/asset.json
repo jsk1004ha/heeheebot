@@ -1,0 +1,15 @@
+{
+  "id": "monster_slime_idle",
+  "category": "monster",
+  "kind": "sprite",
+  "sheet": "2x2",
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb3a85a5ec81918343a5086534e947.png",
+  "raw": "assets/rpg/monsters/slime/idle/raw/raw-sheet.png",
+  "prompt": "assets/rpg/monsters/slime/idle/prompt-used.txt",
+  "processedDir": "assets/rpg/monsters/slime/idle/processed",
+  "status": "processed",
+  "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/monsters/slime/idle/processed",
+  "meta": "assets/rpg/monsters/slime/idle/processed/pipeline-meta.json",
+  "transparentSheet": "assets/rpg/monsters/slime/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/monsters/slime/idle/processed/animation.gif"
+}

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_uncommon_fish_18",
+  "fishId": "uncommon_fish_18",
+  "fishLabel": "참돔",
+  "rarity": "uncommon",
+  "sourcePack": 3,
+  "sourceFrame": 18,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-03/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-03/processed/fish_icon_atlas-18.png",
+  "imagePath": "assets/fishing/fish/uncommon/uncommon_fish_18/icon.png",
+  "promptPath": "assets/fishing/fish/uncommon/uncommon_fish_18/prompt-used.txt"
+}

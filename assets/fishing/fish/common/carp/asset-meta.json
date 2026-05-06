@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_carp",
+  "fishId": "carp",
+  "fishLabel": "잉어",
+  "rarity": "common",
+  "sourcePack": 1,
+  "sourceFrame": 2,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-01/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-01/processed/fish_icon_atlas-2.png",
+  "imagePath": "assets/fishing/fish/common/carp/icon.png",
+  "promptPath": "assets/fishing/fish/common/carp/prompt-used.txt"
+}

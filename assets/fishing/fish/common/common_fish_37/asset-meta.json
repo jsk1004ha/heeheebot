@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_common_fish_37",
+  "fishId": "common_fish_37",
+  "fishLabel": "긴몰개",
+  "rarity": "common",
+  "sourcePack": 2,
+  "sourceFrame": 22,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-02/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-02/processed/fish_icon_atlas-22.png",
+  "imagePath": "assets/fishing/fish/common/common_fish_37/icon.png",
+  "promptPath": "assets/fishing/fish/common/common_fish_37/prompt-used.txt"
+}

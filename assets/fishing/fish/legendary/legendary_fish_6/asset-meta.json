@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_legendary_fish_6",
+  "fishId": "legendary_fish_6",
+  "fishLabel": "달의해룡",
+  "rarity": "legendary",
+  "sourcePack": 6,
+  "sourceFrame": 6,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-06/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-06/processed/fish_icon_atlas-6.png",
+  "imagePath": "assets/fishing/fish/legendary/legendary_fish_6/icon.png",
+  "promptPath": "assets/fishing/fish/legendary/legendary_fish_6/prompt-used.txt"
+}

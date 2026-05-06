@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_common_fish_39",
+  "fishId": "common_fish_39",
+  "fishLabel": "민물검정망둑",
+  "rarity": "common",
+  "sourcePack": 2,
+  "sourceFrame": 24,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-02/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-02/processed/fish_icon_atlas-24.png",
+  "imagePath": "assets/fishing/fish/common/common_fish_39/icon.png",
+  "promptPath": "assets/fishing/fish/common/common_fish_39/prompt-used.txt"
+}

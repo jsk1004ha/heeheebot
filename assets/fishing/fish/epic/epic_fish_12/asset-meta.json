@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_epic_fish_12",
+  "fishId": "epic_fish_12",
+  "fishLabel": "사파이어장어",
+  "rarity": "epic",
+  "sourcePack": 5,
+  "sourceFrame": 17,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-05/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-05/processed/fish_icon_atlas-17.png",
+  "imagePath": "assets/fishing/fish/epic/epic_fish_12/icon.png",
+  "promptPath": "assets/fishing/fish/epic/epic_fish_12/prompt-used.txt"
+}

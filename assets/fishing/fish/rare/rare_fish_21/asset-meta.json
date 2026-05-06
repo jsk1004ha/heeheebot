@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_rare_fish_21",
+  "fishId": "rare_fish_21",
+  "fishLabel": "초대형메기",
+  "rarity": "rare",
+  "sourcePack": 5,
+  "sourceFrame": 1,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-05/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-05/processed/fish_icon_atlas-1.png",
+  "imagePath": "assets/fishing/fish/rare/rare_fish_21/icon.png",
+  "promptPath": "assets/fishing/fish/rare/rare_fish_21/prompt-used.txt"
+}

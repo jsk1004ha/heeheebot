@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_common_fish_7",
+  "fishId": "common_fish_7",
+  "fishLabel": "납자루",
+  "rarity": "common",
+  "sourcePack": 1,
+  "sourceFrame": 17,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-01/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-01/processed/fish_icon_atlas-17.png",
+  "imagePath": "assets/fishing/fish/common/common_fish_7/icon.png",
+  "promptPath": "assets/fishing/fish/common/common_fish_7/prompt-used.txt"
+}

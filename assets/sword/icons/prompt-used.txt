@@ -1,0 +1,14 @@
+Use $generate2dsprite / agent-sprite-forge style to create a clean HD 2D RPG sword enhancement icon pack as one 3x3 prop sheet. Exact 3 rows by 3 columns, each cell contains one centered compact transparent game icon with consistent scale and generous padding. Solid #FF00FF background only, no text, no labels, no numbers, no UI frames, no shadows crossing cell boundaries. Clean hand-painted HD fantasy RPG item art, readable at Discord embed size.
+
+Cell order left-to-right, top-to-bottom:
+1) worn training sword, dull iron, for +0 to +9
+2) polished iron sword, stronger hilt, for +10 to +24
+3) blue steel sword with faint glow, for +25 to +39
+4) crimson enchanted sword with small flame edge, for +40 to +59
+5) violet arcane sword with runes, for +60 to +79
+6) golden holy sword with radiant gem, for +80 to +89
+7) legendary dragon sword, red-black blade with tiny dragon-wing guard, for +90 to +100
+8) refine stone currency icon, cyan crystal ore cluster with silver dust, compact item icon
+9) broken sword shards with small spark, destruction result icon
+
+All icons must be isolated objects, centered in each cell, same camera angle, no text, solid #FF00FF background.

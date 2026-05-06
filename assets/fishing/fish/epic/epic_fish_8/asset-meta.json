@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_epic_fish_8",
+  "fishId": "epic_fish_8",
+  "fishLabel": "별빛참치",
+  "rarity": "epic",
+  "sourcePack": 5,
+  "sourceFrame": 13,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-05/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-05/processed/fish_icon_atlas-13.png",
+  "imagePath": "assets/fishing/fish/epic/epic_fish_8/icon.png",
+  "promptPath": "assets/fishing/fish/epic/epic_fish_8/prompt-used.txt"
+}

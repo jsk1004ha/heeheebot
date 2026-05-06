@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_hidden_fish_3",
+  "fishId": "hidden_fish_3",
+  "fishLabel": "시공도미",
+  "rarity": "hidden",
+  "sourcePack": 6,
+  "sourceFrame": 13,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-06/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-06/processed/fish_icon_atlas-13.png",
+  "imagePath": "assets/fishing/fish/hidden/hidden_fish_3/icon.png",
+  "promptPath": "assets/fishing/fish/hidden/hidden_fish_3/prompt-used.txt"
+}

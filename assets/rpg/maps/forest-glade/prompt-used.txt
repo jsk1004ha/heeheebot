@@ -1,0 +1,1 @@
+Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: peaceful green forest glade, readable grass clearing, trees around the edges, open center for hero and monster sprites, no characters, no UI, no text.

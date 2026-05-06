@@ -25,7 +25,7 @@ export const economyCommands = [
     ),
   new SlashCommandBuilder()
     .setName('랭킹')
-    .setDescription('이 서버의 레벨 랭킹을 확인합니다.')
+    .setDescription('이 서버의 레벨/경험치 랭킹을 확인합니다.')
     .addIntegerOption((option) =>
       option
         .setName('개수')
@@ -55,7 +55,7 @@ export async function handleEconomyCommand(interaction, economy) {
 
   if (interaction.commandName === '프로필') {
     const profile = await economy.getProfile(guildId, user.id, user.username);
-    await interaction.reply(formatProfile(profile, economy));
+    await interaction.reply(formatProfile(profile));
     return true;
   }
 
@@ -80,9 +80,12 @@ export async function handleEconomyCommand(interaction, economy) {
     const bonusText = result.streakBonusXp > 0
       ? ` / 연속 보너스 +${result.streakBonusXp.toLocaleString()} XP`
       : '';
+    const levelText = result.leveledUp
+      ? ` / 레벨업 Lv.${result.profile.level} 보너스 +${result.levelReward.toLocaleString()}원`
+      : '';
 
     await interaction.reply(
-      `✅ 출석 완료! +${result.xpGained.toLocaleString()} XP${bonusText}, +${result.reward.toLocaleString()}원 지급${streakText}. 현재 잔액: ${result.profile.balance.toLocaleString()}원`
+      `✅ 출석 완료! +${result.xpGained.toLocaleString()} XP${bonusText}, +${result.reward.toLocaleString()}원 지급${levelText}${streakText}. 현재 잔액: ${result.profile.balance.toLocaleString()}원`
     );
     return true;
   }
@@ -138,14 +141,11 @@ export async function handleEconomyCommand(interaction, economy) {
   return false;
 }
 
-function formatProfile(profile, economy) {
-  const nextXp = economy.xpForNextLevel(profile.level);
-
+function formatProfile(profile) {
   return [
     `📌 **${profile.username}님의 프로필**`,
     `레벨: **${profile.level}**`,
-    `경험치: **${profile.xp.toLocaleString()} / ${nextXp.toLocaleString()} XP**`,
-    `누적 경험치: **${profile.totalXp.toLocaleString()} XP**`,
+    `경험치: **${profile.totalXp.toLocaleString()} XP**`,
     `연속 출석: **${profile.dailyStreak.toLocaleString()}일**`,
     `보유금: **${profile.balance.toLocaleString()}원**`
   ].join('\n');
@@ -155,7 +155,7 @@ function formatLeaderboard(rows) {
   const body = rows
     .map((profile, index) => {
       const rank = index + 1;
-      return `${rank}. **${profile.username}** — Lv.${profile.level} / ${profile.totalXp.toLocaleString()} XP / ${profile.balance.toLocaleString()}원`;
+      return `${rank}. **${profile.username}** — Lv.${profile.level} / 경험치 ${profile.totalXp.toLocaleString()} XP / ${profile.balance.toLocaleString()}원`;
     })
     .join('\n');
 

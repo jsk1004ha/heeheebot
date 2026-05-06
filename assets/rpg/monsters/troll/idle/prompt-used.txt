@@ -1,0 +1,1 @@
+Use $generate2dsprite to create a clean HD large troll idle animation, 3x3 grid, full body centered in each cell, same scale, heavy stone club kept inside cells, stable feet anchor, solid #FF00FF background, no text.

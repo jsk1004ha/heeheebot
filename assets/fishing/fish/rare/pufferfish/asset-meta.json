@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_pufferfish",
+  "fishId": "pufferfish",
+  "fishLabel": "복어",
+  "rarity": "rare",
+  "sourcePack": 1,
+  "sourceFrame": 6,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-01/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-01/processed/fish_icon_atlas-6.png",
+  "imagePath": "assets/fishing/fish/rare/pufferfish/icon.png",
+  "promptPath": "assets/fishing/fish/rare/pufferfish/prompt-used.txt"
+}

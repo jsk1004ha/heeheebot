@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_epic_fish_16",
+  "fishId": "epic_fish_16",
+  "fishLabel": "빙하대구",
+  "rarity": "epic",
+  "sourcePack": 5,
+  "sourceFrame": 21,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-05/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-05/processed/fish_icon_atlas-21.png",
+  "imagePath": "assets/fishing/fish/epic/epic_fish_16/icon.png",
+  "promptPath": "assets/fishing/fish/epic/epic_fish_16/prompt-used.txt"
+}

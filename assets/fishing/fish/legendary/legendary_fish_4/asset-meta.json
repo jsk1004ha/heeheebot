@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_legendary_fish_4",
+  "fishId": "legendary_fish_4",
+  "fishLabel": "현무거북어",
+  "rarity": "legendary",
+  "sourcePack": 6,
+  "sourceFrame": 4,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-06/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-06/processed/fish_icon_atlas-4.png",
+  "imagePath": "assets/fishing/fish/legendary/legendary_fish_4/icon.png",
+  "promptPath": "assets/fishing/fish/legendary/legendary_fish_4/prompt-used.txt"
+}

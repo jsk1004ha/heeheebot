@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_rare_fish_23",
+  "fishId": "rare_fish_23",
+  "fishLabel": "금강모치",
+  "rarity": "rare",
+  "sourcePack": 5,
+  "sourceFrame": 3,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-05/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-05/processed/fish_icon_atlas-3.png",
+  "imagePath": "assets/fishing/fish/rare/rare_fish_23/icon.png",
+  "promptPath": "assets/fishing/fish/rare/rare_fish_23/prompt-used.txt"
+}

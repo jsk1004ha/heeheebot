@@ -1,0 +1,13 @@
+{
+  "id": "item_iron_sword_icon",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb4069f3c4819199e493884a974a24.png",
+  "raw": "assets/rpg/items/iron-sword/raw/raw-sheet.png",
+  "prompt": "assets/rpg/items/iron-sword/prompt-used.txt",
+  "processedDir": "assets/rpg/items/iron-sword/processed",
+  "status": "processed",
+  "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/iron-sword/processed",
+  "meta": "assets/rpg/items/iron-sword/processed/pipeline-meta.json"
+}

@@ -1,0 +1,15 @@
+{
+  "id": "monster_dark_knight_idle",
+  "category": "monster",
+  "kind": "sprite",
+  "sheet": "3x3",
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb3d266b5481919a3556accffdef64.png",
+  "raw": "assets/rpg/monsters/dark-knight/idle/raw/raw-sheet.png",
+  "prompt": "assets/rpg/monsters/dark-knight/idle/prompt-used.txt",
+  "processedDir": "assets/rpg/monsters/dark-knight/idle/processed",
+  "status": "processed",
+  "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/monsters/dark-knight/idle/processed",
+  "meta": "assets/rpg/monsters/dark-knight/idle/processed/pipeline-meta.json",
+  "transparentSheet": "assets/rpg/monsters/dark-knight/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/monsters/dark-knight/idle/processed/animation.gif"
+}

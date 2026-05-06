@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_epic_fish_13",
+  "fishId": "epic_fish_13",
+  "fishLabel": "에메랄드가자미",
+  "rarity": "epic",
+  "sourcePack": 5,
+  "sourceFrame": 18,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-05/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-05/processed/fish_icon_atlas-18.png",
+  "imagePath": "assets/fishing/fish/epic/epic_fish_13/icon.png",
+  "promptPath": "assets/fishing/fish/epic/epic_fish_13/prompt-used.txt"
+}

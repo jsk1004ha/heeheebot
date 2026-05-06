@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_uncommon_fish_11",
+  "fishId": "uncommon_fish_11",
+  "fishLabel": "오징어",
+  "rarity": "uncommon",
+  "sourcePack": 3,
+  "sourceFrame": 11,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-03/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-03/processed/fish_icon_atlas-11.png",
+  "imagePath": "assets/fishing/fish/uncommon/uncommon_fish_11/icon.png",
+  "promptPath": "assets/fishing/fish/uncommon/uncommon_fish_11/prompt-used.txt"
+}

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_common_fish_19",
+  "fishId": "common_fish_19",
+  "fishLabel": "보리멸",
+  "rarity": "common",
+  "sourcePack": 2,
+  "sourceFrame": 4,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-02/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-02/processed/fish_icon_atlas-4.png",
+  "imagePath": "assets/fishing/fish/common/common_fish_19/icon.png",
+  "promptPath": "assets/fishing/fish/common/common_fish_19/prompt-used.txt"
+}

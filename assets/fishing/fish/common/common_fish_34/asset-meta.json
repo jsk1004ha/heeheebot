@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_common_fish_34",
+  "fishId": "common_fish_34",
+  "fishLabel": "풀망둑",
+  "rarity": "common",
+  "sourcePack": 2,
+  "sourceFrame": 19,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-02/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-02/processed/fish_icon_atlas-19.png",
+  "imagePath": "assets/fishing/fish/common/common_fish_34/icon.png",
+  "promptPath": "assets/fishing/fish/common/common_fish_34/prompt-used.txt"
+}

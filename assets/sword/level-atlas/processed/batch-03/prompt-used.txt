@@ -1,0 +1,29 @@
+Use $generate2dsprite / agent-sprite-forge style to create a clean HD 2D fantasy RPG sword icon atlas: exact 5 rows by 5 columns, 25 separate sword icons for enhancement levels +51 through +75. Solid #FF00FF background only. No text, no numbers, no labels, no UI frames. Each cell contains exactly one centered sword, same diagonal display angle, consistent icon scale, generous padding, nothing crosses cell edges. Cell order left-to-right, top-to-bottom is +51, +52, +53 ... +75.
+CRITICAL VARIATION RULE: Every sword must have a unique silhouette, blade geometry, guard shape, grip, pommel, material language, and fantasy identity. Do not reuse the same sword with only stronger glow or color changes. Effects must be secondary; the physical sword form must change every level.
+Power curve: mythic high-tier weapons. Use emperor greatsword, judgment blade, hourglass sword, dimensional split sword, angelic wing guard, abyss contract blade, scale-covered dragon sword, ocean king blade, five-elements blade, world-tree sword, time-lock sword. Increase drama through structure: double blades, ring guards, floating close crystals, segmented blades, jagged holy/abyss shapes.
+Level concepts in exact cell order, use as visual inspiration only, do not draw the Korean text:
++51: 망각의 강을 거슬러 오른 영혼의 검
++52: 죽은 별의 잔광을 삼킨 흑성검
++53: 천년 제국의 왕좌를 베어낸 황제검
++54: 심판의 종소리와 함께 깨어난 단죄검
++55: 시간의 모래시계를 가르는 사막왕검
++56: 차원의 틈새를 봉합하는 균열검
++57: 대천사의 깃털과 번개로 벼린 성뢰검
++58: 심연의 왕이 남긴 검은 계약검
++59: 운명의 실타래를 끊는 여신의 재단검
++60: 별을 먹는 용의 비늘로 만든 성룡검
++61: 일곱 바다의 권능을 품은 해왕검
++62: 태양의 관과 달의 눈물을 품은 쌍극검
++63: 무한한 밤하늘을 비추는 은하수검
++64: 천지의 숨결을 하나로 묶은 오행검
++65: 신들의 전쟁터에서 살아남은 불멸검
++66: 창세의 불꽃과 종말의 재를 품은 검
++67: 운명의 별자리를 다시 쓰는 점성검
++68: 세계수의 뿌리와 하늘잎을 잇는 생명검
++69: 어둠의 심장을 꿰뚫은 새벽 심판검
++70: 시간왕의 시계를 멈추게 한 영겁검
++71: 무수한 차원의 문을 여닫는 만상검
++72: 태초의 바다와 끝없는 하늘이 만난 창검
++73: 별의 무덤에서 다시 태어난 윤회검
++74: 하늘의 법과 땅의 분노를 함께 품은 천지검
++75: 신화의 끝에서 이름을 얻은 절대검

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_uncommon_fish_30",
+  "fishId": "uncommon_fish_30",
+  "fishLabel": "큰입배스",
+  "rarity": "uncommon",
+  "sourcePack": 4,
+  "sourceFrame": 5,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-04/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-04/processed/fish_icon_atlas-5.png",
+  "imagePath": "assets/fishing/fish/uncommon/uncommon_fish_30/icon.png",
+  "promptPath": "assets/fishing/fish/uncommon/uncommon_fish_30/prompt-used.txt"
+}

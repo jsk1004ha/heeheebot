@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_common_fish_4",
+  "fishId": "common_fish_4",
+  "fishLabel": "은어",
+  "rarity": "common",
+  "sourcePack": 1,
+  "sourceFrame": 14,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-01/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-01/processed/fish_icon_atlas-14.png",
+  "imagePath": "assets/fishing/fish/common/common_fish_4/icon.png",
+  "promptPath": "assets/fishing/fish/common/common_fish_4/prompt-used.txt"
+}

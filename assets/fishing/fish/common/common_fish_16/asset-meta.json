@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_common_fish_16",
+  "fishId": "common_fish_16",
+  "fishLabel": "도루묵",
+  "rarity": "common",
+  "sourcePack": 2,
+  "sourceFrame": 1,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-02/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-02/processed/fish_icon_atlas-1.png",
+  "imagePath": "assets/fishing/fish/common/common_fish_16/icon.png",
+  "promptPath": "assets/fishing/fish/common/common_fish_16/prompt-used.txt"
+}

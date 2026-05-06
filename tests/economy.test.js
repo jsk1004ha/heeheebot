@@ -23,6 +23,97 @@ test('새 프로필은 레벨 1과 잔액 0으로 시작한다', async () => {
   }
 });
 
+test('기존/마이그레이션 프로필의 누락된 레벨 필드를 안전하게 보정한다', async () => {
+  const fixture = await createFixture({
+    messageCooldownMs: 0,
+    firstMessageXpBonus: 0,
+    randomInt: () => 10
+  });
+
+  try {
+    await fixture.store.update((data) => {
+      data.guilds['guild-1'] = {
+        users: {
+          'user-1': {
+            userId: 'user-1',
+            username: '기존유저',
+            level: 3
+          }
+        }
+      };
+    });
+
+    const profile = await fixture.economy.getProfile('guild-1', 'user-1', '기존유저');
+    const reward = await fixture.economy.rewardMessage({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '기존유저',
+      now: 100_000
+    });
+
+    assert.equal(profile.level, 3);
+    assert.equal(profile.xp, 0);
+    assert.equal(profile.totalXp, 382);
+    assert.equal(profile.balance, 0);
+    assert.equal(profile.lastMessageRewardAt, 0);
+    assert.equal(profile.dailyStreak, 0);
+    assert.equal(profile.rpg.characterClass, 'novice');
+    assert.equal(profile.rpg.characterGender, 'male');
+    assert.equal(profile.rpg.currentArea, 'forest');
+    assert.deepEqual(profile.rpg.unlockedAreas, ['forest', 'cave']);
+    assert.deepEqual(profile.rpg.discoveredMonsters, {});
+    assert.equal(profile.rpg.battles, 0);
+    assert.equal(profile.rpg.wins, 0);
+    assert.equal(profile.rpg.losses, 0);
+    assert.equal(profile.rpg.lastBattleAt, 0);
+    assert.equal(reward.profile.level, 3);
+    assert.equal(reward.profile.xp, 10);
+    assert.equal(reward.profile.totalXp, 392);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('랭킹도 기존 프로필의 누락/초과 경험치를 보정해서 표시한다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await fixture.store.update((data) => {
+      data.guilds['guild-1'] = {
+        users: {
+          'user-1': {
+            userId: 'user-1',
+            username: '레거시고렙',
+            level: 3
+          },
+          'user-2': {
+            userId: 'user-2',
+            username: '초과경험치',
+            level: 1,
+            xp: 150,
+            totalXp: 0,
+            balance: '25'
+          }
+        }
+      };
+    });
+
+    const leaderboard = await fixture.economy.getLeaderboard('guild-1');
+    const overflowProfile = leaderboard.find((profile) => profile.userId === 'user-2');
+
+    assert.equal(leaderboard.length, 2);
+    assert.equal(leaderboard[0].userId, 'user-1');
+    assert.equal(leaderboard[0].totalXp, 382);
+    assert.ok(overflowProfile);
+    assert.equal(overflowProfile.level, 2);
+    assert.equal(overflowProfile.xp, 50);
+    assert.equal(overflowProfile.totalXp, 150);
+    assert.equal(overflowProfile.balance, 25);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 test('레벨 필요 경험치는 100 × 레벨^1.5 공식을 따른다', async () => {
   const fixture = await createFixture();
 
@@ -250,7 +341,7 @@ test('운세 확인 경험치는 한국시간 기준 하루 한 번만 지급한
   }
 });
 
-test('송금은 잔액을 이동하고 랭킹은 레벨/누적 경험치 순으로 정렬한다', async () => {
+test('송금은 잔액을 이동하고 랭킹은 레벨/경험치 순으로 정렬한다', async () => {
   const fixture = await createFixture({
     dailyCoinReward: 1_000,
     dailyXpReward: 0

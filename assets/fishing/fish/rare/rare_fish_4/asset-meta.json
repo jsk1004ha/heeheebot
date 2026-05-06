@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_rare_fish_4",
+  "fishId": "rare_fish_4",
+  "fishLabel": "청새치",
+  "rarity": "rare",
+  "sourcePack": 4,
+  "sourceFrame": 9,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-04/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-04/processed/fish_icon_atlas-9.png",
+  "imagePath": "assets/fishing/fish/rare/rare_fish_4/icon.png",
+  "promptPath": "assets/fishing/fish/rare/rare_fish_4/prompt-used.txt"
+}

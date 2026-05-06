@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_kraken_spawn",
+  "fishId": "kraken_spawn",
+  "fishLabel": "크라켄 새끼",
+  "rarity": "epic",
+  "sourcePack": 1,
+  "sourceFrame": 9,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-01/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-01/processed/fish_icon_atlas-9.png",
+  "imagePath": "assets/fishing/fish/epic/kraken_spawn/icon.png",
+  "promptPath": "assets/fishing/fish/epic/kraken_spawn/prompt-used.txt"
+}

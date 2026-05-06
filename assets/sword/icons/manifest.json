@@ -1,0 +1,19 @@
+{
+  "assetPack": "sword-enhancement-icons",
+  "pipeline": "agent-sprite-forge/generate2dsprite",
+  "kind": "sprite",
+  "sheet": "3x3",
+  "background": "#FF00FF",
+  "outputDir": "assets/sword/icons",
+  "items": [
+    { "id": "sword_training", "levels": "0-9", "label": "수련용 검" },
+    { "id": "sword_iron", "levels": "10-24", "label": "철검" },
+    { "id": "sword_blue_steel", "levels": "25-39", "label": "청강검" },
+    { "id": "sword_crimson", "levels": "40-59", "label": "홍염검" },
+    { "id": "sword_arcane", "levels": "60-79", "label": "비전검" },
+    { "id": "sword_holy", "levels": "80-89", "label": "성검" },
+    { "id": "sword_dragon", "levels": "90-100", "label": "용검" },
+    { "id": "refine_stone", "label": "제련석" },
+    { "id": "broken_sword", "label": "파괴된 검" }
+  ]
+}

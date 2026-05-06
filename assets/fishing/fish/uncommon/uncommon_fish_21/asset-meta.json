@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_uncommon_fish_21",
+  "fishId": "uncommon_fish_21",
+  "fishLabel": "능성어",
+  "rarity": "uncommon",
+  "sourcePack": 3,
+  "sourceFrame": 21,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-03/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-03/processed/fish_icon_atlas-21.png",
+  "imagePath": "assets/fishing/fish/uncommon/uncommon_fish_21/icon.png",
+  "promptPath": "assets/fishing/fish/uncommon/uncommon_fish_21/prompt-used.txt"
+}

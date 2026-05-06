@@ -1,0 +1,1 @@
+Use $generate2dsprite to create a clean HD ancient dragon boss idle animation, 3x3 grid, full body centered, same scale, wings and tail fully inside each cell, imposing fantasy RPG boss, solid #FF00FF background, no text.

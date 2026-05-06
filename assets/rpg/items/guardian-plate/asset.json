@@ -1,0 +1,13 @@
+{
+  "id": "item_guardian_plate_icon",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb43a0929c8191a6589c9e6c20a4af.png",
+  "raw": "assets/rpg/items/guardian-plate/raw/raw-sheet.png",
+  "prompt": "assets/rpg/items/guardian-plate/prompt-used.txt",
+  "processedDir": "assets/rpg/items/guardian-plate/processed",
+  "status": "processed",
+  "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/guardian-plate/processed",
+  "meta": "assets/rpg/items/guardian-plate/processed/pipeline-meta.json"
+}

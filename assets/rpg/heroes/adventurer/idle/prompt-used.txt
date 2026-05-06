@@ -1,0 +1,1 @@
+Use $generate2dsprite to create a clean HD 2D RPG novice adventurer idle animation, 2x2 grid, full body centered in each cell, same scale, stable feet anchor, leather tunic, small satchel, short sword, friendly fantasy RPG style, solid #FF00FF background, no text.

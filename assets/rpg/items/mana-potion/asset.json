@@ -1,0 +1,13 @@
+{
+  "id": "item_mana_potion_icon",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb3fc1c324819199b7183086dfffb4.png",
+  "raw": "assets/rpg/items/mana-potion/raw/raw-sheet.png",
+  "prompt": "assets/rpg/items/mana-potion/prompt-used.txt",
+  "processedDir": "assets/rpg/items/mana-potion/processed",
+  "status": "processed",
+  "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/mana-potion/processed",
+  "meta": "assets/rpg/items/mana-potion/processed/pipeline-meta.json"
+}

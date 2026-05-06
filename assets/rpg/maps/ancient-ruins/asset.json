@@ -1,0 +1,9 @@
+{
+  "id": "map_ancient_ruins",
+  "category": "map",
+  "kind": "map",
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb3f1bcf708191be06e37add9fbb71.png",
+  "raw": "assets/rpg/maps/ancient-ruins/raw/background.png",
+  "prompt": "assets/rpg/maps/ancient-ruins/prompt-used.txt",
+  "status": "raw-map-copied"
+}

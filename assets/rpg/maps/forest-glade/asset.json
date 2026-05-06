@@ -1,0 +1,9 @@
+{
+  "id": "map_forest_glade",
+  "category": "map",
+  "kind": "map",
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb3e8935188191abcb87c024191c39.png",
+  "raw": "assets/rpg/maps/forest-glade/raw/background.png",
+  "prompt": "assets/rpg/maps/forest-glade/prompt-used.txt",
+  "status": "raw-map-copied"
+}

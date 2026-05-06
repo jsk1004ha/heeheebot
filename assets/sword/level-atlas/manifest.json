@@ -1,0 +1,51 @@
+{
+  "assetPack": "sword-level-1-to-100",
+  "pipeline": "agent-sprite-forge/generate2dsprite",
+  "kind": "sprite",
+  "sheetPlan": "four 5x5 raw prop sheets, 25 unique sword icons per sheet",
+  "background": "#FF00FF",
+  "importantArtRule": "Every sword must have a unique silhouette, blade geometry, guard shape, grip, pommel, material language, and fantasy identity. Do not reuse the same sword with only stronger glow or color changes.",
+  "batches": [
+    {
+      "id": "batch_01",
+      "levels": "1-25",
+      "prompt": "prompts/batch-01-levels-001-025.txt"
+    },
+    {
+      "id": "batch_02",
+      "levels": "26-50",
+      "prompt": "prompts/batch-02-levels-026-050.txt"
+    },
+    {
+      "id": "batch_03",
+      "levels": "51-75",
+      "prompt": "prompts/batch-03-levels-051-075.txt"
+    },
+    {
+      "id": "batch_04",
+      "levels": "76-100",
+      "prompt": "prompts/batch-04-levels-076-100.txt"
+    }
+  ],
+  "outputs": {
+    "rawSheets": "raw/batch-*/raw-sheet.png",
+    "agentSpriteForgeProcessed": "processed/batch-*",
+    "cleanExtractedIcons": "extracted/batch-*/sword_001.png through sword_100.png",
+    "cleanBatchSheets": "extracted/batch-*/sheet-transparent.png",
+    "cleanFullAtlas": "extracted/atlas-100-transparent.png",
+    "levelIndex": "extracted/index.json",
+    "qcReport": "extracted/qc-report.json"
+  },
+  "postprocess": {
+    "script": "tools/extract_sword_atlas.py",
+    "method": "global connected-component assignment to nearest 5x5 cell center, magenta chroma key, 256px centered transparent icons"
+  },
+  "qc": {
+    "status": "pass",
+    "checkedFiles": 100,
+    "uniqueImageHashes": 100,
+    "edgeTouchFiles": 0,
+    "emptyFiles": 0,
+    "minMargin": 23
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "monster_goblin_idle",
+  "category": "monster",
+  "kind": "sprite",
+  "sheet": "2x2",
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb3ac24dc4819194ba5ca7e448f454.png",
+  "raw": "assets/rpg/monsters/goblin/idle/raw/raw-sheet.png",
+  "prompt": "assets/rpg/monsters/goblin/idle/prompt-used.txt",
+  "processedDir": "assets/rpg/monsters/goblin/idle/processed",
+  "status": "processed",
+  "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/monsters/goblin/idle/processed",
+  "meta": "assets/rpg/monsters/goblin/idle/processed/pipeline-meta.json",
+  "transparentSheet": "assets/rpg/monsters/goblin/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/monsters/goblin/idle/processed/animation.gif"
+}

@@ -1,0 +1,1 @@
+Use $generate2dsprite to create a clean HD cave bat hover animation, 2x2 grid, centered body and wings fully inside each cell, same scale, solid #FF00FF background, no text.

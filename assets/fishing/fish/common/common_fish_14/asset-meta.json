@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_common_fish_14",
+  "fishId": "common_fish_14",
+  "fishLabel": "망둥어",
+  "rarity": "common",
+  "sourcePack": 1,
+  "sourceFrame": 24,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-01/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-01/processed/fish_icon_atlas-24.png",
+  "imagePath": "assets/fishing/fish/common/common_fish_14/icon.png",
+  "promptPath": "assets/fishing/fish/common/common_fish_14/prompt-used.txt"
+}

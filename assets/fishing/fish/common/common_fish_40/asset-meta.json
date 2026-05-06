@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_common_fish_40",
+  "fishId": "common_fish_40",
+  "fishLabel": "흰줄납줄개",
+  "rarity": "common",
+  "sourcePack": 2,
+  "sourceFrame": 25,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-02/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-02/processed/fish_icon_atlas-25.png",
+  "imagePath": "assets/fishing/fish/common/common_fish_40/icon.png",
+  "promptPath": "assets/fishing/fish/common/common_fish_40/prompt-used.txt"
+}

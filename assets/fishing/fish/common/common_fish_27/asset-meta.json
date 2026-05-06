@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_common_fish_27",
+  "fishId": "common_fish_27",
+  "fishLabel": "참붕어",
+  "rarity": "common",
+  "sourcePack": 2,
+  "sourceFrame": 12,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-02/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-02/processed/fish_icon_atlas-12.png",
+  "imagePath": "assets/fishing/fish/common/common_fish_27/icon.png",
+  "promptPath": "assets/fishing/fish/common/common_fish_27/prompt-used.txt"
+}

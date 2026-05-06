@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_uncommon_fish_26",
+  "fishId": "uncommon_fish_26",
+  "fishLabel": "볼락",
+  "rarity": "uncommon",
+  "sourcePack": 4,
+  "sourceFrame": 1,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-04/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-04/processed/fish_icon_atlas-1.png",
+  "imagePath": "assets/fishing/fish/uncommon/uncommon_fish_26/icon.png",
+  "promptPath": "assets/fishing/fish/uncommon/uncommon_fish_26/prompt-used.txt"
+}

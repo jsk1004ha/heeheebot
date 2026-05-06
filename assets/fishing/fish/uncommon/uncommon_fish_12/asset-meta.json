@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_uncommon_fish_12",
+  "fishId": "uncommon_fish_12",
+  "fishLabel": "갑오징어",
+  "rarity": "uncommon",
+  "sourcePack": 3,
+  "sourceFrame": 12,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-03/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-03/processed/fish_icon_atlas-12.png",
+  "imagePath": "assets/fishing/fish/uncommon/uncommon_fish_12/icon.png",
+  "promptPath": "assets/fishing/fish/uncommon/uncommon_fish_12/prompt-used.txt"
+}

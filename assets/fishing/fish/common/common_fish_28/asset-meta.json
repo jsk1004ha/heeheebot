@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_common_fish_28",
+  "fishId": "common_fish_28",
+  "fishLabel": "갈겨니",
+  "rarity": "common",
+  "sourcePack": 2,
+  "sourceFrame": 13,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-02/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-02/processed/fish_icon_atlas-13.png",
+  "imagePath": "assets/fishing/fish/common/common_fish_28/icon.png",
+  "promptPath": "assets/fishing/fish/common/common_fish_28/prompt-used.txt"
+}

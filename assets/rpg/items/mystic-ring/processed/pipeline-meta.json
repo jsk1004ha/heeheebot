@@ -1,0 +1,11 @@
+{
+  "target": "asset",
+  "mode": "single",
+  "prompt": "",
+  "role": "",
+  "input": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/mystic-ring/raw/raw-sheet.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 160,
+  "single_size": 512
+}

@@ -1,0 +1,155 @@
+{
+  "target": "asset",
+  "mode": "idle",
+  "prompt": "",
+  "role": "",
+  "input": "/home/jio/code/heeheebot/heeheebot/assets/rpg/monsters/cave-bat/idle/raw/raw-sheet.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 160,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 128,
+  "fit_scale": 0.85,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "bottom",
+  "shared_scale": true,
+  "component_mode": "all",
+  "component_padding": 8,
+  "min_component_area": 1,
+  "edge_touch_margin": 0,
+  "frame_labels": [
+    "monster_cave_bat_idle-1",
+    "monster_cave_bat_idle-2",
+    "monster_cave_bat_idle-3",
+    "monster_cave_bat_idle-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        62,
+        153,
+        581,
+        501
+      ],
+      "edge_touch": false,
+      "output_size": [
+        92,
+        62
+      ],
+      "paste_position": [
+        18,
+        57
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        14,
+        131,
+        584,
+        507
+      ],
+      "edge_touch": false,
+      "output_size": [
+        101,
+        67
+      ],
+      "paste_position": [
+        13,
+        52
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 3,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        10,
+        111,
+        619,
+        458
+      ],
+      "edge_touch": false,
+      "output_size": [
+        108,
+        61
+      ],
+      "paste_position": [
+        10,
+        58
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        63,
+        110,
+        518,
+        458
+      ],
+      "edge_touch": false,
+      "output_size": [
+        81,
+        62
+      ],
+      "paste_position": [
+        23,
+        57
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

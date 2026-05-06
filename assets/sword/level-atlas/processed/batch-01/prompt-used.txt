@@ -1,0 +1,29 @@
+Use $generate2dsprite / agent-sprite-forge style to create a clean HD 2D fantasy RPG sword icon atlas: exact 5 rows by 5 columns, 25 separate sword icons for enhancement levels +1 through +25. Solid #FF00FF background only. No text, no numbers, no labels, no UI frames. Each cell contains exactly one centered sword, same diagonal display angle, consistent icon scale, generous padding, nothing crosses cell edges. Cell order left-to-right, top-to-bottom is +1, +2, +3 ... +25.
+CRITICAL VARIATION RULE: Every sword must have a unique silhouette, blade geometry, guard shape, grip, pommel, material language, and fantasy identity. Do not reuse the same sword with only stronger glow or color changes. Effects must be secondary; the physical sword form must change every level.
+Power curve: humble early weapons becoming polished adventurer weapons. Use worn training blade, short sword, broad sword, hooked blade, crescent blade, split-tip blade, rugged iron, asymmetrical guard, leather wrap, small gems, early blue steel. +1 is 도훈검 and should be a simple but memorable starter sword. +25 should be clearly cooler than +1 but not legendary yet.
+Level concepts in exact cell order, use as visual inspiration only, do not draw the Korean text:
++1: 도훈검
++2: 새벽 안개를 가르는 낡은 철의 검
++3: 잊힌 대장장이의 불씨가 남은 단련검
++4: 작은 승리를 기억하는 초심자의 강철검
++5: 바람결에 첫 예기를 드러낸 청동 수호검
++6: 오래된 전장의 먼지를 머금은 철혈검
++7: 미완의 맹약이 새겨진 은빛 견습검
++8: 달빛 아래 처음 깨어난 푸른 칼날
++9: 전사의 숨결을 따라 울리는 초승달검
++10: 첫 번째 운명을 베어낸 서약의 검
++11: 잔불 속에서 다시 벼려진 붉은 철검
++12: 흐린 별빛을 머금은 방랑자의 검
++13: 그림자 숲의 늑대 문장이 새겨진 검
++14: 깨어나는 용기의 파편을 품은 기사검
++15: 황혼의 경계에서 빛나는 결의의 장검
++16: 무너진 성벽 위에 꽂힌 수호자의 검
++17: 비 내리는 전장에서 울부짖는 은린검
++18: 잊힌 왕국의 첫 번째 충성검
++19: 새벽의 균열을 가르는 푸른 서광검
++20: 별의 조각으로 날을 세운 천문검
++21: 검은 바람의 속삭임을 새긴 추격검
++22: 붉은 달의 맹세를 두른 사냥검
++23: 눈보라 속에서도 꺼지지 않는 백은검
++24: 고대 룬이 깨어나는 청휘의 검
++25: 운명의 문턱에 선 푸른 용사의 검

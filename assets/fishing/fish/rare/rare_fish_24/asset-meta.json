@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_rare_fish_24",
+  "fishId": "rare_fish_24",
+  "fishLabel": "얼음빙어",
+  "rarity": "rare",
+  "sourcePack": 5,
+  "sourceFrame": 4,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-05/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-05/processed/fish_icon_atlas-4.png",
+  "imagePath": "assets/fishing/fish/rare/rare_fish_24/icon.png",
+  "promptPath": "assets/fishing/fish/rare/rare_fish_24/prompt-used.txt"
+}

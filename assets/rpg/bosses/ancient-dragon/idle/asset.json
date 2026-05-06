@@ -1,0 +1,21 @@
+{
+  "id": "boss_ancient_dragon_idle",
+  "category": "monster",
+  "kind": "sprite",
+  "sheet": "3x3",
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb3e1f9b708191a96b2248390695c3.png",
+  "raw": "assets/rpg/bosses/ancient-dragon/idle/raw/raw-sheet.png",
+  "prompt": "assets/rpg/bosses/ancient-dragon/idle/prompt-used.txt",
+  "processedDir": "assets/rpg/bosses/ancient-dragon/idle/processed",
+  "status": "processed",
+  "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/bosses/ancient-dragon/idle/processed",
+  "meta": "assets/rpg/bosses/ancient-dragon/idle/processed/pipeline-meta.json",
+  "transparentSheet": "assets/rpg/bosses/ancient-dragon/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/bosses/ancient-dragon/idle/processed/animation.gif",
+  "normalization": {
+    "type": "cell-padding",
+    "reason": "raw generated grid touched a cell edge; preserved generated art and added deterministic magenta safe padding before forge processing",
+    "scale": 0.9,
+    "originalRaw": "assets/rpg/bosses/ancient-dragon/idle/raw/raw-sheet-original-edge-touch.png"
+  }
+}

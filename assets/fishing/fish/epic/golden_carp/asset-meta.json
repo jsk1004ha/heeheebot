@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_golden_carp",
+  "fishId": "golden_carp",
+  "fishLabel": "황금잉어",
+  "rarity": "epic",
+  "sourcePack": 1,
+  "sourceFrame": 8,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-01/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-01/processed/fish_icon_atlas-8.png",
+  "imagePath": "assets/fishing/fish/epic/golden_carp/icon.png",
+  "promptPath": "assets/fishing/fish/epic/golden_carp/prompt-used.txt"
+}

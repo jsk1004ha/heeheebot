@@ -1,0 +1,1 @@
+Use $generate2dsprite to create a clean HD 2D RPG paladin idle animation, 2x2 grid, full body centered, same scale, stable feet anchor, white-gold armor, compact holy shield and sword held close, solid #FF00FF background, no text.

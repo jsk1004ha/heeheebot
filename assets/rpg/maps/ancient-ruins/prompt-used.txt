@@ -1,0 +1,1 @@
+Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: ancient stone ruins at sunset, broken pillars around the edges, open center arena for battle sprites, no characters, no UI, no text.

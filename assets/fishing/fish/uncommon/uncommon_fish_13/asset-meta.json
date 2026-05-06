@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_uncommon_fish_13",
+  "fishId": "uncommon_fish_13",
+  "fishLabel": "쭈꾸미",
+  "rarity": "uncommon",
+  "sourcePack": 3,
+  "sourceFrame": 13,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-03/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-03/processed/fish_icon_atlas-13.png",
+  "imagePath": "assets/fishing/fish/uncommon/uncommon_fish_13/icon.png",
+  "promptPath": "assets/fishing/fish/uncommon/uncommon_fish_13/prompt-used.txt"
+}

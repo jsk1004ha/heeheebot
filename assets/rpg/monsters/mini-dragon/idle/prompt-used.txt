@@ -1,0 +1,1 @@
+Use $generate2dsprite to create a clean HD small dragon idle animation, 3x3 grid, full body centered, same scale, wings and tail fully inside cells, fantasy RPG boss minion, solid #FF00FF background, no text.

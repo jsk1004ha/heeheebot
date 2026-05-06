@@ -1,0 +1,15 @@
+{
+  "id": "hero_warrior_idle",
+  "category": "hero",
+  "kind": "sprite",
+  "sheet": "2x2",
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb370cde348191a65b6dc3d74adf5b.png",
+  "raw": "assets/rpg/heroes/warrior/idle/raw/raw-sheet.png",
+  "prompt": "assets/rpg/heroes/warrior/idle/prompt-used.txt",
+  "processedDir": "assets/rpg/heroes/warrior/idle/processed",
+  "status": "processed",
+  "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/warrior/idle/processed",
+  "meta": "assets/rpg/heroes/warrior/idle/processed/pipeline-meta.json",
+  "transparentSheet": "assets/rpg/heroes/warrior/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/heroes/warrior/idle/processed/animation.gif"
+}

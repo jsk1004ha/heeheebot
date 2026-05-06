@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_legendary_fish_9",
+  "fishId": "legendary_fish_9",
+  "fishLabel": "심연의군주어",
+  "rarity": "legendary",
+  "sourcePack": 6,
+  "sourceFrame": 9,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-06/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-06/processed/fish_icon_atlas-9.png",
+  "imagePath": "assets/fishing/fish/legendary/legendary_fish_9/icon.png",
+  "promptPath": "assets/fishing/fish/legendary/legendary_fish_9/prompt-used.txt"
+}

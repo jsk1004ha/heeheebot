@@ -1,0 +1,639 @@
+{
+  "source": "assets/sword/level-atlas/raw/batch-01/raw-sheet.png",
+  "rows": 5,
+  "cols": 5,
+  "levels": [
+    {
+      "level": 1,
+      "name": "도훈검",
+      "file": "sword_001.png",
+      "source_bbox": [
+        37,
+        51,
+        212,
+        228
+      ],
+      "components_kept": 1,
+      "foreground_bbox": [
+        42,
+        41,
+        213,
+        214
+      ],
+      "margins": [
+        42,
+        41,
+        43,
+        42
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 2,
+      "name": "새벽 안개를 가르는 낡은 철의 검",
+      "file": "sword_002.png",
+      "source_bbox": [
+        279,
+        33,
+        463,
+        225
+      ],
+      "components_kept": 1,
+      "foreground_bbox": [
+        38,
+        34,
+        218,
+        222
+      ],
+      "margins": [
+        38,
+        34,
+        38,
+        34
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 3,
+      "name": "잊힌 대장장이의 불씨가 남은 단련검",
+      "file": "sword_003.png",
+      "source_bbox": [
+        534,
+        31,
+        725,
+        228
+      ],
+      "components_kept": 2,
+      "foreground_bbox": [
+        34,
+        31,
+        221,
+        224
+      ],
+      "margins": [
+        34,
+        31,
+        35,
+        32
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 4,
+      "name": "작은 승리를 기억하는 초심자의 강철검",
+      "file": "sword_004.png",
+      "source_bbox": [
+        783,
+        30,
+        972,
+        227
+      ],
+      "components_kept": 1,
+      "foreground_bbox": [
+        35,
+        31,
+        220,
+        224
+      ],
+      "margins": [
+        35,
+        31,
+        36,
+        32
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 5,
+      "name": "바람결에 첫 예기를 드러낸 청동 수호검",
+      "file": "sword_005.png",
+      "source_bbox": [
+        1019,
+        24,
+        1220,
+        235
+      ],
+      "components_kept": 1,
+      "foreground_bbox": [
+        29,
+        24,
+        226,
+        231
+      ],
+      "margins": [
+        29,
+        24,
+        30,
+        25
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 6,
+      "name": "오래된 전장의 먼지를 머금은 철혈검",
+      "file": "sword_006.png",
+      "source_bbox": [
+        29,
+        271,
+        223,
+        479
+      ],
+      "components_kept": 1,
+      "foreground_bbox": [
+        33,
+        26,
+        223,
+        230
+      ],
+      "margins": [
+        33,
+        26,
+        33,
+        26
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 7,
+      "name": "미완의 맹약이 새겨진 은빛 견습검",
+      "file": "sword_007.png",
+      "source_bbox": [
+        278,
+        269,
+        465,
+        474
+      ],
+      "components_kept": 1,
+      "foreground_bbox": [
+        36,
+        27,
+        219,
+        228
+      ],
+      "margins": [
+        36,
+        27,
+        37,
+        28
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 8,
+      "name": "달빛 아래 처음 깨어난 푸른 칼날",
+      "file": "sword_008.png",
+      "source_bbox": [
+        515,
+        285,
+        717,
+        482
+      ],
+      "components_kept": 1,
+      "foreground_bbox": [
+        29,
+        31,
+        227,
+        224
+      ],
+      "margins": [
+        29,
+        31,
+        29,
+        32
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 9,
+      "name": "전사의 숨결을 따라 울리는 초승달검",
+      "file": "sword_009.png",
+      "source_bbox": [
+        776,
+        280,
+        964,
+        480
+      ],
+      "components_kept": 1,
+      "foreground_bbox": [
+        36,
+        30,
+        220,
+        226
+      ],
+      "margins": [
+        36,
+        30,
+        36,
+        30
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 10,
+      "name": "첫 번째 운명을 베어낸 서약의 검",
+      "file": "sword_010.png",
+      "source_bbox": [
+        1017,
+        262,
+        1223,
+        484
+      ],
+      "components_kept": 1,
+      "foreground_bbox": [
+        30,
+        23,
+        225,
+        233
+      ],
+      "margins": [
+        30,
+        23,
+        31,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 11,
+      "name": "잔불 속에서 다시 벼려진 붉은 철검",
+      "file": "sword_011.png",
+      "source_bbox": [
+        32,
+        506,
+        225,
+        714
+      ],
+      "components_kept": 1,
+      "foreground_bbox": [
+        33,
+        26,
+        222,
+        230
+      ],
+      "margins": [
+        33,
+        26,
+        34,
+        26
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 12,
+      "name": "흐린 별빛을 머금은 방랑자의 검",
+      "file": "sword_012.png",
+      "source_bbox": [
+        277,
+        515,
+        456,
+        716
+      ],
+      "components_kept": 1,
+      "foreground_bbox": [
+        40,
+        29,
+        215,
+        226
+      ],
+      "margins": [
+        40,
+        29,
+        41,
+        30
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 13,
+      "name": "그림자 숲의 늑대 문장이 새겨진 검",
+      "file": "sword_013.png",
+      "source_bbox": [
+        522,
+        516,
+        717,
+        716
+      ],
+      "components_kept": 1,
+      "foreground_bbox": [
+        32,
+        30,
+        223,
+        226
+      ],
+      "margins": [
+        32,
+        30,
+        33,
+        30
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 14,
+      "name": "깨어나는 용기의 파편을 품은 기사검",
+      "file": "sword_014.png",
+      "source_bbox": [
+        773,
+        503,
+        972,
+        711
+      ],
+      "components_kept": 1,
+      "foreground_bbox": [
+        30,
+        26,
+        225,
+        230
+      ],
+      "margins": [
+        30,
+        26,
+        31,
+        26
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 15,
+      "name": "황혼의 경계에서 빛나는 결의의 장검",
+      "file": "sword_015.png",
+      "source_bbox": [
+        1017,
+        510,
+        1211,
+        717
+      ],
+      "components_kept": 1,
+      "foreground_bbox": [
+        33,
+        26,
+        223,
+        229
+      ],
+      "margins": [
+        33,
+        26,
+        33,
+        27
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 16,
+      "name": "무너진 성벽 위에 꽂힌 수호자의 검",
+      "file": "sword_016.png",
+      "source_bbox": [
+        26,
+        745,
+        226,
+        949
+      ],
+      "components_kept": 5,
+      "foreground_bbox": [
+        30,
+        28,
+        226,
+        228
+      ],
+      "margins": [
+        30,
+        28,
+        30,
+        28
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 17,
+      "name": "비 내리는 전장에서 울부짖는 은린검",
+      "file": "sword_017.png",
+      "source_bbox": [
+        285,
+        750,
+        462,
+        953
+      ],
+      "components_kept": 3,
+      "foreground_bbox": [
+        41,
+        28,
+        214,
+        227
+      ],
+      "margins": [
+        41,
+        28,
+        42,
+        29
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 18,
+      "name": "잊힌 왕국의 첫 번째 충성검",
+      "file": "sword_018.png",
+      "source_bbox": [
+        519,
+        739,
+        728,
+        952
+      ],
+      "components_kept": 1,
+      "foreground_bbox": [
+        25,
+        23,
+        230,
+        232
+      ],
+      "margins": [
+        25,
+        23,
+        26,
+        24
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 19,
+      "name": "새벽의 균열을 가르는 푸른 서광검",
+      "file": "sword_019.png",
+      "source_bbox": [
+        766,
+        750,
+        962,
+        959
+      ],
+      "components_kept": 1,
+      "foreground_bbox": [
+        32,
+        25,
+        224,
+        230
+      ],
+      "margins": [
+        32,
+        25,
+        32,
+        26
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 20,
+      "name": "별의 조각으로 날을 세운 천문검",
+      "file": "sword_020.png",
+      "source_bbox": [
+        1018,
+        747,
+        1234,
+        955
+      ],
+      "components_kept": 2,
+      "foreground_bbox": [
+        23,
+        27,
+        233,
+        229
+      ],
+      "margins": [
+        23,
+        27,
+        23,
+        27
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 21,
+      "name": "검은 바람의 속삭임을 새긴 추격검",
+      "file": "sword_021.png",
+      "source_bbox": [
+        27,
+        976,
+        220,
+        1198
+      ],
+      "components_kept": 3,
+      "foreground_bbox": [
+        37,
+        23,
+        219,
+        233
+      ],
+      "margins": [
+        37,
+        23,
+        37,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 22,
+      "name": "붉은 달의 맹세를 두른 사냥검",
+      "file": "sword_022.png",
+      "source_bbox": [
+        276,
+        978,
+        476,
+        1204
+      ],
+      "components_kept": 1,
+      "foreground_bbox": [
+        35,
+        23,
+        220,
+        233
+      ],
+      "margins": [
+        35,
+        23,
+        36,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 23,
+      "name": "눈보라 속에서도 꺼지지 않는 백은검",
+      "file": "sword_023.png",
+      "source_bbox": [
+        526,
+        980,
+        730,
+        1204
+      ],
+      "components_kept": 6,
+      "foreground_bbox": [
+        32,
+        23,
+        223,
+        233
+      ],
+      "margins": [
+        32,
+        23,
+        33,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 24,
+      "name": "고대 룬이 깨어나는 청휘의 검",
+      "file": "sword_024.png",
+      "source_bbox": [
+        767,
+        979,
+        968,
+        1205
+      ],
+      "components_kept": 3,
+      "foreground_bbox": [
+        35,
+        23,
+        221,
+        233
+      ],
+      "margins": [
+        35,
+        23,
+        35,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 25,
+      "name": "운명의 문턱에 선 푸른 용사의 검",
+      "file": "sword_025.png",
+      "source_bbox": [
+        1001,
+        983,
+        1212,
+        1221
+      ],
+      "components_kept": 1,
+      "foreground_bbox": [
+        35,
+        23,
+        221,
+        233
+      ],
+      "margins": [
+        35,
+        23,
+        35,
+        23
+      ],
+      "edge_touch": false
+    }
+  ],
+  "method": "global connected-component assignment to nearest 5x5 cell center, magenta chroma key, 256px centered icons",
+  "threshold": {
+    "rb_min": 220,
+    "g_max": 100
+  },
+  "component_count": 42,
+  "tiny_components_dropped": 0
+}

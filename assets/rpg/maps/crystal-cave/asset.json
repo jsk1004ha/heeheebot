@@ -1,0 +1,9 @@
+{
+  "id": "map_crystal_cave",
+  "category": "map",
+  "kind": "map",
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb3ece064881919c91645eab7dec98.png",
+  "raw": "assets/rpg/maps/crystal-cave/raw/background.png",
+  "prompt": "assets/rpg/maps/crystal-cave/prompt-used.txt",
+  "status": "raw-map-copied"
+}

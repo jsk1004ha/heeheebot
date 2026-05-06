@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_legendary_fish_7",
+  "fishId": "legendary_fish_7",
+  "fishLabel": "태초의실러캔스",
+  "rarity": "legendary",
+  "sourcePack": 6,
+  "sourceFrame": 7,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-06/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-06/processed/fish_icon_atlas-7.png",
+  "imagePath": "assets/fishing/fish/legendary/legendary_fish_7/icon.png",
+  "promptPath": "assets/fishing/fish/legendary/legendary_fish_7/prompt-used.txt"
+}

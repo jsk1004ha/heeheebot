@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_uncommon_fish_23",
+  "fishId": "uncommon_fish_23",
+  "fishLabel": "자리돔",
+  "rarity": "uncommon",
+  "sourcePack": 3,
+  "sourceFrame": 23,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-03/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-03/processed/fish_icon_atlas-23.png",
+  "imagePath": "assets/fishing/fish/uncommon/uncommon_fish_23/icon.png",
+  "promptPath": "assets/fishing/fish/uncommon/uncommon_fish_23/prompt-used.txt"
+}

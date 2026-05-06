@@ -1,0 +1,639 @@
+{
+  "source": "assets/sword/level-atlas/raw/batch-03/raw-sheet.png",
+  "rows": 5,
+  "cols": 5,
+  "levels": [
+    {
+      "level": 51,
+      "name": "망각의 강을 거슬러 오른 영혼의 검",
+      "file": "sword_051.png",
+      "source_bbox": [
+        15,
+        4,
+        245,
+        251
+      ],
+      "components_kept": 9,
+      "foreground_bbox": [
+        30,
+        23,
+        225,
+        233
+      ],
+      "margins": [
+        30,
+        23,
+        31,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 52,
+      "name": "죽은 별의 잔광을 삼킨 흑성검",
+      "file": "sword_052.png",
+      "source_bbox": [
+        265,
+        2,
+        489,
+        252
+      ],
+      "components_kept": 3,
+      "foreground_bbox": [
+        34,
+        23,
+        222,
+        233
+      ],
+      "margins": [
+        34,
+        23,
+        34,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 53,
+      "name": "천년 제국의 왕좌를 베어낸 황제검",
+      "file": "sword_053.png",
+      "source_bbox": [
+        504,
+        0,
+        737,
+        256
+      ],
+      "components_kept": 3,
+      "foreground_bbox": [
+        32,
+        23,
+        223,
+        233
+      ],
+      "margins": [
+        32,
+        23,
+        33,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 54,
+      "name": "심판의 종소리와 함께 깨어난 단죄검",
+      "file": "sword_054.png",
+      "source_bbox": [
+        750,
+        0,
+        993,
+        256
+      ],
+      "components_kept": 1,
+      "foreground_bbox": [
+        29,
+        23,
+        227,
+        233
+      ],
+      "margins": [
+        29,
+        23,
+        29,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 55,
+      "name": "시간의 모래시계를 가르는 사막왕검",
+      "file": "sword_055.png",
+      "source_bbox": [
+        1010,
+        1,
+        1241,
+        254
+      ],
+      "components_kept": 1,
+      "foreground_bbox": [
+        32,
+        23,
+        223,
+        233
+      ],
+      "margins": [
+        32,
+        23,
+        33,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 56,
+      "name": "차원의 틈새를 봉합하는 균열검",
+      "file": "sword_056.png",
+      "source_bbox": [
+        19,
+        253,
+        249,
+        499
+      ],
+      "components_kept": 9,
+      "foreground_bbox": [
+        30,
+        23,
+        226,
+        233
+      ],
+      "margins": [
+        30,
+        23,
+        30,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 57,
+      "name": "대천사의 깃털과 번개로 벼린 성뢰검",
+      "file": "sword_057.png",
+      "source_bbox": [
+        274,
+        253,
+        501,
+        504
+      ],
+      "components_kept": 9,
+      "foreground_bbox": [
+        33,
+        23,
+        223,
+        233
+      ],
+      "margins": [
+        33,
+        23,
+        33,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 58,
+      "name": "심연의 왕이 남긴 검은 계약검",
+      "file": "sword_058.png",
+      "source_bbox": [
+        512,
+        262,
+        734,
+        503
+      ],
+      "components_kept": 7,
+      "foreground_bbox": [
+        31,
+        23,
+        224,
+        233
+      ],
+      "margins": [
+        31,
+        23,
+        32,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 59,
+      "name": "운명의 실타래를 끊는 여신의 재단검",
+      "file": "sword_059.png",
+      "source_bbox": [
+        750,
+        253,
+        991,
+        503
+      ],
+      "components_kept": 10,
+      "foreground_bbox": [
+        27,
+        23,
+        229,
+        233
+      ],
+      "margins": [
+        27,
+        23,
+        27,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 60,
+      "name": "별을 먹는 용의 비늘로 만든 성룡검",
+      "file": "sword_060.png",
+      "source_bbox": [
+        1008,
+        253,
+        1240,
+        503
+      ],
+      "components_kept": 1,
+      "foreground_bbox": [
+        30,
+        23,
+        225,
+        233
+      ],
+      "margins": [
+        30,
+        23,
+        31,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 61,
+      "name": "일곱 바다의 권능을 품은 해왕검",
+      "file": "sword_061.png",
+      "source_bbox": [
+        15,
+        504,
+        246,
+        749
+      ],
+      "components_kept": 8,
+      "foreground_bbox": [
+        29,
+        23,
+        227,
+        233
+      ],
+      "margins": [
+        29,
+        23,
+        29,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 62,
+      "name": "태양의 관과 달의 눈물을 품은 쌍극검",
+      "file": "sword_062.png",
+      "source_bbox": [
+        274,
+        504,
+        476,
+        746
+      ],
+      "components_kept": 1,
+      "foreground_bbox": [
+        40,
+        23,
+        215,
+        233
+      ],
+      "margins": [
+        40,
+        23,
+        41,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 63,
+      "name": "무한한 밤하늘을 비추는 은하수검",
+      "file": "sword_063.png",
+      "source_bbox": [
+        509,
+        503,
+        740,
+        749
+      ],
+      "components_kept": 19,
+      "foreground_bbox": [
+        29,
+        23,
+        226,
+        233
+      ],
+      "margins": [
+        29,
+        23,
+        30,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 64,
+      "name": "천지의 숨결을 하나로 묶은 오행검",
+      "file": "sword_064.png",
+      "source_bbox": [
+        763,
+        507,
+        965,
+        748
+      ],
+      "components_kept": 2,
+      "foreground_bbox": [
+        40,
+        23,
+        215,
+        233
+      ],
+      "margins": [
+        40,
+        23,
+        41,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 65,
+      "name": "신들의 전쟁터에서 살아남은 불멸검",
+      "file": "sword_065.png",
+      "source_bbox": [
+        1012,
+        501,
+        1234,
+        749
+      ],
+      "components_kept": 2,
+      "foreground_bbox": [
+        34,
+        23,
+        222,
+        233
+      ],
+      "margins": [
+        34,
+        23,
+        34,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 66,
+      "name": "창세의 불꽃과 종말의 재를 품은 검",
+      "file": "sword_066.png",
+      "source_bbox": [
+        25,
+        750,
+        249,
+        992
+      ],
+      "components_kept": 15,
+      "foreground_bbox": [
+        31,
+        23,
+        225,
+        233
+      ],
+      "margins": [
+        31,
+        23,
+        31,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 67,
+      "name": "운명의 별자리를 다시 쓰는 점성검",
+      "file": "sword_067.png",
+      "source_bbox": [
+        280,
+        748,
+        492,
+        1005
+      ],
+      "components_kept": 5,
+      "foreground_bbox": [
+        41,
+        23,
+        214,
+        233
+      ],
+      "margins": [
+        41,
+        23,
+        42,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 68,
+      "name": "세계수의 뿌리와 하늘잎을 잇는 생명검",
+      "file": "sword_068.png",
+      "source_bbox": [
+        518,
+        746,
+        740,
+        992
+      ],
+      "components_kept": 10,
+      "foreground_bbox": [
+        33,
+        23,
+        222,
+        233
+      ],
+      "margins": [
+        33,
+        23,
+        34,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 69,
+      "name": "어둠의 심장을 꿰뚫은 새벽 심판검",
+      "file": "sword_069.png",
+      "source_bbox": [
+        761,
+        748,
+        990,
+        992
+      ],
+      "components_kept": 3,
+      "foreground_bbox": [
+        29,
+        23,
+        226,
+        233
+      ],
+      "margins": [
+        29,
+        23,
+        30,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 70,
+      "name": "시간왕의 시계를 멈추게 한 영겁검",
+      "file": "sword_070.png",
+      "source_bbox": [
+        1012,
+        746,
+        1233,
+        993
+      ],
+      "components_kept": 10,
+      "foreground_bbox": [
+        34,
+        23,
+        221,
+        233
+      ],
+      "margins": [
+        34,
+        23,
+        35,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 71,
+      "name": "무수한 차원의 문을 여닫는 만상검",
+      "file": "sword_071.png",
+      "source_bbox": [
+        15,
+        996,
+        245,
+        1233
+      ],
+      "components_kept": 4,
+      "foreground_bbox": [
+        26,
+        23,
+        230,
+        233
+      ],
+      "margins": [
+        26,
+        23,
+        26,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 72,
+      "name": "태초의 바다와 끝없는 하늘이 만난 창검",
+      "file": "sword_072.png",
+      "source_bbox": [
+        277,
+        996,
+        494,
+        1234
+      ],
+      "components_kept": 11,
+      "foreground_bbox": [
+        32,
+        23,
+        223,
+        233
+      ],
+      "margins": [
+        32,
+        23,
+        33,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 73,
+      "name": "별의 무덤에서 다시 태어난 윤회검",
+      "file": "sword_073.png",
+      "source_bbox": [
+        509,
+        991,
+        738,
+        1235
+      ],
+      "components_kept": 1,
+      "foreground_bbox": [
+        29,
+        23,
+        226,
+        233
+      ],
+      "margins": [
+        29,
+        23,
+        30,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 74,
+      "name": "하늘의 법과 땅의 분노를 함께 품은 천지검",
+      "file": "sword_074.png",
+      "source_bbox": [
+        762,
+        991,
+        987,
+        1235
+      ],
+      "components_kept": 32,
+      "foreground_bbox": [
+        31,
+        23,
+        224,
+        233
+      ],
+      "margins": [
+        31,
+        23,
+        32,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 75,
+      "name": "신화의 끝에서 이름을 얻은 절대검",
+      "file": "sword_075.png",
+      "source_bbox": [
+        1023,
+        991,
+        1238,
+        1234
+      ],
+      "components_kept": 17,
+      "foreground_bbox": [
+        35,
+        23,
+        220,
+        233
+      ],
+      "margins": [
+        35,
+        23,
+        36,
+        23
+      ],
+      "edge_touch": false
+    }
+  ],
+  "method": "global connected-component assignment to nearest 5x5 cell center, magenta chroma key, 256px centered icons",
+  "threshold": {
+    "rb_min": 220,
+    "g_max": 100
+  },
+  "component_count": 204,
+  "tiny_components_dropped": 11
+}

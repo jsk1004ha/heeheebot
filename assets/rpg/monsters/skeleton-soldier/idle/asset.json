@@ -1,0 +1,15 @@
+{
+  "id": "monster_skeleton_soldier_idle",
+  "category": "monster",
+  "kind": "sprite",
+  "sheet": "2x2",
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb3baef60c8191a482f7f5cb6107fa.png",
+  "raw": "assets/rpg/monsters/skeleton-soldier/idle/raw/raw-sheet.png",
+  "prompt": "assets/rpg/monsters/skeleton-soldier/idle/prompt-used.txt",
+  "processedDir": "assets/rpg/monsters/skeleton-soldier/idle/processed",
+  "status": "processed",
+  "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/monsters/skeleton-soldier/idle/processed",
+  "meta": "assets/rpg/monsters/skeleton-soldier/idle/processed/pipeline-meta.json",
+  "transparentSheet": "assets/rpg/monsters/skeleton-soldier/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/monsters/skeleton-soldier/idle/processed/animation.gif"
+}

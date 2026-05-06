@@ -1,0 +1,13 @@
+{
+  "id": "item_dragon_blade_icon",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb42dad5308191b1f28ef798087626.png",
+  "raw": "assets/rpg/items/dragon-blade/raw/raw-sheet.png",
+  "prompt": "assets/rpg/items/dragon-blade/prompt-used.txt",
+  "processedDir": "assets/rpg/items/dragon-blade/processed",
+  "status": "processed",
+  "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/dragon-blade/processed",
+  "meta": "assets/rpg/items/dragon-blade/processed/pipeline-meta.json"
+}

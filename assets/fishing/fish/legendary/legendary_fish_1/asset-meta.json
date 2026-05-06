@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_legendary_fish_1",
+  "fishId": "legendary_fish_1",
+  "fishLabel": "청룡잉어",
+  "rarity": "legendary",
+  "sourcePack": 6,
+  "sourceFrame": 1,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-06/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-06/processed/fish_icon_atlas-1.png",
+  "imagePath": "assets/fishing/fish/legendary/legendary_fish_1/icon.png",
+  "promptPath": "assets/fishing/fish/legendary/legendary_fish_1/prompt-used.txt"
+}

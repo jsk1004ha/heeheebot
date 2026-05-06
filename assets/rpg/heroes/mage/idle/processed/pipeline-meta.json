@@ -1,0 +1,155 @@
+{
+  "target": "asset",
+  "mode": "idle",
+  "prompt": "",
+  "role": "",
+  "input": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/mage/idle/raw/raw-sheet.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 160,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 128,
+  "fit_scale": 0.85,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "bottom",
+  "shared_scale": true,
+  "component_mode": "all",
+  "component_padding": 8,
+  "min_component_area": 1,
+  "edge_touch_margin": 0,
+  "frame_labels": [
+    "hero_mage_idle-1",
+    "hero_mage_idle-2",
+    "hero_mage_idle-3",
+    "hero_mage_idle-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "component_mode": "all",
+      "component_count": 6,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        101,
+        55,
+        499,
+        583
+      ],
+      "edge_touch": false,
+      "output_size": [
+        81,
+        108
+      ],
+      "paste_position": [
+        23,
+        11
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "component_mode": "all",
+      "component_count": 6,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        87,
+        55,
+        469,
+        585
+      ],
+      "edge_touch": false,
+      "output_size": [
+        78,
+        108
+      ],
+      "paste_position": [
+        25,
+        11
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 8,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        97,
+        48,
+        481,
+        574
+      ],
+      "edge_touch": false,
+      "output_size": [
+        78,
+        107
+      ],
+      "paste_position": [
+        25,
+        12
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 7,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        88,
+        50,
+        476,
+        576
+      ],
+      "edge_touch": false,
+      "output_size": [
+        79,
+        107
+      ],
+      "paste_position": [
+        24,
+        12
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

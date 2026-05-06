@@ -1,0 +1,1 @@
+Use $generate2dsprite to create a clean HD forest wolf idle animation, 2x2 grid, side-view full body centered, same scale, sharp readable silhouette, solid #FF00FF background, no text.

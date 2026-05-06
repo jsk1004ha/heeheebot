@@ -1,0 +1,13 @@
+{
+  "id": "item_leather_armor_icon",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb40d24e488191b6eaf971078cbc6c.png",
+  "raw": "assets/rpg/items/leather-armor/raw/raw-sheet.png",
+  "prompt": "assets/rpg/items/leather-armor/prompt-used.txt",
+  "processedDir": "assets/rpg/items/leather-armor/processed",
+  "status": "processed",
+  "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/leather-armor/processed",
+  "meta": "assets/rpg/items/leather-armor/processed/pipeline-meta.json"
+}

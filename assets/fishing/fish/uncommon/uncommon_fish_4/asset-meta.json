@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_uncommon_fish_4",
+  "fishId": "uncommon_fish_4",
+  "fishLabel": "광어",
+  "rarity": "uncommon",
+  "sourcePack": 3,
+  "sourceFrame": 4,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-03/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-03/processed/fish_icon_atlas-4.png",
+  "imagePath": "assets/fishing/fish/uncommon/uncommon_fish_4/icon.png",
+  "promptPath": "assets/fishing/fish/uncommon/uncommon_fish_4/prompt-used.txt"
+}

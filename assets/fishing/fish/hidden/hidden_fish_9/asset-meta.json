@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_hidden_fish_9",
+  "fishId": "hidden_fish_9",
+  "fishLabel": "404피쉬",
+  "rarity": "hidden",
+  "sourcePack": 6,
+  "sourceFrame": 19,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-06/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-06/processed/fish_icon_atlas-19.png",
+  "imagePath": "assets/fishing/fish/hidden/hidden_fish_9/icon.png",
+  "promptPath": "assets/fishing/fish/hidden/hidden_fish_9/prompt-used.txt"
+}

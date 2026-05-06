@@ -1,0 +1,15 @@
+{
+  "id": "monster_orc_warrior_idle",
+  "category": "monster",
+  "kind": "sprite",
+  "sheet": "2x2",
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb3b6aa4f481918e9b84fc541ce552.png",
+  "raw": "assets/rpg/monsters/orc-warrior/idle/raw/raw-sheet.png",
+  "prompt": "assets/rpg/monsters/orc-warrior/idle/prompt-used.txt",
+  "processedDir": "assets/rpg/monsters/orc-warrior/idle/processed",
+  "status": "processed",
+  "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/monsters/orc-warrior/idle/processed",
+  "meta": "assets/rpg/monsters/orc-warrior/idle/processed/pipeline-meta.json",
+  "transparentSheet": "assets/rpg/monsters/orc-warrior/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/monsters/orc-warrior/idle/processed/animation.gif"
+}

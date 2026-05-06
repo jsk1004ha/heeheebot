@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_common_fish_3",
+  "fishId": "common_fish_3",
+  "fishLabel": "미꾸라지",
+  "rarity": "common",
+  "sourcePack": 1,
+  "sourceFrame": 13,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-01/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-01/processed/fish_icon_atlas-13.png",
+  "imagePath": "assets/fishing/fish/common/common_fish_3/icon.png",
+  "promptPath": "assets/fishing/fish/common/common_fish_3/prompt-used.txt"
+}

@@ -1,0 +1,1 @@
+Use $generate2dsprite to create a clean HD cute blue slime idle bounce animation, 2x2 grid, centered blob body, same scale, readable fantasy RPG enemy, solid #FF00FF background, no text.

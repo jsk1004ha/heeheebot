@@ -1,0 +1,155 @@
+{
+  "target": "asset",
+  "mode": "idle",
+  "prompt": "",
+  "role": "",
+  "input": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/female/warrior/idle/raw/raw-sheet.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 160,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 128,
+  "fit_scale": 0.85,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "bottom",
+  "shared_scale": true,
+  "component_mode": "all",
+  "component_padding": 8,
+  "min_component_area": 1,
+  "edge_touch_margin": 0,
+  "frame_labels": [
+    "hero_female_warrior_idle-1",
+    "hero_female_warrior_idle-2",
+    "hero_female_warrior_idle-3",
+    "hero_female_warrior_idle-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "component_mode": "all",
+      "component_count": 2,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        123,
+        59,
+        481,
+        558
+      ],
+      "edge_touch": false,
+      "output_size": [
+        78,
+        108
+      ],
+      "paste_position": [
+        25,
+        11
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "component_mode": "all",
+      "component_count": 2,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        106,
+        66,
+        454,
+        558
+      ],
+      "edge_touch": false,
+      "output_size": [
+        75,
+        107
+      ],
+      "paste_position": [
+        26,
+        12
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        123,
+        59,
+        473,
+        558
+      ],
+      "edge_touch": false,
+      "output_size": [
+        76,
+        108
+      ],
+      "paste_position": [
+        26,
+        11
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 2,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        104,
+        65,
+        452,
+        558
+      ],
+      "edge_touch": false,
+      "output_size": [
+        75,
+        107
+      ],
+      "paste_position": [
+        26,
+        12
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

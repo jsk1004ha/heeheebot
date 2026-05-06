@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_mackerel",
+  "fishId": "mackerel",
+  "fishLabel": "고등어",
+  "rarity": "common",
+  "sourcePack": 1,
+  "sourceFrame": 3,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-01/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-01/processed/fish_icon_atlas-3.png",
+  "imagePath": "assets/fishing/fish/common/mackerel/icon.png",
+  "promptPath": "assets/fishing/fish/common/mackerel/prompt-used.txt"
+}

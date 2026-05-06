@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_tuna",
+  "fishId": "tuna",
+  "fishLabel": "참치",
+  "rarity": "uncommon",
+  "sourcePack": 1,
+  "sourceFrame": 5,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-01/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-01/processed/fish_icon_atlas-5.png",
+  "imagePath": "assets/fishing/fish/uncommon/tuna/icon.png",
+  "promptPath": "assets/fishing/fish/uncommon/tuna/prompt-used.txt"
+}

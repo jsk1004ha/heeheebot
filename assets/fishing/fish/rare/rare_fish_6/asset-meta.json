@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_rare_fish_6",
+  "fishId": "rare_fish_6",
+  "fishLabel": "돛새치",
+  "rarity": "rare",
+  "sourcePack": 4,
+  "sourceFrame": 11,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-04/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-04/processed/fish_icon_atlas-11.png",
+  "imagePath": "assets/fishing/fish/rare/rare_fish_6/icon.png",
+  "promptPath": "assets/fishing/fish/rare/rare_fish_6/prompt-used.txt"
+}

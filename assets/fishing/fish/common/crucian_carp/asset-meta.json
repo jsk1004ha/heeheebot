@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_crucian_carp",
+  "fishId": "crucian_carp",
+  "fishLabel": "붕어",
+  "rarity": "common",
+  "sourcePack": 1,
+  "sourceFrame": 1,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-01/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-01/processed/fish_icon_atlas-1.png",
+  "imagePath": "assets/fishing/fish/common/crucian_carp/icon.png",
+  "promptPath": "assets/fishing/fish/common/crucian_carp/prompt-used.txt"
+}

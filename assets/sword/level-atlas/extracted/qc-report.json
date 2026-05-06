@@ -1,0 +1,15 @@
+{
+  "assetPack": "sword-level-1-to-100",
+  "checkedFiles": 100,
+  "expectedFiles": 100,
+  "dimensions": {
+    "(256, 256)": 100
+  },
+  "emptyFiles": [],
+  "edgeTouchFiles": [],
+  "smallForegroundFiles": [],
+  "uniqueImageHashes": 100,
+  "minMargin": 23,
+  "maxForegroundDimension": 210,
+  "status": "pass"
+}

@@ -1,0 +1,602 @@
+[
+  {
+    "level": 1,
+    "name": "도훈검",
+    "image": "extracted/batch-01/sword_001.png",
+    "batch": 1
+  },
+  {
+    "level": 2,
+    "name": "새벽 안개를 가르는 낡은 철의 검",
+    "image": "extracted/batch-01/sword_002.png",
+    "batch": 1
+  },
+  {
+    "level": 3,
+    "name": "잊힌 대장장이의 불씨가 남은 단련검",
+    "image": "extracted/batch-01/sword_003.png",
+    "batch": 1
+  },
+  {
+    "level": 4,
+    "name": "작은 승리를 기억하는 초심자의 강철검",
+    "image": "extracted/batch-01/sword_004.png",
+    "batch": 1
+  },
+  {
+    "level": 5,
+    "name": "바람결에 첫 예기를 드러낸 청동 수호검",
+    "image": "extracted/batch-01/sword_005.png",
+    "batch": 1
+  },
+  {
+    "level": 6,
+    "name": "오래된 전장의 먼지를 머금은 철혈검",
+    "image": "extracted/batch-01/sword_006.png",
+    "batch": 1
+  },
+  {
+    "level": 7,
+    "name": "미완의 맹약이 새겨진 은빛 견습검",
+    "image": "extracted/batch-01/sword_007.png",
+    "batch": 1
+  },
+  {
+    "level": 8,
+    "name": "달빛 아래 처음 깨어난 푸른 칼날",
+    "image": "extracted/batch-01/sword_008.png",
+    "batch": 1
+  },
+  {
+    "level": 9,
+    "name": "전사의 숨결을 따라 울리는 초승달검",
+    "image": "extracted/batch-01/sword_009.png",
+    "batch": 1
+  },
+  {
+    "level": 10,
+    "name": "첫 번째 운명을 베어낸 서약의 검",
+    "image": "extracted/batch-01/sword_010.png",
+    "batch": 1
+  },
+  {
+    "level": 11,
+    "name": "잔불 속에서 다시 벼려진 붉은 철검",
+    "image": "extracted/batch-01/sword_011.png",
+    "batch": 1
+  },
+  {
+    "level": 12,
+    "name": "흐린 별빛을 머금은 방랑자의 검",
+    "image": "extracted/batch-01/sword_012.png",
+    "batch": 1
+  },
+  {
+    "level": 13,
+    "name": "그림자 숲의 늑대 문장이 새겨진 검",
+    "image": "extracted/batch-01/sword_013.png",
+    "batch": 1
+  },
+  {
+    "level": 14,
+    "name": "깨어나는 용기의 파편을 품은 기사검",
+    "image": "extracted/batch-01/sword_014.png",
+    "batch": 1
+  },
+  {
+    "level": 15,
+    "name": "황혼의 경계에서 빛나는 결의의 장검",
+    "image": "extracted/batch-01/sword_015.png",
+    "batch": 1
+  },
+  {
+    "level": 16,
+    "name": "무너진 성벽 위에 꽂힌 수호자의 검",
+    "image": "extracted/batch-01/sword_016.png",
+    "batch": 1
+  },
+  {
+    "level": 17,
+    "name": "비 내리는 전장에서 울부짖는 은린검",
+    "image": "extracted/batch-01/sword_017.png",
+    "batch": 1
+  },
+  {
+    "level": 18,
+    "name": "잊힌 왕국의 첫 번째 충성검",
+    "image": "extracted/batch-01/sword_018.png",
+    "batch": 1
+  },
+  {
+    "level": 19,
+    "name": "새벽의 균열을 가르는 푸른 서광검",
+    "image": "extracted/batch-01/sword_019.png",
+    "batch": 1
+  },
+  {
+    "level": 20,
+    "name": "별의 조각으로 날을 세운 천문검",
+    "image": "extracted/batch-01/sword_020.png",
+    "batch": 1
+  },
+  {
+    "level": 21,
+    "name": "검은 바람의 속삭임을 새긴 추격검",
+    "image": "extracted/batch-01/sword_021.png",
+    "batch": 1
+  },
+  {
+    "level": 22,
+    "name": "붉은 달의 맹세를 두른 사냥검",
+    "image": "extracted/batch-01/sword_022.png",
+    "batch": 1
+  },
+  {
+    "level": 23,
+    "name": "눈보라 속에서도 꺼지지 않는 백은검",
+    "image": "extracted/batch-01/sword_023.png",
+    "batch": 1
+  },
+  {
+    "level": 24,
+    "name": "고대 룬이 깨어나는 청휘의 검",
+    "image": "extracted/batch-01/sword_024.png",
+    "batch": 1
+  },
+  {
+    "level": 25,
+    "name": "운명의 문턱에 선 푸른 용사의 검",
+    "image": "extracted/batch-01/sword_025.png",
+    "batch": 1
+  },
+  {
+    "level": 26,
+    "name": "물병자리의 유수검",
+    "image": "extracted/batch-02/sword_026.png",
+    "batch": 2
+  },
+  {
+    "level": 27,
+    "name": "사자자리의 포효를 담은 황금 왕검",
+    "image": "extracted/batch-02/sword_027.png",
+    "batch": 2
+  },
+  {
+    "level": 28,
+    "name": "처녀자리의 순백 질서를 새긴 성휘검",
+    "image": "extracted/batch-02/sword_028.png",
+    "batch": 2
+  },
+  {
+    "level": 29,
+    "name": "쌍둥이별의 궤적을 베어내는 쌍월검",
+    "image": "extracted/batch-02/sword_029.png",
+    "batch": 2
+  },
+  {
+    "level": 30,
+    "name": "전갈자리의 독성과 밤을 품은 흑침검",
+    "image": "extracted/batch-02/sword_030.png",
+    "batch": 2
+  },
+  {
+    "level": 31,
+    "name": "별무리의 숨결로 벼려진 은하 기사검",
+    "image": "extracted/batch-02/sword_031.png",
+    "batch": 2
+  },
+  {
+    "level": 32,
+    "name": "무지개 결정의 심장을 지닌 수정 장검",
+    "image": "extracted/batch-02/sword_032.png",
+    "batch": 2
+  },
+  {
+    "level": 33,
+    "name": "폭풍의 중심에서 태어난 뇌명검",
+    "image": "extracted/batch-02/sword_033.png",
+    "batch": 2
+  },
+  {
+    "level": 34,
+    "name": "심해의 왕관을 품은 푸른 해룡검",
+    "image": "extracted/batch-02/sword_034.png",
+    "batch": 2
+  },
+  {
+    "level": 35,
+    "name": "사막 태양의 분노를 머금은 작열검",
+    "image": "extracted/batch-02/sword_035.png",
+    "batch": 2
+  },
+  {
+    "level": 36,
+    "name": "겨울 성좌의 침묵으로 벼려진 빙결검",
+    "image": "extracted/batch-02/sword_036.png",
+    "batch": 2
+  },
+  {
+    "level": 37,
+    "name": "낙뢰의 길을 따라 춤추는 천둥검",
+    "image": "extracted/batch-02/sword_037.png",
+    "batch": 2
+  },
+  {
+    "level": 38,
+    "name": "핏빛 장미와 왕가의 저주가 깃든 검",
+    "image": "extracted/batch-02/sword_038.png",
+    "batch": 2
+  },
+  {
+    "level": 39,
+    "name": "고대 신전의 문을 여는 황금 열쇠검",
+    "image": "extracted/batch-02/sword_039.png",
+    "batch": 2
+  },
+  {
+    "level": 40,
+    "name": "붉은 용의 심장 박동을 품은 화룡검",
+    "image": "extracted/batch-02/sword_040.png",
+    "batch": 2
+  },
+  {
+    "level": 41,
+    "name": "그림자 군주의 망토를 찢은 흑월검",
+    "image": "extracted/batch-02/sword_041.png",
+    "batch": 2
+  },
+  {
+    "level": 42,
+    "name": "영원의 숲이 선택한 녹옥 생명검",
+    "image": "extracted/batch-02/sword_042.png",
+    "batch": 2
+  },
+  {
+    "level": 43,
+    "name": "천공의 계단을 오르는 백익검",
+    "image": "extracted/batch-02/sword_043.png",
+    "batch": 2
+  },
+  {
+    "level": 44,
+    "name": "바다와 달의 조수를 부르는 창해검",
+    "image": "extracted/batch-02/sword_044.png",
+    "batch": 2
+  },
+  {
+    "level": 45,
+    "name": "무너진 별의 파편을 이어 붙인 성진검",
+    "image": "extracted/batch-02/sword_045.png",
+    "batch": 2
+  },
+  {
+    "level": 46,
+    "name": "왕국의 마지막 깃발을 지킨 맹세검",
+    "image": "extracted/batch-02/sword_046.png",
+    "batch": 2
+  },
+  {
+    "level": 47,
+    "name": "어둠 속 태양처럼 타오르는 흑염검",
+    "image": "extracted/batch-02/sword_047.png",
+    "batch": 2
+  },
+  {
+    "level": 48,
+    "name": "운석의 핵에서 뽑아낸 중력검",
+    "image": "extracted/batch-02/sword_048.png",
+    "batch": 2
+  },
+  {
+    "level": 49,
+    "name": "고대 용언으로 이름 새겨진 용문검",
+    "image": "extracted/batch-02/sword_049.png",
+    "batch": 2
+  },
+  {
+    "level": 50,
+    "name": "영웅의 피와 별빛으로 완성된 패왕검",
+    "image": "extracted/batch-02/sword_050.png",
+    "batch": 2
+  },
+  {
+    "level": 51,
+    "name": "망각의 강을 거슬러 오른 영혼의 검",
+    "image": "extracted/batch-03/sword_051.png",
+    "batch": 3
+  },
+  {
+    "level": 52,
+    "name": "죽은 별의 잔광을 삼킨 흑성검",
+    "image": "extracted/batch-03/sword_052.png",
+    "batch": 3
+  },
+  {
+    "level": 53,
+    "name": "천년 제국의 왕좌를 베어낸 황제검",
+    "image": "extracted/batch-03/sword_053.png",
+    "batch": 3
+  },
+  {
+    "level": 54,
+    "name": "심판의 종소리와 함께 깨어난 단죄검",
+    "image": "extracted/batch-03/sword_054.png",
+    "batch": 3
+  },
+  {
+    "level": 55,
+    "name": "시간의 모래시계를 가르는 사막왕검",
+    "image": "extracted/batch-03/sword_055.png",
+    "batch": 3
+  },
+  {
+    "level": 56,
+    "name": "차원의 틈새를 봉합하는 균열검",
+    "image": "extracted/batch-03/sword_056.png",
+    "batch": 3
+  },
+  {
+    "level": 57,
+    "name": "대천사의 깃털과 번개로 벼린 성뢰검",
+    "image": "extracted/batch-03/sword_057.png",
+    "batch": 3
+  },
+  {
+    "level": 58,
+    "name": "심연의 왕이 남긴 검은 계약검",
+    "image": "extracted/batch-03/sword_058.png",
+    "batch": 3
+  },
+  {
+    "level": 59,
+    "name": "운명의 실타래를 끊는 여신의 재단검",
+    "image": "extracted/batch-03/sword_059.png",
+    "batch": 3
+  },
+  {
+    "level": 60,
+    "name": "별을 먹는 용의 비늘로 만든 성룡검",
+    "image": "extracted/batch-03/sword_060.png",
+    "batch": 3
+  },
+  {
+    "level": 61,
+    "name": "일곱 바다의 권능을 품은 해왕검",
+    "image": "extracted/batch-03/sword_061.png",
+    "batch": 3
+  },
+  {
+    "level": 62,
+    "name": "태양의 관과 달의 눈물을 품은 쌍극검",
+    "image": "extracted/batch-03/sword_062.png",
+    "batch": 3
+  },
+  {
+    "level": 63,
+    "name": "무한한 밤하늘을 비추는 은하수검",
+    "image": "extracted/batch-03/sword_063.png",
+    "batch": 3
+  },
+  {
+    "level": 64,
+    "name": "천지의 숨결을 하나로 묶은 오행검",
+    "image": "extracted/batch-03/sword_064.png",
+    "batch": 3
+  },
+  {
+    "level": 65,
+    "name": "신들의 전쟁터에서 살아남은 불멸검",
+    "image": "extracted/batch-03/sword_065.png",
+    "batch": 3
+  },
+  {
+    "level": 66,
+    "name": "창세의 불꽃과 종말의 재를 품은 검",
+    "image": "extracted/batch-03/sword_066.png",
+    "batch": 3
+  },
+  {
+    "level": 67,
+    "name": "운명의 별자리를 다시 쓰는 점성검",
+    "image": "extracted/batch-03/sword_067.png",
+    "batch": 3
+  },
+  {
+    "level": 68,
+    "name": "세계수의 뿌리와 하늘잎을 잇는 생명검",
+    "image": "extracted/batch-03/sword_068.png",
+    "batch": 3
+  },
+  {
+    "level": 69,
+    "name": "어둠의 심장을 꿰뚫은 새벽 심판검",
+    "image": "extracted/batch-03/sword_069.png",
+    "batch": 3
+  },
+  {
+    "level": 70,
+    "name": "시간왕의 시계를 멈추게 한 영겁검",
+    "image": "extracted/batch-03/sword_070.png",
+    "batch": 3
+  },
+  {
+    "level": 71,
+    "name": "무수한 차원의 문을 여닫는 만상검",
+    "image": "extracted/batch-03/sword_071.png",
+    "batch": 3
+  },
+  {
+    "level": 72,
+    "name": "태초의 바다와 끝없는 하늘이 만난 창검",
+    "image": "extracted/batch-03/sword_072.png",
+    "batch": 3
+  },
+  {
+    "level": 73,
+    "name": "별의 무덤에서 다시 태어난 윤회검",
+    "image": "extracted/batch-03/sword_073.png",
+    "batch": 3
+  },
+  {
+    "level": 74,
+    "name": "하늘의 법과 땅의 분노를 함께 품은 천지검",
+    "image": "extracted/batch-03/sword_074.png",
+    "batch": 3
+  },
+  {
+    "level": 75,
+    "name": "신화의 끝에서 이름을 얻은 절대검",
+    "image": "extracted/batch-03/sword_075.png",
+    "batch": 3
+  },
+  {
+    "level": 76,
+    "name": "태양계의 궤도를 베어내는 황도검",
+    "image": "extracted/batch-04/sword_076.png",
+    "batch": 4
+  },
+  {
+    "level": 77,
+    "name": "은하의 중심핵에서 울리는 초중력검",
+    "image": "extracted/batch-04/sword_077.png",
+    "batch": 4
+  },
+  {
+    "level": 78,
+    "name": "별의 탄생과 죽음을 기록한 성서검",
+    "image": "extracted/batch-04/sword_078.png",
+    "batch": 4
+  },
+  {
+    "level": 79,
+    "name": "시간의 왕관과 공간의 날개를 지닌 차원검",
+    "image": "extracted/batch-04/sword_079.png",
+    "batch": 4
+  },
+  {
+    "level": 80,
+    "name": "모든 별자리의 축복을 받은 천궁검",
+    "image": "extracted/batch-04/sword_080.png",
+    "batch": 4
+  },
+  {
+    "level": 81,
+    "name": "우주 용맥을 따라 흐르는 창천용검",
+    "image": "extracted/batch-04/sword_081.png",
+    "batch": 4
+  },
+  {
+    "level": 82,
+    "name": "빛과 어둠의 균형을 심판하는 양극검",
+    "image": "extracted/batch-04/sword_082.png",
+    "batch": 4
+  },
+  {
+    "level": 83,
+    "name": "멸망한 신들의 이름을 새긴 금기검",
+    "image": "extracted/batch-04/sword_083.png",
+    "batch": 4
+  },
+  {
+    "level": 84,
+    "name": "무한한 평행세계의 운명을 묶은 인과검",
+    "image": "extracted/batch-04/sword_084.png",
+    "batch": 4
+  },
+  {
+    "level": 85,
+    "name": "태초의 불꽃과 최후의 서리를 품은 원초검",
+    "image": "extracted/batch-04/sword_085.png",
+    "batch": 4
+  },
+  {
+    "level": 86,
+    "name": "별의 왕좌 위에 꽂힌 절대 군림검",
+    "image": "extracted/batch-04/sword_086.png",
+    "batch": 4
+  },
+  {
+    "level": 87,
+    "name": "시간의 종말에서 피어난 영원의 검",
+    "image": "extracted/batch-04/sword_087.png",
+    "batch": 4
+  },
+  {
+    "level": 88,
+    "name": "생명과 죽음의 경계를 지우는 윤회섭리검",
+    "image": "extracted/batch-04/sword_088.png",
+    "batch": 4
+  },
+  {
+    "level": 89,
+    "name": "우주의 심장박동을 따라 진동하는 창성검",
+    "image": "extracted/batch-04/sword_089.png",
+    "batch": 4
+  },
+  {
+    "level": 90,
+    "name": "태초와 종언의 절대 섭리, 모든 시공간의 근원",
+    "image": "extracted/batch-04/sword_090.png",
+    "batch": 4
+  },
+  {
+    "level": 91,
+    "name": "만물의 기원과 종언을 품은 우주 생명의 절대 섭리",
+    "image": "extracted/batch-04/sword_091.png",
+    "batch": 4
+  },
+  {
+    "level": 92,
+    "name": "무한 차원과 모든 별의 이름을 삼킨 근원검",
+    "image": "extracted/batch-04/sword_092.png",
+    "batch": 4
+  },
+  {
+    "level": 93,
+    "name": "존재와 무존재의 법칙을 동시에 베어내는 공허검",
+    "image": "extracted/batch-04/sword_093.png",
+    "batch": 4
+  },
+  {
+    "level": 94,
+    "name": "시작 이전의 침묵과 끝 이후의 빛을 품은 검",
+    "image": "extracted/batch-04/sword_094.png",
+    "batch": 4
+  },
+  {
+    "level": 95,
+    "name": "모든 세계선의 왕좌 위에 군림하는 초월검",
+    "image": "extracted/batch-04/sword_095.png",
+    "batch": 4
+  },
+  {
+    "level": 96,
+    "name": "우주 탄생의 첫 숨결과 종말의 마지막 눈물",
+    "image": "extracted/batch-04/sword_096.png",
+    "batch": 4
+  },
+  {
+    "level": 97,
+    "name": "신조차 기억하지 못한 태초의 근원 섭리검",
+    "image": "extracted/batch-04/sword_097.png",
+    "batch": 4
+  },
+  {
+    "level": 98,
+    "name": "모든 시간축과 차원문을 관통하는 절대 인과율검",
+    "image": "extracted/batch-04/sword_098.png",
+    "batch": 4
+  },
+  {
+    "level": 99,
+    "name": "만상, 윤회, 창조, 소멸을 명령하는 최후의 검",
+    "image": "extracted/batch-04/sword_099.png",
+    "batch": 4
+  },
+  {
+    "level": 100,
+    "name": "희희검",
+    "image": "extracted/batch-04/sword_100.png",
+    "batch": 4
+  }
+]

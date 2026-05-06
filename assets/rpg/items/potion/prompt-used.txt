@@ -1,0 +1,1 @@
+Use $generate2dsprite to create a clean HD transparent RPG potion icon, single asset, red liquid glass bottle, centered, solid #FF00FF background, no text.

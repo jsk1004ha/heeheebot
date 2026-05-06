@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_salmon",
+  "fishId": "salmon",
+  "fishLabel": "연어",
+  "rarity": "uncommon",
+  "sourcePack": 1,
+  "sourceFrame": 4,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-01/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-01/processed/fish_icon_atlas-4.png",
+  "imagePath": "assets/fishing/fish/uncommon/salmon/icon.png",
+  "promptPath": "assets/fishing/fish/uncommon/salmon/prompt-used.txt"
+}

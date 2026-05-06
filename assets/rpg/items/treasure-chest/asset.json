@@ -1,0 +1,13 @@
+{
+  "id": "item_treasure_chest_icon",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb401b1f7c8191ab354f6e9356a60a.png",
+  "raw": "assets/rpg/items/treasure-chest/raw/raw-sheet.png",
+  "prompt": "assets/rpg/items/treasure-chest/prompt-used.txt",
+  "processedDir": "assets/rpg/items/treasure-chest/processed",
+  "status": "processed",
+  "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/treasure-chest/processed",
+  "meta": "assets/rpg/items/treasure-chest/processed/pipeline-meta.json"
+}

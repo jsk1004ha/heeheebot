@@ -1,0 +1,639 @@
+{
+  "source": "assets/sword/level-atlas/raw/batch-04/raw-sheet.png",
+  "rows": 5,
+  "cols": 5,
+  "levels": [
+    {
+      "level": 76,
+      "name": "태양계의 궤도를 베어내는 황도검",
+      "file": "sword_076.png",
+      "source_bbox": [
+        18,
+        8,
+        253,
+        245
+      ],
+      "components_kept": 24,
+      "foreground_bbox": [
+        24,
+        23,
+        232,
+        233
+      ],
+      "margins": [
+        24,
+        23,
+        24,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 77,
+      "name": "은하의 중심핵에서 울리는 초중력검",
+      "file": "sword_077.png",
+      "source_bbox": [
+        270,
+        6,
+        505,
+        246
+      ],
+      "components_kept": 35,
+      "foreground_bbox": [
+        25,
+        23,
+        230,
+        233
+      ],
+      "margins": [
+        25,
+        23,
+        26,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 78,
+      "name": "별의 탄생과 죽음을 기록한 성서검",
+      "file": "sword_078.png",
+      "source_bbox": [
+        522,
+        16,
+        744,
+        245
+      ],
+      "components_kept": 2,
+      "foreground_bbox": [
+        26,
+        23,
+        229,
+        233
+      ],
+      "margins": [
+        26,
+        23,
+        27,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 79,
+      "name": "시간의 왕관과 공간의 날개를 지닌 차원검",
+      "file": "sword_079.png",
+      "source_bbox": [
+        775,
+        4,
+        1002,
+        244
+      ],
+      "components_kept": 3,
+      "foreground_bbox": [
+        29,
+        23,
+        227,
+        233
+      ],
+      "margins": [
+        29,
+        23,
+        29,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 80,
+      "name": "모든 별자리의 축복을 받은 천궁검",
+      "file": "sword_080.png",
+      "source_bbox": [
+        1023,
+        11,
+        1245,
+        244
+      ],
+      "components_kept": 19,
+      "foreground_bbox": [
+        28,
+        23,
+        228,
+        233
+      ],
+      "margins": [
+        28,
+        23,
+        28,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 81,
+      "name": "우주 용맥을 따라 흐르는 창천용검",
+      "file": "sword_081.png",
+      "source_bbox": [
+        15,
+        262,
+        242,
+        488
+      ],
+      "components_kept": 3,
+      "foreground_bbox": [
+        23,
+        23,
+        233,
+        232
+      ],
+      "margins": [
+        23,
+        23,
+        23,
+        24
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 82,
+      "name": "빛과 어둠의 균형을 심판하는 양극검",
+      "file": "sword_082.png",
+      "source_bbox": [
+        277,
+        262,
+        491,
+        486
+      ],
+      "components_kept": 10,
+      "foreground_bbox": [
+        28,
+        23,
+        228,
+        233
+      ],
+      "margins": [
+        28,
+        23,
+        28,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 83,
+      "name": "멸망한 신들의 이름을 새긴 금기검",
+      "file": "sword_083.png",
+      "source_bbox": [
+        522,
+        262,
+        743,
+        488
+      ],
+      "components_kept": 13,
+      "foreground_bbox": [
+        25,
+        23,
+        230,
+        233
+      ],
+      "margins": [
+        25,
+        23,
+        26,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 84,
+      "name": "무한한 평행세계의 운명을 묶은 인과검",
+      "file": "sword_084.png",
+      "source_bbox": [
+        774,
+        267,
+        990,
+        484
+      ],
+      "components_kept": 17,
+      "foreground_bbox": [
+        23,
+        23,
+        232,
+        233
+      ],
+      "margins": [
+        23,
+        23,
+        24,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 85,
+      "name": "태초의 불꽃과 최후의 서리를 품은 원초검",
+      "file": "sword_085.png",
+      "source_bbox": [
+        1020,
+        259,
+        1244,
+        489
+      ],
+      "components_kept": 17,
+      "foreground_bbox": [
+        26,
+        23,
+        230,
+        233
+      ],
+      "margins": [
+        26,
+        23,
+        26,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 86,
+      "name": "별의 왕좌 위에 꽂힌 절대 군림검",
+      "file": "sword_086.png",
+      "source_bbox": [
+        12,
+        507,
+        247,
+        733
+      ],
+      "components_kept": 7,
+      "foreground_bbox": [
+        23,
+        27,
+        233,
+        229
+      ],
+      "margins": [
+        23,
+        27,
+        23,
+        27
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 87,
+      "name": "시간의 종말에서 피어난 영원의 검",
+      "file": "sword_087.png",
+      "source_bbox": [
+        265,
+        506,
+        490,
+        734
+      ],
+      "components_kept": 9,
+      "foreground_bbox": [
+        24,
+        23,
+        231,
+        233
+      ],
+      "margins": [
+        24,
+        23,
+        25,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 88,
+      "name": "생명과 죽음의 경계를 지우는 윤회섭리검",
+      "file": "sword_088.png",
+      "source_bbox": [
+        519,
+        509,
+        744,
+        732
+      ],
+      "components_kept": 4,
+      "foreground_bbox": [
+        23,
+        24,
+        233,
+        232
+      ],
+      "margins": [
+        23,
+        24,
+        23,
+        24
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 89,
+      "name": "우주의 심장박동을 따라 진동하는 창성검",
+      "file": "sword_089.png",
+      "source_bbox": [
+        771,
+        507,
+        994,
+        734
+      ],
+      "components_kept": 9,
+      "foreground_bbox": [
+        25,
+        23,
+        231,
+        233
+      ],
+      "margins": [
+        25,
+        23,
+        25,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 90,
+      "name": "태초와 종언의 절대 섭리, 모든 시공간의 근원",
+      "file": "sword_090.png",
+      "source_bbox": [
+        1019,
+        505,
+        1244,
+        734
+      ],
+      "components_kept": 17,
+      "foreground_bbox": [
+        25,
+        23,
+        231,
+        233
+      ],
+      "margins": [
+        25,
+        23,
+        25,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 91,
+      "name": "만물의 기원과 종언을 품은 우주 생명의 절대 섭리",
+      "file": "sword_091.png",
+      "source_bbox": [
+        8,
+        751,
+        241,
+        981
+      ],
+      "components_kept": 10,
+      "foreground_bbox": [
+        23,
+        24,
+        233,
+        231
+      ],
+      "margins": [
+        23,
+        24,
+        23,
+        25
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 92,
+      "name": "무한 차원과 모든 별의 이름을 삼킨 근원검",
+      "file": "sword_092.png",
+      "source_bbox": [
+        267,
+        750,
+        496,
+        979
+      ],
+      "components_kept": 17,
+      "foreground_bbox": [
+        23,
+        23,
+        233,
+        233
+      ],
+      "margins": [
+        23,
+        23,
+        23,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 93,
+      "name": "존재와 무존재의 법칙을 동시에 베어내는 공허검",
+      "file": "sword_093.png",
+      "source_bbox": [
+        520,
+        744,
+        747,
+        980
+      ],
+      "components_kept": 26,
+      "foreground_bbox": [
+        27,
+        23,
+        229,
+        233
+      ],
+      "margins": [
+        27,
+        23,
+        27,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 94,
+      "name": "시작 이전의 침묵과 끝 이후의 빛을 품은 검",
+      "file": "sword_094.png",
+      "source_bbox": [
+        772,
+        748,
+        994,
+        978
+      ],
+      "components_kept": 7,
+      "foreground_bbox": [
+        27,
+        23,
+        229,
+        233
+      ],
+      "margins": [
+        27,
+        23,
+        27,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 95,
+      "name": "모든 세계선의 왕좌 위에 군림하는 초월검",
+      "file": "sword_095.png",
+      "source_bbox": [
+        1021,
+        750,
+        1246,
+        978
+      ],
+      "components_kept": 12,
+      "foreground_bbox": [
+        24,
+        23,
+        231,
+        233
+      ],
+      "margins": [
+        24,
+        23,
+        25,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 96,
+      "name": "우주 탄생의 첫 숨결과 종말의 마지막 눈물",
+      "file": "sword_096.png",
+      "source_bbox": [
+        12,
+        996,
+        246,
+        1224
+      ],
+      "components_kept": 26,
+      "foreground_bbox": [
+        23,
+        26,
+        233,
+        230
+      ],
+      "margins": [
+        23,
+        26,
+        23,
+        26
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 97,
+      "name": "신조차 기억하지 못한 태초의 근원 섭리검",
+      "file": "sword_097.png",
+      "source_bbox": [
+        269,
+        995,
+        498,
+        1226
+      ],
+      "components_kept": 49,
+      "foreground_bbox": [
+        24,
+        23,
+        232,
+        233
+      ],
+      "margins": [
+        24,
+        23,
+        24,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 98,
+      "name": "모든 시간축과 차원문을 관통하는 절대 인과율검",
+      "file": "sword_098.png",
+      "source_bbox": [
+        523,
+        997,
+        739,
+        1226
+      ],
+      "components_kept": 17,
+      "foreground_bbox": [
+        29,
+        23,
+        227,
+        233
+      ],
+      "margins": [
+        29,
+        23,
+        29,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 99,
+      "name": "만상, 윤회, 창조, 소멸을 명령하는 최후의 검",
+      "file": "sword_099.png",
+      "source_bbox": [
+        769,
+        997,
+        997,
+        1226
+      ],
+      "components_kept": 38,
+      "foreground_bbox": [
+        23,
+        23,
+        232,
+        233
+      ],
+      "margins": [
+        23,
+        23,
+        24,
+        23
+      ],
+      "edge_touch": false
+    },
+    {
+      "level": 100,
+      "name": "희희검",
+      "file": "sword_100.png",
+      "source_bbox": [
+        1020,
+        996,
+        1238,
+        1223
+      ],
+      "components_kept": 2,
+      "foreground_bbox": [
+        27,
+        23,
+        228,
+        233
+      ],
+      "margins": [
+        27,
+        23,
+        28,
+        23
+      ],
+      "edge_touch": false
+    }
+  ],
+  "method": "global connected-component assignment to nearest 5x5 cell center, magenta chroma key, 256px centered icons",
+  "threshold": {
+    "rb_min": 220,
+    "g_max": 100
+  },
+  "component_count": 402,
+  "tiny_components_dropped": 9
+}

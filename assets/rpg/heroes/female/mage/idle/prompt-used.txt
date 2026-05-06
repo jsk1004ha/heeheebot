@@ -1,0 +1,1 @@
+Use $generate2dsprite to create a clean HD 2D RPG female mage idle animation, 2x2 grid, full body centered, same scale, stable feet anchor, blue robe, wooden staff kept inside the cell, subtle magical glow attached to hands only, solid #FF00FF background, no text.

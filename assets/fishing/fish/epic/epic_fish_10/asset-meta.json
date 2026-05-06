@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_epic_fish_10",
+  "fishId": "epic_fish_10",
+  "fishLabel": "백금도미",
+  "rarity": "epic",
+  "sourcePack": 5,
+  "sourceFrame": 15,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-05/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-05/processed/fish_icon_atlas-15.png",
+  "imagePath": "assets/fishing/fish/epic/epic_fish_10/icon.png",
+  "promptPath": "assets/fishing/fish/epic/epic_fish_10/prompt-used.txt"
+}

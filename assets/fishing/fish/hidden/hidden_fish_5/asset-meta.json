@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_hidden_fish_5",
+  "fishId": "hidden_fish_5",
+  "fishLabel": "개발자의붕어",
+  "rarity": "hidden",
+  "sourcePack": 6,
+  "sourceFrame": 15,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-06/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-06/processed/fish_icon_atlas-15.png",
+  "imagePath": "assets/fishing/fish/hidden/hidden_fish_5/icon.png",
+  "promptPath": "assets/fishing/fish/hidden/hidden_fish_5/prompt-used.txt"
+}

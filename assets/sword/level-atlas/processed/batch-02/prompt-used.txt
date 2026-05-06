@@ -1,0 +1,29 @@
+Use $generate2dsprite / agent-sprite-forge style to create a clean HD 2D fantasy RPG sword icon atlas: exact 5 rows by 5 columns, 25 separate sword icons for enhancement levels +26 through +50. Solid #FF00FF background only. No text, no numbers, no labels, no UI frames. Each cell contains exactly one centered sword, same diagonal display angle, consistent icon scale, generous padding, nothing crosses cell edges. Cell order left-to-right, top-to-bottom is +26, +27, +28 ... +50.
+CRITICAL VARIATION RULE: Every sword must have a unique silhouette, blade geometry, guard shape, grip, pommel, material language, and fantasy identity. Do not reuse the same sword with only stronger glow or color changes. Effects must be secondary; the physical sword form must change every level.
+Power curve: heroic mid-tier weapons with varied silhouettes. Use knight sword, water-flow blade, zodiac motifs, curved saber, piercing rapier-like fantasy sword, heavy cleaver sword, ice blade, thunder blade, dragon-language guard, meteor metal, ornate but contained elemental forms. Every cell should read as a different weapon type.
+Level concepts in exact cell order, use as visual inspiration only, do not draw the Korean text:
++26: 물병자리의 유수검
++27: 사자자리의 포효를 담은 황금 왕검
++28: 처녀자리의 순백 질서를 새긴 성휘검
++29: 쌍둥이별의 궤적을 베어내는 쌍월검
++30: 전갈자리의 독성과 밤을 품은 흑침검
++31: 별무리의 숨결로 벼려진 은하 기사검
++32: 무지개 결정의 심장을 지닌 수정 장검
++33: 폭풍의 중심에서 태어난 뇌명검
++34: 심해의 왕관을 품은 푸른 해룡검
++35: 사막 태양의 분노를 머금은 작열검
++36: 겨울 성좌의 침묵으로 벼려진 빙결검
++37: 낙뢰의 길을 따라 춤추는 천둥검
++38: 핏빛 장미와 왕가의 저주가 깃든 검
++39: 고대 신전의 문을 여는 황금 열쇠검
++40: 붉은 용의 심장 박동을 품은 화룡검
++41: 그림자 군주의 망토를 찢은 흑월검
++42: 영원의 숲이 선택한 녹옥 생명검
++43: 천공의 계단을 오르는 백익검
++44: 바다와 달의 조수를 부르는 창해검
++45: 무너진 별의 파편을 이어 붙인 성진검
++46: 왕국의 마지막 깃발을 지킨 맹세검
++47: 어둠 속 태양처럼 타오르는 흑염검
++48: 운석의 핵에서 뽑아낸 중력검
++49: 고대 용언으로 이름 새겨진 용문검
++50: 영웅의 피와 별빛으로 완성된 패왕검

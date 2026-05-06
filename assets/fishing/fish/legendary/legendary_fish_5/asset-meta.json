@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_legendary_fish_5",
+  "fishId": "legendary_fish_5",
+  "fishLabel": "별고래",
+  "rarity": "legendary",
+  "sourcePack": 6,
+  "sourceFrame": 5,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-06/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-06/processed/fish_icon_atlas-5.png",
+  "imagePath": "assets/fishing/fish/legendary/legendary_fish_5/icon.png",
+  "promptPath": "assets/fishing/fish/legendary/legendary_fish_5/prompt-used.txt"
+}

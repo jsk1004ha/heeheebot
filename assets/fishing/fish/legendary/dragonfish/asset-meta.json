@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_dragonfish",
+  "fishId": "dragonfish",
+  "fishLabel": "용왕의 물고기",
+  "rarity": "legendary",
+  "sourcePack": 1,
+  "sourceFrame": 10,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-01/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-01/processed/fish_icon_atlas-10.png",
+  "imagePath": "assets/fishing/fish/legendary/dragonfish/icon.png",
+  "promptPath": "assets/fishing/fish/legendary/dragonfish/prompt-used.txt"
+}

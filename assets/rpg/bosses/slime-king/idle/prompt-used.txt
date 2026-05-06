@@ -1,0 +1,1 @@
+Use $generate2dsprite to create a clean HD giant slime king boss idle animation, 3x3 grid, centered large blue slime wearing a small crown, same scale, readable RPG boss silhouette, solid #FF00FF background, no text.

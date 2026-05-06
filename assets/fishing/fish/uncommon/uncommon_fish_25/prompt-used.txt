@@ -1,0 +1,1 @@
+Use $generate2dsprite to create a clean HD transparent 2D game fish icon, single asset, 말쥐치, 고급 rarity, 고급 type, side-view readable silhouette, centered in canvas, full body inside safe area, slight premium mobile RPG item-icon polish, no UI frame, no text, no watermark, solid #FF00FF background for chroma key cleanup.

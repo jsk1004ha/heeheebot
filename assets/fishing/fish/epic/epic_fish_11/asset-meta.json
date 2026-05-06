@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fish_epic_fish_11",
+  "fishId": "epic_fish_11",
+  "fishLabel": "루비복어",
+  "rarity": "epic",
+  "sourcePack": 5,
+  "sourceFrame": 16,
+  "sourceRawSheet": "assets/fishing/_incoming/fish-pack-05/raw-sheet.png",
+  "sourceProcessedFrame": "assets/fishing/_incoming/fish-pack-05/processed/fish_icon_atlas-16.png",
+  "imagePath": "assets/fishing/fish/epic/epic_fish_11/icon.png",
+  "promptPath": "assets/fishing/fish/epic/epic_fish_11/prompt-used.txt"
+}

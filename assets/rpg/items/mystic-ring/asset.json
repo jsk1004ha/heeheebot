@@ -1,0 +1,13 @@
+{
+  "id": "item_mystic_ring_icon",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb412f5ce48191a532e70c63bfe4f0.png",
+  "raw": "assets/rpg/items/mystic-ring/raw/raw-sheet.png",
+  "prompt": "assets/rpg/items/mystic-ring/prompt-used.txt",
+  "processedDir": "assets/rpg/items/mystic-ring/processed",
+  "status": "processed",
+  "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/mystic-ring/processed",
+  "meta": "assets/rpg/items/mystic-ring/processed/pipeline-meta.json"
+}
