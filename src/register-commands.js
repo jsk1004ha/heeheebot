@@ -4,6 +4,7 @@ import { getCasinoCommandPayloads } from './commands/casino.js';
 import { getEconomyCommandPayloads } from './commands/economy.js';
 import { getFortuneCommandPayloads } from './commands/fortune.js';
 import { getModerationCommandPayloads } from './commands/moderation.js';
+import { getWordChainCommandPayloads } from './commands/wordchain.js';
 import { loadConfig, requireBotConfig } from './config.js';
 
 const config = loadConfig();
@@ -14,6 +15,7 @@ const commands = [
   ...getEconomyCommandPayloads(),
   ...getFortuneCommandPayloads(),
   ...getModerationCommandPayloads(),
+  ...getWordChainCommandPayloads(),
   ...getCasinoCommandPayloads()
 ];
 

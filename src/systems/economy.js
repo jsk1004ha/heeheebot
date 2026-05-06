@@ -13,7 +13,9 @@ const DEFAULT_OPTIONS = Object.freeze({
     14: 500,
     30: 1500
   }),
+  wordChainParticipationXpMin: 20,
   wordChainWinXp: 80,
+  wordChainWinnerMoney: 1000,
   rpgBattleWinXpMin: 50,
   rpgBattleWinXpMax: 200,
   fortuneXpReward: 10,
@@ -137,6 +139,50 @@ export class EconomyService {
       username,
       xp: this.options.wordChainWinXp,
       source: '끝말잇기 승리'
+    });
+  }
+
+  async awardWordChainResults({ guildId, participants, winnerUserId = null }) {
+    const normalizedParticipants = normalizeWordChainParticipants(participants);
+
+    return this.store.update((data) => {
+      const totalHumans = normalizedParticipants.length;
+      const lastHumanIndex = Math.max(0, totalHumans - 1);
+      const xpRange = this.options.wordChainWinXp - this.options.wordChainParticipationXpMin;
+      const results = normalizedParticipants.map((participant, index) => {
+        const xpGained = totalHumans <= 1
+          ? (participant.userId === winnerUserId
+              ? this.options.wordChainWinXp
+              : this.options.wordChainParticipationXpMin)
+          : Math.round(this.options.wordChainParticipationXpMin + (xpRange * index) / lastHumanIndex);
+        const profile = getOrCreateProfile(data, guildId, participant.userId, participant.username);
+        const levelResult = addXp(profile, xpGained, this);
+        const moneyGained = participant.userId === winnerUserId
+          ? this.options.wordChainWinnerMoney
+          : 0;
+
+        if (moneyGained > 0) {
+          profile.balance += moneyGained;
+        }
+
+        return {
+          userId: participant.userId,
+          username: participant.username,
+          xpGained,
+          moneyGained,
+          ...levelResult,
+          profile: cloneProfile(profile)
+        };
+      });
+      const winner = results.find((result) => result.userId === winnerUserId) ?? null;
+
+      return {
+        source: '끝말잇기 결과',
+        winner,
+        winnerUserId: winner?.userId ?? null,
+        winnerMoney: winner?.moneyGained ?? 0,
+        participants: results
+      };
     });
   }
 
@@ -330,6 +376,29 @@ function normalizeNonNegativeInteger(value, label) {
   }
 
   return normalized;
+}
+
+function normalizeWordChainParticipants(participants) {
+  if (!Array.isArray(participants)) {
+    throw new Error('끝말잇기 참가자 목록이 필요합니다.');
+  }
+
+  const uniqueParticipants = new Map();
+
+  for (const participant of participants) {
+    if (!participant?.userId) {
+      throw new Error('끝말잇기 참가자 userId가 필요합니다.');
+    }
+
+    if (!uniqueParticipants.has(participant.userId)) {
+      uniqueParticipants.set(participant.userId, {
+        userId: participant.userId,
+        username: participant.username || 'Unknown'
+      });
+    }
+  }
+
+  return [...uniqueParticipants.values()];
 }
 
 function getOrCreateProfile(data, guildId, userId, username) {

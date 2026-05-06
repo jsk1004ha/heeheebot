@@ -9,6 +9,8 @@ node_modules/
 # Runtime data
 data/*
 !data/.gitkeep
+!data/wordchain-ko.txt
+!data/wordchain-ko.SOURCE.md
 
 # SQLite sidecar files
 *.sqlite

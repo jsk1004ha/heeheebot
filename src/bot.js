@@ -6,6 +6,10 @@ import {
   handleModerationCommand,
   inspectMessageForModeration
 } from './commands/moderation.js';
+import {
+  handleWordChainCommand,
+  handleWordChainMessage
+} from './commands/wordchain.js';
 import { ModerationService } from './systems/moderation.js';
 import { createSqliteStore } from './storage/sqlite-store.js';
 import { EconomyService } from './systems/economy.js';
@@ -41,6 +45,7 @@ export function createBot({
     try {
       const handled = await handleCasinoCommand(interaction, economy, logger)
         || await handleModerationCommand(interaction, moderation, logger)
+        || await handleWordChainCommand(interaction, economy, logger)
         || await handleFortuneCommand(interaction, fortune, economy)
         || await handleEconomyCommand(interaction, economy);
 
@@ -72,6 +77,9 @@ export function createBot({
     try {
       const moderationResult = await inspectMessageForModeration(message, moderation, logger);
       if (moderationResult.blocked) return;
+
+      const handledWordChain = await handleWordChainMessage(message, economy, logger);
+      if (handledWordChain) return;
 
       const result = await economy.rewardMessage({
         guildId: message.guild.id,
