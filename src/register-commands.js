@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { REST, Routes } from 'discord.js';
 import { getCasinoCommandPayloads } from './commands/casino.js';
 import { getEconomyCommandPayloads } from './commands/economy.js';

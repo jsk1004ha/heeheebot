@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { createBot } from './bot.js';
 import { loadConfig, requireBotConfig } from './config.js';
 
