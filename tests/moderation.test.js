@@ -27,8 +27,63 @@ test('로그 채널과 금칙어 설정을 저장한다', async () => {
     const duplicated = await fixture.moderation.addBannedWord('guild-1', '나쁜말');
 
     assert.equal(settings.logChannelId, 'channel-1');
+    assert.equal(settings.autoSpamBan.enabled, true);
     assert.deepEqual(duplicated.bannedWords, ['나쁜말']);
     assert.equal(await fixture.moderation.findBannedWord('guild-1', '이건 나쁜말 입니다'), '나쁜말');
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('짧은 시간에 같은 메시지를 반복하면 먼저 슬로우모드를 반환하고 재적발 때 밴한다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    const first = await fixture.moderation.recordMessageAndDetectSpam(createSpamInput(1, '도배'));
+    const second = await fixture.moderation.recordMessageAndDetectSpam(createSpamInput(2, '도배'));
+    const third = await fixture.moderation.recordMessageAndDetectSpam(createSpamInput(3, '도배'));
+    await fixture.moderation.recordMessageAndDetectSpam(createSpamInput(4, '도배'));
+    await fixture.moderation.recordMessageAndDetectSpam(createSpamInput(5, '도배'));
+    const repeated = await fixture.moderation.recordMessageAndDetectSpam(createSpamInput(6, '도배'));
+
+    assert.equal(first.detected, false);
+    assert.equal(second.detected, false);
+    assert.equal(third.detected, true);
+    assert.deepEqual(third.punishment, {
+      action: 'slowmode',
+      durationMs: null,
+      slowmodeSeconds: 10
+    });
+    assert.equal(third.offenseCount, 1);
+    assert.deepEqual(repeated.punishment, {
+      action: 'ban',
+      durationMs: null,
+      slowmodeSeconds: null
+    });
+    assert.equal(repeated.offenseCount, 2);
+    assert.match(third.reason, /같은 메시지 3회 반복/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('짧은 시간에 메시지를 너무 많이 보내면 먼저 슬로우모드를 반환한다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    let result;
+    for (let sequence = 1; sequence <= 5; sequence += 1) {
+      result = await fixture.moderation.recordMessageAndDetectSpam(createSpamInput(sequence, `내용 ${sequence}`));
+    }
+
+    assert.equal(result.detected, true);
+    assert.deepEqual(result.punishment, {
+      action: 'slowmode',
+      durationMs: null,
+      slowmodeSeconds: 10
+    });
+    assert.equal(result.offenseCount, 1);
+    assert.match(result.reason, /5초 내 메시지 5개/);
   } finally {
     await fixture.cleanup();
   }
@@ -91,6 +146,16 @@ function createWarningInput(sequence) {
     moderatorId: 'mod-1',
     reason: `사유 ${sequence}`,
     now: 1000 + sequence
+  };
+}
+
+function createSpamInput(sequence, content) {
+  return {
+    guildId: 'guild-1',
+    userId: 'user-1',
+    username: '테스터',
+    content,
+    now: 1000 + sequence * 500
   };
 }
 

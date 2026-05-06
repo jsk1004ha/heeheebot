@@ -16,15 +16,28 @@ test('새 프로필은 레벨 1과 잔액 0으로 시작한다', async () => {
     assert.equal(profile.xp, 0);
     assert.equal(profile.totalXp, 0);
     assert.equal(profile.balance, 0);
+    assert.equal(profile.dailyStreak, 0);
     assert.equal(profile.username, '테스터');
   } finally {
     await fixture.cleanup();
   }
 });
 
-test('메시지 보상은 쿨다운을 지키고 경험치와 돈을 지급한다', async () => {
+test('레벨 필요 경험치는 100 × 레벨^1.5 공식을 따른다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    assert.equal(fixture.economy.xpForNextLevel(1), 100);
+    assert.equal(fixture.economy.xpForNextLevel(2), 282);
+    assert.equal(fixture.economy.xpForNextLevel(10), 3162);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('메시지 보상은 일반 채팅 XP와 하루 첫 채팅 보너스를 지급한다', async () => {
   const fixture = await createFixture({
-    randomInt: (min, max) => (max === 15 ? 10 : 3)
+    randomInt: () => 10
   });
 
   try {
@@ -43,13 +56,15 @@ test('메시지 보상은 쿨다운을 지키고 경험치와 돈을 지급한�
 
     assert.equal(first.awarded, true);
     assert.equal(first.xpGained, 10);
-    assert.equal(first.moneyGained, 3);
-    assert.equal(first.profile.xp, 10);
-    assert.equal(first.profile.balance, 3);
+    assert.equal(first.firstMessageBonusXp, 50);
+    assert.equal(first.totalXpGained, 60);
+    assert.equal(first.moneyGained, 0);
+    assert.equal(first.profile.xp, 60);
+    assert.equal(first.profile.balance, 0);
 
     assert.equal(second.awarded, false);
-    assert.equal(second.profile.xp, 10);
-    assert.equal(second.profile.balance, 3);
+    assert.equal(second.profile.xp, 60);
+    assert.equal(second.profile.balance, 0);
   } finally {
     await fixture.cleanup();
   }
@@ -60,8 +75,7 @@ test('충분한 경험치를 받으면 레벨업 보상을 지급한다', async 
     messageCooldownMs: 0,
     messageXpMin: 120,
     messageXpMax: 120,
-    messageMoneyMin: 5,
-    messageMoneyMax: 5,
+    firstMessageXpBonus: 0,
     randomInt: (min) => min
   });
 
@@ -78,13 +92,13 @@ test('충분한 경험치를 받으면 레벨업 보상을 지급한다', async 
     assert.equal(result.profile.level, 2);
     assert.equal(result.profile.xp, 20);
     assert.equal(result.levelReward, 200);
-    assert.equal(result.profile.balance, 205);
+    assert.equal(result.profile.balance, 200);
   } finally {
     await fixture.cleanup();
   }
 });
 
-test('출석 보상은 하루 한 번만 받을 수 있다', async () => {
+test('출석 보상은 100 XP와 500 코인을 하루 한 번만 지급한다', async () => {
   const fixture = await createFixture();
 
   try {
@@ -103,10 +117,94 @@ test('출석 보상은 하루 한 번만 받을 수 있다', async () => {
 
     assert.equal(first.claimed, true);
     assert.equal(first.reward, 500);
-    assert.equal(first.profile.balance, 500);
+    assert.equal(first.xpGained, 100);
+    assert.equal(first.streak, 1);
+    assert.equal(first.profile.level, 2);
+    assert.equal(first.profile.xp, 0);
+    assert.equal(first.profile.balance, 700);
 
     assert.equal(second.claimed, false);
-    assert.equal(second.profile.balance, 500);
+    assert.equal(second.profile.balance, 700);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('연속 출석 3일과 5일에는 추가 경험치를 지급한다', async () => {
+  const fixture = await createFixture({
+    dailyStreakXpBonuses: {
+      3: 50,
+      5: 100
+    }
+  });
+
+  try {
+    const day = 24 * 60 * 60 * 1000;
+    const first = await fixture.economy.claimDaily({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '테스터',
+      now: day
+    });
+    const second = await fixture.economy.claimDaily({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '테스터',
+      now: day * 2
+    });
+    const third = await fixture.economy.claimDaily({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '테스터',
+      now: day * 3
+    });
+    const fourth = await fixture.economy.claimDaily({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '테스터',
+      now: day * 4
+    });
+    const fifth = await fixture.economy.claimDaily({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '테스터',
+      now: day * 5
+    });
+
+    assert.equal(first.streak, 1);
+    assert.equal(second.streak, 2);
+    assert.equal(third.streak, 3);
+    assert.equal(third.streakBonusXp, 50);
+    assert.deepEqual(third.streakBonuses, [{ days: 3, xp: 50 }]);
+    assert.equal(fourth.streakBonusXp, 0);
+    assert.equal(fifth.streak, 5);
+    assert.equal(fifth.streakBonusXp, 100);
+    assert.deepEqual(fifth.streakBonuses, [{ days: 5, xp: 100 }]);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('끝말잇기와 RPG 승리 경험치를 지급한다', async () => {
+  const fixture = await createFixture({
+    randomInt: () => 150
+  });
+
+  try {
+    const wordChain = await fixture.economy.awardWordChainWin({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '테스터'
+    });
+    const rpg = await fixture.economy.awardRpgBattleWin({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '테스터'
+    });
+
+    assert.equal(wordChain.xpGained, 80);
+    assert.equal(rpg.xpGained, 150);
+    assert.equal(rpg.profile.totalXp, 230);
   } finally {
     await fixture.cleanup();
   }
@@ -114,7 +212,8 @@ test('출석 보상은 하루 한 번만 받을 수 있다', async () => {
 
 test('송금은 잔액을 이동하고 랭킹은 레벨/누적 경험치 순으로 정렬한다', async () => {
   const fixture = await createFixture({
-    dailyReward: 1_000
+    dailyCoinReward: 1_000,
+    dailyXpReward: 0
   });
 
   try {

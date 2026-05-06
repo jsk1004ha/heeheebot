@@ -1,7 +1,16 @@
 const DEFAULT_SETTINGS = Object.freeze({
   logChannelId: null,
   bannedWords: [],
-  warningPunishment: null
+  warningPunishment: null,
+  autoSpamBan: Object.freeze({
+    enabled: true,
+    windowMs: 5_000,
+    messageLimit: 5,
+    duplicateLimit: 3,
+    slowmodeSeconds: 10,
+    banAfterOffenses: 2,
+    offenseResetMs: 10 * 60 * 1000
+  })
 });
 
 const MAX_TIMEOUT_MS = 28 * 24 * 60 * 60 * 1000;
@@ -120,6 +129,75 @@ export class ModerationService {
     });
   }
 
+  async recordMessageAndDetectSpam({ guildId, userId, username, content = '', now = Date.now() }) {
+    return this.store.update((data) => {
+      const moderation = getOrCreateModeration(data, guildId);
+      const settings = moderation.settings.autoSpamBan;
+
+      if (!settings.enabled) {
+        return {
+          detected: false,
+          count: 0,
+          duplicateCount: 0
+        };
+      }
+
+      moderation.spam[userId] ??= {
+        userId,
+        username,
+        messages: [],
+        offenses: []
+      };
+
+      const spamState = moderation.spam[userId];
+      spamState.username = username || spamState.username;
+      spamState.offenses ??= [];
+      spamState.messages = spamState.messages
+        .filter((entry) => now - entry.createdAt <= settings.windowMs);
+      spamState.messages.push({
+        createdAt: now,
+        normalizedContent: normalizeMessageContent(content)
+      });
+
+      const normalizedContent = normalizeMessageContent(content);
+      const duplicateCount = normalizedContent
+        ? spamState.messages.filter((entry) => entry.normalizedContent === normalizedContent).length
+        : 0;
+      const count = spamState.messages.length;
+      const detected = count >= settings.messageLimit || duplicateCount >= settings.duplicateLimit;
+
+      if (!detected) {
+        return {
+          detected: false,
+          count,
+          duplicateCount
+        };
+      }
+
+      spamState.messages = [];
+      spamState.offenses = spamState.offenses
+        .filter((entry) => now - entry.createdAt <= settings.offenseResetMs);
+      spamState.offenses.push({ createdAt: now });
+
+      const offenseCount = spamState.offenses.length;
+      const shouldBan = offenseCount >= settings.banAfterOffenses;
+      return {
+        detected: true,
+        count,
+        duplicateCount,
+        offenseCount,
+        punishment: {
+          action: shouldBan ? 'ban' : 'slowmode',
+          durationMs: null,
+          slowmodeSeconds: shouldBan ? null : settings.slowmodeSeconds
+        },
+        reason: duplicateCount >= settings.duplicateLimit
+          ? `자동 도배 감지: 같은 메시지 ${duplicateCount}회 반복`
+          : `자동 도배 감지: ${Math.ceil(settings.windowMs / 1000)}초 내 메시지 ${count}개`
+      };
+    });
+  }
+
   async findBannedWord(guildId, content) {
     const data = await this.store.load();
     const moderation = getOrCreateModeration(data, guildId);
@@ -168,6 +246,7 @@ export function formatDurationMs(ms) {
 
 export function formatAction(action) {
   return {
+    slowmode: '슬로우모드',
     mute: '뮤트',
     kick: '킥',
     ban: '밴'
@@ -179,16 +258,22 @@ function getOrCreateModeration(data, guildId) {
   data.guilds[guildId] ??= {};
   data.guilds[guildId].moderation ??= {
     settings: structuredClone(DEFAULT_SETTINGS),
-    warnings: {}
+    warnings: {},
+    spam: {}
   };
 
   const moderation = data.guilds[guildId].moderation;
   moderation.settings = {
     ...structuredClone(DEFAULT_SETTINGS),
     ...moderation.settings,
-    bannedWords: moderation.settings?.bannedWords ?? []
+    bannedWords: moderation.settings?.bannedWords ?? [],
+    autoSpamBan: {
+      ...structuredClone(DEFAULT_SETTINGS.autoSpamBan),
+      ...moderation.settings?.autoSpamBan
+    }
   };
   moderation.warnings ??= {};
+  moderation.spam ??= {};
 
   return moderation;
 }
@@ -219,13 +304,18 @@ function normalizeWord(word) {
   return String(word ?? '').trim().toLocaleLowerCase('ko-KR');
 }
 
+function normalizeMessageContent(content) {
+  return String(content ?? '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('ko-KR');
+}
+
 function cloneSettings(settings) {
   return {
     logChannelId: settings.logChannelId,
     bannedWords: [...settings.bannedWords],
     warningPunishment: settings.warningPunishment
       ? { ...settings.warningPunishment }
-      : null
+      : null,
+    autoSpamBan: { ...settings.autoSpamBan }
   };
 }
 

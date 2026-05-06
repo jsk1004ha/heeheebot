@@ -74,8 +74,15 @@ export async function handleEconomyCommand(interaction, economy) {
       return true;
     }
 
+    const streakText = result.streak > 1
+      ? ` / 연속 ${result.streak}일`
+      : '';
+    const bonusText = result.streakBonusXp > 0
+      ? ` / 연속 보너스 +${result.streakBonusXp.toLocaleString()} XP`
+      : '';
+
     await interaction.reply(
-      `✅ 출석 완료! +${result.reward.toLocaleString()}원 지급. 현재 잔액: ${result.profile.balance.toLocaleString()}원`
+      `✅ 출석 완료! +${result.xpGained.toLocaleString()} XP${bonusText}, +${result.reward.toLocaleString()}원 지급${streakText}. 현재 잔액: ${result.profile.balance.toLocaleString()}원`
     );
     return true;
   }
@@ -139,6 +146,7 @@ function formatProfile(profile, economy) {
     `레벨: **${profile.level}**`,
     `경험치: **${profile.xp.toLocaleString()} / ${nextXp.toLocaleString()} XP**`,
     `누적 경험치: **${profile.totalXp.toLocaleString()} XP**`,
+    `연속 출석: **${profile.dailyStreak.toLocaleString()}일**`,
     `보유금: **${profile.balance.toLocaleString()}원**`
   ].join('\n');
 }

@@ -220,6 +220,39 @@ export async function handleModerationCommand(interaction, moderation, logger = 
 export async function inspectMessageForModeration(message, moderation, logger = console) {
   if (!message.inGuild() || message.author.bot) return { blocked: false };
 
+  const spamResult = await moderation.recordMessageAndDetectSpam({
+    guildId: message.guild.id,
+    userId: message.author.id,
+    username: message.author.username,
+    content: message.content
+  });
+
+  if (spamResult.detected) {
+    if (message.deletable) {
+      await message.delete().catch((error) => logger.error('Failed to delete spam message:', error));
+    }
+
+    const punishmentResult = await applyPunishment(
+      message.guild,
+      message.author.id,
+      spamResult.punishment,
+      spamResult.reason,
+      logger,
+      message.channel
+    );
+    await sendModerationLog(
+      message.guild,
+      moderation,
+      `🚨 자동 도배 대응: ${message.author} / 조치: ${punishmentResult} / 적발 ${spamResult.offenseCount}회 / 사유: ${spamResult.reason}`
+    );
+
+    return {
+      blocked: true,
+      spam: true,
+      reason: spamResult.reason
+    };
+  }
+
   const bannedWord = await moderation.findBannedWord(message.guild.id, message.content);
   if (!bannedWord) return { blocked: false };
 
@@ -405,8 +438,17 @@ async function handleModerationSettings(interaction, moderation) {
   }
 }
 
-async function applyPunishment(guild, userId, punishment, reason, logger) {
+async function applyPunishment(guild, userId, punishment, reason, logger, channel = null) {
   try {
+    if (punishment.action === 'slowmode') {
+      if (!channel?.setRateLimitPerUser) {
+        throw new Error('슬로우모드를 적용할 수 없는 채널입니다.');
+      }
+
+      await channel.setRateLimitPerUser(punishment.slowmodeSeconds, reason);
+      return `${punishment.slowmodeSeconds}초 슬로우모드`;
+    }
+
     if (punishment.action === 'mute') {
       await timeoutMember(guild, userId, punishment.durationMs, reason);
       return `${formatDurationMs(punishment.durationMs)} 뮤트`;
