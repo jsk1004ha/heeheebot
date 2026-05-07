@@ -17,8 +17,19 @@ const HELP_CATEGORIES = Object.freeze({
     ].join('\n'),
     fields: Object.freeze([
       { name: '성장/프로필', value: '`/프로필` `/출석` `/랭킹` `/재화정보`' },
-      { name: '전투 성장', value: '`/rpg 메뉴` `/rpg 전투` `/검강화` `/검배틀` `/검도감`' },
+      { name: '전투 성장', value: '`/rpg 메뉴` `/rpg 전투` `/검강화` `/검배틀` `/검도감` `/시즌 정보`' },
       { name: '경제/놀이', value: '`/주식 시세` `/주식 보유` `/낚시` `/카지노정보` `/희진다마고치`' }
+    ])
+  }),
+  season: Object.freeze({
+    label: '시즌',
+    emoji: '🏆',
+    title: '통합 시즌 도움말',
+    description: 'RPG, 검 강화, 검배틀 같은 여러 콘텐츠를 하나의 시즌 포인트와 보상으로 묶는 장기 이벤트입니다.',
+    fields: Object.freeze([
+      { name: '기본', value: '`/시즌 정보` — 내 점수, 오늘 획득량, 보상 현황 확인' },
+      { name: '경쟁', value: '`/시즌 랭킹` — 서버 시즌 포인트 순위 확인' },
+      { name: '보상', value: '`/시즌 보상` — 달성한 시즌 배지 보상 수령' }
     ])
   }),
   rpg: Object.freeze({
@@ -27,7 +38,7 @@ const HELP_CATEGORIES = Object.freeze({
     title: 'RPG 도움말',
     description: '캐릭터를 키우고 전직, 스킬트리, 장비, 레이드까지 이어가는 성장 루프입니다.',
     fields: Object.freeze([
-      { name: '시작/상태', value: '`/rpg 시작` `/rpg 메뉴` `/rpg 상태` `/rpg 지역`' },
+      { name: '시작/상태', value: '`/rpg 시작` `/rpg 튜토리얼` `/rpg 메뉴` `/rpg 상태` `/rpg 지역`' },
       { name: '성장 루프', value: '`/rpg 전투` `/rpg 탐험` `/rpg 던전` `/rpg 휴식` `/rpg 일일`' },
       { name: '심화', value: '`/rpg 스킬트리` `/rpg 전직` `/rpg 보스` `/rpg 레이드` `/rpg 길드레이드`' }
     ])
@@ -171,6 +182,7 @@ function createHelpRows(userId, activeCategoryId) {
 function getHelpCategoryColor(categoryId) {
   return {
     home: 0x38bdf8,
+    season: 0xfacc15,
     rpg: 0xa855f7,
     sword: 0xf59e0b,
     stock: 0x22c55e,

@@ -5,6 +5,7 @@ import {
   SlashCommandBuilder
 } from 'discord.js';
 import { getStockCatalog } from '../systems/stocks.js';
+import { createPagedButtonRow } from './ui.js';
 
 const STOCK_AUTOCOMPLETE_LIMIT = 25;
 const DISCORD_CONTENT_MAX_LENGTH = 2000;
@@ -733,18 +734,14 @@ function createFullMarketPageRows(userId, market, page = 0) {
   const currentPage = clampFullMarketPage(page, totalPages);
 
   return [
-    new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`stock_market_page:${Math.max(0, currentPage - 1)}:${userId}`)
-        .setLabel('이전 10개')
-        .setStyle(ButtonStyle.Secondary)
-        .setDisabled(currentPage <= 0),
-      new ButtonBuilder()
-        .setCustomId(`stock_market_page:${Math.min(totalPages - 1, currentPage + 1)}:${userId}`)
-        .setLabel('다음 10개')
-        .setStyle(ButtonStyle.Primary)
-        .setDisabled(currentPage >= totalPages - 1)
-    )
+    createPagedButtonRow({
+      previousCustomId: `stock_market_page:${Math.max(0, currentPage - 1)}:${userId}`,
+      nextCustomId: `stock_market_page:${Math.min(totalPages - 1, currentPage + 1)}:${userId}`,
+      previousLabel: '이전 10개',
+      nextLabel: '다음 10개',
+      pageIndex: currentPage,
+      pageCount: totalPages
+    })
   ];
 }
 

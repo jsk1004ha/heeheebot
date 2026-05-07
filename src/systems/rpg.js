@@ -1144,6 +1144,63 @@ const RPG_STORY_CHAPTERS = Object.freeze({
   })
 });
 
+const RPG_TUTORIAL_STEPS = Object.freeze({
+  create_character: Object.freeze({
+    label: '캐릭터 만들기',
+    description: '성별과 직업을 고르고 내 캐릭터 카드를 확인합니다.',
+    command: '/rpg 시작',
+    action: 'start',
+    actionLabel: '직업 선택',
+    requirement: Object.freeze({ type: 'started', count: 1 }),
+    rewards: Object.freeze({ xp: 30, coins: 50, items: Object.freeze({ potion: 1 }) })
+  }),
+  first_battle: Object.freeze({
+    label: '첫 전투',
+    description: '전투 메뉴에서 사냥을 한 번 진행해 전적과 보상 흐름을 익힙니다.',
+    command: '/rpg 전투',
+    action: 'battle',
+    actionLabel: '사냥하기',
+    requirement: Object.freeze({ type: 'battles', count: 1 }),
+    rewards: Object.freeze({ xp: 50, coins: 80, items: Object.freeze({ potion: 1 }) })
+  }),
+  first_recovery: Object.freeze({
+    label: '첫 정비',
+    description: '휴식이나 회복 아이템으로 HP/MP를 정비하는 방법을 익힙니다.',
+    command: '/rpg 휴식 또는 /rpg 인벤토리',
+    action: 'rest',
+    actionLabel: '휴식하기',
+    requirement: Object.freeze({ type: 'recoveryActions', count: 1 }),
+    rewards: Object.freeze({ xp: 40, coins: 40, items: Object.freeze({ mana_potion: 1 }) })
+  }),
+  first_shop: Object.freeze({
+    label: '첫 상점 정비',
+    description: '상점에서 포션이나 장비를 사서 성장 루프를 이해합니다.',
+    command: '/rpg 상점',
+    action: 'shop',
+    actionLabel: '상점 가기',
+    requirement: Object.freeze({ type: 'shopPurchases', count: 1 }),
+    rewards: Object.freeze({ xp: 60, coins: 120, items: Object.freeze({ enhancement_stone: 1 }) })
+  }),
+  first_quest: Object.freeze({
+    label: '첫 퀘스트 보상',
+    description: '완료한 퀘스트 보상을 직접 받아 목표 보드 사용법을 익힙니다.',
+    command: '/rpg 퀘스트',
+    action: 'quest',
+    actionLabel: '퀘스트 보기',
+    requirement: Object.freeze({ type: 'claimedQuests', count: 1 }),
+    rewards: Object.freeze({ xp: 80, coins: 160, items: Object.freeze({ potion: 1 }) })
+  }),
+  first_world_step: Object.freeze({
+    label: '월드맵 첫걸음',
+    description: '탐험, 지역 이동, 보스전 중 하나로 월드 진행도를 열어봅니다.',
+    command: '/rpg 지역 또는 /rpg 탐험',
+    action: 'area',
+    actionLabel: '월드맵 보기',
+    requirement: Object.freeze({ type: 'worldSteps', count: 1 }),
+    rewards: Object.freeze({ xp: 100, coins: 200, items: Object.freeze({ potion: 1 }) })
+  })
+});
+
 const RPG_RAIDS = Object.freeze({
   slime_horde: Object.freeze({
     label: '슬라임 군단',
@@ -1393,6 +1450,13 @@ export function getRpgQuestOptions() {
 export function getRpgDailyMissionOptions() {
   return Object.entries(RPG_DAILY_MISSIONS).map(([value, mission]) => ({
     name: mission.label,
+    value
+  }));
+}
+
+export function getRpgTutorialStepOptions() {
+  return Object.entries(RPG_TUTORIAL_STEPS).map(([value, step]) => ({
+    name: step.label,
     value
   }));
 }
@@ -1657,6 +1721,45 @@ export function getRpgDailyMissionStatuses(profile, now = Date.now()) {
       canClaim: current >= required && !claimed
     };
   });
+}
+
+export function getRpgTutorialStepConfig(stepId) {
+  return RPG_TUTORIAL_STEPS[normalizeRpgTutorialStepId(stepId)];
+}
+
+export function getRpgTutorialStatuses(profile) {
+  return Object.entries(RPG_TUTORIAL_STEPS).map(([id, step], index) => {
+    const current = getTutorialProgress(profile, step.requirement);
+    const required = step.requirement.count;
+    const claimed = Boolean(profile.rpg?.tutorial?.claimedSteps?.[id]);
+
+    return {
+      id,
+      order: index + 1,
+      ...step,
+      current,
+      required,
+      complete: current >= required,
+      claimed,
+      canClaim: current >= required && !claimed
+    };
+  });
+}
+
+export function getRpgTutorialSummary(profile) {
+  const steps = getRpgTutorialStatuses(profile);
+  const claimedCount = steps.filter((step) => step.claimed).length;
+  const claimableCount = steps.filter((step) => step.canClaim).length;
+  const nextStep = steps.find((step) => !step.claimed) ?? null;
+
+  return {
+    steps,
+    total: steps.length,
+    claimedCount,
+    claimableCount,
+    complete: claimedCount >= steps.length,
+    nextStep
+  };
 }
 
 export function getRpgAdventureGuide(profile, {
@@ -2012,6 +2115,19 @@ export function normalizeRpgDailyMissionId(missionId) {
   if (['승리 계약', '승리계약', 'victory_contract', 'victory contract', '승리'].includes(normalized)) return 'victory_contract';
 
   throw new Error('알 수 없는 일일 의뢰입니다.');
+}
+
+export function normalizeRpgTutorialStepId(stepId) {
+  const normalized = String(stepId || '').trim().toLocaleLowerCase('ko-KR');
+
+  if (['캐릭터 만들기', '캐릭터만들기', '캐릭터 생성', '캐릭터생성', 'create_character', 'create character', 'start'].includes(normalized)) return 'create_character';
+  if (['첫 전투', '첫전투', 'first_battle', 'first battle', 'battle'].includes(normalized)) return 'first_battle';
+  if (['첫 정비', '첫정비', '첫 회복', '첫회복', 'first_recovery', 'first recovery', 'recovery', 'rest'].includes(normalized)) return 'first_recovery';
+  if (['첫 상점 정비', '첫상점정비', '첫 상점', '첫상점', 'first_shop', 'first shop', 'shop'].includes(normalized)) return 'first_shop';
+  if (['첫 퀘스트 보상', '첫퀘스트보상', '첫 퀘스트', '첫퀘스트', 'first_quest', 'first quest', 'quest'].includes(normalized)) return 'first_quest';
+  if (['월드맵 첫걸음', '월드맵첫걸음', '월드 첫걸음', '월드첫걸음', 'first_world_step', 'first world step', 'world', 'area'].includes(normalized)) return 'first_world_step';
+
+  throw new Error('알 수 없는 RPG 튜토리얼 단계입니다.');
 }
 
 export function normalizeRpgBossId(bossId) {
@@ -3006,6 +3122,41 @@ function getRpgDailyStatsForDay(daily = {}, now = Date.now()) {
 
 function getDailyMissionProgress(daily, mission) {
   return Math.max(0, Number(daily[mission.requirement.type]) || 0);
+}
+
+function getTutorialProgress(profile, requirement) {
+  const rpg = profile.rpg ?? {};
+
+  if (requirement.type === 'started') {
+    return rpg.startedAt > 0 ? 1 : 0;
+  }
+
+  if (requirement.type === 'battles') {
+    return Math.max(0, Number(rpg.battles) || 0);
+  }
+
+  if (requirement.type === 'recoveryActions') {
+    const restCount = rpg.lastRestAt > 0 ? 1 : 0;
+    const usedItems = Math.max(0, Number(rpg.usedItems) || 0);
+    return restCount + usedItems;
+  }
+
+  if (requirement.type === 'shopPurchases') {
+    return Math.max(0, Number(rpg.shopPurchases) || 0);
+  }
+
+  if (requirement.type === 'claimedQuests') {
+    return Object.keys(rpg.claimedQuests ?? {}).length;
+  }
+
+  if (requirement.type === 'worldSteps') {
+    const movedArea = rpg.currentArea && rpg.currentArea !== 'forest' ? 1 : 0;
+    const explores = Math.max(0, Number(rpg.explores) || 0);
+    const bosses = Object.values(rpg.bossKills ?? {}).reduce((sum, count) => sum + Math.max(0, Number(count) || 0), 0);
+    return movedArea + explores + bosses;
+  }
+
+  return 0;
 }
 
 function createObjective(type, entry) {

@@ -9,6 +9,7 @@ import { getHelpCommandPayloads } from './commands/help.js';
 import { getMealCommandPayloads } from './commands/meals.js';
 import { getModerationCommandPayloads } from './commands/moderation.js';
 import { getRpgCommandPayloads } from './commands/rpg.js';
+import { getSeasonCommandPayloads } from './commands/seasons.js';
 import { getStockCommandPayloads } from './commands/stocks.js';
 import { getSwordCommandPayloads } from './commands/sword.js';
 import { getTamagotchiCommandPayloads } from './commands/tamagotchi.js';
@@ -31,6 +32,7 @@ const commands = [
   ...getWordChainCommandPayloads(),
   ...getMealCommandPayloads(),
   ...getTimetableCommandPayloads(),
+  ...getSeasonCommandPayloads(),
   ...getStockCommandPayloads(),
   ...getTamagotchiCommandPayloads(),
   ...getFishingCommandPayloads(),

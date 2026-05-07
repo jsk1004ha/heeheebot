@@ -13,6 +13,7 @@ test('도움말 명령 payload는 분류 선택과 통합 도움말 이름을 �
   assert.equal(payload.options[0].name, '분류');
   assert.ok(payload.options[0].choices.some((choice) => choice.value === 'rpg'));
   assert.ok(payload.options[0].choices.some((choice) => choice.value === 'sword'));
+  assert.ok(payload.options[0].choices.some((choice) => choice.value === 'season'));
 });
 
 test('도움말 명령은 카테고리 버튼과 선택 분류 embed를 보여준다', async () => {
@@ -38,6 +39,7 @@ test('도움말 명령은 카테고리 버튼과 선택 분류 embed를 보여�
   assert.ok(buttonLabels.includes('RPG'));
   assert.ok(buttonLabels.includes('검'));
   assert.ok(buttonLabels.includes('주식'));
+  assert.ok(buttonLabels.includes('시즌'));
 });
 
 test('도움말 버튼은 실행한 유저만 분류를 바꿀 수 있다', async () => {

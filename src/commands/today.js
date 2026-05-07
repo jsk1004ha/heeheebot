@@ -120,6 +120,12 @@ async function buildTodayContext(interaction, services, { notice = null } = {}) 
         now
       })
     : null;
+  const seasonOverview = services.seasons?.getOverview
+    ? await services.seasons.getOverview({
+        ...base,
+        now
+      })
+    : null;
 
   return {
     now,
@@ -128,7 +134,8 @@ async function buildTodayContext(interaction, services, { notice = null } = {}) 
     profile: rpgStatus.profile,
     communityOverview,
     rpgStatus,
-    swordStatus
+    swordStatus,
+    seasonOverview
   };
 }
 
@@ -147,6 +154,7 @@ export function formatTodayChecklist(context) {
     communityOverview,
     rpgStatus,
     swordStatus,
+    seasonOverview,
     notice,
     now
   } = context;
@@ -166,6 +174,7 @@ export function formatTodayChecklist(context) {
     rpgStatus,
     swordStatus
   });
+  const seasonClaimableRewards = seasonOverview?.rewards?.filter((reward) => reward.claimable) ?? [];
 
   return [
     `🗓️ **오늘 할 일** — ${user.username}`,
@@ -189,6 +198,14 @@ export function formatTodayChecklist(context) {
       : '- 검 정보를 불러오지 못했습니다.',
     swordStatus
       ? `⚔️ **검배틀** — 오늘 남은 횟수 **${swordStatus.battleRemaining.toLocaleString()}회** / 제련석 보상 한도 **${swordStatus.battleStoneRemaining.toLocaleString()}개** (\`/검배틀\`)`
+      : null,
+    '',
+    '🏆 **시즌 이벤트**',
+    seasonOverview
+      ? `🏆 **시즌 포인트** — 누적 **${seasonOverview.profile.totalPoints.toLocaleString()}점** / 오늘 **${seasonOverview.daily.earned.toLocaleString()}점** 획득 (\`/시즌 정보\`)`
+      : '- 시즌 정보를 불러오지 못했습니다.',
+    seasonOverview
+      ? `${seasonClaimableRewards.length > 0 ? '🎁' : '⬜'} **시즌 보상** — ${formatSeasonRewardSummary(seasonOverview.rewards)} (\`/시즌 보상\`)`
       : null,
     '',
     '🏫 **학교/생활**',
@@ -313,6 +330,16 @@ function getRecommendedActions({
   if (rpgStatus.cooldownRemainingMs <= 0) actions.push('`/rpg 전투`');
 
   return actions.length > 0 ? actions.slice(0, 4) : ['할 일 거의 끝남', '`/급식`', '`/시간표`'];
+}
+
+function formatSeasonRewardSummary(rewards = []) {
+  const claimable = rewards.filter((reward) => reward.claimable);
+  if (claimable.length > 0) {
+    return `수령 가능 **${claimable.length.toLocaleString()}개** (${claimable.map((reward) => reward.label).join(', ')})`;
+  }
+
+  const claimed = rewards.filter((reward) => reward.claimed).length;
+  return `수령 **${claimed}/${rewards.length}개**`;
 }
 
 function getClaimableCommunityMissions(missions = []) {

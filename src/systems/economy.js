@@ -27,6 +27,9 @@ import {
   getRpgSkillTreeStatuses,
   getRpgStoryChapterConfig,
   getRpgStoryChapterStatuses,
+  getRpgTutorialStepConfig,
+  getRpgTutorialStatuses,
+  getRpgTutorialSummary,
   getStarterRpgClassIds,
   getUnlockedRpgAreaIds,
   normalizeNullableRpgAdvancedClass,
@@ -46,6 +49,7 @@ import {
   normalizeRpgSkillId,
   normalizeRpgSkillTreeNodeId,
   normalizeRpgStoryChapterId,
+  normalizeRpgTutorialStepId,
   resolveRpgExploration,
   resolveRpgBattle,
   resolveRpgBossBattle,
@@ -463,6 +467,7 @@ export class EconomyService {
 
       debitCurrency(profile, CURRENCY_RPG, totalPrice, '골드가 부족합니다.');
       addInventoryItem(profile.rpg.inventory, normalizedItemId, normalizedQuantity);
+      profile.rpg.shopPurchases += normalizedQuantity;
 
       return {
         itemId: normalizedItemId,
@@ -502,6 +507,7 @@ export class EconomyService {
       const beforeMp = profile.rpg.mp;
       profile.rpg.hp = Math.min(derivedStats.maxHp, profile.rpg.hp + item.heal);
       profile.rpg.mp = Math.min(derivedStats.maxMp, profile.rpg.mp + (item.mpHeal ?? 0));
+      profile.rpg.usedItems += 1;
 
       return {
         itemId: normalizedItemId,
@@ -659,6 +665,42 @@ export class EconomyService {
     });
   }
 
+  async claimRpgTutorialStep({ guildId, userId, username, stepId, now = Date.now() }) {
+    const normalizedStepId = normalizeRpgTutorialStepId(stepId);
+    const step = getRpgTutorialStepConfig(normalizedStepId);
+
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, this);
+      const stepStatus = getRpgTutorialStatuses(profile)
+        .find((status) => status.id === normalizedStepId);
+
+      if (!stepStatus.complete) {
+        throw new Error(`${step.label} 튜토리얼 조건을 아직 달성하지 못했습니다.`);
+      }
+
+      if (stepStatus.claimed) {
+        throw new Error('이미 받은 튜토리얼 보상입니다.');
+      }
+
+      creditCurrency(profile, CURRENCY_RPG, step.rewards.coins);
+      for (const [rewardItemId, count] of Object.entries(step.rewards.items)) {
+        addInventoryItem(profile.rpg.inventory, rewardItemId, count);
+      }
+      profile.rpg.tutorial.claimedSteps[normalizedStepId] = now;
+      const levelResult = addXp(profile, step.rewards.xp, this);
+
+      return {
+        stepId: normalizedStepId,
+        step,
+        status: stepStatus,
+        rewards: step.rewards,
+        tutorial: getRpgTutorialSummary(profile),
+        ...levelResult,
+        profile: cloneProfile(profile)
+      };
+    });
+  }
+
   async getRpgStatus({ guildId, userId, username, now = Date.now() }) {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
@@ -685,6 +727,7 @@ export class EconomyService {
         skillPoints: getRpgSkillPointSummary(profile),
         storyChapters: getRpgStoryChapterStatuses(profile),
         codex: getRpgMonsterCodexStatuses(profile),
+        tutorial: getRpgTutorialSummary(profile),
         areaProgress: getRpgAreaProgressStatuses(profile),
         classMastery: getRpgClassMasteryStatus(profile),
         classPaths: getRpgAdvancedClassStatuses(profile),
@@ -2844,6 +2887,10 @@ function cloneRpgStats(rpg) {
     claimedQuests: { ...rpg.claimedQuests },
     storyChapters: { ...rpg.storyChapters },
     codexClaims: { ...rpg.codexClaims },
+    tutorial: {
+      ...rpg.tutorial,
+      claimedSteps: { ...(rpg.tutorial?.claimedSteps ?? {}) }
+    },
     dungeonClears: { ...rpg.dungeonClears },
     raidClears: { ...rpg.raidClears },
     areaProgress: { ...rpg.areaProgress },
@@ -3160,6 +3207,7 @@ function createDefaultRpgStats() {
     claimedQuests: {},
     storyChapters: {},
     codexClaims: {},
+    tutorial: createDefaultRpgTutorialStats(),
     dungeonClears: {},
     raidClears: {},
     areaProgress: {},
@@ -3170,6 +3218,8 @@ function createDefaultRpgStats() {
     },
     daily: createDefaultRpgDailyStats(),
     explores: 0,
+    usedItems: 0,
+    shopPurchases: 0,
     dungeonRuns: 0,
     battles: 0,
     wins: 0,
@@ -3204,6 +3254,12 @@ function createDefaultRpgDailyStats(day = null) {
   };
 }
 
+function createDefaultRpgTutorialStats() {
+  return {
+    claimedSteps: {}
+  };
+}
+
 function normalizeRpgStats(stats = {}, level = 1) {
   const safeStats = stats && typeof stats === 'object' ? stats : {};
   const unlockedAreas = getUnlockedRpgAreaIds(level);
@@ -3216,6 +3272,7 @@ function normalizeRpgStats(stats = {}, level = 1) {
   const equippedGear = normalizeEquippedGear(safeStats.equippedGear, gearInventory);
   const learnedSkills = normalizeLearnedRpgSkills(safeStats.learnedSkills);
   const daily = normalizeRpgDailyStats(safeStats.daily);
+  const tutorial = normalizeRpgTutorialStats(safeStats.tutorial);
   const areaProgress = normalizeAreaProgress(safeStats.areaProgress);
   const classMastery = normalizeClassMastery(safeStats.classMastery, characterClass);
   const derivedStats = getRpgDerivedStats({
@@ -3263,6 +3320,7 @@ function normalizeRpgStats(stats = {}, level = 1) {
     claimedQuests: normalizeClaimedQuests(safeStats.claimedQuests),
     storyChapters: normalizeTimestampMap(safeStats.storyChapters),
     codexClaims: normalizeTimestampMap(safeStats.codexClaims),
+    tutorial,
     dungeonClears: normalizeCounterMap(safeStats.dungeonClears),
     raidClears: normalizeCounterMap(safeStats.raidClears),
     areaProgress,
@@ -3270,6 +3328,8 @@ function normalizeRpgStats(stats = {}, level = 1) {
     gacha: normalizeGachaStats(safeStats.gacha),
     daily,
     explores: normalizeStoredNonNegativeInteger(safeStats.explores),
+    usedItems: normalizeStoredNonNegativeInteger(safeStats.usedItems),
+    shopPurchases: normalizeStoredNonNegativeInteger(safeStats.shopPurchases),
     dungeonRuns: normalizeStoredNonNegativeInteger(safeStats.dungeonRuns),
     battles: normalizeStoredNonNegativeInteger(safeStats.battles),
     wins: normalizeStoredNonNegativeInteger(safeStats.wins),
@@ -3544,6 +3604,35 @@ function normalizeRpgDailyStats(daily = {}) {
     goldEarned: normalizeStoredNonNegativeInteger(safeDaily.goldEarned),
     claimedMissions: normalizeDailyMissionClaims(safeDaily.claimedMissions)
   };
+}
+
+function normalizeRpgTutorialStats(tutorial = {}) {
+  const safeTutorial = tutorial && typeof tutorial === 'object' ? tutorial : {};
+
+  return {
+    ...createDefaultRpgTutorialStats(),
+    claimedSteps: normalizeRpgTutorialClaims(safeTutorial.claimedSteps)
+  };
+}
+
+function normalizeRpgTutorialClaims(claimedSteps = {}) {
+  const safeClaims = claimedSteps && typeof claimedSteps === 'object'
+    ? claimedSteps
+    : {};
+  const normalizedEntries = [];
+
+  for (const [stepId, claimedAt] of Object.entries(safeClaims)) {
+    try {
+      normalizedEntries.push([
+        normalizeRpgTutorialStepId(stepId),
+        normalizeStoredNonNegativeInteger(claimedAt) || Date.now()
+      ]);
+    } catch {
+      // Invalid legacy tutorial claims are ignored.
+    }
+  }
+
+  return Object.fromEntries(normalizedEntries);
 }
 
 function normalizeDailyMissionClaims(claimedMissions = {}) {

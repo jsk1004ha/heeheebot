@@ -606,6 +606,55 @@ test('유저 검배틀 명령은 수락 버튼 없이 즉시 자동 정산한다
   assert.equal(replies[0].components, undefined);
 });
 
+test('검 강화와 검배틀은 시즌 포인트를 지급하고 응답에 표시한다', async () => {
+  const replies = [];
+  const awards = [];
+  const seasons = {
+    async awardPoints(payload) {
+      awards.push(payload);
+      return {
+        awarded: true,
+        capped: false,
+        points: payload.points,
+        requestedPoints: payload.points,
+        totalPoints: awards.reduce((sum, award) => sum + award.points, 0),
+        sourceLabel: payload.source === 'sword_enhance' ? '검 강화' : '검배틀 승리',
+        newlyClaimableRewards: []
+      };
+    }
+  };
+  const interaction = createSwordInteraction({
+    commandName: '검강화',
+    replies
+  });
+  const battle = createSwordInteraction({
+    commandName: '검배틀',
+    replies
+  });
+  const economy = {
+    async enhanceSword() {
+      return swordEnhancementResult({
+        beforeLevel: 0,
+        afterLevel: 1,
+        outcome: 'success'
+      });
+    },
+    async playSwordRandomBattle() {
+      return {
+        ...swordRandomBattleResult(),
+        won: true
+      };
+    }
+  };
+
+  await handleSwordCommand(interaction, economy, silentLogger, { seasons });
+  await handleSwordCommand(battle, economy, silentLogger, { seasons });
+
+  assert.deepEqual(awards.map((award) => award.source), ['sword_enhance', 'sword_battle_win']);
+  assert.match(replies[0].content, /시즌: 검 강화 \+5점/);
+  assert.match(replies[1].content, /시즌: 검배틀 승리 \+20점/);
+});
+
 test('선물받기는 하루 한 번 제련석을 지급하고 기존 프로필에 검 상태를 채운다', async () => {
   const fixture = await createFixture();
 
@@ -1213,6 +1262,54 @@ function swordEnhancementResult({
         level: afterLevel,
         highestLevel: afterLevel,
         refineStones: 0
+      }
+    }
+  };
+}
+
+function swordRandomBattleResult() {
+  return {
+    battled: true,
+    type: 'random',
+    won: true,
+    battle: {
+      challenger: {
+        power: 20,
+        swordLevel: 1,
+        level: 1,
+        roll: 10
+      },
+      opponent: {
+        power: 5,
+        swordLevel: 0,
+        level: 1,
+        roll: 1
+      }
+    },
+    opponent: {
+      username: '수련용 허수아비',
+      level: 1,
+      sword: {
+        level: 0
+      }
+    },
+    rewards: {
+      xp: 20,
+      money: 50,
+      refineStones: 1
+    },
+    remainingBattles: 9,
+    leveledUp: false,
+    levelReward: 0,
+    profile: {
+      userId: 'user-1',
+      username: '검사',
+      level: 1,
+      balance: 50,
+      sword: {
+        level: 1,
+        battleWins: 1,
+        battleLosses: 0
       }
     }
   };

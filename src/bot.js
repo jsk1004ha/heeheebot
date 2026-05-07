@@ -14,6 +14,7 @@ import {
   inspectMessageForModeration
 } from './commands/moderation.js';
 import { handleRpgCommand } from './commands/rpg.js';
+import { handleSeasonCommand } from './commands/seasons.js';
 import { handleSwordCommand } from './commands/sword.js';
 import {
   handleTamagotchiAutocomplete,
@@ -40,6 +41,7 @@ import {
   scheduleDailyMealAnnouncements
 } from './systems/meals.js';
 import { StockService } from './systems/stocks.js';
+import { SeasonService } from './systems/seasons.js';
 import { TamagotchiService } from './systems/tamagotchi.js';
 import { TimetableService } from './systems/timetable.js';
 
@@ -66,6 +68,7 @@ export function createBot({
   const fortune = new FortuneService();
   const meals = new MealService({ store, apiKey: neisApiKey });
   const stocks = new StockService(store);
+  const seasons = new SeasonService(store);
   const tamagotchi = new TamagotchiService(store);
   const timetable = new TimetableService();
   const moderation = new ModerationService(store);
@@ -117,14 +120,15 @@ export function createBot({
         || await handleModerationCommand(interaction, moderation, logger)
         || await handleWordChainCommand(interaction, economy, logger)
         || await handleFortuneCommand(interaction, fortune, economy)
-        || await handleTodayCommand(interaction, { economy, community })
+        || await handleTodayCommand(interaction, { economy, community, seasons })
         || await handleMealCommand(interaction, meals)
         || await handleTimetableCommand(interaction, timetable)
+        || await handleSeasonCommand(interaction, seasons, logger)
         || await handleStockCommand(interaction, stocks)
         || await handleTamagotchiCommand(interaction, tamagotchi, logger)
         || await handleFishingCommand(interaction, fishing)
-        || await handleSwordCommand(interaction, economy, logger)
-        || await handleRpgCommand(interaction, economy)
+        || await handleSwordCommand(interaction, economy, logger, { seasons })
+        || await handleRpgCommand(interaction, economy, { seasons })
         || await handleEconomyCommand(interaction, economy, { stocks });
 
       if (!handled) {
@@ -195,6 +199,7 @@ export function createBot({
     fortune,
     meals,
     stocks,
+    seasons,
     tamagotchi,
     timetable,
     moderation,

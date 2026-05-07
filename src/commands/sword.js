@@ -15,7 +15,9 @@ import {
   getBlacksmithAssetAttachment,
   getRandomBlacksmithTributeAssetAttachment
 } from '../systems/sword-blacksmith.js';
+import { SEASON_POINT_SOURCES } from '../systems/seasons.js';
 import { formatDuration } from './economy.js';
+import { formatSeasonAwardLine } from './seasons.js';
 
 export const swordCommands = [
   new SlashCommandBuilder()
@@ -98,9 +100,9 @@ export function getSwordCommandPayloads() {
   return swordCommands.map((command) => command.toJSON());
 }
 
-export async function handleSwordCommand(interaction, economy, logger = console) {
+export async function handleSwordCommand(interaction, economy, logger = console, services = {}) {
   if (interaction.isButton()) {
-    return handleSwordButton(interaction, economy, logger);
+    return handleSwordButton(interaction, economy, logger, services);
   }
 
   if (!interaction.isChatInputCommand() || !isSwordCommand(interaction.commandName)) {
@@ -116,7 +118,7 @@ export async function handleSwordCommand(interaction, economy, logger = console)
   }
 
   try {
-    await routeSwordCommand(interaction, economy);
+    await routeSwordCommand(interaction, economy, services);
   } catch (error) {
     logger.error(error);
     await safeReply(interaction, `검 시스템 처리 실패: ${error.message}`, true);
@@ -125,7 +127,7 @@ export async function handleSwordCommand(interaction, economy, logger = console)
   return true;
 }
 
-async function routeSwordCommand(interaction, economy) {
+async function routeSwordCommand(interaction, economy, services = {}) {
   const guildId = interaction.guildId;
   const user = interaction.user;
 
@@ -140,7 +142,8 @@ async function routeSwordCommand(interaction, economy) {
       userId: user.id,
       username: user.username
     });
-    await interaction.reply(createSwordEnhancementReplyPayload(user, result));
+    const seasonAward = await awardSwordEnhanceSeasonPoints(services, { guildId, user, result });
+    await interaction.reply(withSeasonAwardPayload(createSwordEnhancementReplyPayload(user, result), seasonAward));
     return;
   }
 
@@ -150,7 +153,8 @@ async function routeSwordCommand(interaction, economy) {
       userId: user.id,
       username: user.username
     });
-    await interaction.reply(createSwordEnhancementReplyPayload(user, result));
+    const seasonAward = await awardSwordEnhanceSeasonPoints(services, { guildId, user, result });
+    await interaction.reply(withSeasonAwardPayload(createSwordEnhancementReplyPayload(user, result), seasonAward));
     return;
   }
 
@@ -299,10 +303,16 @@ async function routeSwordCommand(interaction, economy) {
         return;
       }
 
+      const seasonAward = await awardSwordBattleSeasonPoints(services, {
+        guildId,
+        user,
+        result
+      });
       await interaction.reply(createSwordReplyPayload(
         formatRandomSwordBattle(user, result),
         result.profile.sword.level,
-        `내 검 — ${getSwordAssetLabel(result.profile.sword.level)}`
+        `내 검 — ${getSwordAssetLabel(result.profile.sword.level)}`,
+        { contentSuffix: formatSeasonAwardLine(seasonAward) }
       ));
       return;
     }
@@ -314,17 +324,23 @@ async function routeSwordCommand(interaction, economy) {
       challenger: challenge.challenger,
       opponent: challenge.opponent
     });
+    const seasonAward = await awardSwordPvpSeasonPoints(services, {
+      guildId,
+      challenge,
+      result
+    });
     await interaction.reply(createSwordReplyPayload(
       formatPvpSwordBattle(challenge, result),
       getPvpWinnerSwordLevel(result),
-      `승자 검 — ${getSwordAssetLabel(getPvpWinnerSwordLevel(result))}`
+      `승자 검 — ${getSwordAssetLabel(getPvpWinnerSwordLevel(result))}`,
+      { contentSuffix: formatSeasonAwardLine(seasonAward) }
     ));
   }
 }
 
-async function handleSwordButton(interaction, economy, logger = console) {
+async function handleSwordButton(interaction, economy, logger = console, services = {}) {
   if (interaction.customId?.startsWith('sword_quick:')) {
-    return handleSwordQuickButton(interaction, economy, logger);
+    return handleSwordQuickButton(interaction, economy, logger, services);
   }
   if (!interaction.customId?.startsWith('sword_sell_')) return false;
 
@@ -376,7 +392,7 @@ async function handleSwordButton(interaction, economy, logger = console) {
   return true;
 }
 
-async function handleSwordQuickButton(interaction, economy, logger = console) {
+async function handleSwordQuickButton(interaction, economy, logger = console, services = {}) {
   const [, action, userId] = interaction.customId.split(':');
 
   if (interaction.user.id !== userId) {
@@ -394,7 +410,12 @@ async function handleSwordQuickButton(interaction, economy, logger = console) {
         userId: interaction.user.id,
         username: interaction.user.username
       });
-      await interaction.update(createSwordEnhancementReplyPayload(interaction.user, result));
+      const seasonAward = await awardSwordEnhanceSeasonPoints(services, {
+        guildId: interaction.guildId,
+        user: interaction.user,
+        result
+      });
+      await interaction.update(withSeasonAwardPayload(createSwordEnhancementReplyPayload(interaction.user, result), seasonAward));
       return true;
     }
 
@@ -404,7 +425,12 @@ async function handleSwordQuickButton(interaction, economy, logger = console) {
         userId: interaction.user.id,
         username: interaction.user.username
       });
-      await interaction.update(createSwordEnhancementReplyPayload(interaction.user, result));
+      const seasonAward = await awardSwordEnhanceSeasonPoints(services, {
+        guildId: interaction.guildId,
+        user: interaction.user,
+        result
+      });
+      await interaction.update(withSeasonAwardPayload(createSwordEnhancementReplyPayload(interaction.user, result), seasonAward));
       return true;
     }
 
@@ -458,6 +484,63 @@ function createSwordEnhancementReplyPayload(user, result) {
       components: [createSwordQuickActionRow(user.id)]
     }
   );
+}
+
+async function awardSwordEnhanceSeasonPoints(services, { guildId, user, result }) {
+  if (!services?.seasons?.awardPoints || result?.blocked) {
+    return null;
+  }
+
+  return services.seasons.awardPoints({
+    guildId,
+    userId: user.id,
+    username: user.username,
+    source: SEASON_POINT_SOURCES.SWORD_ENHANCE,
+    points: 5
+  });
+}
+
+async function awardSwordBattleSeasonPoints(services, { guildId, user, result }) {
+  if (!services?.seasons?.awardPoints || !result?.battled) {
+    return null;
+  }
+
+  return services.seasons.awardPoints({
+    guildId,
+    userId: user.id,
+    username: user.username,
+    source: result.won
+      ? SEASON_POINT_SOURCES.SWORD_BATTLE_WIN
+      : SEASON_POINT_SOURCES.SWORD_BATTLE_PLAY,
+    points: result.won ? 20 : 8
+  });
+}
+
+async function awardSwordPvpSeasonPoints(services, { guildId, challenge, result }) {
+  if (!services?.seasons?.awardPoints || !result?.battled) {
+    return null;
+  }
+
+  const challengerWon = result.winnerUserId === challenge.challenger.userId;
+  const winner = challengerWon ? result.challenger : result.opponent;
+
+  return services.seasons.awardPoints({
+    guildId,
+    userId: winner.userId,
+    username: winner.username,
+    source: SEASON_POINT_SOURCES.SWORD_BATTLE_WIN,
+    points: 20
+  });
+}
+
+function withSeasonAwardPayload(payload, award) {
+  const line = formatSeasonAwardLine(award);
+  if (!line) return payload;
+
+  return {
+    ...payload,
+    content: `${payload.content ?? ''}\n${line}`.trim()
+  };
 }
 
 function formatSwordEnhancement(user, result) {
@@ -743,7 +826,10 @@ function createSwordBattleContext(interaction, target) {
 
 export function createSwordReplyPayload(content, swordLevel, title = null, options = {}) {
   const attachment = getSwordAssetAttachment(swordLevel);
-  if (!attachment) return { content };
+  const payloadContent = options.contentSuffix
+    ? `${content}\n${options.contentSuffix}`
+    : content;
+  if (!attachment) return { content: payloadContent };
 
   const files = [attachment];
   const embed = new EmbedBuilder()
@@ -760,7 +846,7 @@ export function createSwordReplyPayload(content, swordLevel, title = null, optio
   }
 
   return {
-    content,
+    content: payloadContent,
     embeds: [embed],
     files,
     ...(options.components ? { components: options.components } : {})
