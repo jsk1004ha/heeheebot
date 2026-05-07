@@ -23,6 +23,7 @@ import {
   handleStockCommand
 } from './commands/stocks.js';
 import { handleTimetableCommand } from './commands/timetable.js';
+import { handleTodayCommand } from './commands/today.js';
 import {
   handleWordChainCommand,
   handleWordChainMessage
@@ -114,6 +115,7 @@ export function createBot({
         || await handleModerationCommand(interaction, moderation, logger)
         || await handleWordChainCommand(interaction, economy, logger)
         || await handleFortuneCommand(interaction, fortune, economy)
+        || await handleTodayCommand(interaction, { economy, community })
         || await handleMealCommand(interaction, meals)
         || await handleTimetableCommand(interaction, timetable)
         || await handleStockCommand(interaction, stocks)
