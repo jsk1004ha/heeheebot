@@ -7,7 +7,8 @@ requireBotConfig(config);
 
 const bot = createBot({
   databasePath: config.databasePath,
-  legacyJsonPath: config.legacyJsonPath
+  legacyJsonPath: config.legacyJsonPath,
+  neisApiKey: config.neisApiKey
 });
 
 await bot.start(config.token);

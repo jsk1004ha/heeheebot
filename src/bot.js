@@ -4,6 +4,10 @@ import { handleEconomyCommand } from './commands/economy.js';
 import { handleFishingCommand } from './commands/fishing.js';
 import { handleFortuneCommand } from './commands/fortune.js';
 import {
+  formatMealMessage,
+  handleMealCommand
+} from './commands/meals.js';
+import {
   handleModerationCommand,
   inspectMessageForModeration
 } from './commands/moderation.js';
@@ -22,11 +26,16 @@ import { createSqliteStore } from './storage/sqlite-store.js';
 import { EconomyService } from './systems/economy.js';
 import { FishingService } from './systems/fishing.js';
 import { FortuneService } from './systems/fortune.js';
+import {
+  MealService,
+  scheduleDailyMealAnnouncements
+} from './systems/meals.js';
 import { StockService } from './systems/stocks.js';
 
 export function createBot({
   databasePath = 'data/profiles.sqlite',
   legacyJsonPath = 'data/profiles.json',
+  neisApiKey = null,
   logger = console
 }) {
   const client = new Client({
@@ -43,11 +52,20 @@ export function createBot({
   const economy = new EconomyService(store);
   const fishing = new FishingService(store);
   const fortune = new FortuneService();
+  const meals = new MealService({ store, apiKey: neisApiKey });
   const stocks = new StockService(store);
   const moderation = new ModerationService(store);
+  let stopMealAnnouncementScheduler = () => {};
 
   client.once(Events.ClientReady, (readyClient) => {
     logger.log(`Logged in as ${readyClient.user.tag}`);
+
+    stopMealAnnouncementScheduler = scheduleDailyMealAnnouncements({
+      logger,
+      async sendAnnouncement() {
+        await sendDailyMealAnnouncements(readyClient, meals, logger);
+      }
+    });
   });
 
   client.on(Events.InteractionCreate, async (interaction) => {
@@ -69,6 +87,7 @@ export function createBot({
         || await handleModerationCommand(interaction, moderation, logger)
         || await handleWordChainCommand(interaction, economy, logger)
         || await handleFortuneCommand(interaction, fortune, economy)
+        || await handleMealCommand(interaction, meals)
         || await handleStockCommand(interaction, stocks)
         || await handleFishingCommand(interaction, fishing)
         || await handleSwordCommand(interaction, economy, logger)
@@ -128,10 +147,38 @@ export function createBot({
     economy,
     fishing,
     fortune,
+    meals,
     stocks,
     moderation,
+    stopMealAnnouncements() {
+      stopMealAnnouncementScheduler();
+    },
     async start(token) {
       await client.login(token);
     }
   };
+}
+
+async function sendDailyMealAnnouncements(client, meals, logger) {
+  const targets = await meals.listAutoAnnouncementTargets();
+
+  if (targets.length === 0) {
+    return;
+  }
+
+  const message = formatMealMessage(await meals.getTodayMeals());
+
+  for (const target of targets) {
+    try {
+      const channel = await client.channels.fetch(target.channelId);
+
+      if (!channel || typeof channel.send !== 'function') {
+        throw new Error(`채널을 찾을 수 없습니다: ${target.channelId}`);
+      }
+
+      await channel.send(message);
+    } catch (error) {
+      logger.error(`Failed to send daily meal announcement for guild ${target.guildId}:`, error);
+    }
+  }
 }

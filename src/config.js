@@ -3,6 +3,7 @@ export function loadConfig(env = process.env) {
     token: env.DISCORD_TOKEN,
     clientId: env.DISCORD_CLIENT_ID,
     guildId: env.DISCORD_GUILD_ID,
+    neisApiKey: env.NEIS_API_KEY,
     databasePath: env.BOT_SQLITE_PATH ?? 'data/profiles.sqlite',
     legacyJsonPath: env.BOT_JSON_MIGRATION_PATH ?? env.BOT_DATA_PATH ?? 'data/profiles.json'
   };

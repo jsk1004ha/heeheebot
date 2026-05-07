@@ -4,6 +4,7 @@ import { getCasinoCommandPayloads } from './commands/casino.js';
 import { getEconomyCommandPayloads } from './commands/economy.js';
 import { getFishingCommandPayloads } from './commands/fishing.js';
 import { getFortuneCommandPayloads } from './commands/fortune.js';
+import { getMealCommandPayloads } from './commands/meals.js';
 import { getModerationCommandPayloads } from './commands/moderation.js';
 import { getRpgCommandPayloads } from './commands/rpg.js';
 import { getStockCommandPayloads } from './commands/stocks.js';
@@ -20,6 +21,7 @@ const commands = [
   ...getFortuneCommandPayloads(),
   ...getModerationCommandPayloads(),
   ...getWordChainCommandPayloads(),
+  ...getMealCommandPayloads(),
   ...getStockCommandPayloads(),
   ...getFishingCommandPayloads(),
   ...getSwordCommandPayloads(),
