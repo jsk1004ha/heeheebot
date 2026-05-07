@@ -1,0 +1,1 @@
+Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: dragon nest, rocky high mountain nest, eggs and bones at edges, open center arena, no characters, no UI, no text.

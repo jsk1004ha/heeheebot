@@ -88,32 +88,73 @@ const STOCK_LOOKUP = Object.freeze(new Map(
   ])
 ));
 
-const NEWS_TEMPLATES = Object.freeze({
-  stable: Object.freeze([
-    '{name} 시장 뉴스: 배당 기대감에 디코 투자자들이 조용히 매수 중',
-    '{name} 실적 발표가 무난해서 채팅창이 평화롭습니다',
-    '{name} 밈 지수는 낮지만 안정감은 높다는 소문'
-  ]),
-  growth: Object.freeze([
-    '{name} 신사업 발표에 성장주단이 다시 모였습니다',
-    '{name} 신제품 티저 공개, 채팅창에 로켓 이모지가 늘었습니다',
-    '{name} 클라우드/AI 소문에 밈 투자자들이 술렁입니다'
-  ]),
-  cyclical: Object.freeze([
-    '{name} 수주 소문에 경기민감주단이 바빠졌습니다',
-    '{name} 원자재 가격 뉴스로 주가가 흔들립니다',
-    '{name} 실적 전망이 갈려서 투자자들이 계산기를 꺼냈습니다'
-  ]),
-  volatile: Object.freeze([
-    '{name} 임상/허가 소문에 급등락 경보가 켜졌습니다',
-    '{name} 바이오 밈 뉴스로 채팅창이 과열됐습니다',
-    '{name} 연구 발표를 앞두고 기대와 공포가 같이 올라옵니다'
-  ]),
-  meme: Object.freeze([
-    '{name} 밈 게시글 폭주로 원숭이 투자자들이 난입했습니다',
-    '{name} 대표가 이상한 발표를 해서 주가가 급등락합니다',
-    '{name} 급등 소문에 디코방이 바나나 이모지로 도배됐습니다'
-  ])
+const PRE_MARKET_NEWS_TEMPLATES = Object.freeze({
+  positive: Object.freeze({
+    stable: Object.freeze([
+      '{name} 배당 정책 검토 자료가 게시됐습니다',
+      '{name} 실적 설명회 일정이 공개됐습니다',
+      '{name} 장기 공급 계약 진행 상황 안내가 올라왔습니다'
+    ]),
+    growth: Object.freeze([
+      '{name} 신제품 공개 일정이 예고됐습니다',
+      '{name} 신규 서비스 사전 안내가 게시됐습니다',
+      '{name} AI 협업 관련 질의응답 일정이 잡혔습니다'
+    ]),
+    cyclical: Object.freeze([
+      '{name} 신규 수주 협상 진행 상황이 공지됐습니다',
+      '{name} 원가 구조 점검 자료가 공시됐습니다',
+      '{name} 대형 프로젝트 관련 일정 안내가 나왔습니다'
+    ]),
+    volatile: Object.freeze([
+      '{name} 임상 데이터 공개 일정이 잡혔습니다',
+      '{name} 연구 성과 발표 예고가 게시됐습니다',
+      '{name} 기술 이전 논의 관련 자료가 게시됐습니다'
+    ]),
+    meme: Object.freeze([
+      '{name} 커뮤니티 협업 이벤트 예고가 퍼졌습니다',
+      '{name} 신규 굿즈 공개 일정이 알려졌습니다',
+      '{name} 유명 스트리머 협업 관련 안내가 나왔습니다'
+    ])
+  }),
+  negative: Object.freeze({
+    stable: Object.freeze([
+      '{name} 비용 구조 점검 자료가 게시됐습니다',
+      '{name} 배당 정책 재검토 가능성이 공시됐습니다',
+      '{name} 주요 고객사 발주 일정 조율 안내가 나왔습니다'
+    ]),
+    growth: Object.freeze([
+      '{name} 신사업 출시 일정 지연 가능성이 제기됐습니다',
+      '{name} 개발비 집행 계획 변경 공시가 게시됐습니다',
+      '{name} 경쟁 환경 관련 설명자료가 공개됐습니다'
+    ]),
+    cyclical: Object.freeze([
+      '{name} 원자재 조달 비용 점검 자료가 나왔습니다',
+      '{name} 수주 일정 조정 가능성이 전해졌습니다',
+      '{name} 경기 민감도 검토 보고서가 나왔습니다'
+    ]),
+    volatile: Object.freeze([
+      '{name} 허가 심사 보완 요청 가능성이 제기됐습니다',
+      '{name} 연구비 조달 계획 보완 공시가 게시됐습니다',
+      '{name} 핵심 데이터 공개 지연 가능성이 나왔습니다'
+    ]),
+    meme: Object.freeze([
+      '{name} 커뮤니티 운영 관련 추가 공지가 예고됐습니다',
+      '{name} 운영진 해명 공지 예고가 나왔습니다',
+      '{name} 밈 캠페인 일정 연기 가능성이 제기됐습니다'
+    ])
+  }),
+  risk: Object.freeze({
+    volatile: Object.freeze([
+      '{name} 거래소 확인 자료 제출 일정이 공지됐습니다',
+      '{name} 핵심 파이프라인 추가 설명자료가 게시됐습니다',
+      '{name} 자금 조달 계획 보완 자료가 접수됐습니다'
+    ]),
+    meme: Object.freeze([
+      '{name} 거래소 확인 자료 제출 일정이 공지됐습니다',
+      '{name} 운영 관련 소명 자료 접수 가능성이 나왔습니다',
+      '{name} 커뮤니티 집계 방식 추가 설명 공지가 게시됐습니다'
+    ])
+  })
 });
 
 const AUTO_IPO_PREFIXES = Object.freeze([
@@ -969,10 +1010,11 @@ function advanceMarket(guild, market, now, service) {
     for (const definition of getActiveStockDefinitions(guild, market)) {
       const state = market.symbols[definition.id];
       if (!state || state.status === 'delisted') continue;
-      const nextState = advanceSymbol(definition, state, market.tickIndex, service.randomInt, market.lastTickAt);
+      const advanced = advanceSymbol(definition, state, market.tickIndex, service.randomInt, market.lastTickAt);
+      const nextState = advanced.state;
       market.symbols[definition.id] = nextState;
-      if (nextState.eventType) {
-        recordMarketNews(guild, definition, nextState, market.tickIndex, market.lastTickAt);
+      if (advanced.marketNews) {
+        recordMarketNews(guild, definition, advanced.marketNews, market.tickIndex, market.lastTickAt);
       }
     }
     listScheduledStocks(guild, market);
@@ -982,7 +1024,7 @@ function advanceMarket(guild, market, now, service) {
 }
 
 function advanceSymbol(definition, state, tickIndex, randomIntFn, updatedAt) {
-  if (state.status === 'delisted') return state;
+  if (state.status === 'delisted') return { state, marketNews: null };
 
   const previousPrice = state.price;
   const baseMoveBps = randomIntFn(-definition.volatilityBps, definition.volatilityBps);
@@ -992,45 +1034,52 @@ function advanceSymbol(definition, state, tickIndex, randomIntFn, updatedAt) {
     : 0;
   const totalMoveBps = clampInteger(baseMoveBps + eventMoveBps, -3000, 3000);
   const eventType = getMarketEventType(definition, totalMoveBps);
+  const marketNews = createPreMarketNews(definition, eventMoveBps, tickIndex);
 
   if (eventType === 'delisted') {
     return {
-      price: 0,
-      previousPrice,
-      changeBps: -10_000,
-      news: `상장폐지: ${definition.name} 거래가 정지되고 보유 평가는 0원이 됐습니다`,
-      status: 'delisted',
-      eventType,
-      listedAtTick: normalizeNonNegativeInteger(state.listedAtTick ?? definition.listedFromTick),
-      delistedAtTick: tickIndex,
-      definition: definition.dynamic ? cloneStoredStockDefinition(definition) : null,
-      updatedAt,
-      history: appendPriceHistory(state.history, {
-        tickIndex,
+      state: {
         price: 0,
-        at: updatedAt
-      })
+        previousPrice,
+        changeBps: -10_000,
+        news: `시황: ${definition.name} 상장폐지 처리로 거래가 정지되고 보유 평가는 0골드가 됐습니다`,
+        status: 'delisted',
+        eventType,
+        listedAtTick: normalizeNonNegativeInteger(state.listedAtTick ?? definition.listedFromTick),
+        delistedAtTick: tickIndex,
+        definition: definition.dynamic ? cloneStoredStockDefinition(definition) : null,
+        updatedAt,
+        history: appendPriceHistory(state.history, {
+          tickIndex,
+          price: 0,
+          at: updatedAt
+        })
+      },
+      marketNews
     };
   }
 
   const price = Math.max(MIN_STOCK_PRICE, Math.round(previousPrice * (10_000 + totalMoveBps) / 10_000));
 
   return {
-    price,
-    previousPrice,
-    changeBps: calculateChangeBps(price, previousPrice),
-    news: createNews(definition, totalMoveBps, tickIndex, eventType),
-    status: 'listed',
-    eventType,
-    listedAtTick: normalizeNonNegativeInteger(state.listedAtTick ?? definition.listedFromTick),
-    delistedAtTick: 0,
-    definition: definition.dynamic ? cloneStoredStockDefinition(definition) : null,
-    updatedAt,
-    history: appendPriceHistory(state.history, {
-      tickIndex,
+    state: {
       price,
-      at: updatedAt
-    })
+      previousPrice,
+      changeBps: calculateChangeBps(price, previousPrice),
+      news: createMarketSummary(definition, totalMoveBps, tickIndex, eventType),
+      status: 'listed',
+      eventType,
+      listedAtTick: normalizeNonNegativeInteger(state.listedAtTick ?? definition.listedFromTick),
+      delistedAtTick: 0,
+      definition: definition.dynamic ? cloneStoredStockDefinition(definition) : null,
+      updatedAt,
+      history: appendPriceHistory(state.history, {
+        tickIndex,
+        price,
+        at: updatedAt
+      })
+    },
+    marketNews
   };
 }
 
@@ -1045,7 +1094,7 @@ function listScheduledStocks(guild, market) {
       market.tickIndex
     );
     if (definition.listedFromTick > 0) {
-      recordMarketNews(guild, definition, market.symbols[definition.id], market.tickIndex, market.lastTickAt);
+      recordMarketNews(guild, definition, createIpoMarketNews(definition, market.symbols[definition.id]), market.tickIndex, market.lastTickAt, market.tickIndex);
     }
   }
 }
@@ -1067,7 +1116,7 @@ function maybeAutoListStock(guild, market, service) {
   const definition = createAutomaticIpoDefinition(guild, market, service.ipoRandomInt);
   guild.stocks.dynamicDefinitions[definition.id] = definition;
   market.symbols[definition.id] = createInitialSymbolState(definition, market.lastTickAt, 'ipo', market.tickIndex);
-  recordMarketNews(guild, definition, market.symbols[definition.id], market.tickIndex, market.lastTickAt);
+  recordMarketNews(guild, definition, createIpoMarketNews(definition, market.symbols[definition.id]), market.tickIndex, market.lastTickAt, market.tickIndex);
 }
 
 function createAutomaticIpoDefinition(guild, market, randomIntFn) {
@@ -1138,20 +1187,61 @@ function getMarketEventType(definition, moveBps) {
   return null;
 }
 
-function createNews(definition, moveBps, tickIndex, eventType = null) {
-  const templates = NEWS_TEMPLATES[definition.risk] ?? NEWS_TEMPLATES.stable;
-  const template = templates[tickIndex % templates.length];
-  const prefix = eventType === 'surge'
-    ? '급등 이벤트'
-    : eventType === 'crash'
-      ? '급락 이벤트'
-      : moveBps >= 900
-        ? '급등 뉴스'
-        : moveBps <= -900
-          ? '급락 뉴스'
-          : '시장 뉴스';
+function createPreMarketNews(definition, impactBps, tickIndex) {
+  if (impactBps === 0) return null;
 
-  return `${prefix}: ${template.replaceAll('{name}', definition.name)}`;
+  const riskThreshold = -Math.floor(definition.volatilityBps * 1.2);
+  const type = impactBps <= riskThreshold && ['meme', 'volatile'].includes(definition.risk)
+    ? 'risk'
+    : impactBps > 0
+      ? 'positive'
+      : 'negative';
+  const message = createPreMarketNewsMessage(definition, type, tickIndex);
+
+  return {
+    type,
+    title: formatMarketNewsTitle(type),
+    message,
+    impactBps
+  };
+}
+
+function createPreMarketNewsMessage(definition, type, tickIndex) {
+  const typedTemplates = PRE_MARKET_NEWS_TEMPLATES[type] ?? PRE_MARKET_NEWS_TEMPLATES.negative;
+  const templates = typedTemplates[definition.risk] ?? typedTemplates.stable ?? typedTemplates.meme ?? typedTemplates.volatile;
+  const template = templates[tickIndex % templates.length];
+  return `${formatMarketNewsTitle(type)}: ${template.replaceAll('{name}', definition.name)}`;
+}
+
+function createIpoMarketNews(definition, state) {
+  return {
+    type: 'ipo',
+    title: formatMarketNewsTitle('ipo'),
+    message: `${formatMarketNewsTitle('ipo')}: ${state.news}`,
+    impactBps: 0
+  };
+}
+
+function createMarketSummary(definition, moveBps, tickIndex, eventType = null) {
+  if (eventType === 'surge') {
+    return `시황: ${definition.name}에 강한 매수세가 몰렸습니다`;
+  }
+  if (eventType === 'crash') {
+    return `시황: ${definition.name} 매도 물량이 늘며 약세로 마감했습니다`;
+  }
+  if (moveBps >= 900) {
+    return `시황: ${definition.name} 투자심리가 개선됐습니다`;
+  }
+  if (moveBps <= -900) {
+    return `시황: ${definition.name} 경계 매물이 늘었습니다`;
+  }
+
+  const quietSummaries = [
+    `시황: ${definition.name} 보합권에서 조용히 거래됐습니다`,
+    `시황: ${definition.name} 투자자들이 다음 공시를 기다리고 있습니다`,
+    `시황: ${definition.name} 거래 흐름이 안정적으로 유지됐습니다`
+  ];
+  return quietSummaries[tickIndex % quietSummaries.length];
 }
 
 function getOrCreateMoneyProfile(guild, userId, username, now) {
@@ -1510,13 +1600,16 @@ function normalizeMarketNewsEntry(entry = {}, fallbackId = null, guild = null) {
     title: String(safeEntry.title ?? '').trim() || '시장 뉴스',
     message: String(safeEntry.message ?? '').trim() || '시장 뉴스가 없습니다.',
     tickIndex: normalizeNonNegativeInteger(safeEntry.tickIndex),
+    publishedTickIndex: normalizeNonNegativeInteger(safeEntry.publishedTickIndex ?? safeEntry.tickIndex),
+    effectiveTickIndex: normalizeNonNegativeInteger(safeEntry.effectiveTickIndex ?? safeEntry.tickIndex),
+    impactBps: normalizeInteger(safeEntry.impactBps),
     at: normalizeNonNegativeInteger(safeEntry.at)
   };
 }
 
 function normalizeMarketNewsType(type) {
   const normalized = String(type ?? '').trim();
-  return ['ipo', 'surge', 'crash', 'delisted'].includes(normalized) ? normalized : 'news';
+  return ['ipo', 'positive', 'negative', 'risk', 'news'].includes(normalized) ? normalized : 'news';
 }
 
 function normalizePriceHistory(history = [], fallbackState = null, fallbackTickIndex = 0, fallbackAt = 0) {
@@ -1606,18 +1699,22 @@ function recordTrade(stockUser, entry) {
     .slice(0, RECENT_TRADE_LIMIT);
 }
 
-function recordMarketNews(guild, definition, state, tickIndex, at) {
-  const type = normalizeMarketNewsType(state.eventType);
+function recordMarketNews(guild, definition, news, effectiveTickIndex, at, publishedTickIndex = Math.max(0, effectiveTickIndex - 1)) {
+  if (!news) return;
+  const type = normalizeMarketNewsType(news.type);
   guild.stocks.marketNews = normalizeMarketNews(guild.stocks.marketNews, guild);
   const sequence = guild.stocks.marketNews.reduce((max, item) => Math.max(max, item.sequence), 0) + 1;
   const normalized = normalizeMarketNewsEntry({
-    id: createMarketNewsId(tickIndex, definition.id),
+    id: createMarketNewsId(effectiveTickIndex, definition.id),
     sequence,
     type,
     stockId: definition.id,
-    title: formatMarketNewsTitle(type),
-    message: `${formatMarketNewsTitle(type)}: ${state.news}`,
-    tickIndex,
+    title: news.title ?? formatMarketNewsTitle(type),
+    message: news.message,
+    tickIndex: effectiveTickIndex,
+    publishedTickIndex,
+    effectiveTickIndex,
+    impactBps: news.impactBps,
     at
   }, null, guild);
   guild.stocks.marketNews = [
@@ -1647,9 +1744,9 @@ function cloneMarketNewsEntry(entry, market) {
 function formatMarketNewsTitle(type) {
   return {
     ipo: '신규상장 공시',
-    surge: '급등 공시',
-    crash: '급락 공시',
-    delisted: '상장폐지 공시'
+    positive: '시장 공시',
+    negative: '시장 공시',
+    risk: '시장 공시'
   }[type] ?? '시장 뉴스';
 }
 

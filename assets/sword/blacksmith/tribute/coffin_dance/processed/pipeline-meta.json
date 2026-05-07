@@ -1,0 +1,59 @@
+{
+  "target": "npc",
+  "mode": "single",
+  "prompt": "",
+  "role": "",
+  "input": "/home/jio/code/heeheebot/heeheebot/assets/sword/blacksmith/tribute/coffin_dance/raw/raw-sheet.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 500,
+  "rows": 1,
+  "cols": 1,
+  "cell_size": 512,
+  "fit_scale": 0.94,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "center",
+  "shared_scale": false,
+  "component_mode": "all",
+  "component_padding": 0,
+  "min_component_area": 1,
+  "edge_touch_margin": 0,
+  "frame_labels": [
+    "coffin-dance-1"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        768,
+        768
+      ],
+      "component_mode": "all",
+      "component_count": 13,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        53,
+        70,
+        695,
+        722
+      ],
+      "edge_touch": false,
+      "output_size": [
+        473,
+        481
+      ],
+      "paste_position": [
+        19,
+        15
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

@@ -1,0 +1,1 @@
+Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: dark abyss mine, glowing ore, mine rails at edges, open cavern floor center, no characters, no UI, no text.

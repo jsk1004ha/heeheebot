@@ -12,6 +12,11 @@ const BLACKSMITH_ASSET_FILES = Object.freeze({
   destroy: 'blacksmith_destroy.png'
 });
 
+const BLACKSMITH_TRIBUTE_ASSET_FILES = Object.freeze([
+  'blacksmith_hisashiburi.png',
+  'blacksmith_coffin_dance.png'
+]);
+
 const BLACKSMITH_MESSAGES = Object.freeze({
   success: Object.freeze([
     '축하한다! 이건 망치가 아니라 불꽃이 붙인 명작이다.',
@@ -48,6 +53,22 @@ const BLACKSMITH_MESSAGES = Object.freeze({
 export function getBlacksmithAssetAttachment(outcome = 'maintain') {
   const normalizedOutcome = normalizeBlacksmithOutcome(outcome);
   const fileName = BLACKSMITH_ASSET_FILES[normalizedOutcome];
+  const filePath = join(BLACKSMITH_ASSET_ROOT, fileName);
+
+  if (!existsSync(filePath)) return null;
+
+  return {
+    attachment: filePath,
+    name: fileName
+  };
+}
+
+export function getRandomBlacksmithTributeAssetAttachment(random = Math.random) {
+  const index = Math.min(
+    BLACKSMITH_TRIBUTE_ASSET_FILES.length - 1,
+    Math.floor(normalizeRandom(random) * BLACKSMITH_TRIBUTE_ASSET_FILES.length)
+  );
+  const fileName = BLACKSMITH_TRIBUTE_ASSET_FILES[index];
   const filePath = join(BLACKSMITH_ASSET_ROOT, fileName);
 
   if (!existsSync(filePath)) return null;
@@ -102,6 +123,13 @@ function getSpecialBlacksmithMessage(result = {}) {
 
 function normalizeBlacksmithOutcome(outcome) {
   return Object.hasOwn(BLACKSMITH_ASSET_FILES, outcome) ? outcome : 'maintain';
+}
+
+function normalizeRandom(random) {
+  const value = typeof random === 'function' ? random() : random;
+  if (!Number.isFinite(value)) return 0;
+
+  return Math.max(0, Math.min(0.999999, value));
 }
 
 function getMessageSeed(result = {}) {

@@ -1,0 +1,187 @@
+{
+  "count": 12,
+  "files": [
+    {
+      "id": "hero_berserker_idle",
+      "path": "assets/rpg/heroes/advanced/berserker/idle/processed/clean.png",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        17,
+        14,
+        111,
+        114
+      ],
+      "empty": false
+    },
+    {
+      "id": "hero_female_berserker_idle",
+      "path": "assets/rpg/heroes/advanced/female/berserker/idle/processed/clean.png",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        23,
+        15,
+        105,
+        112
+      ],
+      "empty": false
+    },
+    {
+      "id": "hero_archmage_idle",
+      "path": "assets/rpg/heroes/advanced/archmage/idle/processed/clean.png",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        23,
+        12,
+        104,
+        116
+      ],
+      "empty": false
+    },
+    {
+      "id": "hero_female_archmage_idle",
+      "path": "assets/rpg/heroes/advanced/female/archmage/idle/processed/clean.png",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        25,
+        14,
+        102,
+        113
+      ],
+      "empty": false
+    },
+    {
+      "id": "hero_sniper_idle",
+      "path": "assets/rpg/heroes/advanced/sniper/idle/processed/clean.png",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        21,
+        13,
+        106,
+        114
+      ],
+      "empty": false
+    },
+    {
+      "id": "hero_female_sniper_idle",
+      "path": "assets/rpg/heroes/advanced/female/sniper/idle/processed/clean.png",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        15,
+        14,
+        112,
+        113
+      ],
+      "empty": false
+    },
+    {
+      "id": "hero_crusader_idle",
+      "path": "assets/rpg/heroes/advanced/crusader/idle/processed/clean.png",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        16,
+        12,
+        112,
+        116
+      ],
+      "empty": false
+    },
+    {
+      "id": "hero_female_crusader_idle",
+      "path": "assets/rpg/heroes/advanced/female/crusader/idle/processed/clean.png",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        22,
+        12,
+        106,
+        116
+      ],
+      "empty": false
+    },
+    {
+      "id": "hero_shadow_idle",
+      "path": "assets/rpg/heroes/advanced/shadow/idle/processed/clean.png",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        20,
+        12,
+        108,
+        115
+      ],
+      "empty": false
+    },
+    {
+      "id": "hero_female_shadow_idle",
+      "path": "assets/rpg/heroes/advanced/female/shadow/idle/processed/clean.png",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        25,
+        14,
+        103,
+        113
+      ],
+      "empty": false
+    },
+    {
+      "id": "hero_saint_idle",
+      "path": "assets/rpg/heroes/advanced/saint/idle/processed/clean.png",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        23,
+        13,
+        104,
+        115
+      ],
+      "empty": false
+    },
+    {
+      "id": "hero_female_saint_idle",
+      "path": "assets/rpg/heroes/advanced/female/saint/idle/processed/clean.png",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        24,
+        12,
+        104,
+        115
+      ],
+      "empty": false
+    }
+  ],
+  "uniqueHashes": 12,
+  "status": "pass"
+}

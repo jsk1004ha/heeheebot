@@ -1,0 +1,18 @@
+{
+  "id": "hero_female_shadow_idle",
+  "category": "hero",
+  "kind": "sprite",
+  "sheet": "single",
+  "source": "/home/jio/.codex/generated_images/019dfd64-811e-7561-a000-5b3212cc9327/ig_0be8125a22524a6e0169fc2ae43048819194033095fa3a6e25.png",
+  "raw": "assets/rpg/heroes/advanced/female/shadow/idle/raw/raw-sheet.png",
+  "prompt": "assets/rpg/heroes/advanced/female/shadow/idle/prompt-used.txt",
+  "processedDir": "assets/rpg/heroes/advanced/female/shadow/idle/processed",
+  "status": "processed",
+  "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/advanced/female/shadow/idle/processed",
+  "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
+  "advancedClass": "shadow",
+  "gender": "female",
+  "label": "여성 섀도우",
+  "rosterFrame": 10,
+  "clean": "assets/rpg/heroes/advanced/female/shadow/idle/processed/clean.png"
+}

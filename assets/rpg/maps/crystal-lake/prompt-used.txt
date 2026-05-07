@@ -1,0 +1,1 @@
+Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: icy crystal lake, blue crystals, reflective frozen arena center, no characters, no UI, no text.

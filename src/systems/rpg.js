@@ -137,6 +137,11 @@ const RPG_SKILLS = Object.freeze({
     mpCost: 10,
     attackBonus: 6,
     defenseBonus: 0,
+    statusEffect: Object.freeze({
+      type: 'burn',
+      label: '화상',
+      description: '불길이 남아 적을 압박합니다.'
+    }),
     classes: Object.freeze(['mage'])
   }),
   aimed_shot: Object.freeze({
@@ -145,6 +150,11 @@ const RPG_SKILLS = Object.freeze({
     mpCost: 8,
     attackBonus: 4,
     defenseBonus: 0,
+    statusEffect: Object.freeze({
+      type: 'bleed',
+      label: '출혈',
+      description: '약점을 맞혀 다음 행동을 위축시킵니다.'
+    }),
     classes: Object.freeze(['ranger'])
   }),
   backstab: Object.freeze({
@@ -153,6 +163,11 @@ const RPG_SKILLS = Object.freeze({
     mpCost: 9,
     attackBonus: 6,
     defenseBonus: 0,
+    statusEffect: Object.freeze({
+      type: 'vulnerable',
+      label: '약점 노출',
+      description: '방어 틈을 벌려 폭딜 기회를 만듭니다.'
+    }),
     classes: Object.freeze(['rogue'])
   }),
   holy_guard: Object.freeze({
@@ -161,7 +176,20 @@ const RPG_SKILLS = Object.freeze({
     mpCost: 10,
     attackBonus: 2,
     defenseBonus: 5,
+    statusEffect: Object.freeze({
+      type: 'barrier',
+      label: '보호막',
+      description: '신성한 장막으로 받는 피해를 줄입니다.'
+    }),
     classes: Object.freeze(['paladin', 'priest'])
+  }),
+  holy_smite: Object.freeze({
+    label: '성스러운 강타',
+    description: '팔라딘의 심판 공격. 전투력 +10, 방어 +3',
+    mpCost: 18,
+    attackBonus: 10,
+    defenseBonus: 3,
+    classes: Object.freeze(['paladin'])
   }),
   blade_storm: Object.freeze({
     label: '검의 폭풍',
@@ -170,6 +198,11 @@ const RPG_SKILLS = Object.freeze({
     attackBonus: 12,
     defenseBonus: 0,
     ultimate: true,
+    statusEffect: Object.freeze({
+      type: 'bleed',
+      label: '깊은 출혈',
+      description: '검격 폭풍으로 적의 전열을 무너뜨립니다.'
+    }),
     classes: Object.freeze(['warrior'])
   }),
   meteor_storm: Object.freeze({
@@ -179,6 +212,11 @@ const RPG_SKILLS = Object.freeze({
     attackBonus: 14,
     defenseBonus: 0,
     ultimate: true,
+    statusEffect: Object.freeze({
+      type: 'burn',
+      label: '대화상',
+      description: '운석의 열기로 전장을 불태웁니다.'
+    }),
     classes: Object.freeze(['mage'])
   }),
   arrow_tempest: Object.freeze({
@@ -188,6 +226,11 @@ const RPG_SKILLS = Object.freeze({
     attackBonus: 11,
     defenseBonus: 0,
     ultimate: true,
+    statusEffect: Object.freeze({
+      type: 'pin',
+      label: '속박',
+      description: '화살비로 적의 움직임을 묶습니다.'
+    }),
     classes: Object.freeze(['ranger'])
   }),
   divine_aegis: Object.freeze({
@@ -197,6 +240,11 @@ const RPG_SKILLS = Object.freeze({
     attackBonus: 7,
     defenseBonus: 9,
     ultimate: true,
+    statusEffect: Object.freeze({
+      type: 'barrier',
+      label: '성역',
+      description: '파티를 감싸는 강력한 보호막을 전개합니다.'
+    }),
     classes: Object.freeze(['paladin'])
   }),
   shadow_execute: Object.freeze({
@@ -206,6 +254,11 @@ const RPG_SKILLS = Object.freeze({
     attackBonus: 13,
     defenseBonus: 0,
     ultimate: true,
+    statusEffect: Object.freeze({
+      type: 'vulnerable',
+      label: '치명상',
+      description: '급소를 갈라 적을 크게 약화합니다.'
+    }),
     classes: Object.freeze(['rogue'])
   }),
   miracle_judgement: Object.freeze({
@@ -215,6 +268,11 @@ const RPG_SKILLS = Object.freeze({
     attackBonus: 6,
     defenseBonus: 8,
     ultimate: true,
+    statusEffect: Object.freeze({
+      type: 'barrier',
+      label: '기적의 가호',
+      description: '빛의 심판 뒤에 회복의 가호가 남습니다.'
+    }),
     classes: Object.freeze(['priest'])
   })
 });
@@ -266,6 +324,19 @@ const RPG_AREAS = Object.freeze({
       hard: RPG_DIFFICULTIES.hard.monsters
     })
   }),
+  wildflower_plains: Object.freeze({
+    label: '들꽃 평원',
+    unlockLevel: 1,
+    description: '슬라임과 숲짐승이 많은 초반 평원 사냥터',
+    backgroundAssetId: 'map_wildflower_plains',
+    coinMultiplier: 1.03,
+    xpMultiplier: 1.02,
+    monsters: Object.freeze({
+      easy: Object.freeze(['슬라임', '고블린', '숲 늑대']),
+      normal: Object.freeze(['고블린', '숲 늑대', '동굴 박쥐']),
+      hard: Object.freeze(['오크 전사', '숲 늑대', '고블린'])
+    })
+  }),
   cave: Object.freeze({
     label: '수정 동굴',
     unlockLevel: 2,
@@ -277,6 +348,19 @@ const RPG_AREAS = Object.freeze({
       easy: Object.freeze(['슬라임', '동굴 박쥐', '고블린']),
       normal: Object.freeze(['동굴 박쥐', '해골 병사', '오크 전사']),
       hard: Object.freeze(['트롤', '암흑 기사', '미니 드래곤'])
+    })
+  }),
+  moonlit_hill: Object.freeze({
+    label: '달빛 언덕',
+    unlockLevel: 2,
+    description: '밤짐승과 고블린 정찰대가 배회하는 낮은 언덕 사냥터',
+    backgroundAssetId: 'map_moonlit_hill',
+    coinMultiplier: 1.08,
+    xpMultiplier: 1.06,
+    monsters: Object.freeze({
+      easy: Object.freeze(['슬라임', '숲 늑대', '동굴 박쥐']),
+      normal: Object.freeze(['숲 늑대', '고블린', '오크 전사']),
+      hard: Object.freeze(['오크 전사', '동굴 박쥐', '트롤'])
     })
   }),
   marsh: Object.freeze({
@@ -292,6 +376,19 @@ const RPG_AREAS = Object.freeze({
       hard: Object.freeze(['암흑 기사', '트롤', '미니 드래곤'])
     })
   }),
+  mushroom_grove: Object.freeze({
+    label: '버섯 숲',
+    unlockLevel: 3,
+    description: '포자 안개 속에서 기습 몬스터가 튀어나오는 숲 사냥터',
+    backgroundAssetId: 'map_mushroom_grove',
+    coinMultiplier: 1.22,
+    xpMultiplier: 1.15,
+    monsters: Object.freeze({
+      easy: Object.freeze(['고블린', '동굴 박쥐', '숲 늑대']),
+      normal: Object.freeze(['해골 병사', '오크 전사', '트롤']),
+      hard: Object.freeze(['트롤', '암흑 기사', '미니 드래곤'])
+    })
+  }),
   ruins: Object.freeze({
     label: '고대 유적',
     unlockLevel: 4,
@@ -303,6 +400,32 @@ const RPG_AREAS = Object.freeze({
       easy: Object.freeze(['해골 병사', '고블린', '동굴 박쥐']),
       normal: Object.freeze(['오크 전사', '암흑 기사', '트롤']),
       hard: RPG_DIFFICULTIES.hard.monsters
+    })
+  }),
+  bandit_outpost: Object.freeze({
+    label: '도적 전초기지',
+    unlockLevel: 4,
+    description: '몬스터 무리와 약탈자 잔당이 길목을 막는 전투 사냥터',
+    backgroundAssetId: 'map_bandit_outpost',
+    coinMultiplier: 1.42,
+    xpMultiplier: 1.3,
+    monsters: Object.freeze({
+      easy: Object.freeze(['고블린', '오크 전사', '해골 병사']),
+      normal: Object.freeze(['오크 전사', '트롤', '암흑 기사']),
+      hard: Object.freeze(['트롤', '암흑 기사', '미니 드래곤'])
+    })
+  }),
+  red_desert: Object.freeze({
+    label: '붉은 사막',
+    unlockLevel: 5,
+    description: '모래폭풍과 강한 야수가 체력을 갉아먹는 건조 지대',
+    backgroundAssetId: 'map_red_desert',
+    coinMultiplier: 1.5,
+    xpMultiplier: 1.36,
+    monsters: Object.freeze({
+      easy: Object.freeze(['오크 전사', '숲 늑대', '해골 병사']),
+      normal: Object.freeze(['트롤', '오크 전사', '암흑 기사']),
+      hard: Object.freeze(['암흑 기사', '트롤', '미니 드래곤'])
     })
   }),
   volcano: Object.freeze({
@@ -318,6 +441,19 @@ const RPG_AREAS = Object.freeze({
       hard: Object.freeze(['암흑 기사', '미니 드래곤', '고대 드래곤'])
     })
   }),
+  thunder_plateau: Object.freeze({
+    label: '천둥 고원',
+    unlockLevel: 7,
+    description: '번개가 떨어지는 고원에서 정예 몬스터와 맞서는 사냥터',
+    backgroundAssetId: 'map_thunder_plateau',
+    coinMultiplier: 1.72,
+    xpMultiplier: 1.58,
+    monsters: Object.freeze({
+      easy: Object.freeze(['트롤', '오크 전사', '해골 병사']),
+      normal: Object.freeze(['암흑 기사', '트롤', '미니 드래곤']),
+      hard: Object.freeze(['미니 드래곤', '암흑 기사', '고대 드래곤'])
+    })
+  }),
   frost: Object.freeze({
     label: '빙결 봉우리',
     unlockLevel: 8,
@@ -331,6 +467,19 @@ const RPG_AREAS = Object.freeze({
       hard: Object.freeze(['미니 드래곤', '고대 드래곤', '암흑 기사'])
     })
   }),
+  crystal_lake: Object.freeze({
+    label: '수정 호수',
+    unlockLevel: 9,
+    description: '얼어붙은 호수와 수정 군락이 마력을 뒤틀어놓는 사냥터',
+    backgroundAssetId: 'map_crystal_lake',
+    coinMultiplier: 2,
+    xpMultiplier: 1.85,
+    monsters: Object.freeze({
+      easy: Object.freeze(['암흑 기사', '트롤', '동굴 박쥐']),
+      normal: Object.freeze(['미니 드래곤', '암흑 기사', '트롤']),
+      hard: Object.freeze(['고대 드래곤', '미니 드래곤', '암흑 기사'])
+    })
+  }),
   sky: Object.freeze({
     label: '하늘 성채',
     unlockLevel: 10,
@@ -341,6 +490,71 @@ const RPG_AREAS = Object.freeze({
     monsters: Object.freeze({
       easy: Object.freeze(['트롤', '암흑 기사', '미니 드래곤']),
       normal: Object.freeze(['암흑 기사', '미니 드래곤', '고대 드래곤']),
+      hard: Object.freeze(['고대 드래곤', '미니 드래곤', '암흑 기사'])
+    })
+  }),
+  phantom_forest: Object.freeze({
+    label: '환영 숲',
+    unlockLevel: 11,
+    description: '환영과 그림자가 길을 흐리는 상위 사냥터',
+    backgroundAssetId: 'map_phantom_forest',
+    coinMultiplier: 2.3,
+    xpMultiplier: 2.12,
+    monsters: Object.freeze({
+      easy: Object.freeze(['암흑 기사', '트롤', '미니 드래곤']),
+      normal: Object.freeze(['미니 드래곤', '고대 드래곤', '암흑 기사']),
+      hard: Object.freeze(['고대 드래곤', '암흑 기사', '미니 드래곤'])
+    })
+  }),
+  abyss_mine: Object.freeze({
+    label: '심연 광산',
+    unlockLevel: 12,
+    description: '어둠 속 광맥에서 고대 몬스터가 깨어나는 위험 사냥터',
+    backgroundAssetId: 'map_abyss_mine',
+    coinMultiplier: 2.45,
+    xpMultiplier: 2.25,
+    monsters: Object.freeze({
+      easy: Object.freeze(['트롤', '암흑 기사', '미니 드래곤']),
+      normal: Object.freeze(['암흑 기사', '고대 드래곤', '미니 드래곤']),
+      hard: Object.freeze(['고대 드래곤', '미니 드래곤', '암흑 기사'])
+    })
+  }),
+  starfall_crater: Object.freeze({
+    label: '별무리 분화구',
+    unlockLevel: 13,
+    description: '별빛 파편과 용암이 뒤섞인 초고난도 사냥터',
+    backgroundAssetId: 'map_starfall_crater',
+    coinMultiplier: 2.65,
+    xpMultiplier: 2.45,
+    monsters: Object.freeze({
+      easy: Object.freeze(['암흑 기사', '미니 드래곤', '트롤']),
+      normal: Object.freeze(['미니 드래곤', '고대 드래곤', '암흑 기사']),
+      hard: Object.freeze(['고대 드래곤', '미니 드래곤', '암흑 기사'])
+    })
+  }),
+  dragon_nest: Object.freeze({
+    label: '용의 둥지',
+    unlockLevel: 15,
+    description: '고대 드래곤의 둥지에서 최고급 전리품을 노리는 사냥터',
+    backgroundAssetId: 'map_dragon_nest',
+    coinMultiplier: 2.95,
+    xpMultiplier: 2.75,
+    monsters: Object.freeze({
+      easy: Object.freeze(['미니 드래곤', '암흑 기사', '고대 드래곤']),
+      normal: Object.freeze(['고대 드래곤', '미니 드래곤', '암흑 기사']),
+      hard: Object.freeze(['고대 드래곤', '미니 드래곤', '암흑 기사'])
+    })
+  }),
+  void_gate: Object.freeze({
+    label: '공허 관문',
+    unlockLevel: 16,
+    description: '공허의 균열에서 엔드게임 몬스터가 쏟아지는 최심부 사냥터',
+    backgroundAssetId: 'map_void_gate',
+    coinMultiplier: 3.15,
+    xpMultiplier: 2.95,
+    monsters: Object.freeze({
+      easy: Object.freeze(['암흑 기사', '미니 드래곤', '고대 드래곤']),
+      normal: Object.freeze(['고대 드래곤', '암흑 기사', '미니 드래곤']),
       hard: Object.freeze(['고대 드래곤', '미니 드래곤', '암흑 기사'])
     })
   })
@@ -357,7 +571,17 @@ const MONSTER_ASSET_IDS = Object.freeze({
   '암흑 기사': 'monster_dark_knight_idle',
   '미니 드래곤': 'monster_mini_dragon_idle',
   '슬라임 킹': 'boss_slime_king_idle',
-  '고대 드래곤': 'boss_ancient_dragon_idle'
+  '고블린 전투부대': 'boss_goblin_warband_idle',
+  '수정 히드라': 'boss_crystal_hydra_idle',
+  '늪지 베헤모스': 'boss_marsh_behemoth_idle',
+  '유적 감시자': 'boss_ruins_sentinel_idle',
+  '화염 거인': 'boss_flame_giant_idle',
+  '빙결 리치': 'boss_frost_lich_idle',
+  '폭풍 와이번': 'boss_storm_wyvern_idle',
+  '공허 기사단': 'boss_void_knights_idle',
+  '천공 골렘': 'boss_sky_golem_idle',
+  '고대 드래곤': 'boss_ancient_dragon_idle',
+  '종말의 용': 'boss_apocalypse_dragon_idle'
 });
 
 const RPG_ITEMS = Object.freeze({
@@ -378,6 +602,14 @@ const RPG_ITEMS = Object.freeze({
     heal: 0,
     mpHeal: 25,
     assetId: 'item_mana_potion_icon'
+  }),
+  enhancement_stone: Object.freeze({
+    label: '강화석',
+    description: '전리품 장비 강화 보조 재료입니다. 전리품을 분해하면 얻습니다.',
+    type: 'material',
+    price: 0,
+    assetId: 'item_enhancement_stone_icon',
+    shopHidden: true
   }),
   iron_sword: Object.freeze({
     label: '철검',
@@ -555,6 +787,11 @@ const RPG_BOSS_PATTERNS = Object.freeze({
       id: 'crown_bounce',
       label: '왕관 튕기기',
       description: '가벼운 왕관 돌진. 다음 큰 공격 전 예열 패턴입니다.',
+      telegraph: '몸을 낮추고 왕관이 반짝입니다.',
+      counterAction: 'basic',
+      counterLabel: '기본 공격으로 튕기기',
+      weaknessSkillIds: Object.freeze(['basic', 'power_strike', 'aimed_shot']),
+      weaknessLabel: '물리 타격',
       damageMultiplier: 1,
       guardMitigationRate: 0.55
     }),
@@ -562,6 +799,11 @@ const RPG_BOSS_PATTERNS = Object.freeze({
       id: 'royal_slam',
       label: '왕관 내려찍기',
       description: '슬라임 킹이 크게 뛰어올라 찍어누릅니다. 방어 효율이 높습니다.',
+      telegraph: '높이 뛰어올라 그림자가 커집니다.',
+      counterAction: 'guard',
+      counterLabel: '방어로 충격 흘리기',
+      weaknessSkillIds: Object.freeze(['holy_guard', 'divine_aegis']),
+      weaknessLabel: '보호막/방어',
       damageMultiplier: 1.5,
       guardMitigationRate: 0.7
     }),
@@ -569,6 +811,11 @@ const RPG_BOSS_PATTERNS = Object.freeze({
       id: 'slime_split',
       label: '슬라임 분열',
       description: '분열체를 뿌려 누적 피해를 노리는 패턴입니다.',
+      telegraph: '몸이 부풀며 작은 분열체가 튀어나옵니다.',
+      counterAction: 'skill',
+      counterLabel: '스킬로 분열체 정리',
+      weaknessSkillIds: Object.freeze(['fireball', 'meteor_storm', 'arrow_tempest']),
+      weaknessLabel: '광역 스킬',
       damageMultiplier: 1.15,
       guardMitigationRate: 0.6
     })
@@ -578,6 +825,11 @@ const RPG_BOSS_PATTERNS = Object.freeze({
       id: 'ember_breath',
       label: '잿불 숨결',
       description: '고대 드래곤이 전장을 불길로 덮습니다.',
+      telegraph: '목 안쪽에서 붉은 불빛이 차오릅니다.',
+      counterAction: 'guard',
+      counterLabel: '방어로 숨결 버티기',
+      weaknessSkillIds: Object.freeze(['holy_guard', 'divine_aegis', 'miracle_judgement']),
+      weaknessLabel: '신성 방어',
       damageMultiplier: 1.2,
       guardMitigationRate: 0.55
     }),
@@ -585,6 +837,11 @@ const RPG_BOSS_PATTERNS = Object.freeze({
       id: 'tail_crash',
       label: '꼬리 붕괴',
       description: '육중한 꼬리로 방어선을 부숩니다.',
+      telegraph: '꼬리를 뒤로 빼고 지면이 흔들립니다.',
+      counterAction: 'skill',
+      counterLabel: '강한 단일기로 꼬리 끊기',
+      weaknessSkillIds: Object.freeze(['power_strike', 'backstab', 'shadow_execute']),
+      weaknessLabel: '강한 단일기',
       damageMultiplier: 1.45,
       guardMitigationRate: 0.65
     }),
@@ -592,6 +849,11 @@ const RPG_BOSS_PATTERNS = Object.freeze({
       id: 'ancient_nova',
       label: '고대의 신성',
       description: '가장 위험한 광역 폭발 패턴입니다.',
+      telegraph: '가슴의 고대 문양이 하얗게 폭주합니다.',
+      counterAction: 'ultimate',
+      counterLabel: '궁극기로 폭주 끊기',
+      weaknessSkillIds: Object.freeze(['blade_storm', 'meteor_storm', 'arrow_tempest', 'divine_aegis', 'shadow_execute', 'miracle_judgement']),
+      weaknessLabel: '궁극기',
       damageMultiplier: 1.8,
       guardMitigationRate: 0.75
     })
@@ -609,7 +871,12 @@ const RPG_ADVANCED_CLASSES = Object.freeze({
       requirement: Object.freeze({ type: 'wins', count: 1 })
     }),
     description: '공격 특화 전직. 공격력 +5, 최대 HP +10',
-    stats: Object.freeze({ attack: 5, maxHp: 10 })
+    stats: Object.freeze({ attack: 5, maxHp: 10 }),
+    assetId: 'hero_berserker_idle',
+    assetIds: Object.freeze({
+      male: 'hero_berserker_idle',
+      female: 'hero_female_berserker_idle'
+    })
   }),
   archmage: Object.freeze({
     label: '대마법사',
@@ -621,7 +888,12 @@ const RPG_ADVANCED_CLASSES = Object.freeze({
       requirement: Object.freeze({ type: 'explores', count: 1 })
     }),
     description: '마력 특화 전직. 공격력 +4, 최대 MP +30',
-    stats: Object.freeze({ attack: 4, maxMp: 30 })
+    stats: Object.freeze({ attack: 4, maxMp: 30 }),
+    assetId: 'hero_archmage_idle',
+    assetIds: Object.freeze({
+      male: 'hero_archmage_idle',
+      female: 'hero_female_archmage_idle'
+    })
   }),
   sniper: Object.freeze({
     label: '저격수',
@@ -633,7 +905,12 @@ const RPG_ADVANCED_CLASSES = Object.freeze({
       requirement: Object.freeze({ type: 'areaProgress', area: 'forest', count: 20 })
     }),
     description: '정밀 사격 전직. 공격력 +4, 방어력 +1',
-    stats: Object.freeze({ attack: 4, defense: 1 })
+    stats: Object.freeze({ attack: 4, defense: 1 }),
+    assetId: 'hero_sniper_idle',
+    assetIds: Object.freeze({
+      male: 'hero_sniper_idle',
+      female: 'hero_female_sniper_idle'
+    })
   }),
   crusader: Object.freeze({
     label: '크루세이더',
@@ -645,7 +922,12 @@ const RPG_ADVANCED_CLASSES = Object.freeze({
       requirement: Object.freeze({ type: 'bossKills', count: 1 })
     }),
     description: '성전사 전직. 방어력 +4, 최대 HP +25',
-    stats: Object.freeze({ defense: 4, maxHp: 25 })
+    stats: Object.freeze({ defense: 4, maxHp: 25 }),
+    assetId: 'hero_crusader_idle',
+    assetIds: Object.freeze({
+      male: 'hero_crusader_idle',
+      female: 'hero_female_crusader_idle'
+    })
   }),
   shadow: Object.freeze({
     label: '섀도우',
@@ -657,7 +939,12 @@ const RPG_ADVANCED_CLASSES = Object.freeze({
       requirement: Object.freeze({ type: 'wins', count: 3 })
     }),
     description: '암살자 전직. 공격력 +6',
-    stats: Object.freeze({ attack: 6 })
+    stats: Object.freeze({ attack: 6 }),
+    assetId: 'hero_shadow_idle',
+    assetIds: Object.freeze({
+      male: 'hero_shadow_idle',
+      female: 'hero_female_shadow_idle'
+    })
   }),
   saint: Object.freeze({
     label: '성자',
@@ -669,7 +956,12 @@ const RPG_ADVANCED_CLASSES = Object.freeze({
       requirement: Object.freeze({ type: 'explores', count: 3 })
     }),
     description: '치유 특화 전직. 방어력 +2, 최대 MP +35',
-    stats: Object.freeze({ defense: 2, maxMp: 35 })
+    stats: Object.freeze({ defense: 2, maxMp: 35 }),
+    assetId: 'hero_saint_idle',
+    assetIds: Object.freeze({
+      male: 'hero_saint_idle',
+      female: 'hero_female_saint_idle'
+    })
   })
 });
 
@@ -795,6 +1087,105 @@ const RPG_RAIDS = Object.freeze({
     monster: '슬라임 킹',
     backgroundAssetId: 'map_forest_glade'
   }),
+  goblin_warband: Object.freeze({
+    label: '고블린 전투부대',
+    area: 'forest',
+    unlockLevel: 3,
+    powerMin: 28,
+    powerMax: 42,
+    xpReward: 560,
+    coinReward: 1400,
+    monster: '고블린 전투부대',
+    backgroundAssetId: 'map_goblin_war_camp'
+  }),
+  crystal_hydra: Object.freeze({
+    label: '수정 히드라',
+    area: 'cave',
+    unlockLevel: 5,
+    powerMin: 36,
+    powerMax: 54,
+    xpReward: 820,
+    coinReward: 1900,
+    monster: '수정 히드라',
+    backgroundAssetId: 'map_crystal_nest'
+  }),
+  marsh_behemoth: Object.freeze({
+    label: '늪지 베헤모스',
+    area: 'marsh',
+    unlockLevel: 7,
+    powerMin: 44,
+    powerMax: 64,
+    xpReward: 1050,
+    coinReward: 2300,
+    monster: '늪지 베헤모스',
+    backgroundAssetId: 'map_marsh_depths'
+  }),
+  ruins_sentinel: Object.freeze({
+    label: '유적 감시자',
+    area: 'ruins',
+    unlockLevel: 9,
+    powerMin: 52,
+    powerMax: 72,
+    xpReward: 1320,
+    coinReward: 2700,
+    monster: '유적 감시자',
+    backgroundAssetId: 'map_ruins_obelisk'
+  }),
+  flame_giant: Object.freeze({
+    label: '화염 거인',
+    area: 'volcano',
+    unlockLevel: 12,
+    powerMin: 60,
+    powerMax: 82,
+    xpReward: 1650,
+    coinReward: 3200,
+    monster: '화염 거인',
+    backgroundAssetId: 'map_lava_throne'
+  }),
+  frost_lich: Object.freeze({
+    label: '빙결 리치',
+    area: 'frost',
+    unlockLevel: 15,
+    powerMin: 68,
+    powerMax: 90,
+    xpReward: 2050,
+    coinReward: 3700,
+    monster: '빙결 리치',
+    backgroundAssetId: 'map_frost_catacomb'
+  }),
+  storm_wyvern: Object.freeze({
+    label: '폭풍 와이번',
+    area: 'sky',
+    unlockLevel: 18,
+    powerMin: 74,
+    powerMax: 96,
+    xpReward: 2500,
+    coinReward: 4300,
+    monster: '폭풍 와이번',
+    backgroundAssetId: 'map_storm_spire'
+  }),
+  void_knights: Object.freeze({
+    label: '공허 기사단',
+    area: 'sky',
+    unlockLevel: 21,
+    powerMin: 82,
+    powerMax: 104,
+    xpReward: 3000,
+    coinReward: 5000,
+    monster: '공허 기사단',
+    backgroundAssetId: 'map_void_bastion'
+  }),
+  sky_golem: Object.freeze({
+    label: '천공 골렘',
+    area: 'sky',
+    unlockLevel: 24,
+    powerMin: 88,
+    powerMax: 110,
+    xpReward: 3600,
+    coinReward: 5800,
+    monster: '천공 골렘',
+    backgroundAssetId: 'map_sky_foundry'
+  }),
   dragon_rift: Object.freeze({
     label: '드래곤 균열',
     area: 'ruins',
@@ -805,6 +1196,17 @@ const RPG_RAIDS = Object.freeze({
     coinReward: 3500,
     monster: '고대 드래곤',
     backgroundAssetId: 'map_ancient_ruins'
+  }),
+  apocalypse_dragon: Object.freeze({
+    label: '종말의 용',
+    area: 'sky',
+    unlockLevel: 30,
+    powerMin: 94,
+    powerMax: 108,
+    xpReward: 5000,
+    coinReward: 8000,
+    monster: '종말의 용',
+    backgroundAssetId: 'map_eclipse_throne'
   })
 });
 
@@ -887,7 +1289,7 @@ export function getRpgSkillOptions() {
 
 export function getRpgShopItemOptions() {
   return Object.entries(RPG_ITEMS)
-    .filter(([, item]) => !item.gachaOnly)
+    .filter(([, item]) => !item.gachaOnly && !item.shopHidden)
     .map(([value, item]) => ({
       name: `${item.label} (${item.price}골드)`,
       value
@@ -962,10 +1364,12 @@ export function getRpgStoryChapterOptions() {
 }
 
 export function getRpgRaidOptions() {
-  return Object.entries(RPG_RAIDS).map(([value, raid]) => ({
-    name: `${raid.label} (Lv.${raid.unlockLevel}+)`,
-    value
-  }));
+  return Object.entries(RPG_RAIDS)
+    .sort(([, a], [, b]) => a.unlockLevel - b.unlockLevel || a.powerMin - b.powerMin)
+    .map(([value, raid]) => ({
+      name: `${raid.label} (Lv.${raid.unlockLevel}+)`,
+      value
+    }));
 }
 
 export function getRpgClassConfig(characterClass = 'novice') {
@@ -981,6 +1385,35 @@ export function getRpgClassAssetId(characterClass = 'novice', characterGender = 
   const normalizedGender = normalizeRpgGender(characterGender);
 
   return classConfig.assetIds?.[normalizedGender] ?? classConfig.assetId;
+}
+
+export function getRpgAdvancedClassAssetId(advancedClass, characterGender = 'male', characterClass = null) {
+  let normalizedAdvancedClass = null;
+  try {
+    normalizedAdvancedClass = normalizeNullableRpgAdvancedClass(advancedClass);
+  } catch {
+    return null;
+  }
+  if (!normalizedAdvancedClass) return null;
+
+  const advancedClassConfig = RPG_ADVANCED_CLASSES[normalizedAdvancedClass];
+  const normalizedClass = characterClass ? normalizeRpgClass(characterClass) : null;
+  if (normalizedClass && advancedClassConfig.baseClass !== normalizedClass) return null;
+
+  const normalizedGender = normalizeRpgGender(characterGender);
+  return advancedClassConfig.assetIds?.[normalizedGender] ?? advancedClassConfig.assetId ?? null;
+}
+
+export function getRpgHeroAssetId({
+  characterClass = 'novice',
+  characterGender = 'male',
+  advancedClass = null
+} = {}) {
+  const normalizedClass = normalizeRpgClass(characterClass);
+  const normalizedGender = normalizeRpgGender(characterGender);
+
+  return getRpgAdvancedClassAssetId(advancedClass, normalizedGender, normalizedClass)
+    ?? getRpgClassAssetId(normalizedClass, normalizedGender);
 }
 
 export function getRpgMonsterAssetId(monsterName) {
@@ -1151,6 +1584,8 @@ export function getRpgDailyMissionStatuses(profile, now = Date.now()) {
 export function getRpgAdventureGuide(profile, {
   now = Date.now(),
   cooldownRemainingMs = 0,
+  actionAvailability = null,
+  dailyGold = null,
   xpForNextLevel = defaultRpgXpForNextLevel
 } = {}) {
   const level = Math.max(1, Number(profile.level) || 1);
@@ -1219,9 +1654,12 @@ export function getRpgAdventureGuide(profile, {
     claimableDailyMissions,
     claimableQuests,
     progressableStoryChapters,
+    actionAvailability,
+    dailyGold,
     recommendedAction: getRecommendedRpgAction({
       profile,
       cooldownRemainingMs,
+      actionAvailability,
       claimableDailyMissions,
       claimableQuests,
       progressableStoryChapters,
@@ -1403,14 +1841,26 @@ export function normalizeRpgArea(area = 'forest') {
   const normalized = String(area || 'forest').trim().toLocaleLowerCase('ko-KR');
 
   if (['숲', '초록 숲', 'forest', 'f'].includes(normalized)) return 'forest';
+  if (['들꽃', '들꽃 평원', '들꽃평원', '평원', 'wildflower_plains', 'wildflower plains', 'plains', 'wp'].includes(normalized)) return 'wildflower_plains';
   if (['동굴', '수정 동굴', 'cave', 'c'].includes(normalized)) return 'cave';
+  if (['달빛', '달빛 언덕', '달빛언덕', '언덕', 'moonlit_hill', 'moonlit hill', 'hill', 'mh'].includes(normalized)) return 'moonlit_hill';
   if (['늪', '그림자 늪', '그림자늪', 'marsh', 'swamp', 'm'].includes(normalized)) return 'marsh';
+  if (['버섯', '버섯 숲', '버섯숲', '포자 숲', '포자숲', 'mushroom_grove', 'mushroom grove', 'mushroom', 'grove'].includes(normalized)) return 'mushroom_grove';
   if (['유적', '고대 유적', 'ruins', 'r'].includes(normalized)) return 'ruins';
+  if (['도적', '도적 전초기지', '도적전초기지', '전초기지', 'bandit_outpost', 'bandit outpost', 'bandit', 'outpost'].includes(normalized)) return 'bandit_outpost';
+  if (['사막', '붉은 사막', '붉은사막', 'red_desert', 'red desert', 'desert'].includes(normalized)) return 'red_desert';
   if (['화산', '화산 협곡', '화산협곡', 'volcano', 'rift', 'v'].includes(normalized)) return 'volcano';
+  if (['천둥', '천둥 고원', '천둥고원', '고원', 'thunder_plateau', 'thunder plateau', 'thunder', 'plateau'].includes(normalized)) return 'thunder_plateau';
   if (['빙결', '빙결 봉우리', '빙결봉우리', '설산', 'frost', 'peak', 'ice'].includes(normalized)) return 'frost';
+  if (['호수', '수정 호수', '수정호수', 'crystal_lake', 'crystal lake', 'lake'].includes(normalized)) return 'crystal_lake';
   if (['하늘', '하늘 성채', '하늘성채', 'sky', 'citadel', 's'].includes(normalized)) return 'sky';
+  if (['환영', '환영 숲', '환영숲', 'phantom_forest', 'phantom forest', 'phantom'].includes(normalized)) return 'phantom_forest';
+  if (['심연', '심연 광산', '심연광산', '광산', 'abyss_mine', 'abyss mine', 'abyss', 'mine'].includes(normalized)) return 'abyss_mine';
+  if (['별무리', '별무리 분화구', '별무리분화구', '분화구', 'starfall_crater', 'starfall crater', 'starfall', 'crater'].includes(normalized)) return 'starfall_crater';
+  if (['용', '용의 둥지', '용의둥지', '용둥지', '둥지', 'dragon_nest', 'dragon nest', 'nest'].includes(normalized)) return 'dragon_nest';
+  if (['공허', '공허 관문', '공허관문', '관문', 'void_gate', 'void gate', 'void', 'gate'].includes(normalized)) return 'void_gate';
 
-  throw new Error('지역은 초록 숲, 수정 동굴, 그림자 늪, 고대 유적, 화산 협곡, 빙결 봉우리, 하늘 성채 중 하나여야 합니다.');
+  throw new Error('지역은 초록 숲, 들꽃 평원, 수정 동굴, 달빛 언덕, 그림자 늪, 버섯 숲, 고대 유적, 도적 전초기지, 붉은 사막, 화산 협곡, 천둥 고원, 빙결 봉우리, 수정 호수, 하늘 성채, 환영 숲, 심연 광산, 별무리 분화구, 용의 둥지, 공허 관문 중 하나여야 합니다.');
 }
 
 export function normalizeRpgSkillId(skillId = 'basic') {
@@ -1422,6 +1872,7 @@ export function normalizeRpgSkillId(skillId = 'basic') {
   if (['조준 사격', '조준사격', 'aimed_shot', 'aimed shot'].includes(normalized)) return 'aimed_shot';
   if (['백스탭', 'backstab'].includes(normalized)) return 'backstab';
   if (['성스러운 방패', '성스러운방패', 'holy_guard', 'holy guard'].includes(normalized)) return 'holy_guard';
+  if (['성스러운 강타', '성스러운강타', '홀리 스마이트', '홀리스마이트', 'holy_smite', 'holy smite'].includes(normalized)) return 'holy_smite';
   if (['검의 폭풍', '검의폭풍', '블레이드 스톰', '블레이드스톰', 'blade_storm', 'blade storm'].includes(normalized)) return 'blade_storm';
   if (['메테오 스톰', '메테오스톰', 'meteor_storm', 'meteor storm'].includes(normalized)) return 'meteor_storm';
   if (['화살 폭우', '화살폭우', '애로우 템페스트', 'arrow_tempest', 'arrow tempest'].includes(normalized)) return 'arrow_tempest';
@@ -1446,6 +1897,7 @@ export function normalizeRpgItemId(itemId) {
 
   if (['포션', '회복 포션', 'potion'].includes(normalized)) return 'potion';
   if (['마나 포션', '마나포션', 'mana_potion', 'mana potion'].includes(normalized)) return 'mana_potion';
+  if (['강화석', '강화 돌', '강화돌', 'enhancement_stone', 'enhancement stone', 'stone'].includes(normalized)) return 'enhancement_stone';
   if (['철검', 'iron_sword', 'iron sword', 'sword'].includes(normalized)) return 'iron_sword';
   if (['가죽 갑옷', '가죽갑옷', 'leather_armor', 'leather armor', 'armor'].includes(normalized)) return 'leather_armor';
   if (['반지', '신비한 반지', 'mystic_ring', 'mystic ring', 'ring'].includes(normalized)) return 'mystic_ring';
@@ -1541,8 +1993,14 @@ export function normalizeRpgStoryChapterId(chapterId) {
 export function normalizeRpgRaidId(raidId) {
   const normalized = String(raidId || '').trim().toLocaleLowerCase('ko-KR');
 
-  if (['슬라임 군단', '슬라임군단', 'slime_horde', 'slime horde'].includes(normalized)) return 'slime_horde';
-  if (['드래곤 균열', '드래곤균열', 'dragon_rift', 'dragon rift'].includes(normalized)) return 'dragon_rift';
+  for (const [id, raid] of Object.entries(RPG_RAIDS)) {
+    const label = raid.label.toLocaleLowerCase('ko-KR');
+    const compactLabel = label.replace(/\s+/g, '');
+    const spacedId = id.replace(/_/g, ' ');
+    if ([id, spacedId, label, compactLabel].includes(normalized)) {
+      return id;
+    }
+  }
 
   throw new Error('알 수 없는 레이드입니다.');
 }
@@ -1599,6 +2057,7 @@ export function resolveRpgBattle({
   difficulty = 'normal',
   characterClass = 'novice',
   characterGender = 'male',
+  advancedClass = null,
   area = 'forest',
   skillId = 'basic',
   statBonuses = {},
@@ -1642,6 +2101,7 @@ export function resolveRpgBattle({
     skillLabel: skill.label,
     skillMpCost: skill.mpCost,
     ultimate: Boolean(skill.ultimate),
+    statusEffect: cloneRpgStatusEffect(skill.statusEffect),
     area: normalizedArea,
     areaLabel: areaConfig.label,
     monster,
@@ -1659,7 +2119,11 @@ export function resolveRpgBattle({
       coins: coinReward
     },
     assets: {
-      hero: getRpgClassAssetId(normalizedClass, normalizedGender),
+      hero: getRpgHeroAssetId({
+        characterClass: normalizedClass,
+        characterGender: normalizedGender,
+        advancedClass
+      }),
       monster: MONSTER_ASSET_IDS[monster] ?? 'monster_unknown_idle',
       background: areaConfig.backgroundAssetId
     }
@@ -1689,6 +2153,7 @@ export function resolveRpgPvpTurn({
     skillLabel: skill.label,
     skillMpCost: skill.mpCost,
     ultimate: Boolean(skill.ultimate),
+    statusEffect: cloneRpgStatusEffect(skill.statusEffect),
     roll,
     attackBonus,
     guardBonus: Math.max(0, Number(skill.defenseBonus) || 0),
@@ -1723,6 +2188,7 @@ export function resolveRpgBossTurn({
   let skillLabel = null;
   let mpCost = 0;
   let ultimate = false;
+  let statusEffect = null;
   let playerMpAfter = playerState.mp;
   const inventory = { ...playerState.inventory };
 
@@ -1750,10 +2216,25 @@ export function resolveRpgBossTurn({
     skillLabel = skill.label;
     mpCost = skill.mpCost;
     ultimate = Boolean(skill.ultimate);
+    statusEffect = cloneRpgStatusEffect(skill.statusEffect);
     playerMpAfter = Math.max(0, playerState.mp - skill.mpCost);
     roll = randomInt(1, 20);
     attackPower = playerState.stats.attack + skill.attackBonus + playerState.level + roll;
     playerDamage = Math.max(1, Math.floor(attackPower / 2));
+  }
+
+  const weaknessHit = Boolean(skillId && bossPattern.weaknessSkillIds?.includes(skillId));
+  const patternCountered = isRpgBossPatternCountered({
+    bossPattern,
+    action: normalizedAction,
+    skillId,
+    ultimate
+  });
+  if (weaknessHit) {
+    playerDamage += Math.max(2, Math.ceil(playerDamage * 0.35));
+  }
+  if (patternCountered && normalizedAction !== 'guard' && normalizedAction !== 'potion') {
+    playerDamage += Math.max(1, Math.ceil(playerState.level / 2));
   }
 
   const bossHpAfter = Math.max(0, bossState.hp - playerDamage);
@@ -1762,9 +2243,13 @@ export function resolveRpgBossTurn({
   const guardMitigation = normalizedAction === 'guard'
     ? Math.ceil(patternedBossPower * bossPattern.guardMitigationRate)
     : 0;
-  const bossDamage = bossDefeated
+  const rawBossDamage = bossDefeated
     ? 0
     : Math.max(1, Math.floor(Math.max(1, patternedBossPower - playerState.stats.defense - guardMitigation) / 3));
+  const bossDamageReduction = patternCountered && !bossDefeated
+    ? Math.max(1, Math.ceil(rawBossDamage * 0.4))
+    : 0;
+  const bossDamage = Math.max(0, rawBossDamage - bossDamageReduction);
   const playerHpAfterHeal = Math.min(playerState.maxHp, playerState.hp + healed);
   const playerHpAfter = Math.max(1, playerHpAfterHeal - bossDamage);
 
@@ -1774,12 +2259,16 @@ export function resolveRpgBossTurn({
     skillLabel,
     mpCost,
     ultimate,
+    statusEffect,
     roll,
     attackPower,
     playerDamage,
     healed,
     consumedItemId,
     bossPattern,
+    patternCountered,
+    weaknessHit,
+    bossDamageReduction,
     bossDamage,
     bossHpBefore: bossState.hp,
     bossHpAfter,
@@ -1798,6 +2287,7 @@ export function resolveRpgBossBattle({
   bossId,
   characterClass = 'novice',
   characterGender = 'male',
+  advancedClass = null,
   skillId = 'basic',
   statBonuses = {},
   randomInt = defaultRandomInt
@@ -1852,7 +2342,11 @@ export function resolveRpgBossBattle({
       coins: win ? boss.coinReward : 0
     },
     assets: {
-      hero: getRpgClassAssetId(normalizedClass, normalizedGender),
+      hero: getRpgHeroAssetId({
+        characterClass: normalizedClass,
+        characterGender: normalizedGender,
+        advancedClass
+      }),
       monster: MONSTER_ASSET_IDS[boss.monster] ?? 'boss_unknown_idle',
       background: boss.backgroundAssetId
     }
@@ -1863,6 +2357,7 @@ function createRpgPvpTurnFighter(fighter) {
   const safeFighter = fighter && typeof fighter === 'object' ? fighter : {};
   const normalizedClass = normalizeRpgClass(safeFighter.characterClass ?? 'novice');
   const normalizedGender = normalizeRpgGender(safeFighter.characterGender ?? 'male');
+  const normalizedAdvancedClass = normalizeNullableRpgAdvancedClass(safeFighter.advancedClass);
   const classConfig = RPG_CLASSES[normalizedClass];
   const genderConfig = RPG_GENDERS[normalizedGender];
   const safeLevel = Math.max(1, Number(safeFighter.level) || 1);
@@ -1873,10 +2368,18 @@ function createRpgPvpTurnFighter(fighter) {
     characterClassLabel: classConfig.label,
     characterGender: normalizedGender,
     characterGenderLabel: genderConfig.label,
+    advancedClass: normalizedAdvancedClass,
+    advancedClassLabel: normalizedAdvancedClass
+      ? RPG_ADVANCED_CLASSES[normalizedAdvancedClass].label
+      : null,
     stats: normalizeRpgPvpStats(safeFighter.stats, safeLevel, normalizedClass),
     guardBonus: Math.max(0, Number(safeFighter.guardBonus) || 0),
     assets: {
-      hero: getRpgClassAssetId(normalizedClass, normalizedGender)
+      hero: getRpgHeroAssetId({
+        characterClass: normalizedClass,
+        characterGender: normalizedGender,
+        advancedClass: normalizedAdvancedClass
+      })
     }
   };
 }
@@ -1885,6 +2388,7 @@ function createRpgBossTurnPlayer(player) {
   const safePlayer = player && typeof player === 'object' ? player : {};
   const normalizedClass = normalizeRpgClass(safePlayer.characterClass ?? 'novice');
   const normalizedGender = normalizeRpgGender(safePlayer.characterGender ?? 'male');
+  const normalizedAdvancedClass = normalizeNullableRpgAdvancedClass(safePlayer.advancedClass);
   const classConfig = RPG_CLASSES[normalizedClass];
   const genderConfig = RPG_GENDERS[normalizedGender];
   const safeLevel = Math.max(1, Number(safePlayer.level) || 1);
@@ -1902,6 +2406,10 @@ function createRpgBossTurnPlayer(player) {
     characterClassLabel: classConfig.label,
     characterGender: normalizedGender,
     characterGenderLabel: genderConfig.label,
+    advancedClass: normalizedAdvancedClass,
+    advancedClassLabel: normalizedAdvancedClass
+      ? RPG_ADVANCED_CLASSES[normalizedAdvancedClass].label
+      : null,
     hp: Math.max(1, Number(safePlayer.hp) || fallbackStats.maxHp),
     maxHp: Math.max(1, Number(safePlayer.maxHp) || fallbackStats.maxHp),
     mp: Math.max(0, Number(safePlayer.mp) || 0),
@@ -1915,7 +2423,11 @@ function createRpgBossTurnPlayer(player) {
       ? safePlayer.availableSkillIds.map((skillId) => normalizeRpgSkillId(skillId))
       : getAvailableRpgSkillIds(normalizedClass),
     assets: {
-      hero: getRpgClassAssetId(normalizedClass, normalizedGender)
+      hero: getRpgHeroAssetId({
+        characterClass: normalizedClass,
+        characterGender: normalizedGender,
+        advancedClass: normalizedAdvancedClass
+      })
     }
   };
 }
@@ -1963,6 +2475,7 @@ function normalizeRpgGuildRaidMembers(partyMembers = []) {
     .map((member, index) => {
       const characterClass = normalizeRpgClass(member.characterClass ?? 'novice');
       const characterGender = normalizeRpgGender(member.characterGender ?? 'male');
+      const advancedClass = normalizeNullableRpgAdvancedClass(member.advancedClass);
       const level = Math.max(1, Number(member.level) || 1);
       const fallbackStats = getRpgDerivedStats({ level, characterClass });
       const stats = member.stats && typeof member.stats === 'object'
@@ -1979,10 +2492,16 @@ function normalizeRpgGuildRaidMembers(partyMembers = []) {
         characterClassLabel: RPG_CLASSES[characterClass].label,
         characterGender,
         characterGenderLabel: RPG_GENDERS[characterGender].label,
+        advancedClass,
+        advancedClassLabel: advancedClass ? RPG_ADVANCED_CLASSES[advancedClass].label : null,
         stats: { attack, defense },
         power: Math.max(1, attack + Math.floor(defense / 2) + Math.floor(level / 2)),
         assets: {
-          hero: getRpgClassAssetId(characterClass, characterGender)
+          hero: getRpgHeroAssetId({
+            characterClass,
+            characterGender,
+            advancedClass
+          })
         }
       };
     });
@@ -2036,6 +2555,7 @@ export function resolveRpgRaidBattle({
   raidId,
   characterClass = 'novice',
   characterGender = 'male',
+  advancedClass = null,
   skillId = 'basic',
   statBonuses = {},
   randomInt = defaultRandomInt
@@ -2074,6 +2594,7 @@ export function resolveRpgRaidBattle({
     skillLabel: skill.label,
     skillMpCost: skill.mpCost,
     ultimate: Boolean(skill.ultimate),
+    statusEffect: cloneRpgStatusEffect(skill.statusEffect),
     area: raid.area,
     areaLabel: RPG_AREAS[raid.area].label,
     monster: raid.monster,
@@ -2092,7 +2613,11 @@ export function resolveRpgRaidBattle({
       coins: win ? raid.coinReward : 0
     },
     assets: {
-      hero: getRpgClassAssetId(normalizedClass, normalizedGender),
+      hero: getRpgHeroAssetId({
+        characterClass: normalizedClass,
+        characterGender: normalizedGender,
+        advancedClass
+      }),
       monster: MONSTER_ASSET_IDS[raid.monster] ?? 'boss_unknown_idle',
       background: raid.backgroundAssetId
     }
@@ -2104,6 +2629,7 @@ export function resolveRpgGuildRaidBattle({
   raidId,
   characterClass = 'novice',
   characterGender = 'male',
+  advancedClass = null,
   skillId = 'basic',
   statBonuses = {},
   partyMembers = [],
@@ -2146,6 +2672,7 @@ export function resolveRpgGuildRaidBattle({
     skillLabel: skill.label,
     skillMpCost: skill.mpCost,
     ultimate: Boolean(skill.ultimate),
+    statusEffect: cloneRpgStatusEffect(skill.statusEffect),
     area: raid.area,
     areaLabel: RPG_AREAS[raid.area].label,
     monster: raid.monster,
@@ -2171,7 +2698,11 @@ export function resolveRpgGuildRaidBattle({
       coins: win ? Math.floor(raid.coinReward / 4) : 0
     },
     assets: {
-      hero: getRpgClassAssetId(normalizedClass, normalizedGender),
+      hero: getRpgHeroAssetId({
+        characterClass: normalizedClass,
+        characterGender: normalizedGender,
+        advancedClass
+      }),
       monster: MONSTER_ASSET_IDS[raid.monster] ?? 'boss_unknown_idle',
       background: raid.backgroundAssetId
     }
@@ -2200,11 +2731,22 @@ export function rollRpgGearDrop({
   const rarity = Object.entries(RPG_GEAR_RARITIES)
     .reverse()
     .find(([, config]) => rarityRoll >= config.dropFloor)?.[0] ?? 'common';
-  const basePool = ['volcano', 'frost', 'sky'].includes(area)
+  const basePool = [
+    'volcano',
+    'thunder_plateau',
+    'frost',
+    'crystal_lake',
+    'sky',
+    'phantom_forest',
+    'abyss_mine',
+    'starfall_crater',
+    'dragon_nest',
+    'void_gate'
+  ].includes(area)
     ? ['dragon_blade', 'archmage_staff', 'guardian_plate', 'mystic_ring']
-    : ['marsh', 'ruins'].includes(area)
+    : ['marsh', 'mushroom_grove', 'ruins', 'bandit_outpost', 'red_desert'].includes(area)
       ? ['dragon_blade', 'guardian_plate', 'mystic_ring']
-      : area === 'cave'
+      : ['cave', 'moonlit_hill'].includes(area)
         ? ['archmage_staff', 'leather_armor', 'mystic_ring']
         : ['iron_sword', 'leather_armor', 'mystic_ring'];
   const baseItemId = basePool[randomInt(0, basePool.length - 1)];
@@ -2359,6 +2901,7 @@ function getRpgDailyStatsForDay(daily = {}, now = Date.now()) {
       bosses: 0,
       raids: 0,
       pvpWins: 0,
+      goldEarned: 0,
       claimedMissions: {}
     };
   }
@@ -2372,6 +2915,7 @@ function getRpgDailyStatsForDay(daily = {}, now = Date.now()) {
     bosses: Math.max(0, Number(safeDaily.bosses) || 0),
     raids: Math.max(0, Number(safeDaily.raids) || 0),
     pvpWins: Math.max(0, Number(safeDaily.pvpWins) || 0),
+    goldEarned: Math.max(0, Number(safeDaily.goldEarned) || 0),
     claimedMissions: { ...(safeDaily.claimedMissions ?? {}) }
   };
 }
@@ -2393,6 +2937,7 @@ function createObjective(type, entry) {
 function getRecommendedRpgAction({
   profile,
   cooldownRemainingMs,
+  actionAvailability,
   claimableDailyMissions,
   claimableQuests,
   progressableStoryChapters,
@@ -2428,12 +2973,53 @@ function getRecommendedRpgAction({
     };
   }
 
-  if (cooldownRemainingMs > 0) {
+  const battleAction = actionAvailability?.battle;
+  const exploreAction = actionAvailability?.explore;
+  const dungeonAction = actionAvailability?.dungeon;
+  const restAction = actionAvailability?.rest;
+
+  if ((battleAction && !battleAction.available) || cooldownRemainingMs > 0) {
+    if (!actionAvailability && cooldownRemainingMs > 0) {
+      return {
+        type: 'explore',
+        label: `${currentArea.label} 탐험`,
+        command: '/rpg 탐험',
+        reason: '전투 대기시간 동안 탐험으로 보상과 전리품을 노릴 수 있습니다.'
+      };
+    }
+
+    if (exploreAction?.available) {
+      return {
+        type: 'explore',
+        label: `${currentArea.label} 탐험`,
+        command: exploreAction.command,
+        reason: '전투 대기시간 동안 탐험으로 보상과 전리품을 노릴 수 있습니다.'
+      };
+    }
+
+    if (dungeonAction?.available) {
+      return {
+        type: 'dungeon',
+        label: `${currentArea.label} 던전`,
+        command: dungeonAction.command,
+        reason: '전투 대기 중에도 던전 쿨다운이 비어 있어 장비 파밍을 할 수 있습니다.'
+      };
+    }
+
+    if (restAction?.available) {
+      return {
+        type: 'rest',
+        label: '휴식',
+        command: restAction.command,
+        reason: '주요 행동이 대기 중이면 HP/MP를 정비할 시간입니다.'
+      };
+    }
+
     return {
-      type: 'explore',
-      label: `${currentArea.label} 탐험`,
-      command: '/rpg 탐험',
-      reason: '전투 대기시간 동안 탐험으로 보상과 전리품을 노릴 수 있습니다.'
+      type: 'wait',
+      label: '쿨다운 대기',
+      command: '/rpg 상태',
+      reason: battleAction?.reason ?? '주요 RPG 행동이 아직 대기 중입니다.'
     };
   }
 
@@ -2520,6 +3106,24 @@ function classReward(classId) {
 
 function cloneReward(reward) {
   return { ...reward };
+}
+
+function cloneRpgStatusEffect(statusEffect) {
+  return statusEffect ? { ...statusEffect } : null;
+}
+
+function isRpgBossPatternCountered({
+  bossPattern,
+  action,
+  skillId,
+  ultimate = false
+} = {}) {
+  if (!bossPattern) return false;
+  if (bossPattern.counterAction === 'guard') return action === 'guard';
+  if (bossPattern.counterAction === 'ultimate') return Boolean(ultimate);
+  if (bossPattern.counterAction === 'skill') return Boolean(skillId && skillId !== 'basic');
+  if (bossPattern.counterAction === 'basic') return skillId === 'basic';
+  return Boolean(skillId && bossPattern.weaknessSkillIds?.includes(skillId));
 }
 
 function defaultRandomInt(min, max) {

@@ -13,6 +13,8 @@ test('RPG 에셋 manifest는 forge skill과 출력 위치를 제공한다', () =
   const slime = getRpgAssetById('monster_slime_idle');
   const femaleWarrior = getRpgAssetById('hero_female_warrior_idle');
   const femaleWarriorAttachment = getRpgAssetAttachment('hero_female_warrior_idle');
+  const femaleBerserker = getRpgAssetById('hero_female_berserker_idle');
+  const femaleBerserkerAttachment = getRpgAssetAttachment('hero_female_berserker_idle');
   const skyCitadel = getRpgAssetById('map_sky_citadel');
   const skyCitadelAttachment = getRpgAssetAttachment('map_sky_citadel');
   const maps = getRpgAssetBatch({ kind: 'map', limit: 10 });
@@ -21,12 +23,16 @@ test('RPG 에셋 manifest는 forge skill과 출력 위치를 제공한다', () =
   assert.equal(batch.length, 3);
   assert.ok(slime);
   assert.ok(femaleWarrior);
+  assert.ok(femaleBerserker);
+  assert.ok(femaleBerserkerAttachment);
   assert.ok(skyCitadel);
   assert.ok(skyCitadelAttachment);
   assert.equal(slime.skill, '$generate2dsprite');
   assert.equal(femaleWarrior.category, 'hero');
   assert.equal(skyCitadel.skill, '$generate2dmap');
   assert.match(femaleWarrior.outputDir, /assets\/rpg\/heroes\/female\/warrior/);
+  assert.equal(femaleBerserker.sheet, 'single');
+  assert.match(femaleBerserker.outputDir, /assets\/rpg\/heroes\/advanced\/female\/berserker/);
   assert.ok(femaleWarriorAttachment);
   assert.match(femaleWarriorAttachment.name, /^rpg-image-\d+\.[a-z0-9]+$/i);
   assert.doesNotMatch(femaleWarriorAttachment.name, /hero_female_warrior_idle|warrior|female/i);
@@ -37,4 +43,100 @@ test('RPG 에셋 manifest는 forge skill과 출력 위치를 제공한다', () =
   assert.ok(maps.length >= 7);
   assert.ok(maps.every((asset) => asset.skill === '$generate2dmap'));
   assert.match(formatRpgAssetLine(slime), /monster_slime_idle/);
+});
+
+test('확장 레이드 보스와 전장은 생성된 이미지 파일에 연결되어 있다', () => {
+  const raidBossIds = [
+    'boss_goblin_warband_idle',
+    'boss_crystal_hydra_idle',
+    'boss_marsh_behemoth_idle',
+    'boss_ruins_sentinel_idle',
+    'boss_flame_giant_idle',
+    'boss_frost_lich_idle',
+    'boss_storm_wyvern_idle',
+    'boss_void_knights_idle',
+    'boss_sky_golem_idle',
+    'boss_apocalypse_dragon_idle'
+  ];
+  const raidMapIds = [
+    'map_goblin_war_camp',
+    'map_crystal_nest',
+    'map_marsh_depths',
+    'map_ruins_obelisk',
+    'map_lava_throne',
+    'map_frost_catacomb',
+    'map_storm_spire',
+    'map_void_bastion',
+    'map_sky_foundry',
+    'map_eclipse_throne'
+  ];
+
+  assert.ok(getRpgAssetCount() >= 57);
+
+  for (const assetId of [...raidBossIds, ...raidMapIds]) {
+    const asset = getRpgAssetById(assetId);
+    const attachment = getRpgAssetAttachment(assetId);
+
+    assert.ok(asset, `${assetId} asset definition missing`);
+    assert.ok(attachment, `${assetId} generated file missing`);
+    assert.match(attachment.name, /^rpg-image-\d+\.[a-z0-9]+$/i);
+    assert.doesNotMatch(attachment.name, new RegExp(assetId, 'i'));
+  }
+});
+
+test('추가 사냥터 배경은 agent-sprite-forge 맵 이미지에 연결되어 있다', () => {
+  const huntingGroundMapIds = [
+    'map_wildflower_plains',
+    'map_moonlit_hill',
+    'map_mushroom_grove',
+    'map_bandit_outpost',
+    'map_red_desert',
+    'map_thunder_plateau',
+    'map_crystal_lake',
+    'map_phantom_forest',
+    'map_abyss_mine',
+    'map_starfall_crater',
+    'map_dragon_nest',
+    'map_void_gate'
+  ];
+
+  for (const assetId of huntingGroundMapIds) {
+    const asset = getRpgAssetById(assetId);
+    const attachment = getRpgAssetAttachment(assetId);
+
+    assert.ok(asset, `${assetId} asset definition missing`);
+    assert.equal(asset.skill, '$generate2dmap');
+    assert.ok(attachment, `${assetId} generated file missing`);
+    assert.match(attachment.name, /^rpg-image-\d+\.png$/i);
+    assert.doesNotMatch(attachment.name, new RegExp(assetId, 'i'));
+  }
+});
+
+test('전직 영웅 이미지는 남녀 모두 생성된 파일에 연결되어 있다', () => {
+  const advancedHeroIds = [
+    'hero_berserker_idle',
+    'hero_female_berserker_idle',
+    'hero_archmage_idle',
+    'hero_female_archmage_idle',
+    'hero_sniper_idle',
+    'hero_female_sniper_idle',
+    'hero_crusader_idle',
+    'hero_female_crusader_idle',
+    'hero_shadow_idle',
+    'hero_female_shadow_idle',
+    'hero_saint_idle',
+    'hero_female_saint_idle'
+  ];
+
+  for (const assetId of advancedHeroIds) {
+    const asset = getRpgAssetById(assetId);
+    const attachment = getRpgAssetAttachment(assetId);
+
+    assert.ok(asset, `${assetId} asset definition missing`);
+    assert.equal(asset.category, 'hero');
+    assert.match(asset.outputDir, /assets\/rpg\/heroes\/advanced/);
+    assert.ok(attachment, `${assetId} generated file missing`);
+    assert.match(attachment.name, /^rpg-image-\d+\.[a-z0-9]+$/i);
+    assert.doesNotMatch(attachment.name, new RegExp(assetId, 'i'));
+  }
 });

@@ -1,0 +1,1 @@
+Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: phantom forest, ghostly mist, twisted trees, open haunted path center, no characters, no UI, no text.

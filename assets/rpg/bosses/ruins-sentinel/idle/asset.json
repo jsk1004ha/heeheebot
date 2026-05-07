@@ -1,0 +1,8 @@
+{
+  "id": "boss_ruins_sentinel_idle",
+  "label": "유적 감시자 대기 모션",
+  "category": "monster",
+  "kind": "sprite",
+  "sheet": "3x3",
+  "prompt": "Generated local fallback raid boss sprite for 유적 감시자 대기 모션; clean HD RPG boss, 3x3 transparent idle sheet, no text."
+}

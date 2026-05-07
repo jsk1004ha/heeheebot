@@ -118,6 +118,102 @@ const RPG_ASSETS = Object.freeze([
     prompt: 'Use $generate2dsprite to create a clean HD 2D RPG female priest idle animation, 2x2 grid, full body centered, same scale, stable feet anchor, white robe, small staff, gentle holy glow attached to hands only, solid #FF00FF background, no text.'
   }),
   spriteAsset({
+    id: 'hero_berserker_idle',
+    label: '광전사 전직 이미지',
+    category: 'hero',
+    sheet: 'single',
+    outputDir: 'assets/rpg/heroes/advanced/berserker/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD 2D RPG male berserker advanced class hero, single full-body sprite centered, red-black heavy battle armor, huge axe held inside silhouette, compact rage aura, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'hero_female_berserker_idle',
+    label: '여성 광전사 전직 이미지',
+    category: 'hero',
+    sheet: 'single',
+    outputDir: 'assets/rpg/heroes/advanced/female/berserker/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD 2D RPG female berserker advanced class hero, single full-body sprite centered, red-black battle armor, heavy axe held inside silhouette, compact rage aura, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'hero_archmage_idle',
+    label: '대마법사 전직 이미지',
+    category: 'hero',
+    sheet: 'single',
+    outputDir: 'assets/rpg/heroes/advanced/archmage/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD 2D RPG male archmage advanced class hero, single full-body sprite centered, ornate blue-violet robe, crystal staff kept close, compact arcane halo, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'hero_female_archmage_idle',
+    label: '여성 대마법사 전직 이미지',
+    category: 'hero',
+    sheet: 'single',
+    outputDir: 'assets/rpg/heroes/advanced/female/archmage/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD 2D RPG female archmage advanced class hero, single full-body sprite centered, elegant blue-violet robe, crystal staff kept close, compact arcane glow, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'hero_sniper_idle',
+    label: '저격수 전직 이미지',
+    category: 'hero',
+    sheet: 'single',
+    outputDir: 'assets/rpg/heroes/advanced/sniper/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD 2D RPG male sniper advanced class hero, single full-body sprite centered, green-brown cloak, eagle-feather hood, longbow/crossbow kept inside silhouette, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'hero_female_sniper_idle',
+    label: '여성 저격수 전직 이미지',
+    category: 'hero',
+    sheet: 'single',
+    outputDir: 'assets/rpg/heroes/advanced/female/sniper/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD 2D RPG female sniper advanced class hero, single full-body sprite centered, green-brown cloak, feather hood, precise longbow/crossbow kept inside silhouette, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'hero_crusader_idle',
+    label: '크루세이더 전직 이미지',
+    category: 'hero',
+    sheet: 'single',
+    outputDir: 'assets/rpg/heroes/advanced/crusader/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD 2D RPG male crusader advanced class hero, single full-body sprite centered, white-gold heavy armor, holy tower shield and sword kept close, compact sacred glow, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'hero_female_crusader_idle',
+    label: '여성 크루세이더 전직 이미지',
+    category: 'hero',
+    sheet: 'single',
+    outputDir: 'assets/rpg/heroes/advanced/female/crusader/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD 2D RPG female crusader advanced class hero, single full-body sprite centered, white-gold heavy armor, holy shield and sword kept close, compact sacred glow, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'hero_shadow_idle',
+    label: '섀도우 전직 이미지',
+    category: 'hero',
+    sheet: 'single',
+    outputDir: 'assets/rpg/heroes/advanced/shadow/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD 2D RPG male shadow assassin advanced class hero, single full-body sprite centered, black-purple assassin coat, twin daggers held close, compact smoky shadow aura, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'hero_female_shadow_idle',
+    label: '여성 섀도우 전직 이미지',
+    category: 'hero',
+    sheet: 'single',
+    outputDir: 'assets/rpg/heroes/advanced/female/shadow/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD 2D RPG female shadow assassin advanced class hero, single full-body sprite centered, black-purple assassin coat, twin daggers held close, compact smoky shadow aura, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'hero_saint_idle',
+    label: '성자 전직 이미지',
+    category: 'hero',
+    sheet: 'single',
+    outputDir: 'assets/rpg/heroes/advanced/saint/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD 2D RPG male saint advanced class hero, single full-body sprite centered, luminous white-gold robes, holy staff kept close, soft halo motif contained, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'hero_female_saint_idle',
+    label: '여성 성자 전직 이미지',
+    category: 'hero',
+    sheet: 'single',
+    outputDir: 'assets/rpg/heroes/advanced/female/saint/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD 2D RPG female saint advanced class hero, single full-body sprite centered, luminous white-gold robes, holy staff kept close, soft halo motif contained, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
     id: 'monster_slime_idle',
     label: '슬라임 대기 모션',
     category: 'monster',
@@ -205,6 +301,86 @@ const RPG_ASSETS = Object.freeze([
     outputDir: 'assets/rpg/bosses/ancient-dragon/idle',
     prompt: 'Use $generate2dsprite to create a clean HD ancient dragon boss idle animation, 3x3 grid, full body centered, same scale, wings and tail fully inside each cell, imposing fantasy RPG boss, solid #FF00FF background, no text.'
   }),
+  spriteAsset({
+    id: 'boss_goblin_warband_idle',
+    label: '고블린 전투부대 대기 모션',
+    category: 'monster',
+    sheet: '3x3',
+    outputDir: 'assets/rpg/bosses/goblin-warband/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD goblin warband raid boss idle animation, 3x3 grid, armored goblin commander with banner and compact spear, full body centered, same scale, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'boss_crystal_hydra_idle',
+    label: '수정 히드라 대기 모션',
+    category: 'monster',
+    sheet: '3x3',
+    outputDir: 'assets/rpg/bosses/crystal-hydra/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD crystal hydra raid boss idle animation, 3x3 grid, three compact crystal serpent heads, glowing blue facets, full body centered, same scale, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'boss_marsh_behemoth_idle',
+    label: '늪지 베헤모스 대기 모션',
+    category: 'monster',
+    sheet: '3x3',
+    outputDir: 'assets/rpg/bosses/marsh-behemoth/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD marsh behemoth raid boss idle animation, 3x3 grid, bulky swamp beast with mossy horns, readable silhouette, full body centered, same scale, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'boss_ruins_sentinel_idle',
+    label: '유적 감시자 대기 모션',
+    category: 'monster',
+    sheet: '3x3',
+    outputDir: 'assets/rpg/bosses/ruins-sentinel/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD ancient ruins sentinel raid boss idle animation, 3x3 grid, stone guardian construct with glowing runes, full body centered, same scale, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'boss_flame_giant_idle',
+    label: '화염 거인 대기 모션',
+    category: 'monster',
+    sheet: '3x3',
+    outputDir: 'assets/rpg/bosses/flame-giant/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD flame giant raid boss idle animation, 3x3 grid, lava stone giant with contained flame core, full body centered, same scale, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'boss_frost_lich_idle',
+    label: '빙결 리치 대기 모션',
+    category: 'monster',
+    sheet: '3x3',
+    outputDir: 'assets/rpg/bosses/frost-lich/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD frost lich raid boss idle animation, 3x3 grid, skeletal ice mage in tattered robes, blue frost aura attached to body only, full body centered, same scale, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'boss_storm_wyvern_idle',
+    label: '폭풍 와이번 대기 모션',
+    category: 'monster',
+    sheet: '3x3',
+    outputDir: 'assets/rpg/bosses/storm-wyvern/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD storm wyvern raid boss idle animation, 3x3 grid, winged wyvern with compact lightning fins, wings and tail inside each cell, same scale, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'boss_void_knights_idle',
+    label: '공허 기사단 대기 모션',
+    category: 'monster',
+    sheet: '3x3',
+    outputDir: 'assets/rpg/bosses/void-knights/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD void knights raid boss idle animation, 3x3 grid, one merged silhouette of two dark armored knights back-to-back, purple void glow, centered, same scale, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'boss_sky_golem_idle',
+    label: '천공 골렘 대기 모션',
+    category: 'monster',
+    sheet: '3x3',
+    outputDir: 'assets/rpg/bosses/sky-golem/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD sky golem raid boss idle animation, 3x3 grid, floating gold-white stone golem with cloud crystals, centered, same scale, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'boss_apocalypse_dragon_idle',
+    label: '종말의 용 대기 모션',
+    category: 'monster',
+    sheet: '3x3',
+    outputDir: 'assets/rpg/bosses/apocalypse-dragon/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD apocalypse dragon final raid boss idle animation, 3x3 grid, black-red dragon with eclipse halo, full body centered, wings and tail fully inside each cell, same scale, solid #FF00FF background, no text.'
+  }),
   mapAsset({
     id: 'map_forest_glade',
     label: '초록 숲 전투 배경',
@@ -254,6 +430,160 @@ const RPG_ASSETS = Object.freeze([
     outputDir: 'assets/rpg/maps/sky-citadel',
     prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: floating sky citadel platform above clouds, golden stone floor, distant towers, open center arena, no characters, no UI, no text.'
   }),
+  mapAsset({
+    id: 'map_wildflower_plains',
+    label: '들꽃 평원 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/wildflower-plains',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: bright wildflower plains, green meadow, flowers at edges, open grass center, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_moonlit_hill',
+    label: '달빛 언덕 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/moonlit-hill',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: moonlit hill, blue night sky, soft moonlight, open stone path center, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_mushroom_grove',
+    label: '버섯 숲 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/mushroom-grove',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: giant mushroom grove, violet spores, glowing fungi at edges, open forest floor center, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_bandit_outpost',
+    label: '도적 전초기지 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/bandit-outpost',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: rough bandit outpost, wooden barricades at sides, open dirt arena center, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_red_desert',
+    label: '붉은 사막 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/red-desert',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: red desert canyon, warm sandstorm, cracked dry arena center, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_thunder_plateau',
+    label: '천둥 고원 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/thunder-plateau',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: stormy thunder plateau, distant lightning, open stone platform center, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_crystal_lake',
+    label: '수정 호수 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/crystal-lake',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: icy crystal lake, blue crystals, reflective frozen arena center, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_phantom_forest',
+    label: '환영 숲 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/phantom-forest',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: phantom forest, ghostly mist, twisted trees, open haunted path center, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_abyss_mine',
+    label: '심연 광산 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/abyss-mine',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: dark abyss mine, glowing ore, mine rails at edges, open cavern floor center, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_starfall_crater',
+    label: '별무리 분화구 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/starfall-crater',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: starfall crater, meteor fragments, lava cracks, open impact arena center, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_dragon_nest',
+    label: '용의 둥지 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/dragon-nest',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: dragon nest, rocky high mountain nest, eggs and bones at edges, open center arena, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_void_gate',
+    label: '공허 관문 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/void-gate',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: void gate, cosmic purple portal far back, floating stones, open dark arena center, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_goblin_war_camp',
+    label: '고블린 전쟁 야영지 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/goblin-war-camp',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: goblin war camp, torn banners, crude palisades, open dirt arena center, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_crystal_nest',
+    label: '수정 둥지 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/crystal-nest',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: deep crystal hydra nest, jagged blue crystals framing sides, shallow reflective floor, open center arena, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_marsh_depths',
+    label: '늪 심연 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/marsh-depths',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: deep shadow marsh, black water, huge roots and green mist at edges, open muddy island center, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_ruins_obelisk',
+    label: '유적 방첨탑 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/ruins-obelisk',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: ancient obelisk arena, broken rune pillars, sunset gold light, open stone center, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_lava_throne',
+    label: '용암 왕좌 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/lava-throne',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: lava throne chamber, basalt bridge, orange magma glow, open black stone platform center, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_frost_catacomb',
+    label: '빙결 지하묘지 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/frost-catacomb',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: frozen catacomb hall, blue ice coffins and frost runes, open icy arena center, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_storm_spire',
+    label: '폭풍 첨탑 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/storm-spire',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: storm spire above clouds, dark sky, contained lightning arcs at edges, open circular platform center, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_void_bastion',
+    label: '공허 요새 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/void-bastion',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: void bastion, black stone walls, purple portals at edges, open center arena with violet glow, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_sky_foundry',
+    label: '천공 주조소 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/sky-foundry',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: floating sky foundry, gold gears and cloud furnaces, open metal platform center, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_eclipse_throne',
+    label: '일식 왕좌 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/eclipse-throne',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG final raid background: eclipse throne at the edge of the sky, black-red celestial light, ruined royal platform center, no characters, no UI, no text.'
+  }),
   spriteAsset({
     id: 'item_potion_icon',
     label: '회복 포션 아이콘',
@@ -269,6 +599,14 @@ const RPG_ASSETS = Object.freeze([
     sheet: 'single',
     outputDir: 'assets/rpg/items/mana-potion',
     prompt: 'Use $generate2dsprite to create a clean HD transparent RPG mana potion icon, single asset, blue liquid glass bottle, centered, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_enhancement_stone_icon',
+    label: '강화석 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/enhancement-stone',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent RPG enhancement stone icon, single asset, glowing blue-purple crystal shard with gold flecks, centered, solid #FF00FF background, no text.'
   }),
   spriteAsset({
     id: 'item_treasure_chest_icon',

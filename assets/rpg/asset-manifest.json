@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-06T14:06:35.045374+00:00",
+  "generatedAt": "2026-05-07T06:09:21.896736+00:00",
   "sourceGeneratedImagesDir": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c",
   "assets": [
     {
@@ -578,8 +578,791 @@
       "meta": "assets/rpg/heroes/female/priest/idle/processed/pipeline-meta.json",
       "transparentSheet": "assets/rpg/heroes/female/priest/idle/processed/sheet-transparent.png",
       "animation": "assets/rpg/heroes/female/priest/idle/processed/animation.gif"
+    },
+    {
+      "id": "boss_goblin_warband_idle",
+      "category": "monster",
+      "kind": "sprite",
+      "sheet": "3x3",
+      "source": "local-procedural-raid-assets",
+      "raw": "assets/rpg/bosses/goblin-warband/idle/raw/raw-sheet.png",
+      "prompt": "assets/rpg/bosses/goblin-warband/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/bosses/goblin-warband/idle/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/bosses/goblin-warband/idle/processed",
+      "meta": "assets/rpg/bosses/goblin-warband/idle/processed/pipeline-meta.json",
+      "transparentSheet": "assets/rpg/bosses/goblin-warband/idle/processed/sheet-transparent.png",
+      "animation": "assets/rpg/bosses/goblin-warband/idle/processed/animation.gif"
+    },
+    {
+      "id": "boss_crystal_hydra_idle",
+      "category": "monster",
+      "kind": "sprite",
+      "sheet": "3x3",
+      "source": "local-procedural-raid-assets",
+      "raw": "assets/rpg/bosses/crystal-hydra/idle/raw/raw-sheet.png",
+      "prompt": "assets/rpg/bosses/crystal-hydra/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/bosses/crystal-hydra/idle/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/bosses/crystal-hydra/idle/processed",
+      "meta": "assets/rpg/bosses/crystal-hydra/idle/processed/pipeline-meta.json",
+      "transparentSheet": "assets/rpg/bosses/crystal-hydra/idle/processed/sheet-transparent.png",
+      "animation": "assets/rpg/bosses/crystal-hydra/idle/processed/animation.gif"
+    },
+    {
+      "id": "boss_marsh_behemoth_idle",
+      "category": "monster",
+      "kind": "sprite",
+      "sheet": "3x3",
+      "source": "local-procedural-raid-assets",
+      "raw": "assets/rpg/bosses/marsh-behemoth/idle/raw/raw-sheet.png",
+      "prompt": "assets/rpg/bosses/marsh-behemoth/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/bosses/marsh-behemoth/idle/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/bosses/marsh-behemoth/idle/processed",
+      "meta": "assets/rpg/bosses/marsh-behemoth/idle/processed/pipeline-meta.json",
+      "transparentSheet": "assets/rpg/bosses/marsh-behemoth/idle/processed/sheet-transparent.png",
+      "animation": "assets/rpg/bosses/marsh-behemoth/idle/processed/animation.gif"
+    },
+    {
+      "id": "boss_ruins_sentinel_idle",
+      "category": "monster",
+      "kind": "sprite",
+      "sheet": "3x3",
+      "source": "local-procedural-raid-assets",
+      "raw": "assets/rpg/bosses/ruins-sentinel/idle/raw/raw-sheet.png",
+      "prompt": "assets/rpg/bosses/ruins-sentinel/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/bosses/ruins-sentinel/idle/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/bosses/ruins-sentinel/idle/processed",
+      "meta": "assets/rpg/bosses/ruins-sentinel/idle/processed/pipeline-meta.json",
+      "transparentSheet": "assets/rpg/bosses/ruins-sentinel/idle/processed/sheet-transparent.png",
+      "animation": "assets/rpg/bosses/ruins-sentinel/idle/processed/animation.gif"
+    },
+    {
+      "id": "boss_flame_giant_idle",
+      "category": "monster",
+      "kind": "sprite",
+      "sheet": "3x3",
+      "source": "local-procedural-raid-assets",
+      "raw": "assets/rpg/bosses/flame-giant/idle/raw/raw-sheet.png",
+      "prompt": "assets/rpg/bosses/flame-giant/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/bosses/flame-giant/idle/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/bosses/flame-giant/idle/processed",
+      "meta": "assets/rpg/bosses/flame-giant/idle/processed/pipeline-meta.json",
+      "transparentSheet": "assets/rpg/bosses/flame-giant/idle/processed/sheet-transparent.png",
+      "animation": "assets/rpg/bosses/flame-giant/idle/processed/animation.gif"
+    },
+    {
+      "id": "boss_frost_lich_idle",
+      "category": "monster",
+      "kind": "sprite",
+      "sheet": "3x3",
+      "source": "local-procedural-raid-assets",
+      "raw": "assets/rpg/bosses/frost-lich/idle/raw/raw-sheet.png",
+      "prompt": "assets/rpg/bosses/frost-lich/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/bosses/frost-lich/idle/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/bosses/frost-lich/idle/processed",
+      "meta": "assets/rpg/bosses/frost-lich/idle/processed/pipeline-meta.json",
+      "transparentSheet": "assets/rpg/bosses/frost-lich/idle/processed/sheet-transparent.png",
+      "animation": "assets/rpg/bosses/frost-lich/idle/processed/animation.gif"
+    },
+    {
+      "id": "boss_storm_wyvern_idle",
+      "category": "monster",
+      "kind": "sprite",
+      "sheet": "3x3",
+      "source": "local-procedural-raid-assets",
+      "raw": "assets/rpg/bosses/storm-wyvern/idle/raw/raw-sheet.png",
+      "prompt": "assets/rpg/bosses/storm-wyvern/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/bosses/storm-wyvern/idle/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/bosses/storm-wyvern/idle/processed",
+      "meta": "assets/rpg/bosses/storm-wyvern/idle/processed/pipeline-meta.json",
+      "transparentSheet": "assets/rpg/bosses/storm-wyvern/idle/processed/sheet-transparent.png",
+      "animation": "assets/rpg/bosses/storm-wyvern/idle/processed/animation.gif"
+    },
+    {
+      "id": "boss_void_knights_idle",
+      "category": "monster",
+      "kind": "sprite",
+      "sheet": "3x3",
+      "source": "local-procedural-raid-assets",
+      "raw": "assets/rpg/bosses/void-knights/idle/raw/raw-sheet.png",
+      "prompt": "assets/rpg/bosses/void-knights/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/bosses/void-knights/idle/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/bosses/void-knights/idle/processed",
+      "meta": "assets/rpg/bosses/void-knights/idle/processed/pipeline-meta.json",
+      "transparentSheet": "assets/rpg/bosses/void-knights/idle/processed/sheet-transparent.png",
+      "animation": "assets/rpg/bosses/void-knights/idle/processed/animation.gif"
+    },
+    {
+      "id": "boss_sky_golem_idle",
+      "category": "monster",
+      "kind": "sprite",
+      "sheet": "3x3",
+      "source": "local-procedural-raid-assets",
+      "raw": "assets/rpg/bosses/sky-golem/idle/raw/raw-sheet.png",
+      "prompt": "assets/rpg/bosses/sky-golem/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/bosses/sky-golem/idle/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/bosses/sky-golem/idle/processed",
+      "meta": "assets/rpg/bosses/sky-golem/idle/processed/pipeline-meta.json",
+      "transparentSheet": "assets/rpg/bosses/sky-golem/idle/processed/sheet-transparent.png",
+      "animation": "assets/rpg/bosses/sky-golem/idle/processed/animation.gif"
+    },
+    {
+      "id": "boss_apocalypse_dragon_idle",
+      "category": "monster",
+      "kind": "sprite",
+      "sheet": "3x3",
+      "source": "local-procedural-raid-assets",
+      "raw": "assets/rpg/bosses/apocalypse-dragon/idle/raw/raw-sheet.png",
+      "prompt": "assets/rpg/bosses/apocalypse-dragon/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/bosses/apocalypse-dragon/idle/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/bosses/apocalypse-dragon/idle/processed",
+      "meta": "assets/rpg/bosses/apocalypse-dragon/idle/processed/pipeline-meta.json",
+      "transparentSheet": "assets/rpg/bosses/apocalypse-dragon/idle/processed/sheet-transparent.png",
+      "animation": "assets/rpg/bosses/apocalypse-dragon/idle/processed/animation.gif"
+    },
+    {
+      "id": "map_goblin_war_camp",
+      "category": "map",
+      "kind": "map",
+      "source": "local-procedural-raid-assets",
+      "raw": "assets/rpg/maps/goblin-war-camp/raw/background.png",
+      "prompt": "assets/rpg/maps/goblin-war-camp/prompt-used.txt",
+      "status": "generated"
+    },
+    {
+      "id": "map_crystal_nest",
+      "category": "map",
+      "kind": "map",
+      "source": "local-procedural-raid-assets",
+      "raw": "assets/rpg/maps/crystal-nest/raw/background.png",
+      "prompt": "assets/rpg/maps/crystal-nest/prompt-used.txt",
+      "status": "generated"
+    },
+    {
+      "id": "map_marsh_depths",
+      "category": "map",
+      "kind": "map",
+      "source": "local-procedural-raid-assets",
+      "raw": "assets/rpg/maps/marsh-depths/raw/background.png",
+      "prompt": "assets/rpg/maps/marsh-depths/prompt-used.txt",
+      "status": "generated"
+    },
+    {
+      "id": "map_ruins_obelisk",
+      "category": "map",
+      "kind": "map",
+      "source": "local-procedural-raid-assets",
+      "raw": "assets/rpg/maps/ruins-obelisk/raw/background.png",
+      "prompt": "assets/rpg/maps/ruins-obelisk/prompt-used.txt",
+      "status": "generated"
+    },
+    {
+      "id": "map_lava_throne",
+      "category": "map",
+      "kind": "map",
+      "source": "local-procedural-raid-assets",
+      "raw": "assets/rpg/maps/lava-throne/raw/background.png",
+      "prompt": "assets/rpg/maps/lava-throne/prompt-used.txt",
+      "status": "generated"
+    },
+    {
+      "id": "map_frost_catacomb",
+      "category": "map",
+      "kind": "map",
+      "source": "local-procedural-raid-assets",
+      "raw": "assets/rpg/maps/frost-catacomb/raw/background.png",
+      "prompt": "assets/rpg/maps/frost-catacomb/prompt-used.txt",
+      "status": "generated"
+    },
+    {
+      "id": "map_storm_spire",
+      "category": "map",
+      "kind": "map",
+      "source": "local-procedural-raid-assets",
+      "raw": "assets/rpg/maps/storm-spire/raw/background.png",
+      "prompt": "assets/rpg/maps/storm-spire/prompt-used.txt",
+      "status": "generated"
+    },
+    {
+      "id": "map_void_bastion",
+      "category": "map",
+      "kind": "map",
+      "source": "local-procedural-raid-assets",
+      "raw": "assets/rpg/maps/void-bastion/raw/background.png",
+      "prompt": "assets/rpg/maps/void-bastion/prompt-used.txt",
+      "status": "generated"
+    },
+    {
+      "id": "map_sky_foundry",
+      "category": "map",
+      "kind": "map",
+      "source": "local-procedural-raid-assets",
+      "raw": "assets/rpg/maps/sky-foundry/raw/background.png",
+      "prompt": "assets/rpg/maps/sky-foundry/prompt-used.txt",
+      "status": "generated"
+    },
+    {
+      "id": "map_eclipse_throne",
+      "category": "map",
+      "kind": "map",
+      "source": "local-procedural-raid-assets",
+      "raw": "assets/rpg/maps/eclipse-throne/raw/background.png",
+      "prompt": "assets/rpg/maps/eclipse-throne/prompt-used.txt",
+      "status": "generated"
+    },
+    {
+      "id": "map_wildflower_plains",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/wildflower-plains/raw/background.png",
+      "prompt": "assets/rpg/maps/wildflower-plains/prompt-used.txt",
+      "status": "generated-contact-sheet-crop",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "crop": {
+        "contactSheetColumns": 4,
+        "contactSheetRows": 3,
+        "cellIndex": 0,
+        "cellColumn": 0,
+        "cellRow": 0,
+        "sourceCell": [
+          0,
+          0,
+          362,
+          362
+        ],
+        "outputSize": [
+          1024,
+          576
+        ]
+      }
+    },
+    {
+      "id": "map_moonlit_hill",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/moonlit-hill/raw/background.png",
+      "prompt": "assets/rpg/maps/moonlit-hill/prompt-used.txt",
+      "status": "generated-contact-sheet-crop",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "crop": {
+        "contactSheetColumns": 4,
+        "contactSheetRows": 3,
+        "cellIndex": 1,
+        "cellColumn": 1,
+        "cellRow": 0,
+        "sourceCell": [
+          362,
+          0,
+          724,
+          362
+        ],
+        "outputSize": [
+          1024,
+          576
+        ]
+      }
+    },
+    {
+      "id": "map_mushroom_grove",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/mushroom-grove/raw/background.png",
+      "prompt": "assets/rpg/maps/mushroom-grove/prompt-used.txt",
+      "status": "generated-contact-sheet-crop",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "crop": {
+        "contactSheetColumns": 4,
+        "contactSheetRows": 3,
+        "cellIndex": 2,
+        "cellColumn": 2,
+        "cellRow": 0,
+        "sourceCell": [
+          724,
+          0,
+          1086,
+          362
+        ],
+        "outputSize": [
+          1024,
+          576
+        ]
+      }
+    },
+    {
+      "id": "map_bandit_outpost",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/bandit-outpost/raw/background.png",
+      "prompt": "assets/rpg/maps/bandit-outpost/prompt-used.txt",
+      "status": "generated-contact-sheet-crop",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "crop": {
+        "contactSheetColumns": 4,
+        "contactSheetRows": 3,
+        "cellIndex": 3,
+        "cellColumn": 3,
+        "cellRow": 0,
+        "sourceCell": [
+          1086,
+          0,
+          1448,
+          362
+        ],
+        "outputSize": [
+          1024,
+          576
+        ]
+      }
+    },
+    {
+      "id": "map_red_desert",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/red-desert/raw/background.png",
+      "prompt": "assets/rpg/maps/red-desert/prompt-used.txt",
+      "status": "generated-contact-sheet-crop",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "crop": {
+        "contactSheetColumns": 4,
+        "contactSheetRows": 3,
+        "cellIndex": 4,
+        "cellColumn": 0,
+        "cellRow": 1,
+        "sourceCell": [
+          0,
+          362,
+          362,
+          724
+        ],
+        "outputSize": [
+          1024,
+          576
+        ]
+      }
+    },
+    {
+      "id": "map_thunder_plateau",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/thunder-plateau/raw/background.png",
+      "prompt": "assets/rpg/maps/thunder-plateau/prompt-used.txt",
+      "status": "generated-contact-sheet-crop",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "crop": {
+        "contactSheetColumns": 4,
+        "contactSheetRows": 3,
+        "cellIndex": 5,
+        "cellColumn": 1,
+        "cellRow": 1,
+        "sourceCell": [
+          362,
+          362,
+          724,
+          724
+        ],
+        "outputSize": [
+          1024,
+          576
+        ]
+      }
+    },
+    {
+      "id": "map_crystal_lake",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/crystal-lake/raw/background.png",
+      "prompt": "assets/rpg/maps/crystal-lake/prompt-used.txt",
+      "status": "generated-contact-sheet-crop",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "crop": {
+        "contactSheetColumns": 4,
+        "contactSheetRows": 3,
+        "cellIndex": 6,
+        "cellColumn": 2,
+        "cellRow": 1,
+        "sourceCell": [
+          724,
+          362,
+          1086,
+          724
+        ],
+        "outputSize": [
+          1024,
+          576
+        ]
+      }
+    },
+    {
+      "id": "map_phantom_forest",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/phantom-forest/raw/background.png",
+      "prompt": "assets/rpg/maps/phantom-forest/prompt-used.txt",
+      "status": "generated-contact-sheet-crop",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "crop": {
+        "contactSheetColumns": 4,
+        "contactSheetRows": 3,
+        "cellIndex": 7,
+        "cellColumn": 3,
+        "cellRow": 1,
+        "sourceCell": [
+          1086,
+          362,
+          1448,
+          724
+        ],
+        "outputSize": [
+          1024,
+          576
+        ]
+      }
+    },
+    {
+      "id": "map_abyss_mine",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/abyss-mine/raw/background.png",
+      "prompt": "assets/rpg/maps/abyss-mine/prompt-used.txt",
+      "status": "generated-contact-sheet-crop",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "crop": {
+        "contactSheetColumns": 4,
+        "contactSheetRows": 3,
+        "cellIndex": 8,
+        "cellColumn": 0,
+        "cellRow": 2,
+        "sourceCell": [
+          0,
+          724,
+          362,
+          1086
+        ],
+        "outputSize": [
+          1024,
+          576
+        ]
+      }
+    },
+    {
+      "id": "map_starfall_crater",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/starfall-crater/raw/background.png",
+      "prompt": "assets/rpg/maps/starfall-crater/prompt-used.txt",
+      "status": "generated-contact-sheet-crop",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "crop": {
+        "contactSheetColumns": 4,
+        "contactSheetRows": 3,
+        "cellIndex": 9,
+        "cellColumn": 1,
+        "cellRow": 2,
+        "sourceCell": [
+          362,
+          724,
+          724,
+          1086
+        ],
+        "outputSize": [
+          1024,
+          576
+        ]
+      }
+    },
+    {
+      "id": "map_dragon_nest",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/dragon-nest/raw/background.png",
+      "prompt": "assets/rpg/maps/dragon-nest/prompt-used.txt",
+      "status": "generated-contact-sheet-crop",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "crop": {
+        "contactSheetColumns": 4,
+        "contactSheetRows": 3,
+        "cellIndex": 10,
+        "cellColumn": 2,
+        "cellRow": 2,
+        "sourceCell": [
+          724,
+          724,
+          1086,
+          1086
+        ],
+        "outputSize": [
+          1024,
+          576
+        ]
+      }
+    },
+    {
+      "id": "map_void_gate",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/void-gate/raw/background.png",
+      "prompt": "assets/rpg/maps/void-gate/prompt-used.txt",
+      "status": "generated-contact-sheet-crop",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "crop": {
+        "contactSheetColumns": 4,
+        "contactSheetRows": 3,
+        "cellIndex": 11,
+        "cellColumn": 3,
+        "cellRow": 2,
+        "sourceCell": [
+          1086,
+          724,
+          1448,
+          1086
+        ],
+        "outputSize": [
+          1024,
+          576
+        ]
+      }
+    },
+    {
+      "id": "hero_berserker_idle",
+      "category": "hero",
+      "kind": "sprite",
+      "sheet": "single",
+      "source": "/home/jio/.codex/generated_images/019dfd64-811e-7561-a000-5b3212cc9327/ig_0be8125a22524a6e0169fc2ae43048819194033095fa3a6e25.png",
+      "raw": "assets/rpg/heroes/advanced/berserker/idle/raw/raw-sheet.png",
+      "prompt": "assets/rpg/heroes/advanced/berserker/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/heroes/advanced/berserker/idle/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/heroes/advanced/berserker/idle/processed",
+      "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
+      "advancedClass": "berserker",
+      "gender": "male",
+      "label": "광전사",
+      "rosterFrame": 1,
+      "clean": "assets/rpg/heroes/advanced/berserker/idle/processed/clean.png"
+    },
+    {
+      "id": "hero_female_berserker_idle",
+      "category": "hero",
+      "kind": "sprite",
+      "sheet": "single",
+      "source": "/home/jio/.codex/generated_images/019dfd64-811e-7561-a000-5b3212cc9327/ig_0be8125a22524a6e0169fc2ae43048819194033095fa3a6e25.png",
+      "raw": "assets/rpg/heroes/advanced/female/berserker/idle/raw/raw-sheet.png",
+      "prompt": "assets/rpg/heroes/advanced/female/berserker/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/heroes/advanced/female/berserker/idle/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/heroes/advanced/female/berserker/idle/processed",
+      "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
+      "advancedClass": "berserker",
+      "gender": "female",
+      "label": "여성 광전사",
+      "rosterFrame": 2,
+      "clean": "assets/rpg/heroes/advanced/female/berserker/idle/processed/clean.png"
+    },
+    {
+      "id": "hero_archmage_idle",
+      "category": "hero",
+      "kind": "sprite",
+      "sheet": "single",
+      "source": "/home/jio/.codex/generated_images/019dfd64-811e-7561-a000-5b3212cc9327/ig_0be8125a22524a6e0169fc2ae43048819194033095fa3a6e25.png",
+      "raw": "assets/rpg/heroes/advanced/archmage/idle/raw/raw-sheet.png",
+      "prompt": "assets/rpg/heroes/advanced/archmage/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/heroes/advanced/archmage/idle/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/heroes/advanced/archmage/idle/processed",
+      "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
+      "advancedClass": "archmage",
+      "gender": "male",
+      "label": "대마법사",
+      "rosterFrame": 3,
+      "clean": "assets/rpg/heroes/advanced/archmage/idle/processed/clean.png"
+    },
+    {
+      "id": "hero_female_archmage_idle",
+      "category": "hero",
+      "kind": "sprite",
+      "sheet": "single",
+      "source": "/home/jio/.codex/generated_images/019dfd64-811e-7561-a000-5b3212cc9327/ig_0be8125a22524a6e0169fc2ae43048819194033095fa3a6e25.png",
+      "raw": "assets/rpg/heroes/advanced/female/archmage/idle/raw/raw-sheet.png",
+      "prompt": "assets/rpg/heroes/advanced/female/archmage/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/heroes/advanced/female/archmage/idle/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/heroes/advanced/female/archmage/idle/processed",
+      "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
+      "advancedClass": "archmage",
+      "gender": "female",
+      "label": "여성 대마법사",
+      "rosterFrame": 4,
+      "clean": "assets/rpg/heroes/advanced/female/archmage/idle/processed/clean.png"
+    },
+    {
+      "id": "hero_sniper_idle",
+      "category": "hero",
+      "kind": "sprite",
+      "sheet": "single",
+      "source": "/home/jio/.codex/generated_images/019dfd64-811e-7561-a000-5b3212cc9327/ig_0be8125a22524a6e0169fc2ae43048819194033095fa3a6e25.png",
+      "raw": "assets/rpg/heroes/advanced/sniper/idle/raw/raw-sheet.png",
+      "prompt": "assets/rpg/heroes/advanced/sniper/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/heroes/advanced/sniper/idle/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/heroes/advanced/sniper/idle/processed",
+      "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
+      "advancedClass": "sniper",
+      "gender": "male",
+      "label": "저격수",
+      "rosterFrame": 5,
+      "clean": "assets/rpg/heroes/advanced/sniper/idle/processed/clean.png"
+    },
+    {
+      "id": "hero_female_sniper_idle",
+      "category": "hero",
+      "kind": "sprite",
+      "sheet": "single",
+      "source": "/home/jio/.codex/generated_images/019dfd64-811e-7561-a000-5b3212cc9327/ig_0be8125a22524a6e0169fc2ae43048819194033095fa3a6e25.png",
+      "raw": "assets/rpg/heroes/advanced/female/sniper/idle/raw/raw-sheet.png",
+      "prompt": "assets/rpg/heroes/advanced/female/sniper/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/heroes/advanced/female/sniper/idle/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/heroes/advanced/female/sniper/idle/processed",
+      "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
+      "advancedClass": "sniper",
+      "gender": "female",
+      "label": "여성 저격수",
+      "rosterFrame": 6,
+      "clean": "assets/rpg/heroes/advanced/female/sniper/idle/processed/clean.png"
+    },
+    {
+      "id": "hero_crusader_idle",
+      "category": "hero",
+      "kind": "sprite",
+      "sheet": "single",
+      "source": "/home/jio/.codex/generated_images/019dfd64-811e-7561-a000-5b3212cc9327/ig_0be8125a22524a6e0169fc2ae43048819194033095fa3a6e25.png",
+      "raw": "assets/rpg/heroes/advanced/crusader/idle/raw/raw-sheet.png",
+      "prompt": "assets/rpg/heroes/advanced/crusader/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/heroes/advanced/crusader/idle/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/heroes/advanced/crusader/idle/processed",
+      "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
+      "advancedClass": "crusader",
+      "gender": "male",
+      "label": "크루세이더",
+      "rosterFrame": 7,
+      "clean": "assets/rpg/heroes/advanced/crusader/idle/processed/clean.png"
+    },
+    {
+      "id": "hero_female_crusader_idle",
+      "category": "hero",
+      "kind": "sprite",
+      "sheet": "single",
+      "source": "/home/jio/.codex/generated_images/019dfd64-811e-7561-a000-5b3212cc9327/ig_0be8125a22524a6e0169fc2ae43048819194033095fa3a6e25.png",
+      "raw": "assets/rpg/heroes/advanced/female/crusader/idle/raw/raw-sheet.png",
+      "prompt": "assets/rpg/heroes/advanced/female/crusader/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/heroes/advanced/female/crusader/idle/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/heroes/advanced/female/crusader/idle/processed",
+      "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
+      "advancedClass": "crusader",
+      "gender": "female",
+      "label": "여성 크루세이더",
+      "rosterFrame": 8,
+      "clean": "assets/rpg/heroes/advanced/female/crusader/idle/processed/clean.png"
+    },
+    {
+      "id": "hero_shadow_idle",
+      "category": "hero",
+      "kind": "sprite",
+      "sheet": "single",
+      "source": "/home/jio/.codex/generated_images/019dfd64-811e-7561-a000-5b3212cc9327/ig_0be8125a22524a6e0169fc2ae43048819194033095fa3a6e25.png",
+      "raw": "assets/rpg/heroes/advanced/shadow/idle/raw/raw-sheet.png",
+      "prompt": "assets/rpg/heroes/advanced/shadow/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/heroes/advanced/shadow/idle/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/heroes/advanced/shadow/idle/processed",
+      "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
+      "advancedClass": "shadow",
+      "gender": "male",
+      "label": "섀도우",
+      "rosterFrame": 9,
+      "clean": "assets/rpg/heroes/advanced/shadow/idle/processed/clean.png"
+    },
+    {
+      "id": "hero_female_shadow_idle",
+      "category": "hero",
+      "kind": "sprite",
+      "sheet": "single",
+      "source": "/home/jio/.codex/generated_images/019dfd64-811e-7561-a000-5b3212cc9327/ig_0be8125a22524a6e0169fc2ae43048819194033095fa3a6e25.png",
+      "raw": "assets/rpg/heroes/advanced/female/shadow/idle/raw/raw-sheet.png",
+      "prompt": "assets/rpg/heroes/advanced/female/shadow/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/heroes/advanced/female/shadow/idle/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/heroes/advanced/female/shadow/idle/processed",
+      "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
+      "advancedClass": "shadow",
+      "gender": "female",
+      "label": "여성 섀도우",
+      "rosterFrame": 10,
+      "clean": "assets/rpg/heroes/advanced/female/shadow/idle/processed/clean.png"
+    },
+    {
+      "id": "hero_saint_idle",
+      "category": "hero",
+      "kind": "sprite",
+      "sheet": "single",
+      "source": "/home/jio/.codex/generated_images/019dfd64-811e-7561-a000-5b3212cc9327/ig_0be8125a22524a6e0169fc2ae43048819194033095fa3a6e25.png",
+      "raw": "assets/rpg/heroes/advanced/saint/idle/raw/raw-sheet.png",
+      "prompt": "assets/rpg/heroes/advanced/saint/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/heroes/advanced/saint/idle/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/heroes/advanced/saint/idle/processed",
+      "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
+      "advancedClass": "saint",
+      "gender": "male",
+      "label": "성자",
+      "rosterFrame": 11,
+      "clean": "assets/rpg/heroes/advanced/saint/idle/processed/clean.png"
+    },
+    {
+      "id": "hero_female_saint_idle",
+      "category": "hero",
+      "kind": "sprite",
+      "sheet": "single",
+      "source": "/home/jio/.codex/generated_images/019dfd64-811e-7561-a000-5b3212cc9327/ig_0be8125a22524a6e0169fc2ae43048819194033095fa3a6e25.png",
+      "raw": "assets/rpg/heroes/advanced/female/saint/idle/raw/raw-sheet.png",
+      "prompt": "assets/rpg/heroes/advanced/female/saint/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/heroes/advanced/female/saint/idle/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/heroes/advanced/female/saint/idle/processed",
+      "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
+      "advancedClass": "saint",
+      "gender": "female",
+      "label": "여성 성자",
+      "rosterFrame": 12,
+      "clean": "assets/rpg/heroes/advanced/female/saint/idle/processed/clean.png"
     }
   ],
   "failures": [],
-  "femaleHeroGeneratedAt": "2026-05-06T14:06:35.045374+00:00"
+  "femaleHeroGeneratedAt": "2026-05-06T14:06:35.045374+00:00",
+  "notes": [
+    "Added 12 advanced-class hero single-sprite assets from agent-sprite-forge roster for RPG 전직 visuals."
+  ]
 }

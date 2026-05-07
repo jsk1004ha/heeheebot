@@ -1,0 +1,1 @@
+Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: moonlit hill, blue night sky, soft moonlight, open stone path center, no characters, no UI, no text.

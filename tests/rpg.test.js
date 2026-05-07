@@ -7,10 +7,18 @@ import { createSqliteStore } from '../src/storage/sqlite-store.js';
 import { getRpgCommandPayloads, handleRpgCommand } from '../src/commands/rpg.js';
 import { EconomyService } from '../src/systems/economy.js';
 import {
+  getRpgAreaConfig,
+  getRpgAreaOptions,
   getRpgAdventureGuide,
+  getRpgHeroAssetId,
+  getRpgRaidConfig,
+  getRpgRaidOptions,
+  getUnlockedRpgAreaIds,
+  normalizeRpgArea,
   normalizeRpgDifficulty,
   normalizeRpgGender,
   resolveRpgBattle,
+  resolveRpgRaidBattle,
   resolveRpgBossTurn,
   resolveRpgPvpTurn
 } from '../src/systems/rpg.js';
@@ -81,6 +89,83 @@ test('RPG 명령 payload는 전투와 상태 subcommand를 등록한다', () => 
   const guildRaidCommand = command.options.find((option) => option.name === '길드레이드');
   assert.equal(guildRaidCommand.options[0].name, '레이드');
   assert.equal(guildRaidCommand.options[0].required, true);
+  assert.ok(guildRaidCommand.options[0].choices.length >= 12);
+  assert.ok(guildRaidCommand.options[0].choices.some((choice) => choice.name.includes('종말의 용')));
+  const shopCommand = command.options.find((option) => option.name === '상점');
+  assert.equal(shopCommand.options[0].choices.some((choice) => choice.name === '강화석'), false);
+});
+
+test('RPG 사냥터는 초중후반 구간에 넉넉하게 배치된다', () => {
+  const options = getRpgAreaOptions();
+  const labels = options.map((option) => option.name);
+
+  assert.ok(options.length >= 18);
+  assert.ok(options.length <= 25);
+  assert.ok(labels.some((name) => name.includes('들꽃 평원')));
+  assert.ok(labels.some((name) => name.includes('붉은 사막')));
+  assert.ok(labels.some((name) => name.includes('공허 관문')));
+
+  assert.equal(normalizeRpgArea('들꽃평원'), 'wildflower_plains');
+  assert.equal(normalizeRpgArea('사막'), 'red_desert');
+  assert.equal(normalizeRpgArea('공허'), 'void_gate');
+
+  assert.equal(getRpgAreaConfig('wildflower_plains').unlockLevel, 1);
+  assert.equal(getRpgAreaConfig('red_desert').unlockLevel, 5);
+  assert.equal(getRpgAreaConfig('void_gate').unlockLevel, 16);
+  assert.deepEqual(getUnlockedRpgAreaIds(16).slice(-1), ['void_gate']);
+});
+
+test('RPG 레이드는 12단계 이상으로 확장되고 고단계 전용 에셋을 연결한다', () => {
+  const raids = getRpgRaidOptions();
+  const finalRaid = getRpgRaidConfig('종말의 용');
+  const battle = resolveRpgRaidBattle({
+    playerLevel: finalRaid.unlockLevel,
+    raidId: 'apocalypse_dragon',
+    characterClass: 'paladin',
+    skillId: 'holy_smite',
+    randomInt: (_min, max) => max
+  });
+
+  assert.ok(raids.length >= 12);
+  assert.deepEqual(raids.slice(0, 3).map((raid) => raid.value), [
+    'slime_horde',
+    'goblin_warband',
+    'crystal_hydra'
+  ]);
+  assert.equal(raids.at(-1).value, 'apocalypse_dragon');
+  assert.equal(finalRaid.unlockLevel >= 30, true);
+  assert.equal(battle.raidLabel, '종말의 용');
+  assert.equal(battle.monster, '종말의 용');
+  assert.equal(battle.assets.monster, 'boss_apocalypse_dragon_idle');
+  assert.equal(battle.assets.background, 'map_eclipse_throne');
+  assert.equal(battle.rewards.xp, finalRaid.xpReward);
+});
+
+test('RPG 전직 영웅 에셋은 성별과 기본직업이 맞을 때만 적용된다', () => {
+  assert.equal(
+    getRpgHeroAssetId({
+      characterClass: 'warrior',
+      characterGender: 'female',
+      advancedClass: 'berserker'
+    }),
+    'hero_female_berserker_idle'
+  );
+  assert.equal(
+    getRpgHeroAssetId({
+      characterClass: 'mage',
+      characterGender: 'female',
+      advancedClass: 'berserker'
+    }),
+    'hero_female_mage_idle'
+  );
+  assert.equal(
+    getRpgHeroAssetId({
+      characterClass: 'warrior',
+      characterGender: 'male',
+      advancedClass: '깨진전직'
+    }),
+    'hero_warrior_idle'
+  );
 });
 
 test('RPG 탐험, 던전, 전리품, 스킬트리, 전직, 스토리, 도감, 레이드는 진행도를 확장한다', async () => {
@@ -118,6 +203,12 @@ test('RPG 탐험, 던전, 전리품, 스킬트리, 전직, 스토리, 도감, �
       userId: 'user-1',
       username: '용사',
       advancedClass: 'berserker'
+    });
+    const advancedStatus = await fixture.economy.getRpgStatus({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      now: 1_500
     });
     const explored = await fixture.economy.exploreRpg({
       guildId: 'guild-1',
@@ -172,6 +263,8 @@ test('RPG 탐험, 던전, 전리품, 스킬트리, 전직, 스토리, 도감, �
 
     assert.equal(learned.profile.rpg.learnedSkills.includes('weapon_training'), true);
     assert.equal(advanced.profile.rpg.advancedClass, 'berserker');
+    assert.equal(advanced.heroAssetId, 'hero_female_berserker_idle');
+    assert.equal(advancedStatus.heroAssetId, 'hero_female_berserker_idle');
     assert.equal(explored.profile.rpg.explores, 1);
     assert.equal(dungeon.depth, 1);
     assert.ok(dungeon.gearDrop);
@@ -179,7 +272,9 @@ test('RPG 탐험, 던전, 전리품, 스킬트리, 전직, 스토리, 도감, �
     assert.equal(equippedGear.profile.rpg.equippedGear[dungeon.gearDrop.slot], dungeon.gearDrop.id);
     assert.equal(story.profile.rpg.storyChapters.forest_oath, 5_000);
     assert.equal(codex.profile.rpg.codexClaims[battle.battle.monster], 6_000);
+    assert.equal(battle.battle.assets.hero, 'hero_female_berserker_idle');
     assert.equal(raid.battle.difficulty, 'raid');
+    assert.equal(raid.battle.assets.hero, 'hero_female_berserker_idle');
     assert.equal(raid.profile.rpg.raidClears.slime_horde, 1);
   } finally {
     await fixture.cleanup();
@@ -223,6 +318,13 @@ test('RPG 전투 판정은 난이도와 결정적 난수를 따른다', () => {
 
   assert.equal(femaleMage.characterGenderLabel, '여캐');
   assert.equal(femaleMage.assets.hero, 'hero_female_mage_idle');
+  const fireball = resolveRpgBattle({
+    playerLevel: 1,
+    characterClass: 'mage',
+    skillId: 'fireball',
+    randomInt: (min) => min
+  });
+  assert.equal(fireball.statusEffect.label, '화상');
 });
 
 test('RPG PvP 턴 판정은 선택한 스킬로 피해와 MP 소모를 계산한다', () => {
@@ -350,7 +452,13 @@ test('RPG PvP는 수락 후 버튼 턴을 진행하고 종료 시 전적과 보�
       now: 1_000
     });
     await fixture.store.update((data) => {
-      data.guilds['guild-1'].users['user-2'].rpg.hp = 8;
+      const challenger = data.guilds['guild-1'].users['user-1'];
+      const opponent = data.guilds['guild-1'].users['user-2'];
+      challenger.rpg.hp = 40;
+      challenger.rpg.mp = 10;
+      challenger.rpg.inventory.potion = 1;
+      opponent.rpg.hp = 8;
+      opponent.rpg.mp = 9;
     });
 
     const started = await fixture.economy.startRpgPvpDuel({
@@ -365,9 +473,19 @@ test('RPG PvP는 수락 후 버튼 턴을 진행하고 종료 시 전적과 보�
       },
       now: 10_000
     });
+    const finishingSession = {
+      ...started.session,
+      fighters: {
+        ...started.session.fighters,
+        opponent: {
+          ...started.session.fighters.opponent,
+          hp: 8
+        }
+      }
+    };
     const finished = await fixture.economy.playRpgPvpTurn({
       guildId: 'guild-1',
-      session: started.session,
+      session: finishingSession,
       actorUserId: 'user-1',
       skillId: 'power_strike',
       now: 11_000
@@ -375,6 +493,14 @@ test('RPG PvP는 수락 후 버튼 턴을 진행하고 종료 시 전적과 보�
 
     assert.equal(started.started, true);
     assert.equal(started.session.turnSide, 'challenger');
+    assert.equal(started.session.fighters.challenger.hp, started.session.fighters.challenger.maxHp);
+    assert.equal(started.session.fighters.challenger.mp, started.session.fighters.challenger.maxMp);
+    assert.equal(started.session.fighters.opponent.hp, started.session.fighters.opponent.maxHp);
+    assert.equal(started.session.fighters.opponent.mp, started.session.fighters.opponent.maxMp);
+    assert.equal(started.challenger.rpg.hp, 40);
+    assert.equal(started.challenger.rpg.mp, 10);
+    assert.equal(started.opponent.rpg.hp, 8);
+    assert.equal(started.opponent.rpg.mp, 9);
     assert.deepEqual(started.session.fighters.challenger.availableSkillIds, ['basic', 'power_strike', 'blade_storm']);
     assert.equal(started.challenger.rpg.lastBattleAt, 10_000);
     assert.equal(started.opponent.rpg.lastBattleAt, 10_000);
@@ -387,7 +513,9 @@ test('RPG PvP는 수락 후 버튼 턴을 진행하고 종료 시 전적과 보�
     assert.equal(finished.rewards.coins, 150);
     assert.equal(finished.challenger.totalXp, 80);
     assert.equal(finished.challenger.currencyBalances.rpg, 150);
-    assert.equal(finished.challenger.rpg.mp, 27);
+    assert.equal(finished.challenger.rpg.hp, 40);
+    assert.equal(finished.challenger.rpg.mp, 10);
+    assert.equal(finished.challenger.rpg.inventory.potion, 1);
     assert.equal(finished.challenger.rpg.battles, 1);
     assert.equal(finished.challenger.rpg.wins, 1);
     assert.equal(finished.challenger.rpg.pvpBattles, 1);
@@ -396,7 +524,205 @@ test('RPG PvP는 수락 후 버튼 턴을 진행하고 종료 시 전적과 보�
     assert.equal(finished.opponent.rpg.losses, 1);
     assert.equal(finished.opponent.rpg.pvpBattles, 1);
     assert.equal(finished.opponent.rpg.pvpLosses, 1);
-    assert.equal(finished.opponent.rpg.hp, 1);
+    assert.equal(finished.opponent.rpg.hp, 8);
+    assert.equal(finished.opponent.rpg.mp, 9);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('RPG PvP 신청과 턴 진행도 embed 카드로 표시된다', async () => {
+  const fixture = await createFixture({
+    randomInt: () => 20,
+    rpgBattleCooldownMs: 0
+  });
+
+  try {
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      characterClass: 'warrior',
+      characterGender: 'female',
+      now: 1_000
+    });
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-2',
+      username: '마법사',
+      characterClass: 'mage',
+      characterGender: 'male',
+      now: 1_000
+    });
+    await fixture.store.update((data) => {
+      data.guilds['guild-1'].users['user-2'].rpg.hp = 8;
+    });
+
+    const target = {
+      id: 'user-2',
+      username: '마법사',
+      bot: false,
+      toString() {
+        return '<@user-2>';
+      }
+    };
+    const challenge = createRpgInteraction('대결', {
+      userOptions: { 상대: target }
+    });
+    await handleRpgCommand(challenge, fixture.economy);
+    assertRpgEmbedCard(challenge.replies[0], /RPG PvP 대결 신청/);
+
+    const acceptId = getComponentCustomIds(challenge.replies[0])
+      .find((customId) => customId.startsWith('rpg_pvp_accept:'));
+    const accept = createRpgButtonInteraction(acceptId, {
+      user: { id: 'user-2', username: '마법사', bot: false }
+    });
+    await handleRpgCommand(accept, fixture.economy);
+    assertRpgEmbedCard(accept.updates[0], /RPG 턴제 PvP/);
+
+    const powerStrikeId = getComponentCustomIds(accept.updates[0])
+      .find((customId) => customId.endsWith(':power_strike'));
+    const attack = createRpgButtonInteraction(powerStrikeId);
+    await handleRpgCommand(attack, fixture.economy);
+    assertRpgEmbedCard(attack.updates[0], /RPG 턴제 PvP/);
+    assert.match(getReplyText(attack.updates[0]), /최근 행동/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('RPG PvP 턴 보드는 상태를 크게 보여주고 중간 포션 사용을 지원한다', async () => {
+  const fixture = await createFixture({
+    randomInt: () => 1,
+    rpgBattleCooldownMs: 0
+  });
+
+  try {
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      characterClass: 'warrior',
+      characterGender: 'female',
+      now: 1_000
+    });
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-2',
+      username: '마법사',
+      characterClass: 'mage',
+      characterGender: 'male',
+      now: 1_000
+    });
+    await fixture.store.update((data) => {
+      const challenger = data.guilds['guild-1'].users['user-1'];
+      challenger.rpg.hp = 40;
+      challenger.rpg.inventory.potion = 1;
+    });
+
+    const target = {
+      id: 'user-2',
+      username: '마법사',
+      bot: false,
+      toString() {
+        return '<@user-2>';
+      }
+    };
+    const challenge = createRpgInteraction('대결', {
+      userOptions: { 상대: target }
+    });
+    await handleRpgCommand(challenge, fixture.economy);
+    const acceptId = getComponentCustomIds(challenge.replies[0])
+      .find((customId) => customId.startsWith('rpg_pvp_accept:'));
+    const accept = createRpgButtonInteraction(acceptId, {
+      user: { id: 'user-2', username: '마법사', bot: false }
+    });
+    await handleRpgCommand(accept, fixture.economy);
+
+    const boardText = getReplyText(accept.updates[0]);
+    assert.match(boardText, /전장 상태/);
+    assert.match(boardText, /내 상태|신청자/);
+    assert.match(boardText, /HP .*▰/);
+    assert.match(boardText, /HP .*110\/110/);
+    assert.match(boardText, /MP .*▰/);
+    assert.match(boardText, /포션 \*\*1개\*\*/);
+
+    const firstAttackId = getComponentCustomIds(accept.updates[0])
+      .find((customId) => customId.endsWith(':basic'));
+    const firstAttack = createRpgButtonInteraction(firstAttackId);
+    await handleRpgCommand(firstAttack, fixture.economy);
+
+    const counterAttackId = getComponentCustomIds(firstAttack.updates[0])
+      .find((customId) => customId.endsWith(':basic'));
+    const counterAttack = createRpgButtonInteraction(counterAttackId, {
+      user: { id: 'user-2', username: '마법사', bot: false }
+    });
+    await handleRpgCommand(counterAttack, fixture.economy);
+
+    const potionId = getComponentCustomIds(counterAttack.updates[0])
+      .find((customId) => customId.endsWith(':potion'));
+    assert.ok(potionId);
+
+    const potion = createRpgButtonInteraction(potionId);
+    await handleRpgCommand(potion, fixture.economy);
+
+    const potionText = getReplyText(potion.updates[0]);
+    assert.match(potionText, /회복 포션/);
+    assert.match(potionText, /HP \+\d+/);
+    assert.match(potionText, /포션 \*\*0개\*\*/);
+    assert.match(potionText, /현재 차례.*마법사/);
+
+    const statusAfterPvpPotion = await fixture.economy.getRpgStatus({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사'
+    });
+    assert.equal(statusAfterPvpPotion.profile.rpg.hp, 40);
+    assert.equal(statusAfterPvpPotion.profile.rpg.inventory.potion, 1);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('RPG 보스전 카드는 내 상태와 보스 상태, 포션 잔량을 눈에 띄게 보여준다', async () => {
+  const fixture = await createFixture({
+    randomInt: (min) => min,
+    rpgBattleCooldownMs: 0
+  });
+
+  try {
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      characterClass: 'warrior',
+      characterGender: 'female',
+      now: 1_000
+    });
+    await fixture.economy.awardActivityXp({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      xp: 400
+    });
+    await fixture.store.update((data) => {
+      const profile = data.guilds['guild-1'].users['user-1'];
+      profile.rpg.hp = 55;
+      profile.rpg.inventory.potion = 1;
+    });
+
+    const boss = createRpgInteraction('보스', {
+      stringOptions: { 보스: 'slime_king' }
+    });
+    await handleRpgCommand(boss, fixture.economy);
+
+    const bossText = getReplyText(boss.replies[0]);
+    assertRpgEmbedCard(boss.replies[0], /수동 보스전 시작/);
+    assert.match(bossText, /내 상태/);
+    assert.match(bossText, /보스 상태/);
+    assert.match(bossText, /HP .*▰/);
+    assert.match(bossText, /포션 \*\*1개\*\*/);
+    assert.ok(getComponentCustomIds(boss.replies[0]).some((customId) => customId.endsWith(':potion')));
   } finally {
     await fixture.cleanup();
   }
@@ -526,6 +852,79 @@ test('RPG 장비강화는 전리품 스탯과 골드를 갱신하고 명령 버�
   }
 });
 
+test('RPG 전리품 분해와 강화석 보조 강화는 장비 성장 루프를 만든다', async () => {
+  const fixture = await createFixture({
+    randomInt: (min) => min
+  });
+
+  try {
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      characterClass: 'warrior'
+    });
+    await seedRpgGold(fixture.store, 'guild-1', 'user-1', 1_000);
+    await seedRpgGear(fixture.store, 'guild-1', 'user-1', {
+      id: 'gear_dust',
+      baseItemId: 'iron_sword',
+      slot: 'weapon',
+      rarity: 'rare',
+      rarityLabel: '희귀',
+      label: '희귀 철검',
+      stats: { attack: 5 },
+      power: 2,
+      enhanceLevel: 2,
+      assetId: 'item_iron_sword_icon',
+      acquiredAt: 1_000
+    });
+    await seedRpgGear(fixture.store, 'guild-1', 'user-1', {
+      id: 'gear_enhance',
+      baseItemId: 'iron_sword',
+      slot: 'weapon',
+      rarity: 'common',
+      rarityLabel: '일반',
+      label: '일반 철검',
+      stats: { attack: 4 },
+      power: 1,
+      enhanceLevel: 0,
+      assetId: 'item_iron_sword_icon',
+      acquiredAt: 2_000
+    });
+
+    const disassembled = await fixture.economy.disassembleRpgGear({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      gearId: 'gear_dust',
+      now: 3_000
+    });
+    const enhanced = await fixture.economy.enhanceRpgGear({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      gearId: 'gear_enhance',
+      now: 4_000
+    });
+    const gearView = createRpgButtonInteraction('rpg_quick:user-1:gear');
+    await handleRpgCommand(gearView, fixture.economy);
+
+    assert.equal(disassembled.rewards.enhancementStones, 3);
+    assert.equal(disassembled.rewards.coins, 200);
+    assert.equal(disassembled.profile.rpg.gearInventory.gear_dust, undefined);
+    assert.equal(disassembled.profile.rpg.inventory.enhancement_stone, 3);
+    assert.equal(enhanced.materialUsed, true);
+    assert.equal(enhanced.baseCost, 120);
+    assert.equal(enhanced.cost, 96);
+    assert.equal(enhanced.successRate, 98);
+    assert.equal(enhanced.profile.rpg.inventory.enhancement_stone, 2);
+    assert.equal(enhanced.profile.currencyBalances.rpg, 1_104);
+    assert.ok(getComponentCustomIds(gearView.updates[0]).includes('rpg_gear_disassemble:user-1:gear_enhance'));
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 test('RPG 스킬은 MP를 소모하고 전투력에 반영된다', async () => {
   const fixture = await createFixture({
     randomInt: (min) => min,
@@ -553,6 +952,7 @@ test('RPG 스킬은 MP를 소모하고 전투력에 반영된다', async () => {
     assert.equal(battle.battle.attackBonus, 4);
     assert.equal(battle.battle.playerPower, 11);
     assert.equal(battle.profile.rpg.mp, 27);
+    assert.equal(battle.profile.rpg.ultimateCharge, 35);
 
     const ultimate = await fixture.economy.playRpgBattle({
       guildId: 'guild-1',
@@ -568,6 +968,8 @@ test('RPG 스킬은 MP를 소모하고 전투력에 반영된다', async () => {
     assert.equal(ultimate.battle.ultimate, true);
     assert.equal(ultimate.battle.attackBonus, 12);
     assert.equal(ultimate.profile.rpg.mp, 3);
+    assert.equal(ultimate.ultimateCharge.after, 70);
+    assert.equal(ultimate.profile.rpg.ultimateCharge, 70);
   } finally {
     await fixture.cleanup();
   }
@@ -774,6 +1176,386 @@ test('RPG 전투는 전적, 보상, 쿨다운을 한 번에 정산한다', async
   }
 });
 
+test('RPG 탐험은 반복 쿨다운으로 무제한 골드 파밍을 막는다', async () => {
+  const fixture = await createFixture({
+    randomInt: (_min, max) => max,
+    rpgExploreCooldownMs: 60_000
+  });
+
+  try {
+    const first = await fixture.economy.exploreRpg({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      now: 10_000
+    });
+    const blocked = await fixture.economy.exploreRpg({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      now: 20_000
+    }).catch((error) => error);
+    const afterCooldown = await fixture.economy.exploreRpg({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      now: 70_000
+    });
+
+    assert.equal(first.profile.rpg.lastExploreAt, 10_000);
+    assert.match(blocked.message, /탐험.*남은 시간/);
+    assert.equal(afterCooldown.profile.rpg.explores, 2);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('RPG 반복 골드와 RPG 레벨 보상은 일일 상한을 넘지 않는다', async () => {
+  const fixture = await createFixture({
+    randomInt: (_min, max) => max,
+    rpgExploreCooldownMs: 0,
+    rpgDailyGoldCap: 100
+  });
+
+  try {
+    const first = await fixture.economy.exploreRpg({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      now: 10_000
+    });
+    const second = await fixture.economy.exploreRpg({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      now: 20_000
+    });
+
+    assert.equal(first.requestedCoinReward, 160);
+    assert.equal(first.coinReward, 100);
+    assert.equal(first.rpgGoldLimit.capped, true);
+    assert.equal(first.profile.balance, 100);
+    assert.equal(first.profile.rpg.daily.goldEarned, 100);
+
+    assert.equal(second.coinReward, 0);
+    assert.equal(second.levelRewardRequested, 200);
+    assert.equal(second.levelReward, 0);
+    assert.equal(second.levelRewardCapped, true);
+    assert.equal(second.profile.balance, 100);
+    assert.equal(second.profile.rpg.daily.goldEarned, 100);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('RPG 보스 쿨다운은 일반 전투를 막지 않는다', async () => {
+  const fixture = await createFixture({
+    randomInt: (min) => min,
+    rpgBattleCooldownMs: 0,
+    rpgBossCooldownMs: 60_000
+  });
+
+  try {
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      characterClass: 'warrior'
+    });
+    await fixture.economy.awardActivityXp({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      xp: 100
+    });
+    const boss = await fixture.economy.playRpgBossBattle({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      bossId: 'slime_king',
+      now: 10_000
+    });
+    const battle = await fixture.economy.playRpgBattle({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      difficulty: 'easy',
+      now: 20_000
+    });
+
+    assert.equal(boss.profile.rpg.lastBossAt, 10_000);
+    assert.equal(battle.battled, true);
+    assert.equal(battle.profile.rpg.battles, 2);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('RPG 상태는 행동별 쿨다운과 일일 반복 골드 상한을 한 번에 보여준다', async () => {
+  const fixture = await createFixture({
+    rpgBattleCooldownMs: 60_000,
+    rpgExploreCooldownMs: 120_000,
+    rpgDungeonCooldownMs: 0,
+    rpgDailyGoldCap: 300
+  });
+
+  try {
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      characterClass: 'warrior'
+    });
+    await fixture.store.update((data) => {
+      const profile = data.guilds['guild-1'].users['user-1'];
+      profile.rpg.lastBattleAt = 10_000;
+      profile.rpg.lastExploreAt = 15_000;
+      profile.rpg.daily = {
+        day: 0,
+        battles: 0,
+        wins: 0,
+        explores: 0,
+        dungeons: 0,
+        bosses: 0,
+        raids: 0,
+        pvpWins: 0,
+        goldEarned: 240,
+        claimedMissions: {}
+      };
+    });
+
+    const status = await fixture.economy.getRpgStatus({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      now: 20_000
+    });
+
+    assert.equal(status.dailyGold.cap, 300);
+    assert.equal(status.dailyGold.earned, 240);
+    assert.equal(status.dailyGold.remaining, 60);
+    assert.equal(status.actionAvailability.battle.available, false);
+    assert.equal(status.actionAvailability.battle.cooldownRemainingMs, 50_000);
+    assert.equal(status.actionAvailability.explore.available, false);
+    assert.equal(status.actionAvailability.explore.cooldownRemainingMs, 115_000);
+    assert.equal(status.actionAvailability.dungeon.available, true);
+    assert.equal(status.actionAvailability.boss.available, false);
+    assert.equal(status.actionAvailability.boss.levelBlocked, true);
+    assert.match(status.actionAvailability.boss.reason, /Lv\.2/);
+    assert.equal(status.actionAvailability.raid.available, false);
+    assert.equal(status.actionAvailability.guildRaid.available, false);
+    assert.equal(status.actionAvailability.raid.levelBlocked, true);
+    assert.match(status.actionAvailability.guildRaid.reason, /Lv\.2/);
+    assert.equal(status.adventureGuide.actionAvailability.explore.available, false);
+    assert.equal(status.adventureGuide.dailyGold.remaining, 60);
+    assert.equal(status.adventureGuide.recommendedAction.type, 'dungeon');
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('RPG 전투 결과 추천과 버튼 row는 행동 가용성 및 디스코드 제한을 따른다', async () => {
+  const fixture = await createFixture({
+    randomInt: (min) => min,
+    rpgBattleCooldownMs: 60_000,
+    rpgExploreCooldownMs: 120_000,
+    rpgDungeonCooldownMs: 0
+  });
+
+  try {
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      characterClass: 'warrior'
+    });
+    await fixture.store.update((data) => {
+      data.guilds['guild-1'].users['user-1'].rpg.lastExploreAt = Date.now();
+    });
+
+    const battle = createRpgInteraction('전투', {
+      stringOptions: { 난이도: 'hard' }
+    });
+    await handleRpgCommand(battle, fixture.economy);
+    const replyText = getReplyText(battle.replies[0]);
+
+    assert.match(replyText, /다음 추천:.*던전/);
+    assertComponentRowsWithinDiscordLimit(battle.replies[0]);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('RPG 수동 보스 쿨다운은 다른 보스만 막고 일반 전투는 막지 않는다', async () => {
+  const fixture = await createFixture({
+    randomInt: (_min, max) => max,
+    rpgBattleCooldownMs: 0,
+    rpgBossCooldownMs: 60_000
+  });
+
+  try {
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      characterClass: 'warrior'
+    });
+    await fixture.economy.awardActivityXp({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      xp: 100
+    });
+    const encounter = await fixture.economy.startRpgBossEncounter({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      bossId: 'slime_king',
+      now: 10_000
+    });
+    const blockedBoss = await fixture.economy.startRpgBossEncounter({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      bossId: 'slime_king',
+      now: 20_000
+    }).catch((error) => error);
+    const battle = await fixture.economy.playRpgBattle({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      difficulty: 'easy',
+      now: 20_000
+    });
+    const finished = await fixture.economy.playRpgBossTurn({
+      guildId: 'guild-1',
+      session: {
+        ...encounter.session,
+        boss: {
+          ...encounter.session.boss,
+          hp: 1
+        }
+      },
+      userId: 'user-1',
+      action: 'basic',
+      now: 70_000
+    });
+    const blockedAfterFinish = await fixture.economy.startRpgBossEncounter({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      bossId: 'slime_king',
+      now: 80_000
+    }).catch((error) => error);
+
+    assert.equal(encounter.session.type, 'boss_turn');
+    assert.match(blockedBoss.message, /보스전.*남은 시간/);
+    assert.equal(battle.battled, true);
+    assert.equal(finished.completed, true);
+    assert.equal(finished.profile.rpg.lastBossAt, 70_000);
+    assert.match(blockedAfterFinish.message, /보스전.*남은 시간/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('RPG 길드레이드 모집은 레이드 쿨다운을 사전에 안내한다', async () => {
+  const fixture = await createFixture({
+    rpgRaidCooldownMs: 60_000
+  });
+
+  try {
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      characterClass: 'warrior'
+    });
+    await fixture.economy.awardActivityXp({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      xp: 100
+    });
+    await fixture.store.update((data) => {
+      data.guilds['guild-1'].users['user-1'].rpg.lastRaidAt = Date.now();
+    });
+
+    const interaction = createRpgInteraction('길드레이드', {
+      stringOptions: { 레이드: 'slime_horde' }
+    });
+    await handleRpgCommand(interaction, fixture.economy);
+
+    assert.match(getReplyText(interaction.replies[0]), /모집 실패/);
+    assert.match(getReplyText(interaction.replies[0]), /아직 할 수 없습니다/);
+    assert.deepEqual(getComponentCustomIds(interaction.replies[0]), []);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('RPG 명령 응답은 반복 골드 상한 적용을 사용자에게 보여준다', async () => {
+  const fixture = await createFixture({
+    randomInt: (_min, max) => max,
+    rpgExploreCooldownMs: 0,
+    rpgDailyGoldCap: 100
+  });
+
+  try {
+    const interaction = createRpgInteraction('탐험');
+
+    await handleRpgCommand(interaction, fixture.economy);
+
+    assert.match(getReplyText(interaction.replies[0]), /일일 상한 적용/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('RPG 던전과 휴식도 반복 쿨다운을 적용한다', async () => {
+  const fixture = await createFixture({
+    randomInt: (_min, max) => max,
+    rpgDungeonCooldownMs: 60_000,
+    rpgRestCooldownMs: 60_000
+  });
+
+  try {
+    const dungeon = await fixture.economy.runRpgDungeon({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      depth: 1,
+      now: 10_000
+    });
+    const blockedDungeon = await fixture.economy.runRpgDungeon({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      depth: 1,
+      now: 20_000
+    }).catch((error) => error);
+    const rest = await fixture.economy.restRpg({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      now: 30_000
+    });
+    const blockedRest = await fixture.economy.restRpg({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      now: 40_000
+    }).catch((error) => error);
+
+    assert.equal(dungeon.profile.rpg.lastDungeonAt, 10_000);
+    assert.match(blockedDungeon.message, /던전.*남은 시간/);
+    assert.equal(rest.profile.rpg.lastRestAt, 30_000);
+    assert.match(blockedRest.message, /휴식.*남은 시간/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 test('RPG 메뉴와 일일 의뢰는 다음 행동과 하루 진행 루프를 제공한다', async () => {
   const fixture = await createFixture({
     randomInt: (min) => min,
@@ -890,20 +1672,23 @@ test('RPG 허브 버튼, 지역 진행도, 직업 숙련, 수동 보스전이 �
         'rpg_quick:user-1:battle',
         'rpg_quick:user-1:explore',
         'rpg_quick:user-1:dungeon',
-        'rpg_quick:user-1:raid',
-        'rpg_quick:user-1:guild_raid',
+        'rpg_quick:user-1:area',
+        'rpg_quick:user-1:rest',
         'rpg_quick:user-1:daily',
         'rpg_quick:user-1:quest',
+        'rpg_quick:user-1:story',
+        'rpg_quick:user-1:codex',
         'rpg_quick:user-1:status',
-        'rpg_quick:user-1:inventory',
-        'rpg_quick:user-1:rest',
         'rpg_quick:user-1:equipment',
         'rpg_quick:user-1:gear',
         'rpg_quick:user-1:enhance',
+        'rpg_quick:user-1:disassemble',
         'rpg_quick:user-1:skill_tree',
         'rpg_quick:user-1:class_path',
         'rpg_quick:user-1:shop',
-        'rpg_quick:user-1:area'
+        'rpg_quick:user-1:inventory',
+        'rpg_quick:user-1:raid',
+        'rpg_quick:user-1:guild_raid'
       ]
     );
 
@@ -942,6 +1727,7 @@ test('RPG 허브 버튼, 지역 진행도, 직업 숙련, 수동 보스전이 �
     });
 
     assert.equal(advanced.profile.rpg.advancedClass, 'berserker');
+    assert.equal(advanced.heroAssetId, 'hero_berserker_idle');
 
     const encounter = await fixture.economy.startRpgBossEncounter({
       guildId: 'guild-1',
@@ -950,6 +1736,8 @@ test('RPG 허브 버튼, 지역 진행도, 직업 숙련, 수동 보스전이 �
       bossId: 'slime_king',
       now: 20_000
     });
+    assert.equal(encounter.session.player.advancedClass, 'berserker');
+    assert.equal(encounter.session.assets.hero, 'hero_berserker_idle');
     const firstTurn = await fixture.economy.playRpgBossTurn({
       guildId: 'guild-1',
       session: encounter.session,
@@ -980,6 +1768,9 @@ test('RPG 허브 버튼, 지역 진행도, 직업 숙련, 수동 보스전이 �
     assert.equal(finished.battle.win, true);
     assert.equal(finished.profile.rpg.bossKills.slime_king, 1);
     assert.equal(finished.profile.rpg.areaProgress.forest >= forestProgress.progress, true);
+    for (const payload of [menuInteraction.replies[0]]) {
+      assertComponentRowsWithinDiscordLimit(payload);
+    }
   } finally {
     await fixture.cleanup();
   }
@@ -1020,18 +1811,34 @@ test('RPG 빠른 버튼은 주요 화면과 다음 행동을 명령어 없이 �
     await handleRpgCommand(inventoryButton, fixture.economy);
     const enhanceButton = createRpgButtonInteraction('rpg_quick:user-1:enhance');
     await handleRpgCommand(enhanceButton, fixture.economy);
+    const storyButton = createRpgButtonInteraction('rpg_quick:user-1:story');
+    await handleRpgCommand(storyButton, fixture.economy);
+    const codexButton = createRpgButtonInteraction('rpg_quick:user-1:codex');
+    await handleRpgCommand(codexButton, fixture.economy);
     const battleButton = createRpgButtonInteraction('rpg_quick:user-1:battle');
     await handleRpgCommand(battleButton, fixture.economy);
 
     assert.match(statusButton.updates[0].embeds[0].data.title, /RPG 상태/);
+    for (const payload of [
+      statusButton.updates[0],
+      inventoryButton.updates[0],
+      enhanceButton.updates[0],
+      battleButton.updates[0]
+    ]) {
+      assertComponentRowsWithinDiscordLimit(payload);
+    }
     assert.match(inventoryButton.updates[0].embeds[0].data.title, /RPG 인벤토리/);
     assert.match(enhanceButton.updates[0].embeds[0].data.title, /RPG 장비 강화/);
+    assert.match(storyButton.updates[0].embeds[0].data.title, /RPG 스토리/);
+    assert.match(codexButton.updates[0].embeds[0].data.title, /몬스터 도감/);
     assert.ok(
       enhanceButton.updates[0].components
         .flatMap((row) => row.components)
         .some((button) => button.data.custom_id === 'rpg_gear_enhance:user-1:gear_button')
     );
     assert.match(battleButton.updates[0].embeds[0].data.title, /RPG 전투/);
+    assert.match(getReplyText(battleButton.updates[0]), /전투 판정/);
+    assert.match(getReplyText(battleButton.updates[0]), /다음 추천/);
     assert.ok(
       battleButton.updates[0].components
         .flatMap((row) => row.components)
@@ -1070,27 +1877,38 @@ test('RPG 진행 화면은 내부 id 대신 한글 라벨과 다음 조작을 �
     const quests = createRpgInteraction('퀘스트');
     const shop = createRpgInteraction('상점');
     const story = createRpgInteraction('스토리');
+    const areas = createRpgInteraction('지역');
 
     await handleRpgCommand(menu, fixture.economy);
     await handleRpgCommand(skillTree, fixture.economy);
     await handleRpgCommand(quests, fixture.economy);
     await handleRpgCommand(shop, fixture.economy);
     await handleRpgCommand(story, fixture.economy);
+    await handleRpgCommand(areas, fixture.economy);
 
     const menuText = getReplyText(menu.replies[0]);
     assert.match(menuText, /다음 행동/);
+    assert.match(menuText, /추천 루프/);
     assert.match(menuText, /1\) 전투\/탐험/);
     assert.match(menuText, /2\) 보상 수령/);
     assert.match(menuText, /3\) 성장 정리/);
+    assert.match(menuText, /버튼 배치/);
     assert.ok(getComponentCustomIds(skillTree.replies[0]).includes('rpg_quick:user-1:menu'));
     assert.ok(getComponentCustomIds(quests.replies[0]).includes('rpg_quick:user-1:battle'));
     assert.ok(getComponentCustomIds(story.replies[0]).includes('rpg_story:user-1:forest_oath'));
+    const areaText = getReplyText(areas.replies[0]);
+    assert.match(areaText, /RPG 월드맵 · 사냥터 선택/);
+    assert.match(areaText, /추천 사냥터/);
+    assert.match(areaText, /Lv\.1 입문/);
+    assert.match(areaText, /버튼 가이드/);
+    assert.ok(getComponentCustomIds(areas.replies[0]).includes('rpg_quick:user-1:menu'));
 
     const combinedProgressText = [
       getReplyText(skillTree.replies[0]),
       getReplyText(quests.replies[0]),
       getReplyText(shop.replies[0]),
-      getReplyText(story.replies[0])
+      getReplyText(story.replies[0]),
+      getReplyText(areas.replies[0])
     ].join('\n');
 
     assert.doesNotMatch(combinedProgressText, /\b(?:weapon_training|mana_flow|class_mastery|first_blood|slime_slayer|cave_scout|boss_challenger|iron_sword|leather_armor|mana_potion|forest_oath|cave_signal|ruins_key)\b/);
@@ -1112,6 +1930,96 @@ test('RPG 진행 화면은 내부 id 대신 한글 라벨과 다음 조작을 �
     assert.match(getReplyText(storyButton.updates[0]), /스토리 완료/);
     assert.match(getReplyText(storyButton.updates[0]), /숲의 맹세/);
     assert.doesNotMatch(getReplyText(storyButton.updates[0]), /forest_oath/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('RPG 주요 조작 화면은 일반 텍스트가 아니라 embed 카드로 응답한다', async () => {
+  const fixture = await createFixture({
+    randomInt: (min) => min,
+    rpgBattleCooldownMs: 0
+  });
+
+  try {
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      characterClass: 'mage',
+      now: 1_000
+    });
+    await fixture.economy.awardActivityXp({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      xp: 400
+    });
+    await seedRpgGold(fixture.store, 'guild-1', 'user-1', 10_000);
+    await fixture.economy.buyRpgItem({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      itemId: 'iron_sword',
+      quantity: 1
+    });
+    await seedRpgGear(fixture.store, 'guild-1', 'user-1', {
+      id: 'gear_card',
+      baseItemId: 'iron_sword',
+      slot: 'weapon',
+      rarity: 'rare',
+      rarityLabel: '희귀',
+      label: '희귀 철검',
+      stats: { attack: 5 },
+      power: 2,
+      enhanceLevel: 0,
+      assetId: 'item_iron_sword_icon',
+      acquiredAt: 1_000
+    });
+    await fixture.economy.playRpgBattle({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      difficulty: 'easy'
+    });
+
+    const commandCases = [
+      [createRpgInteraction('시작'), /캐릭터 생성/],
+      [createRpgInteraction('장비'), /RPG 장비 장착/],
+      [createRpgInteraction('전리품'), /RPG 전리품 장비/],
+      [createRpgInteraction('장비강화'), /RPG 장비 강화/],
+      [createRpgInteraction('퀘스트'), /RPG 퀘스트/],
+      [createRpgInteraction('일일'), /오늘의 RPG 의뢰판/],
+      [createRpgInteraction('휴식'), /휴식 완료/],
+      [createRpgInteraction('스킬트리'), /RPG 스킬/],
+      [createRpgInteraction('전직'), /RPG 전직 트리/],
+      [createRpgInteraction('스토리'), /RPG 스토리/],
+      [createRpgInteraction('도감'), /몬스터 도감/],
+      [createRpgInteraction('지역'), /RPG 월드맵/],
+      [createRpgInteraction('장비', { stringOptions: { 아이템: 'iron_sword' } }), /장비 장착/],
+      [createRpgInteraction('전리품', { stringOptions: { 장비: 'gear_card' } }), /전리품 장착/],
+      [createRpgInteraction('퀘스트', { stringOptions: { 퀘스트: 'first_blood' } }), /퀘스트 보상 수령/],
+      [createRpgInteraction('일일', { stringOptions: { 임무: 'victory_contract' } }), /일일 의뢰 보상 수령/],
+      [createRpgInteraction('스킬트리', { stringOptions: { 스킬: 'mana_flow' } }), /스킬트리 학습/],
+      [createRpgInteraction('스토리', { stringOptions: { 챕터: 'forest_oath' } }), /스토리 완료/]
+    ];
+
+    for (const [interaction, titlePattern] of commandCases) {
+      await handleRpgCommand(interaction, fixture.economy);
+      assertRpgEmbedCard(interaction.replies[0], titlePattern);
+    }
+
+    const battleCard = createRpgInteraction('전투', {
+      stringOptions: { 난이도: '쉬움' }
+    });
+    await handleRpgCommand(battleCard, fixture.economy);
+    assertRpgEmbedCard(battleCard.replies[0], /RPG 전투/);
+    assertRpgEmbedFilesAreReferenced(battleCard.replies[0]);
+
+    const gearButton = createRpgButtonInteraction('rpg_gear_equip:user-1:gear_card');
+    await handleRpgCommand(gearButton, fixture.economy);
+    assertRpgEmbedCard(gearButton.updates[0], /전리품 장착/);
+    assertRpgEmbedFilesAreReferenced(gearButton.updates[0]);
   } finally {
     await fixture.cleanup();
   }
@@ -1166,6 +2074,22 @@ test('RPG 상점은 메뉴 버튼과 구매 버튼으로 장비를 사고 포션
     const swordPurchase = createRpgButtonInteraction('rpg_shop_buy:user-1:iron_sword:1');
     await handleRpgCommand(swordPurchase, fixture.economy);
     assert.ok(getComponentCustomIds(swordPurchase.updates[0]).includes('rpg_item_equip:user-1:iron_sword'));
+
+    const inventory = createRpgButtonInteraction('rpg_quick:user-1:inventory');
+    await handleRpgCommand(inventory, fixture.economy);
+    assert.ok(getComponentCustomIds(inventory.updates[0]).includes('rpg_item_use:user-1:potion'));
+    assert.ok(getComponentCustomIds(inventory.updates[0]).includes('rpg_item_sell:user-1:potion:1'));
+
+    const sellPotion = createRpgButtonInteraction('rpg_item_sell:user-1:potion:1');
+    await handleRpgCommand(sellPotion, fixture.economy);
+    assert.match(sellPotion.updates[0].embeds[0].data.title, /아이템 판매/);
+    const afterSell = await fixture.economy.getRpgStatus({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사'
+    });
+    assert.equal(afterSell.profile.rpg.inventory.potion, initialPotionCount);
+    assert.equal(afterSell.profile.balance, 440);
   } finally {
     await fixture.cleanup();
   }
@@ -1174,7 +2098,8 @@ test('RPG 상점은 메뉴 버튼과 구매 버튼으로 장비를 사고 포션
 test('RPG 길드레이드는 서버 파티원을 모아 보상과 지원 보상을 정산한다', async () => {
   const fixture = await createFixture({
     randomInt: (min) => min,
-    rpgBattleCooldownMs: 0
+    rpgBattleCooldownMs: 0,
+    rpgRaidCooldownMs: 0
   });
 
   try {
@@ -1205,6 +2130,18 @@ test('RPG 길드레이드는 서버 파티원을 모아 보상과 지원 보상�
       username: '용사',
       xp: 400
     });
+    await fixture.economy.awardActivityXp({
+      guildId: 'guild-1',
+      userId: 'user-2',
+      username: '마법사',
+      xp: 200
+    });
+    await fixture.economy.awardActivityXp({
+      guildId: 'guild-1',
+      userId: 'user-3',
+      username: '궁수',
+      xp: 200
+    });
 
     const result = await fixture.economy.playRpgGuildRaid({
       guildId: 'guild-1',
@@ -1216,9 +2153,23 @@ test('RPG 길드레이드는 서버 파티원을 모아 보상과 지원 보상�
     });
     const supportProfile = await fixture.economy.getProfile('guild-1', 'user-2', '마법사');
     const interaction = createRpgInteraction('길드레이드', {
-      stringOptions: { 레이드: 'slime_horde', 스킬: 'blade_storm' }
+      stringOptions: { 레이드: 'slime_horde' }
     });
     await handleRpgCommand(interaction, fixture.economy);
+    const lobbyText = getReplyText(interaction.replies[0]);
+    const lobbyIds = getComponentCustomIds(interaction.replies[0]);
+    const joinId = lobbyIds.find((customId) => customId.startsWith('rpg_raid_lobby:join:'));
+    const startId = lobbyIds.find((customId) => customId.startsWith('rpg_raid_lobby:start:'));
+    const join = createRpgButtonInteraction(joinId, {
+      user: {
+        id: 'user-2',
+        username: '마법사',
+        bot: false
+      }
+    });
+    await handleRpgCommand(join, fixture.economy);
+    const start = createRpgButtonInteraction(startId);
+    await handleRpgCommand(start, fixture.economy);
 
     assert.equal(result.battle.type, 'guild_raid');
     assert.equal(result.battle.partySize, 3);
@@ -1226,7 +2177,149 @@ test('RPG 길드레이드는 서버 파티원을 모아 보상과 지원 보상�
     assert.equal(result.supportRewards.length, 2);
     assert.equal(result.profile.currencyBalances.rpg, 1_600);
     assert.equal(supportProfile.currencyBalances.rpg, 475);
-    assert.match(interaction.replies[0].embeds[0].data.title, /길드 레이드/);
+    assert.equal(supportProfile.rpg.lastRaidAt, 10_000);
+    assert.match(interaction.replies[0].embeds[0].data.title, /길드 레이드 모집/);
+    assert.match(lobbyText, /참가/);
+    assert.match(getReplyText(join.updates[0]), /2\/4/);
+    assert.match(start.updates[0].embeds[0].data.title, /길드 레이드 결과/);
+    assert.match(getReplyText(start.updates[0]), /마법사/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('RPG 길드레이드는 지원 파티원의 레이드 쿨다운을 서비스와 로비에서 차단한다', async () => {
+  const fixture = await createFixture({
+    randomInt: (min) => min,
+    rpgBattleCooldownMs: 0,
+    rpgRaidCooldownMs: 60_000
+  });
+
+  try {
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      characterClass: 'warrior',
+      now: 1_000
+    });
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-2',
+      username: '마법사',
+      characterClass: 'mage',
+      now: 1_000
+    });
+    await fixture.economy.awardActivityXp({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      xp: 400
+    });
+    await fixture.economy.awardActivityXp({
+      guildId: 'guild-1',
+      userId: 'user-2',
+      username: '마법사',
+      xp: 400
+    });
+    await fixture.store.update((data) => {
+      data.guilds['guild-1'].users['user-2'].rpg.lastRaidAt = 19_500;
+    });
+    const supportBefore = await fixture.economy.getProfile('guild-1', 'user-2', '마법사');
+
+    const result = await fixture.economy.playRpgGuildRaid({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      raidId: 'slime_horde',
+      partyMemberIds: ['user-1', 'user-2'],
+      now: 20_000
+    });
+    const blockedSupport = await fixture.economy.getProfile('guild-1', 'user-2', '마법사');
+
+    assert.equal(result.battle.partySize, 1);
+    assert.equal(result.supportRewards.length, 0);
+    assert.equal(blockedSupport.rpg.lastRaidAt, 19_500);
+    assert.equal(blockedSupport.currencyBalances.rpg, supportBefore.currencyBalances.rpg);
+
+    await fixture.store.update((data) => {
+      data.guilds['guild-1'].users['user-1'].rpg.lastRaidAt = 0;
+      data.guilds['guild-1'].users['user-2'].rpg.lastRaidAt = Date.now();
+    });
+    const interaction = createRpgInteraction('길드레이드', {
+      stringOptions: { 레이드: 'slime_horde' }
+    });
+    await handleRpgCommand(interaction, fixture.economy);
+    const lobbyIds = getComponentCustomIds(interaction.replies[0]);
+    const joinId = lobbyIds.find((customId) => customId.startsWith('rpg_raid_lobby:join:'));
+    const join = createRpgButtonInteraction(joinId, {
+      user: {
+        id: 'user-2',
+        username: '마법사',
+        bot: false
+      }
+    });
+    await handleRpgCommand(join, fixture.economy);
+
+    assert.match(getReplyText(interaction.replies[0]), /길드 레이드 모집/);
+    assert.match(getReplyText(join.replies[0]), /참가는 아직 할 수 없습니다/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('RPG 길드레이드는 실패해도 참가한 지원 파티원의 쿨다운을 소모한다', async () => {
+  const fixture = await createFixture({
+    randomInt: (min, max) => (min === 1 && max === 20 ? min : max),
+    rpgBattleCooldownMs: 0,
+    rpgRaidCooldownMs: 60_000
+  });
+
+  try {
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      characterClass: 'warrior',
+      now: 1_000
+    });
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-2',
+      username: '마법사',
+      characterClass: 'mage',
+      now: 1_000
+    });
+    await fixture.economy.awardActivityXp({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      xp: 200
+    });
+    await fixture.economy.awardActivityXp({
+      guildId: 'guild-1',
+      userId: 'user-2',
+      username: '마법사',
+      xp: 200
+    });
+    const supportBefore = await fixture.economy.getProfile('guild-1', 'user-2', '마법사');
+
+    const result = await fixture.economy.playRpgGuildRaid({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      raidId: 'slime_horde',
+      partyMemberIds: ['user-1', 'user-2'],
+      now: 30_000
+    });
+    const supportAfter = await fixture.economy.getProfile('guild-1', 'user-2', '마법사');
+
+    assert.equal(result.battle.partySize, 2);
+    assert.equal(result.battle.win, false);
+    assert.equal(result.supportRewards.length, 0);
+    assert.equal(result.profile.rpg.lastRaidAt, 30_000);
+    assert.equal(supportAfter.rpg.lastRaidAt, 30_000);
+    assert.equal(supportAfter.currencyBalances.rpg, supportBefore.currencyBalances.rpg);
   } finally {
     await fixture.cleanup();
   }
@@ -1275,6 +2368,8 @@ test('RPG 보스 턴 판정은 공격, 방어, 포션 행동을 구분한다', (
       power: 12
     },
     action: 'guard',
+    bossId: 'slime_king',
+    turnNumber: 2,
     randomInt: () => 20
   });
   const potion = resolveRpgBossTurn({
@@ -1304,8 +2399,11 @@ test('RPG 보스 턴 판정은 공격, 방어, 포션 행동을 구분한다', (
   assert.equal(attack.bossHpAfter < 30, true);
   assert.equal(attack.bossPattern.id, 'royal_slam');
   assert.equal(attack.bossPattern.damageMultiplier > 1, true);
+  assert.match(attack.bossPattern.telegraph, /뛰어/);
   assert.equal(guard.action, 'guard');
   assert.equal(guard.playerDamage, 0);
+  assert.equal(guard.patternCountered, true);
+  assert.equal(guard.bossDamageReduction > 0, true);
   assert.equal(guard.bossDamage < attack.bossDamage, true);
   assert.equal(potion.action, 'potion');
   assert.equal(potion.healed, 40);
@@ -1375,13 +2473,16 @@ test('기존 프로필에 RPG 상태가 없어도 기본값을 채운다', async
     assert.equal(status.profile.rpg.characterGender, 'male');
     assert.equal(status.heroAssetId, 'hero_adventurer_idle');
     assert.equal(status.profile.rpg.currentArea, 'forest');
-    assert.deepEqual(status.profile.rpg.unlockedAreas, ['forest', 'cave']);
+    assert.deepEqual(status.profile.rpg.unlockedAreas, ['forest', 'wildflower_plains', 'cave', 'moonlit_hill']);
     assert.deepEqual(status.profile.rpg.discoveredMonsters, {});
     assert.equal(status.profile.rpg.battles, 0);
     assert.equal(status.profile.rpg.wins, 0);
     assert.equal(status.profile.rpg.losses, 0);
     assert.equal(status.profile.rpg.lastBattleAt, 0);
     assert.equal(status.cooldownRemainingMs, 0);
+    assert.equal(status.actionAvailability.battle.available, true);
+    assert.equal(status.actionAvailability.rest.available, true);
+    assert.equal(status.dailyGold.remaining, status.dailyGold.cap);
   } finally {
     await fixture.cleanup();
   }
@@ -1407,7 +2508,8 @@ async function createFixture(options = {}) {
 
 function createRpgInteraction(subcommand, {
   stringOptions = {},
-  integerOptions = {}
+  integerOptions = {},
+  userOptions = {}
 } = {}) {
   const replies = [];
 
@@ -1440,8 +2542,8 @@ function createRpgInteraction(subcommand, {
       getInteger(name) {
         return integerOptions[name] ?? null;
       },
-      getUser() {
-        return null;
+      getUser(name) {
+        return userOptions[name] ?? null;
       }
     },
     async reply(payload) {
@@ -1450,7 +2552,13 @@ function createRpgInteraction(subcommand, {
   };
 }
 
-function createRpgButtonInteraction(customId) {
+function createRpgButtonInteraction(customId, {
+  user = {
+    id: 'user-1',
+    username: '용사',
+    bot: false
+  }
+} = {}) {
   const replies = [];
   const updates = [];
 
@@ -1458,11 +2566,7 @@ function createRpgButtonInteraction(customId) {
     guildId: 'guild-1',
     channelId: 'channel-1',
     customId,
-    user: {
-      id: 'user-1',
-      username: '용사',
-      bot: false
-    },
+    user,
     replies,
     updates,
     isButton() {
@@ -1495,11 +2599,40 @@ function getReplyText(payload) {
     .join('\n');
 }
 
+function assertRpgEmbedCard(payload, titlePattern) {
+  assert.notEqual(typeof payload, 'string');
+  assert.equal(payload.content ?? null, null);
+  assert.ok(payload.embeds?.length > 0);
+  assert.match(payload.embeds[0].data.title, titlePattern);
+  assert.ok(payload.embeds[0].data.description?.length > 0);
+  assert.match(payload.embeds[0].data.footer?.text ?? '', /RPG/);
+}
+
+function assertRpgEmbedFilesAreReferenced(payload) {
+  const files = payload.files ?? [];
+  const embed = payload.embeds?.[0]?.data ?? {};
+  const referencedUrls = new Set([
+    embed.image?.url,
+    embed.thumbnail?.url
+  ].filter(Boolean));
+
+  assert.ok(files.length <= 2);
+  for (const file of files) {
+    assert.ok(referencedUrls.has(`attachment://${file.name}`));
+  }
+}
+
 function getComponentCustomIds(payload) {
   return (payload.components ?? [])
     .flatMap((row) => row.components ?? [])
     .map((component) => component.data.custom_id)
     .filter(Boolean);
+}
+
+function assertComponentRowsWithinDiscordLimit(payload) {
+  for (const row of payload.components ?? []) {
+    assert.ok((row.components ?? []).length <= 5);
+  }
 }
 
 async function seedRpgGold(store, guildId, userId, amount) {

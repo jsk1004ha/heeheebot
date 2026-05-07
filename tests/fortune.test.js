@@ -16,10 +16,10 @@ const EXPECTED_FORTUNE_KINDS = [
   '大凶(대흉)'
 ];
 
-test('운세 글귀는 7단계 길흉 분류가 섞인 1400개 목록이다', () => {
+test('운세 글귀는 7단계 길흉 분류가 섞인 350개 직접 작성 목록이다', () => {
   const kinds = new Set(FORTUNE_MESSAGES.map((fortune) => fortune.kind));
 
-  assert.equal(FORTUNE_MESSAGES.length, 1400);
+  assert.equal(FORTUNE_MESSAGES.length, 350);
   assert.deepEqual([...kinds].sort(), [...EXPECTED_FORTUNE_KINDS].sort());
   assert.equal(FORTUNE_MESSAGES.every((fortune) => EXPECTED_FORTUNE_KINDS.includes(fortune.kind)), true);
 
@@ -29,11 +29,11 @@ test('운세 글귀는 7단계 길흉 분류가 섞인 1400개 목록이다', ()
   }, new Map());
   assert.deepEqual(
     EXPECTED_FORTUNE_KINDS.map((kind) => countsByKind.get(kind)),
-    EXPECTED_FORTUNE_KINDS.map(() => 200)
+    EXPECTED_FORTUNE_KINDS.map(() => 50)
   );
 });
 
-test('운세 문구는 완전 중복이 없고 같은 문장 반복을 제한한다', () => {
+test('운세 문구는 직접 쓴 자연스러운 존댓말 문장이다', () => {
   const normalizedTexts = FORTUNE_MESSAGES.map((fortune) => normalizeText(fortune.text));
   assert.equal(new Set(normalizedTexts).size, FORTUNE_MESSAGES.length);
 
@@ -46,6 +46,93 @@ test('운세 문구는 완전 중복이 없고 같은 문장 반복을 제한한
 
   const maxSentenceRepeat = Math.max(...sentenceCounts.values());
   assert.ok(maxSentenceRepeat <= 10, `같은 문장이 ${maxSentenceRepeat}번 반복됩니다.`);
+
+  const bannedPatterns = [
+    /대길(?:의 흐름)?입니다/,
+    /길입니다/,
+    /중길(?:의 흐름)?입니다/,
+    /소길(?:의 흐름)?입니다/,
+    /말길(?:의 흐름)?입니다/,
+    /흉(?:의 흐름)?입니다/,
+    /대흉(?:의 흐름)?입니다/,
+    /흐름입니다/,
+    /쪽에 .* 들어오는/,
+    /포인트:/,
+    /마무리:/,
+    /입니다는/,
+    /습니다는/,
+    /필요 없은/,
+    /없은/,
+    /듣은/,
+    /풀립니다까지/,
+    /풀립니다로/,
+    /스트레칭와/,
+    /은\(는\)/,
+    /운은 .* 운/,
+    /기대보다 분명한 성과/
+  ];
+
+  for (const fortune of FORTUNE_MESSAGES) {
+    assert.ok(fortune.text.length >= 35, `운세가 너무 짧습니다: ${fortune.text}`);
+    assert.ok(fortune.text.length <= 190, `운세가 너무 깁니다: ${fortune.text}`);
+    assert.match(fortune.text, /(니다|세요|겁니다)\./);
+    for (const pattern of bannedPatterns) {
+      assert.doesNotMatch(fortune.text, pattern, fortune.text);
+    }
+  }
+});
+
+test('운세 등급별 문구 강도는 길흉 감각과 맞아야 한다', () => {
+  const messagesByKind = groupMessagesByKind(FORTUNE_MESSAGES);
+  const expectations = [
+    {
+      kind: '大吉(대길)',
+      pattern: /좋은|성사|성과|기회|인정|해결|도움|성공|반가운|수익|합격|칭찬|회복|축하|득점|선물/,
+      label: '확실한 호재'
+    },
+    {
+      kind: '吉(길)',
+      pattern: /좋|무난|괜찮|도움|안정|편안|기분|소득|정리|순조|가볍|나아/,
+      label: '무난한 호재'
+    },
+    {
+      kind: '中吉(중길)',
+      pattern: /조건|차분|천천|준비|확인|정리|기회|좋은|도움|나아|맞추|기준|단계/,
+      label: '조건부 호재'
+    },
+    {
+      kind: '小吉(소길)',
+      pattern: /작은|소소|가벼|조금|짧은|하나|기본|유지|챙기|무난|편안/,
+      label: '작지만 분명한 이득'
+    },
+    {
+      kind: '末吉(말길)',
+      pattern: /늦게|천천|기다|후반|저녁|나중|끝에|미루|시간|조금씩|뒤에/,
+      label: '늦게 풀리는 감각'
+    },
+    {
+      kind: '凶(흉)',
+      pattern: /주의|조심|피하|미루|멈추|위험|손해|실수|오해|무리|확인|쉬는|줄이|신중|안전|낫|중요|바로 답하지|내려놓|백업|거절|다치|무겁|조용|문제|부담|변수|대충|지치|기본|끊깁|예민|피곤|폭발|일찍|비교|숫자|화면|소음|서운함|가능한|식사|좋습니다|마세요|수 있습니다/,
+      label: '분명한 주의'
+    },
+    {
+      kind: '大凶(대흉)',
+      pattern: /피하|미루|멈추|금물|위험|손해|분쟁|취소|보류|쉬세요|하지 마세요|조심|큰|크게|안전|문제|확인|중요|피곤|놓치|무거워|비교|세게|오래|마세요/,
+      label: '강한 경고'
+    }
+  ];
+
+  for (const { kind, pattern, label } of expectations) {
+    const misses = messagesByKind
+      .get(kind)
+      .filter((fortune) => !pattern.test(fortune.text));
+
+    assert.deepEqual(
+      misses,
+      [],
+      `${kind} 문구는 ${label}이 느껴져야 합니다.`
+    );
+  }
 });
 
 test('같은 유저와 같은 날짜의 운세는 누가 보더라도 항상 같다', () => {
@@ -175,4 +262,13 @@ function splitSentences(text) {
     .split(/(?<=[.!?。]|다\.|요\.|니다\.|세요\.)\s+/)
     .map((sentence) => sentence.trim())
     .filter(Boolean);
+}
+
+function groupMessagesByKind(fortunes) {
+  return fortunes.reduce((messagesByKind, fortune) => {
+    const messages = messagesByKind.get(fortune.kind) ?? [];
+    messages.push(fortune);
+    messagesByKind.set(fortune.kind, messages);
+    return messagesByKind;
+  }, new Map());
 }

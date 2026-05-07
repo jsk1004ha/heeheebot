@@ -3,13 +3,28 @@
   "outputs": {
     "success": "assets/sword/blacksmith/blacksmith_success.png",
     "maintain": "assets/sword/blacksmith/blacksmith_maintain.png",
-    "destroy": "assets/sword/blacksmith/blacksmith_destroy.png"
+    "destroy": "assets/sword/blacksmith/blacksmith_destroy.png",
+    "hisashiburi": "assets/sword/blacksmith/blacksmith_hisashiburi.png",
+    "coffinDance": "assets/sword/blacksmith/blacksmith_coffin_dance.png"
   },
   "sources": {
     "success": "/home/jio/.codex/generated_images/019dfd96-21ac-7661-a40e-ce58d64ca566/ig_00f95e77ca4aa3f10169fbe15387188191ac9fe3be9bf5894d.png",
     "maintain": "/home/jio/.codex/generated_images/019dfd96-21ac-7661-a40e-ce58d64ca566/ig_00f95e77ca4aa3f10169fbe19fa7148191839d1062223d1f8b.png",
-    "destroy": "/home/jio/.codex/generated_images/019dfd96-21ac-7661-a40e-ce58d64ca566/ig_00f95e77ca4aa3f10169fbe1e740188191a08638c2a953569a.png"
+    "destroy": "/home/jio/.codex/generated_images/019dfd96-21ac-7661-a40e-ce58d64ca566/ig_00f95e77ca4aa3f10169fbe1e740188191a08638c2a953569a.png",
+    "hisashiburi": "assets/sword/blacksmith/tribute/hisashiburi/raw/raw-sheet.png",
+    "coffinDance": "assets/sword/blacksmith/tribute/coffin_dance/raw/raw-sheet.png"
   },
   "size": "512x512",
-  "backgroundRemoval": "chroma-key #ff00ff via remove_chroma_key.py"
+  "backgroundRemoval": "chroma-key #ff00ff via remove_chroma_key.py",
+  "tribute": {
+    "generatedWith": "agent-sprite-forge:$generate2dsprite",
+    "variants": [
+      "blacksmith_hisashiburi",
+      "blacksmith_coffin_dance"
+    ],
+    "outputs": [
+      "assets/sword/blacksmith/blacksmith_hisashiburi.png",
+      "assets/sword/blacksmith/blacksmith_coffin_dance.png"
+    ]
+  }
 }

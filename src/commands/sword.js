@@ -12,7 +12,8 @@ import {
 } from '../systems/sword-assets.js';
 import {
   formatBlacksmithEnhancementLine,
-  getBlacksmithAssetAttachment
+  getBlacksmithAssetAttachment,
+  getRandomBlacksmithTributeAssetAttachment
 } from '../systems/sword-blacksmith.js';
 import { formatDuration } from './economy.js';
 
@@ -84,7 +85,10 @@ export const swordCommands = [
     ),
   new SlashCommandBuilder()
     .setName('선물받기')
-    .setDescription('하루 한 번 검 상급강화에 필요한 제련석을 받습니다.')
+    .setDescription('하루 한 번 검 상급강화에 필요한 제련석을 받습니다.'),
+  new SlashCommandBuilder()
+    .setName('묵념')
+    .setDescription('터져버린 검과 제련석을 위해 잠시 묵념합니다.')
 ];
 
 export function getSwordCommandPayloads() {
@@ -121,6 +125,11 @@ export async function handleSwordCommand(interaction, economy, logger = console)
 async function routeSwordCommand(interaction, economy) {
   const guildId = interaction.guildId;
   const user = interaction.user;
+
+  if (interaction.commandName === '묵념') {
+    await interaction.reply(formatSwordSilentTribute(user));
+    return;
+  }
 
   if (interaction.commandName === '검강화') {
     const result = await economy.enhanceSword({
@@ -389,6 +398,29 @@ function formatSwordEnhancement(user, result) {
   ].join('\n');
 }
 
+function formatSwordSilentTribute(user) {
+  const attachment = getRandomBlacksmithTributeAssetAttachment();
+  const payload = {
+    content: [
+      `🕯️ ${user}님이 조용히 묵념합니다.`,
+      '방금 터졌거나 언젠가 터질 모든 검과 제련석에게 잠시 침묵을...'
+    ].join('\n')
+  };
+
+  if (!attachment) return payload;
+
+  const embed = new EmbedBuilder()
+    .setTitle('대장장이의 묵념 타임')
+    .setImage(`attachment://${attachment.name}`)
+    .setColor(0x2f3136);
+
+  return {
+    ...payload,
+    embeds: [embed],
+    files: [attachment]
+  };
+}
+
 function formatSwordGift(user, result) {
   return [
     `🎁 **제련석 선물 수령** — ${user}`,
@@ -605,8 +637,7 @@ export function createSwordReplyPayload(content, swordLevel, title = null, optio
   const embed = new EmbedBuilder()
     .setTitle(title ?? getSwordAssetLabel(swordLevel))
     .setImage(`attachment://${attachment.name}`)
-    .setColor(getSwordEmbedColor(swordLevel))
-    .setFooter({ text: '검 강화 이미지' });
+    .setColor(getSwordEmbedColor(swordLevel));
 
   if (options.includeBlacksmith) {
     const blacksmithAttachment = getBlacksmithAssetAttachment(options.blacksmithOutcome);

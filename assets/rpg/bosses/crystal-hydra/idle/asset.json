@@ -1,0 +1,8 @@
+{
+  "id": "boss_crystal_hydra_idle",
+  "label": "수정 히드라 대기 모션",
+  "category": "monster",
+  "kind": "sprite",
+  "sheet": "3x3",
+  "prompt": "Generated local fallback raid boss sprite for 수정 히드라 대기 모션; clean HD RPG boss, 3x3 transparent idle sheet, no text."
+}

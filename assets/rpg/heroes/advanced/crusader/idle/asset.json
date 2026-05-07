@@ -1,0 +1,18 @@
+{
+  "id": "hero_crusader_idle",
+  "category": "hero",
+  "kind": "sprite",
+  "sheet": "single",
+  "source": "/home/jio/.codex/generated_images/019dfd64-811e-7561-a000-5b3212cc9327/ig_0be8125a22524a6e0169fc2ae43048819194033095fa3a6e25.png",
+  "raw": "assets/rpg/heroes/advanced/crusader/idle/raw/raw-sheet.png",
+  "prompt": "assets/rpg/heroes/advanced/crusader/idle/prompt-used.txt",
+  "processedDir": "assets/rpg/heroes/advanced/crusader/idle/processed",
+  "status": "processed",
+  "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/advanced/crusader/idle/processed",
+  "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
+  "advancedClass": "crusader",
+  "gender": "male",
+  "label": "크루세이더",
+  "rosterFrame": 7,
+  "clean": "assets/rpg/heroes/advanced/crusader/idle/processed/clean.png"
+}

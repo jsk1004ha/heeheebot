@@ -7,7 +7,6 @@ import {
   getRpgAdvancedClassConfig,
   getRpgAdvancedClassStatuses,
   getRpgBossConfig,
-  getRpgClassAssetId,
   getRpgClassConfig,
   getRpgClassMasteryStatus,
   getRpgDailyMissionConfig,
@@ -15,6 +14,7 @@ import {
   getRpgDerivedStats,
   getRpgGachaBannerConfig,
   getRpgGenderConfig,
+  getRpgHeroAssetId,
   getRpgItemConfig,
   getRpgMonsterAssetId,
   getRpgMonsterCodexStatuses,
@@ -106,6 +106,12 @@ const DEFAULT_OPTIONS = Object.freeze({
   rpgBattleWinXpMin: 50,
   rpgBattleWinXpMax: 200,
   rpgBattleCooldownMs: 60_000,
+  rpgExploreCooldownMs: 5 * 60_000,
+  rpgDungeonCooldownMs: 30 * 60_000,
+  rpgBossCooldownMs: 30 * 60_000,
+  rpgRaidCooldownMs: 6 * 60 * 60_000,
+  rpgRestCooldownMs: 10 * 60_000,
+  rpgDailyGoldCap: 3_000,
   fortuneXpReward: 10,
   fortuneXpDayOffsetMs: 9 * 60 * 60 * 1000,
   levelBaseXp: 100,
@@ -402,8 +408,6 @@ export class EconomyService {
     const normalizedGender = normalizeRpgGender(characterGender);
     const classConfig = getRpgClassConfig(normalizedClass);
     const genderConfig = getRpgGenderConfig(normalizedGender);
-    const heroAssetId = getRpgClassAssetId(normalizedClass, normalizedGender);
-
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
       const firstStart = !profile.rpg.startedAt;
@@ -436,7 +440,11 @@ export class EconomyService {
         characterGender: normalizedGender,
         classConfig,
         genderConfig,
-        heroAssetId,
+        heroAssetId: getRpgHeroAssetId({
+          characterClass: profile.rpg.characterClass,
+          characterGender: profile.rpg.characterGender,
+          advancedClass: profile.rpg.advancedClass
+        }),
         derivedStats,
         currentArea: getRpgAreaConfig(profile.rpg.currentArea),
         profile: cloneProfile(profile)
@@ -539,6 +547,48 @@ export class EconomyService {
     });
   }
 
+  async sellRpgItem({ guildId, userId, username, itemId, quantity = 1 }) {
+    const normalizedItemId = normalizeRpgItemId(itemId);
+    const item = getRpgItemConfig(normalizedItemId);
+    const normalizedQuantity = normalizePositiveInteger(quantity, '판매 수량');
+    const unitPrice = getRpgItemSellValue(item);
+    const totalPrice = unitPrice * normalizedQuantity;
+
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, this);
+      const beforeCount = profile.rpg.inventory[normalizedItemId] ?? 0;
+
+      if (beforeCount < normalizedQuantity) {
+        throw new Error(`${item.label} 보유 수량이 부족합니다.`);
+      }
+
+      removeInventoryItem(profile.rpg.inventory, normalizedItemId, normalizedQuantity);
+      if (item.type === 'equipment' && (profile.rpg.inventory[normalizedItemId] ?? 0) <= 0) {
+        for (const [slot, equippedItemId] of Object.entries(profile.rpg.equipment)) {
+          if (equippedItemId === normalizedItemId) {
+            profile.rpg.equipment[slot] = null;
+          }
+        }
+      }
+
+      creditCurrency(profile, CURRENCY_RPG, totalPrice);
+      profile.rpg.soldItems += normalizedQuantity;
+      const derivedStats = getProfileRpgDerivedStats(profile);
+      profile.rpg.hp = Math.min(profile.rpg.hp, derivedStats.maxHp);
+      profile.rpg.mp = Math.min(profile.rpg.mp, derivedStats.maxMp);
+
+      return {
+        itemId: normalizedItemId,
+        item,
+        quantity: normalizedQuantity,
+        unitPrice,
+        totalPrice,
+        derivedStats,
+        profile: cloneProfile(profile)
+      };
+    });
+  }
+
   async claimRpgQuest({ guildId, userId, username, questId, now = Date.now() }) {
     const normalizedQuestId = normalizeRpgQuestId(questId);
     const quest = getRpgQuestConfig(normalizedQuestId);
@@ -615,11 +665,7 @@ export class EconomyService {
       resetRpgDailyStats(profile.rpg, now);
       profile.rpg.unlockedAreas = getUnlockedRpgAreaIds(profile.level);
       const derivedStats = getProfileRpgDerivedStats(profile);
-      const cooldownRemainingMs = getRpgCooldownRemaining(
-        profile,
-        now,
-        this.options.rpgBattleCooldownMs
-      );
+      const actionContext = getRpgActionContext(profile, this, now);
 
       return {
         profile: cloneProfile(profile),
@@ -628,7 +674,11 @@ export class EconomyService {
         advancedClassConfig: profile.rpg.advancedClass
           ? getRpgAdvancedClassConfig(profile.rpg.advancedClass)
           : null,
-        heroAssetId: getRpgClassAssetId(profile.rpg.characterClass, profile.rpg.characterGender),
+        heroAssetId: getRpgHeroAssetId({
+          characterClass: profile.rpg.characterClass,
+          characterGender: profile.rpg.characterGender,
+          advancedClass: profile.rpg.advancedClass
+        }),
         derivedStats,
         quests: getRpgQuestStatuses(profile),
         skillTree: getRpgSkillTreeStatuses(profile),
@@ -639,18 +689,14 @@ export class EconomyService {
         classMastery: getRpgClassMasteryStatus(profile),
         classPaths: getRpgAdvancedClassStatuses(profile),
         dailyMissions: getRpgDailyMissionStatuses(profile, now),
-        adventureGuide: getRpgAdventureGuide(profile, {
-          now,
-          cooldownRemainingMs,
-          xpForNextLevel: this.xpForNextLevel.bind(this)
-        }),
+        adventureGuide: actionContext.adventureGuide,
         availableSkillIds: getAvailableRpgSkillIds(profile.rpg.characterClass),
         currentArea: getRpgAreaConfig(profile.rpg.currentArea),
         unlockedAreas: profile.rpg.unlockedAreas.map((area) => ({
           id: area,
           ...getRpgAreaConfig(area)
         })),
-        cooldownRemainingMs
+        ...actionContext
       };
     });
   }
@@ -671,7 +717,11 @@ export class EconomyService {
         profile: cloneProfile(profile),
         classConfig: getRpgClassConfig(profile.rpg.characterClass),
         genderConfig: getRpgGenderConfig(profile.rpg.characterGender),
-        heroAssetId: getRpgClassAssetId(profile.rpg.characterClass, profile.rpg.characterGender),
+        heroAssetId: getRpgHeroAssetId({
+          characterClass: profile.rpg.characterClass,
+          characterGender: profile.rpg.characterGender,
+          advancedClass: profile.rpg.advancedClass
+        }),
         derivedStats: getProfileRpgDerivedStats(profile),
         unlockedAreas: profile.rpg.unlockedAreas.map((areaId) => ({
           id: areaId,
@@ -728,16 +778,13 @@ export class EconomyService {
         area: normalizedArea,
         characterClass: profile.rpg.characterClass,
         characterGender: profile.rpg.characterGender,
+        advancedClass: profile.rpg.advancedClass,
         skillId: skillConfig.id,
         statBonuses: getRpgCombatBonuses(profile),
         randomInt: this.randomInt
       });
       const stats = profile.rpg;
-      let levelResult = {
-        leveledUp: false,
-        levelsGained: 0,
-        levelReward: 0
-      };
+      let rewardSettlement = createEmptyRepeatableRpgRewardSettlement();
 
       stats.battles += 1;
       stats.lastBattleAt = now;
@@ -763,17 +810,20 @@ export class EconomyService {
         stats.wins += 1;
         stats.monsterKills[battle.monster] = (stats.monsterKills[battle.monster] ?? 0) + 1;
         stats.areaWins[normalizedArea] = (stats.areaWins[normalizedArea] ?? 0) + 1;
-        creditCurrency(profile, CURRENCY_RPG, battle.rewards.coins);
         if (drop) {
           addInventoryItem(profile.rpg.inventory, drop.itemId, drop.quantity);
         }
         if (gearDrop) {
           gearDrop = addRpgGear(profile, gearDrop, now);
         }
-        levelResult = addXp(profile, battle.rewards.xp, this);
+        rewardSettlement = settleRepeatableRpgRewards(profile, battle.rewards, this, now);
       } else {
         stats.losses += 1;
       }
+      const ultimateCharge = settleRpgUltimateCharge(profile, {
+        usedUltimate: battle.ultimate,
+        chargeGain: battle.win ? 35 : 20
+      });
 
       return {
         battled: true,
@@ -782,8 +832,12 @@ export class EconomyService {
         drop,
         gearDrop,
         xpGained: battle.rewards.xp,
-        coinReward: battle.rewards.coins,
-        ...levelResult,
+        coinReward: rewardSettlement.coinReward,
+        requestedCoinReward: battle.rewards.coins,
+        rpgGoldLimit: rewardSettlement.rpgGoldLimit,
+        ultimateCharge,
+        ...rewardSettlement.levelResult,
+        ...getRpgActionContext(profile, this, now),
         profile: cloneProfile(profile)
       };
     });
@@ -828,6 +882,8 @@ export class EconomyService {
         };
       }
 
+      assertRpgActionCooldown(profile, 'lastBossAt', now, this.options.rpgBossCooldownMs, '보스전');
+
       if (profile.rpg.hp <= 1) {
         throw new Error('HP가 부족합니다. `/rpg 휴식` 또는 회복 포션을 사용하세요.');
       }
@@ -838,19 +894,17 @@ export class EconomyService {
         bossId: normalizedBossId,
         characterClass: profile.rpg.characterClass,
         characterGender: profile.rpg.characterGender,
+        advancedClass: profile.rpg.advancedClass,
         skillId: skillConfig.id,
         statBonuses: getRpgCombatBonuses(profile),
         randomInt: this.randomInt
       });
       const stats = profile.rpg;
-      let levelResult = {
-        leveledUp: false,
-        levelsGained: 0,
-        levelReward: 0
-      };
+      let rewardSettlement = createEmptyRepeatableRpgRewardSettlement();
 
       stats.battles += 1;
       stats.lastBattleAt = now;
+      stats.lastBossAt = now;
       stats.currentArea = battle.area;
       stats.mp = Math.max(0, stats.mp - skillConfig.mpCost);
       stats.discoveredMonsters[battle.monster] = (stats.discoveredMonsters[battle.monster] ?? 0) + 1;
@@ -873,17 +927,20 @@ export class EconomyService {
       if (battle.win) {
         stats.wins += 1;
         stats.bossKills[normalizedBossId] = (stats.bossKills[normalizedBossId] ?? 0) + 1;
-        creditCurrency(profile, CURRENCY_RPG, battle.rewards.coins);
         if (drop) {
           addInventoryItem(profile.rpg.inventory, drop.itemId, drop.quantity);
         }
         if (gearDrop) {
           gearDrop = addRpgGear(profile, gearDrop, now);
         }
-        levelResult = addXp(profile, battle.rewards.xp, this);
+        rewardSettlement = settleRepeatableRpgRewards(profile, battle.rewards, this, now);
       } else {
         stats.losses += 1;
       }
+      const ultimateCharge = settleRpgUltimateCharge(profile, {
+        usedUltimate: battle.ultimate,
+        chargeGain: battle.win ? 45 : 25
+      });
 
       return {
         battled: true,
@@ -892,8 +949,12 @@ export class EconomyService {
         drop,
         gearDrop,
         xpGained: battle.rewards.xp,
-        coinReward: battle.rewards.coins,
-        ...levelResult,
+        coinReward: rewardSettlement.coinReward,
+        requestedCoinReward: battle.rewards.coins,
+        rpgGoldLimit: rewardSettlement.rpgGoldLimit,
+        ultimateCharge,
+        ...rewardSettlement.levelResult,
+        ...getRpgActionContext(profile, this, now),
         profile: cloneProfile(profile)
       };
     });
@@ -937,6 +998,8 @@ export class EconomyService {
         };
       }
 
+      assertRpgActionCooldown(profile, 'lastBossAt', now, this.options.rpgBossCooldownMs, '보스전');
+
       if (profile.rpg.hp <= 1) {
         throw new Error('HP가 부족합니다. `/rpg 휴식` 또는 회복 포션을 사용하세요.');
       }
@@ -945,6 +1008,7 @@ export class EconomyService {
       const bossPower = this.randomInt(boss.powerMin, boss.powerMax);
       const bossMaxHp = Math.max(20, bossPower * 2);
       profile.rpg.lastBattleAt = now;
+      profile.rpg.lastBossAt = now;
       profile.rpg.currentArea = boss.area;
 
       return {
@@ -982,8 +1046,9 @@ export class EconomyService {
               mana_potion: profile.rpg.inventory.mana_potion ?? 0
             },
             availableSkillIds: getAvailableRpgSkillIds(profile.rpg.characterClass),
+            advancedClass: profile.rpg.advancedClass,
             assets: {
-              hero: getRpgClassAssetId(profile.rpg.characterClass, profile.rpg.characterGender)
+              hero: getProfileRpgHeroAssetId(profile)
             }
           },
           boss: {
@@ -993,7 +1058,7 @@ export class EconomyService {
             assetId: getRpgMonsterAssetId(boss.monster)
           },
           assets: {
-            hero: getRpgClassAssetId(profile.rpg.characterClass, profile.rpg.characterGender),
+            hero: getProfileRpgHeroAssetId(profile),
             monster: getRpgMonsterAssetId(boss.monster),
             background: boss.backgroundAssetId
           }
@@ -1056,11 +1121,7 @@ export class EconomyService {
 
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, nextSession.username, this);
-      let levelResult = {
-        leveledUp: false,
-        levelsGained: 0,
-        levelReward: 0
-      };
+      let rewardSettlement = createEmptyRepeatableRpgRewardSettlement();
       let gearDrop = null;
       const battle = {
         bossId: nextSession.bossId,
@@ -1089,6 +1150,7 @@ export class EconomyService {
 
       profile.rpg.battles += 1;
       profile.rpg.lastBattleAt = now;
+      profile.rpg.lastBossAt = now;
       profile.rpg.currentArea = boss.area;
       profile.rpg.hp = Math.max(1, Math.min(getProfileRpgDerivedStats(profile).maxHp, nextSession.player.hp));
       profile.rpg.mp = Math.max(0, Math.min(getProfileRpgDerivedStats(profile).maxMp, nextSession.player.mp));
@@ -1105,17 +1167,20 @@ export class EconomyService {
       if (win) {
         profile.rpg.wins += 1;
         profile.rpg.bossKills[nextSession.bossId] = (profile.rpg.bossKills[nextSession.bossId] ?? 0) + 1;
-        creditCurrency(profile, CURRENCY_RPG, boss.coinReward);
         gearDrop = addRpgGear(profile, rollRpgGearDrop({
           source: 'boss',
           area: boss.area,
           difficulty: 'boss',
           randomInt: this.randomInt
         }), now);
-        levelResult = addXp(profile, boss.xpReward, this);
+        rewardSettlement = settleRepeatableRpgRewards(profile, battle.rewards, this, now);
       } else {
         profile.rpg.losses += 1;
       }
+      const ultimateCharge = settleRpgUltimateCharge(profile, {
+        usedUltimate: turn.ultimate,
+        chargeGain: win ? 45 : 25
+      });
 
       return {
         completed: true,
@@ -1126,8 +1191,12 @@ export class EconomyService {
         assets: battle.assets,
         gearDrop,
         xpGained: battle.rewards.xp,
-        coinReward: battle.rewards.coins,
-        ...levelResult,
+        coinReward: rewardSettlement.coinReward,
+        requestedCoinReward: battle.rewards.coins,
+        rpgGoldLimit: rewardSettlement.rpgGoldLimit,
+        ultimateCharge,
+        ...rewardSettlement.levelResult,
+        ...getRpgActionContext(profile, this, now),
         profile: cloneProfile(profile)
       };
     });
@@ -1236,6 +1305,55 @@ export class EconomyService {
       throw new Error(`${attacker.username}님의 차례입니다.`);
     }
 
+    if (skillId === 'potion') {
+      const potionCount = Math.max(0, Number(attacker.inventory?.potion) || 0);
+      if (potionCount <= 0) {
+        throw new Error('회복 포션이 없습니다.');
+      }
+
+      const healed = Math.min(40, Math.max(0, attacker.maxHp - attacker.hp));
+      if (healed <= 0) {
+        throw new Error('이미 HP가 가득합니다.');
+      }
+
+      attacker.hp = Math.min(attacker.maxHp, attacker.hp + healed);
+      attacker.inventory = {
+        ...(attacker.inventory ?? {}),
+        potion: potionCount - 1
+      };
+      attacker.guardBonus = 0;
+      nextSession.lastTurn = {
+        action: 'potion',
+        skillId: 'potion',
+        skillLabel: '회복 포션',
+        skillMpCost: 0,
+        roll: 0,
+        attackBonus: 0,
+        guardBonus: 0,
+        defenderGuardBonus: Math.max(0, Number(defender.guardBonus) || 0),
+        attackPower: 0,
+        defenderDefensePower: defender.stats?.defense ?? 0,
+        mitigatedPower: 0,
+        damage: 0,
+        healed,
+        consumedItemId: 'potion',
+        attacker: cloneRpgPvpFighter(attacker),
+        defender: cloneRpgPvpFighter(defender),
+        attackerSide,
+        defenderSide
+      };
+      nextSession.updatedAt = now;
+      nextSession.turn += 1;
+      nextSession.turnSide = defenderSide;
+
+      return {
+        completed: false,
+        type: 'pvp_turn',
+        session: nextSession,
+        turn: nextSession.lastTurn
+      };
+    }
+
     const skillConfig = prepareRpgPvpSessionSkill(attacker, skillId);
     const turn = resolveRpgPvpTurn({
       attacker,
@@ -1293,14 +1411,8 @@ export class EconomyService {
       const loserProfile = attackerSide === 'challenger'
         ? opponentProfile
         : challengerProfile;
-      let levelResult = {
-        leveledUp: false,
-        levelsGained: 0,
-        levelReward: 0
-      };
+      let rewardSettlement = createEmptyRepeatableRpgRewardSettlement();
 
-      applyRpgPvpFighterState(challengerProfile, nextSession.fighters.challenger);
-      applyRpgPvpFighterState(opponentProfile, nextSession.fighters.opponent);
       challengerProfile.rpg.battles += 1;
       opponentProfile.rpg.battles += 1;
       challengerProfile.rpg.pvpBattles += 1;
@@ -1321,8 +1433,15 @@ export class EconomyService {
         pvpWins: winnerProfile === opponentProfile ? 1 : 0
       });
       grantRpgClassMastery(opponentProfile, winnerProfile === opponentProfile ? 15 : 6);
-      creditCurrency(winnerProfile, CURRENCY_RPG, rewards.coins);
-      levelResult = addXp(winnerProfile, rewards.xp, this);
+      rewardSettlement = settleRepeatableRpgRewards(winnerProfile, rewards, this, now);
+      const challengerUltimateCharge = settleRpgUltimateCharge(challengerProfile, {
+        usedUltimate: nextSession.lastTurn?.attackerSide === 'challenger' && nextSession.lastTurn?.ultimate,
+        chargeGain: winnerProfile === challengerProfile ? 35 : 20
+      });
+      const opponentUltimateCharge = settleRpgUltimateCharge(opponentProfile, {
+        usedUltimate: nextSession.lastTurn?.attackerSide === 'opponent' && nextSession.lastTurn?.ultimate,
+        chargeGain: winnerProfile === opponentProfile ? 35 : 20
+      });
 
       return {
         completed: true,
@@ -1333,23 +1452,32 @@ export class EconomyService {
         loserUserId: loserProfile.userId,
         rewards,
         xpGained: rewards.xp,
-        coinReward: rewards.coins,
-        ...levelResult,
+        coinReward: rewardSettlement.coinReward,
+        requestedCoinReward: rewards.coins,
+        rpgGoldLimit: rewardSettlement.rpgGoldLimit,
+        ultimateCharge: {
+          challenger: challengerUltimateCharge,
+          opponent: opponentUltimateCharge
+        },
+        ...rewardSettlement.levelResult,
+        ...getRpgActionContext(winnerProfile, this, now),
         challenger: cloneProfile(challengerProfile),
         opponent: cloneProfile(opponentProfile)
       };
     });
   }
 
-  async restRpg({ guildId, userId, username }) {
+  async restRpg({ guildId, userId, username, now = Date.now() }) {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
+      assertRpgActionCooldown(profile, 'lastRestAt', now, this.options.rpgRestCooldownMs, '휴식');
       const derivedStats = getProfileRpgDerivedStats(profile);
       const beforeHp = profile.rpg.hp;
       const beforeMp = profile.rpg.mp;
 
       profile.rpg.hp = derivedStats.maxHp;
       profile.rpg.mp = derivedStats.maxMp;
+      profile.rpg.lastRestAt = now;
 
       return {
         beforeHp,
@@ -1357,6 +1485,7 @@ export class EconomyService {
         healed: profile.rpg.hp - beforeHp,
         mpRestored: profile.rpg.mp - beforeMp,
         derivedStats,
+        ...getRpgActionContext(profile, this, now),
         profile: cloneProfile(profile)
       };
     });
@@ -1405,6 +1534,10 @@ export class EconomyService {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
       const normalizedArea = normalizeRpgArea(area || profile.rpg.currentArea);
       assertRpgAreaUnlocked(profile, normalizedArea);
+      assertRpgActionCooldown(profile, 'lastExploreAt', now, this.options.rpgExploreCooldownMs, '탐험');
+      if (profile.rpg.hp <= 1) {
+        throw new Error('HP가 부족합니다. `/rpg 휴식` 또는 회복 포션을 사용하세요.');
+      }
       const derivedStats = getProfileRpgDerivedStats(profile);
       const exploration = resolveRpgExploration({
         playerLevel: profile.level,
@@ -1414,13 +1547,10 @@ export class EconomyService {
       const beforeHp = profile.rpg.hp;
       const beforeMp = profile.rpg.mp;
       let gearDrop = null;
-      let levelResult = {
-        leveledUp: false,
-        levelsGained: 0,
-        levelReward: 0
-      };
+      let rewardSettlement = createEmptyRepeatableRpgRewardSettlement();
 
       profile.rpg.explores += 1;
+      profile.rpg.lastExploreAt = now;
       profile.rpg.currentArea = normalizedArea;
       incrementRpgDailyStats(profile.rpg, now, {
         explores: 1
@@ -1429,10 +1559,7 @@ export class EconomyService {
       grantRpgClassMastery(profile, 4);
       profile.rpg.hp = Math.max(1, Math.min(derivedStats.maxHp, profile.rpg.hp - exploration.damageTaken + exploration.hpRecovered));
       profile.rpg.mp = Math.max(0, Math.min(derivedStats.maxMp, profile.rpg.mp + exploration.mpRecovered));
-      creditCurrency(profile, CURRENCY_RPG, exploration.rewards.coins);
-      if (exploration.rewards.xp > 0) {
-        levelResult = addXp(profile, exploration.rewards.xp, this);
-      }
+      rewardSettlement = settleRepeatableRpgRewards(profile, exploration.rewards, this, now);
       if (exploration.event === 'treasure') {
         gearDrop = addRpgGear(profile, rollRpgGearDrop({
           source: 'dungeon',
@@ -1457,8 +1584,11 @@ export class EconomyService {
         beforeMp,
         gearDrop,
         xpGained: exploration.rewards.xp,
-        coinReward: exploration.rewards.coins,
-        ...levelResult,
+        coinReward: rewardSettlement.coinReward,
+        requestedCoinReward: exploration.rewards.coins,
+        rpgGoldLimit: rewardSettlement.rpgGoldLimit,
+        ...rewardSettlement.levelResult,
+        ...getRpgActionContext(profile, this, now),
         profile: cloneProfile(profile)
       };
     });
@@ -1471,6 +1601,10 @@ export class EconomyService {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
       const normalizedArea = normalizeRpgArea(area || profile.rpg.currentArea);
       assertRpgAreaUnlocked(profile, normalizedArea);
+      assertRpgActionCooldown(profile, 'lastDungeonAt', now, this.options.rpgDungeonCooldownMs, '던전');
+      if (profile.rpg.hp <= 1) {
+        throw new Error('HP가 부족합니다. `/rpg 휴식` 또는 회복 포션을 사용하세요.');
+      }
       const derivedStats = getProfileRpgDerivedStats(profile);
       const floors = [];
       let totalXp = 0;
@@ -1491,6 +1625,7 @@ export class EconomyService {
       }
 
       profile.rpg.dungeonRuns += 1;
+      profile.rpg.lastDungeonAt = now;
       profile.rpg.currentArea = normalizedArea;
       incrementRpgDailyStats(profile.rpg, now, {
         dungeons: 1
@@ -1499,9 +1634,13 @@ export class EconomyService {
       grantRpgClassMastery(profile, safeDepth * 8);
       profile.rpg.hp = Math.max(1, Math.min(derivedStats.maxHp, profile.rpg.hp - totalDamage + safeDepth * 3));
       profile.rpg.mp = Math.max(0, Math.min(derivedStats.maxMp, profile.rpg.mp - safeDepth));
-      creditCurrency(profile, CURRENCY_RPG, totalCoins);
+      const rewardSettlement = settleRepeatableRpgRewards(
+        profile,
+        { xp: totalXp, coins: totalCoins },
+        this,
+        now
+      );
       profile.rpg.dungeonClears[normalizedArea] = (profile.rpg.dungeonClears[normalizedArea] ?? 0) + 1;
-      const levelResult = addXp(profile, totalXp, this);
       const blueprint = rollRpgGearDrop({
         source: 'dungeon',
         area: normalizedArea,
@@ -1518,10 +1657,13 @@ export class EconomyService {
         depth: safeDepth,
         floors,
         totalXp,
-        totalCoins,
+        totalCoins: rewardSettlement.coinReward,
+        requestedTotalCoins: totalCoins,
+        rpgGoldLimit: rewardSettlement.rpgGoldLimit,
         totalDamage,
         gearDrop,
-        ...levelResult,
+        ...rewardSettlement.levelResult,
+        ...getRpgActionContext(profile, this, now),
         profile: cloneProfile(profile)
       };
     });
@@ -1551,8 +1693,11 @@ export class EconomyService {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
       const gear = resolveOwnedRpgGear(profile, gearId);
       const beforeGear = cloneRpgGear(gear);
-      const cost = getRpgGearEnhanceCost(gear);
-      const successRate = getRpgGearEnhanceSuccessRate(gear);
+      const baseCost = getRpgGearEnhanceCost(gear);
+      const materialItemId = 'enhancement_stone';
+      const materialUsed = (profile.rpg.inventory[materialItemId] ?? 0) > 0;
+      const cost = materialUsed ? Math.max(1, Math.floor(baseCost * 0.8)) : baseCost;
+      const successRate = Math.min(98, getRpgGearEnhanceSuccessRate(gear) + (materialUsed ? 8 : 0));
       const roll = this.randomInt(1, 100);
       const success = roll <= successRate;
 
@@ -1562,6 +1707,9 @@ export class EconomyService {
         cost,
         `골드가 부족합니다. 장비 강화 비용: ${cost.toLocaleString()}골드`
       );
+      if (materialUsed) {
+        removeInventoryItem(profile.rpg.inventory, materialItemId, 1);
+      }
 
       if (success) {
         applyRpgGearEnhancement(gear, now);
@@ -1577,11 +1725,38 @@ export class EconomyService {
         success,
         roll,
         successRate,
+        baseCost,
         cost,
+        materialUsed,
+        materialItemId: materialUsed ? materialItemId : null,
         beforeGear,
         gear: cloneRpgGear(gear),
         slot: gear.slot,
         derivedStats,
+        profile: cloneProfile(profile)
+      };
+    });
+  }
+
+  async disassembleRpgGear({ guildId, userId, username, gearId, now = Date.now() }) {
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, this);
+      const gear = resolveOwnedRpgGear(profile, gearId);
+
+      if (Object.values(profile.rpg.equippedGear).includes(gear.id)) {
+        throw new Error('장착 중인 전리품은 먼저 다른 장비로 교체한 뒤 분해하세요.');
+      }
+
+      const rewards = getRpgGearDisassembleRewards(gear);
+      delete profile.rpg.gearInventory[gear.id];
+      addInventoryItem(profile.rpg.inventory, 'enhancement_stone', rewards.enhancementStones);
+      creditCurrency(profile, CURRENCY_RPG, rewards.coins);
+      profile.rpg.disassembledGear += 1;
+      profile.rpg.lastDisassembledGearAt = now;
+
+      return {
+        gear: cloneRpgGear(gear),
+        rewards,
         profile: cloneProfile(profile)
       };
     });
@@ -1650,7 +1825,7 @@ export class EconomyService {
       return {
         advancedClass: normalizedAdvancedClass,
         advancedClassConfig,
-        heroAssetId: getRpgClassAssetId(profile.rpg.characterClass, profile.rpg.characterGender),
+        heroAssetId: getProfileRpgHeroAssetId(profile),
         derivedStats,
         profile: cloneProfile(profile)
       };
@@ -1723,6 +1898,7 @@ export class EconomyService {
         throw new Error(`${raid.label} 레이드는 Lv.${raid.unlockLevel}부터 도전할 수 있습니다.`);
       }
       assertRpgAreaUnlocked(profile, raid.area);
+      assertRpgActionCooldown(profile, 'lastRaidAt', now, this.options.rpgRaidCooldownMs, '레이드');
       if (profile.rpg.hp <= 1) {
         throw new Error('HP가 부족합니다. `/rpg 휴식` 또는 회복 포션을 사용하세요.');
       }
@@ -1733,19 +1909,17 @@ export class EconomyService {
         raidId: normalizedRaidId,
         characterClass: profile.rpg.characterClass,
         characterGender: profile.rpg.characterGender,
+        advancedClass: profile.rpg.advancedClass,
         skillId: skillConfig.id,
         statBonuses: getRpgCombatBonuses(profile),
         randomInt: this.randomInt
       });
       let gearDrop = null;
-      let levelResult = {
-        leveledUp: false,
-        levelsGained: 0,
-        levelReward: 0
-      };
+      let rewardSettlement = createEmptyRepeatableRpgRewardSettlement();
 
       profile.rpg.battles += 1;
       profile.rpg.lastBattleAt = now;
+      profile.rpg.lastRaidAt = now;
       profile.rpg.mp = Math.max(0, profile.rpg.mp - skillConfig.mpCost);
       profile.rpg.hp = Math.max(1, profile.rpg.hp - battle.damageTaken);
       profile.rpg.discoveredMonsters[battle.monster] = (profile.rpg.discoveredMonsters[battle.monster] ?? 0) + 1;
@@ -1761,17 +1935,20 @@ export class EconomyService {
         profile.rpg.wins += 1;
         profile.rpg.raidClears[normalizedRaidId] = (profile.rpg.raidClears[normalizedRaidId] ?? 0) + 1;
         profile.rpg.monsterKills[battle.monster] = (profile.rpg.monsterKills[battle.monster] ?? 0) + 1;
-        creditCurrency(profile, CURRENCY_RPG, battle.rewards.coins);
         gearDrop = addRpgGear(profile, rollRpgGearDrop({
           source: 'raid',
           area: battle.area,
           difficulty: 'hard',
           randomInt: this.randomInt
         }), now);
-        levelResult = addXp(profile, battle.rewards.xp, this);
+        rewardSettlement = settleRepeatableRpgRewards(profile, battle.rewards, this, now);
       } else {
         profile.rpg.losses += 1;
       }
+      const ultimateCharge = settleRpgUltimateCharge(profile, {
+        usedUltimate: battle.ultimate,
+        chargeGain: battle.win ? 50 : 25
+      });
 
       return {
         battled: true,
@@ -1779,50 +1956,56 @@ export class EconomyService {
         assets: battle.assets,
         gearDrop,
         xpGained: battle.rewards.xp,
-        coinReward: battle.rewards.coins,
-        ...levelResult,
+        coinReward: rewardSettlement.coinReward,
+        requestedCoinReward: battle.rewards.coins,
+        rpgGoldLimit: rewardSettlement.rpgGoldLimit,
+        ultimateCharge,
+        ...rewardSettlement.levelResult,
+        ...getRpgActionContext(profile, this, now),
         profile: cloneProfile(profile)
       };
     });
   }
 
-  async playRpgGuildRaid({ guildId, userId, username, raidId = 'slime_horde', skill = 'basic', now = Date.now() }) {
+  async playRpgGuildRaid({
+    guildId,
+    userId,
+    username,
+    raidId = 'slime_horde',
+    skill = 'basic',
+    partyMemberIds = null,
+    now = Date.now()
+  }) {
     const normalizedRaidId = normalizeRpgRaidId(raidId);
     const raid = getRpgRaidConfig(normalizedRaidId);
 
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
       const guild = data.guilds[guildId];
-      if (profile.level < raid.unlockLevel) {
-        throw new Error(`${raid.label} 길드 레이드는 Lv.${raid.unlockLevel}부터 지휘할 수 있습니다.`);
-      }
-      assertRpgAreaUnlocked(profile, raid.area);
-      if (profile.rpg.hp <= 1) {
-        throw new Error('HP가 부족합니다. `/rpg 휴식` 또는 회복 포션을 사용하세요.');
-      }
+      assertRpgGuildRaidParticipantAvailable(profile, raid, this, now, '길드 레이드 지휘');
 
       const skillConfig = prepareRpgSkill(profile, skill);
-      const partyProfiles = getRpgGuildRaidPartyProfiles(data, guildId, guild, profile, this);
+      const partyProfiles = Array.isArray(partyMemberIds) && partyMemberIds.length > 0
+        ? getRpgGuildRaidPartyProfilesByIds(data, guildId, guild, profile, partyMemberIds, this, raid, now)
+        : getRpgGuildRaidPartyProfiles(data, guildId, guild, profile, this, raid, now);
       const battle = resolveRpgGuildRaidBattle({
         playerLevel: profile.level,
         raidId: normalizedRaidId,
         characterClass: profile.rpg.characterClass,
         characterGender: profile.rpg.characterGender,
+        advancedClass: profile.rpg.advancedClass,
         skillId: skillConfig.id,
         statBonuses: getRpgCombatBonuses(profile),
         partyMembers: partyProfiles.map((partyProfile) => createRpgGuildRaidMember(partyProfile)),
         randomInt: this.randomInt
       });
       let gearDrop = null;
-      let levelResult = {
-        leveledUp: false,
-        levelsGained: 0,
-        levelReward: 0
-      };
+      let rewardSettlement = createEmptyRepeatableRpgRewardSettlement();
       const supportRewards = [];
 
       profile.rpg.battles += 1;
       profile.rpg.lastBattleAt = now;
+      profile.rpg.lastRaidAt = now;
       profile.rpg.mp = Math.max(0, profile.rpg.mp - skillConfig.mpCost);
       profile.rpg.hp = Math.max(1, profile.rpg.hp - battle.damageTaken);
       profile.rpg.discoveredMonsters[battle.monster] = (profile.rpg.discoveredMonsters[battle.monster] ?? 0) + 1;
@@ -1833,23 +2016,29 @@ export class EconomyService {
       });
       increaseRpgAreaProgress(profile.rpg, battle.area, battle.win ? 34 : 12);
       grantRpgClassMastery(profile, battle.win ? 40 : 14);
+      for (const supportProfile of partyProfiles.slice(1)) {
+        supportProfile.rpg.lastRaidAt = now;
+      }
 
       if (battle.win) {
         profile.rpg.wins += 1;
         profile.rpg.raidClears[normalizedRaidId] = (profile.rpg.raidClears[normalizedRaidId] ?? 0) + 1;
         profile.rpg.monsterKills[battle.monster] = (profile.rpg.monsterKills[battle.monster] ?? 0) + 1;
-        creditCurrency(profile, CURRENCY_RPG, battle.rewards.coins);
         gearDrop = addRpgGear(profile, rollRpgGearDrop({
           source: 'raid',
           area: battle.area,
           difficulty: 'hard',
           randomInt: this.randomInt
         }), now);
-        levelResult = addXp(profile, battle.rewards.xp, this);
+        rewardSettlement = settleRepeatableRpgRewards(profile, battle.rewards, this, now);
 
         for (const supportProfile of partyProfiles.slice(1)) {
-          creditCurrency(supportProfile, CURRENCY_RPG, battle.supportRewards.coins);
-          const supportLevelResult = addXp(supportProfile, battle.supportRewards.xp, this);
+          const supportRewardSettlement = settleRepeatableRpgRewards(
+            supportProfile,
+            battle.supportRewards,
+            this,
+            now
+          );
           supportProfile.rpg.discoveredMonsters[battle.monster] = (supportProfile.rpg.discoveredMonsters[battle.monster] ?? 0) + 1;
           supportProfile.rpg.raidClears[normalizedRaidId] = (supportProfile.rpg.raidClears[normalizedRaidId] ?? 0) + 1;
           grantRpgClassMastery(supportProfile, 15);
@@ -1857,14 +2046,20 @@ export class EconomyService {
             userId: supportProfile.userId,
             username: supportProfile.username,
             xpGained: battle.supportRewards.xp,
-            coinReward: battle.supportRewards.coins,
-            ...supportLevelResult,
+            coinReward: supportRewardSettlement.coinReward,
+            requestedCoinReward: battle.supportRewards.coins,
+            rpgGoldLimit: supportRewardSettlement.rpgGoldLimit,
+            ...supportRewardSettlement.levelResult,
             profile: cloneProfile(supportProfile)
           });
         }
       } else {
         profile.rpg.losses += 1;
       }
+      const ultimateCharge = settleRpgUltimateCharge(profile, {
+        usedUltimate: battle.ultimate,
+        chargeGain: battle.win ? 55 : 25
+      });
 
       return {
         battled: true,
@@ -1873,8 +2068,12 @@ export class EconomyService {
         gearDrop,
         supportRewards,
         xpGained: battle.rewards.xp,
-        coinReward: battle.rewards.coins,
-        ...levelResult,
+        coinReward: rewardSettlement.coinReward,
+        requestedCoinReward: battle.rewards.coins,
+        rpgGoldLimit: rewardSettlement.rpgGoldLimit,
+        ultimateCharge,
+        ...rewardSettlement.levelResult,
+        ...getRpgActionContext(profile, this, now),
         profile: cloneProfile(profile)
       };
     });
@@ -2666,9 +2865,14 @@ function cloneClassMastery(classMastery = {}) {
   );
 }
 
-function addXp(profile, xp, economy) {
+function addXp(profile, xp, economy, options = {}) {
   const beforeLevel = profile.level;
   let levelReward = 0;
+  let levelRewardRequested = 0;
+  let levelRewardCapped = false;
+  const grantLevelReward = typeof options.grantLevelReward === 'function'
+    ? options.grantLevelReward
+    : null;
 
   profile.xp += xp;
   profile.totalXp += xp;
@@ -2677,8 +2881,17 @@ function addXp(profile, xp, economy) {
     profile.xp -= economy.xpForNextLevel(profile.level);
     profile.level += 1;
     const reward = getLevelReward(profile.level);
-    levelReward += reward;
-    profile.balance += reward;
+    levelRewardRequested += reward;
+
+    if (grantLevelReward) {
+      const grant = grantLevelReward(reward);
+      const grantedReward = normalizeStoredNonNegativeInteger(grant?.granted);
+      levelReward += grantedReward;
+      levelRewardCapped = levelRewardCapped || grantedReward < reward;
+    } else {
+      levelReward += reward;
+      profile.balance += reward;
+    }
   }
 
   if (profile.rpg) {
@@ -2688,7 +2901,9 @@ function addXp(profile, xp, economy) {
   return {
     leveledUp: profile.level > beforeLevel,
     levelsGained: profile.level - beforeLevel,
-    levelReward
+    levelReward,
+    levelRewardRequested,
+    levelRewardCapped
   };
 }
 
@@ -2922,6 +3137,7 @@ function createDefaultRpgStats() {
     startedAt: 0,
     hp: 110,
     mp: 35,
+    ultimateCharge: 0,
     unlockedClasses: getStarterRpgClassIds(),
     inventory: {},
     equipment: getDefaultRpgEquipment(),
@@ -2955,7 +3171,15 @@ function createDefaultRpgStats() {
     pvpBattles: 0,
     pvpWins: 0,
     pvpLosses: 0,
-    lastBattleAt: 0
+    soldItems: 0,
+    disassembledGear: 0,
+    lastBattleAt: 0,
+    lastExploreAt: 0,
+    lastDungeonAt: 0,
+    lastBossAt: 0,
+    lastRaidAt: 0,
+    lastRestAt: 0,
+    lastDisassembledGearAt: 0
   };
 }
 
@@ -2969,6 +3193,7 @@ function createDefaultRpgDailyStats(day = null) {
     bosses: 0,
     raids: 0,
     pvpWins: 0,
+    goldEarned: 0,
     claimedMissions: {}
   };
 }
@@ -3016,6 +3241,7 @@ function normalizeRpgStats(stats = {}, level = 1) {
     startedAt: normalizeStoredNonNegativeInteger(safeStats.startedAt),
     hp,
     mp,
+    ultimateCharge: Math.min(100, normalizeStoredNonNegativeInteger(safeStats.ultimateCharge)),
     unlockedClasses,
     inventory: normalizeInventory(safeStats.inventory),
     equipment,
@@ -3045,7 +3271,15 @@ function normalizeRpgStats(stats = {}, level = 1) {
     pvpBattles: normalizeStoredNonNegativeInteger(safeStats.pvpBattles),
     pvpWins: normalizeStoredNonNegativeInteger(safeStats.pvpWins),
     pvpLosses: normalizeStoredNonNegativeInteger(safeStats.pvpLosses),
-    lastBattleAt: normalizeStoredNonNegativeInteger(safeStats.lastBattleAt)
+    soldItems: normalizeStoredNonNegativeInteger(safeStats.soldItems),
+    disassembledGear: normalizeStoredNonNegativeInteger(safeStats.disassembledGear),
+    lastBattleAt: normalizeStoredNonNegativeInteger(safeStats.lastBattleAt),
+    lastExploreAt: normalizeStoredNonNegativeInteger(safeStats.lastExploreAt),
+    lastDungeonAt: normalizeStoredNonNegativeInteger(safeStats.lastDungeonAt),
+    lastBossAt: normalizeStoredNonNegativeInteger(safeStats.lastBossAt),
+    lastRaidAt: normalizeStoredNonNegativeInteger(safeStats.lastRaidAt),
+    lastRestAt: normalizeStoredNonNegativeInteger(safeStats.lastRestAt),
+    lastDisassembledGearAt: normalizeStoredNonNegativeInteger(safeStats.lastDisassembledGearAt)
   };
 }
 
@@ -3301,6 +3535,7 @@ function normalizeRpgDailyStats(daily = {}) {
     bosses: normalizeStoredNonNegativeInteger(safeDaily.bosses),
     raids: normalizeStoredNonNegativeInteger(safeDaily.raids),
     pvpWins: normalizeStoredNonNegativeInteger(safeDaily.pvpWins),
+    goldEarned: normalizeStoredNonNegativeInteger(safeDaily.goldEarned),
     claimedMissions: normalizeDailyMissionClaims(safeDaily.claimedMissions)
   };
 }
@@ -3345,6 +3580,113 @@ function incrementRpgDailyStats(rpg, now, increments = {}) {
   return daily;
 }
 
+function getRpgDailyGoldCap(economy) {
+  const configuredCap = Number(economy.options.rpgDailyGoldCap);
+  if (!Number.isSafeInteger(configuredCap) || configuredCap < 0) {
+    return 0;
+  }
+
+  return configuredCap;
+}
+
+function getRpgDailyGoldStatus(profile, economy, now = Date.now()) {
+  const daily = resetRpgDailyStats(profile.rpg, now);
+  const cap = getRpgDailyGoldCap(economy);
+  const earned = normalizeStoredNonNegativeInteger(daily.goldEarned);
+  const remaining = Math.max(0, cap - earned);
+
+  return {
+    cap,
+    earned,
+    remaining,
+    capped: remaining <= 0
+  };
+}
+
+function grantRepeatableRpgGold(profile, amount, economy, now = Date.now()) {
+  const requested = normalizeStoredNonNegativeInteger(amount);
+  const daily = resetRpgDailyStats(profile.rpg, now);
+  const cap = getRpgDailyGoldCap(economy);
+  const earnedBefore = normalizeStoredNonNegativeInteger(daily.goldEarned);
+  const remainingBefore = Math.max(0, cap - earnedBefore);
+  const granted = Math.min(requested, remainingBefore);
+
+  if (granted > 0) {
+    creditCurrency(profile, CURRENCY_RPG, granted);
+  }
+
+  daily.goldEarned = earnedBefore + granted;
+
+  return {
+    requested,
+    granted,
+    capped: granted < requested,
+    cap,
+    earnedBefore,
+    earnedToday: daily.goldEarned,
+    remainingBefore,
+    remainingAfter: Math.max(0, cap - daily.goldEarned)
+  };
+}
+
+function createEmptyRpgGoldGrant() {
+  return {
+    requested: 0,
+    granted: 0,
+    capped: false,
+    cap: 0,
+    earnedBefore: 0,
+    earnedToday: 0,
+    remainingBefore: 0,
+    remainingAfter: 0
+  };
+}
+
+function createEmptyRpgLevelResult() {
+  return {
+    leveledUp: false,
+    levelsGained: 0,
+    levelReward: 0,
+    levelRewardRequested: 0,
+    levelRewardCapped: false
+  };
+}
+
+function createEmptyRepeatableRpgRewardSettlement() {
+  const coinGrant = createEmptyRpgGoldGrant();
+
+  return {
+    xpGained: 0,
+    coinReward: 0,
+    requestedCoinReward: 0,
+    rpgGoldLimit: coinGrant,
+    levelResult: createEmptyRpgLevelResult()
+  };
+}
+
+function settleRepeatableRpgRewards(profile, rewards = {}, economy, now = Date.now()) {
+  const xp = normalizeStoredNonNegativeInteger(rewards.xp);
+  const coins = normalizeStoredNonNegativeInteger(rewards.coins);
+  const coinGrant = grantRepeatableRpgGold(profile, coins, economy, now);
+  const levelResult = xp > 0
+    ? addRepeatableRpgXp(profile, xp, economy, now)
+    : createEmptyRpgLevelResult();
+
+  return {
+    xpGained: xp,
+    coinReward: coinGrant.granted,
+    requestedCoinReward: coins,
+    rpgGoldLimit: coinGrant,
+    levelResult
+  };
+}
+
+function addRepeatableRpgXp(profile, xp, economy, now = Date.now()) {
+  return addXp(profile, xp, economy, {
+    grantLevelReward: (reward) => grantRepeatableRpgGold(profile, reward, economy, now)
+  });
+}
+
 function normalizeStoredNonNegativeInteger(value) {
   const normalized = Number(value);
   return Number.isSafeInteger(normalized) && normalized >= 0 ? normalized : 0;
@@ -3385,10 +3727,235 @@ function getMinimumTotalXpForLevel(level, economy) {
 }
 
 function getRpgCooldownRemaining(profile, now, cooldownMs) {
-  if (!profile.rpg.lastBattleAt) return 0;
+  return getRpgActionCooldownRemaining(profile.rpg.lastBattleAt, now, cooldownMs);
+}
 
-  const elapsed = now - profile.rpg.lastBattleAt;
-  return elapsed >= cooldownMs ? 0 : cooldownMs - elapsed;
+function getRpgActionContext(profile, economy, now = Date.now()) {
+  const cooldownRemainingMs = getRpgCooldownRemaining(
+    profile,
+    now,
+    economy.options.rpgBattleCooldownMs
+  );
+  const actionAvailability = getRpgActionAvailability(profile, economy, now);
+  const dailyGold = getRpgDailyGoldStatus(profile, economy, now);
+  const adventureGuide = getRpgAdventureGuide(profile, {
+    now,
+    cooldownRemainingMs,
+    actionAvailability,
+    dailyGold,
+    xpForNextLevel: economy.xpForNextLevel.bind(economy)
+  });
+
+  return {
+    cooldownRemainingMs,
+    actionAvailability,
+    dailyGold,
+    adventureGuide
+  };
+}
+
+function getRpgActionAvailability(profile, economy, now = Date.now()) {
+  const firstBoss = getRpgBossConfig('slime_king');
+  const firstRaid = getRpgRaidConfig('slime_horde');
+  const bossUnlock = getRpgActionUnlockState(profile, firstBoss);
+  const raidUnlock = getRpgActionUnlockState(profile, firstRaid);
+  const battleRemainingMs = getRpgActionCooldownRemaining(
+    profile.rpg.lastBattleAt,
+    now,
+    economy.options.rpgBattleCooldownMs
+  );
+  const bossRemainingMs = getRpgActionCooldownRemaining(
+    profile.rpg.lastBossAt,
+    now,
+    economy.options.rpgBossCooldownMs
+  );
+  const raidRemainingMs = getRpgActionCooldownRemaining(
+    profile.rpg.lastRaidAt,
+    now,
+    economy.options.rpgRaidCooldownMs
+  );
+  const hpBlocked = profile.rpg.hp <= 1;
+
+  return {
+    battle: createRpgActionAvailabilityEntry({
+      id: 'battle',
+      label: '전투',
+      command: '/rpg 전투',
+      cooldownRemainingMs: battleRemainingMs,
+      hpBlocked
+    }),
+    explore: createRpgActionAvailabilityEntry({
+      id: 'explore',
+      label: '탐험',
+      command: '/rpg 탐험',
+      cooldownRemainingMs: getRpgActionCooldownRemaining(
+        profile.rpg.lastExploreAt,
+        now,
+        economy.options.rpgExploreCooldownMs
+      ),
+      hpBlocked
+    }),
+    dungeon: createRpgActionAvailabilityEntry({
+      id: 'dungeon',
+      label: '던전',
+      command: '/rpg 던전',
+      cooldownRemainingMs: getRpgActionCooldownRemaining(
+        profile.rpg.lastDungeonAt,
+        now,
+        economy.options.rpgDungeonCooldownMs
+      ),
+      hpBlocked
+    }),
+    boss: createRpgActionAvailabilityEntry({
+      id: 'boss',
+      label: '보스전',
+      command: '/rpg 보스',
+      cooldownRemainingMs: Math.max(battleRemainingMs, bossRemainingMs),
+      hpBlocked,
+      ...bossUnlock,
+      blockers: [
+        ...bossUnlock.blockers,
+        ...(battleRemainingMs > 0 ? [{ type: 'battle', label: '전투 대기', remainingMs: battleRemainingMs }] : []),
+        ...(bossRemainingMs > 0 ? [{ type: 'boss', label: '보스전 대기', remainingMs: bossRemainingMs }] : [])
+      ]
+    }),
+    raid: createRpgActionAvailabilityEntry({
+      id: 'raid',
+      label: '레이드',
+      command: '/rpg 레이드',
+      cooldownRemainingMs: raidRemainingMs,
+      hpBlocked,
+      ...raidUnlock,
+      blockers: raidUnlock.blockers
+    }),
+    guildRaid: createRpgActionAvailabilityEntry({
+      id: 'guildRaid',
+      label: '길드레이드',
+      command: '/rpg 길드레이드',
+      cooldownRemainingMs: raidRemainingMs,
+      hpBlocked,
+      ...raidUnlock,
+      blockers: raidUnlock.blockers
+    }),
+    rest: createRpgActionAvailabilityEntry({
+      id: 'rest',
+      label: '휴식',
+      command: '/rpg 휴식',
+      cooldownRemainingMs: getRpgActionCooldownRemaining(
+        profile.rpg.lastRestAt,
+        now,
+        economy.options.rpgRestCooldownMs
+      ),
+      hpBlocked: false
+    })
+  };
+}
+
+function createRpgActionAvailabilityEntry({
+  id,
+  label,
+  command,
+  cooldownRemainingMs,
+  hpBlocked = false,
+  levelBlocked = false,
+  areaBlocked = false,
+  unlockLevel = null,
+  area = null,
+  areaLabel = null,
+  blockers = []
+}) {
+  const remainingMs = normalizeStoredNonNegativeInteger(cooldownRemainingMs);
+  const available = remainingMs <= 0 && !hpBlocked && !levelBlocked && !areaBlocked;
+  const reason = hpBlocked
+    ? 'HP가 낮아서 먼저 휴식이나 포션이 필요합니다.'
+    : levelBlocked
+      ? `Lv.${unlockLevel}부터 가능`
+      : areaBlocked
+        ? `${areaLabel ?? '해당'} 지역 해금 필요`
+        : remainingMs > 0
+          ? `${formatDurationMs(remainingMs)} 후 가능`
+          : '지금 가능';
+
+  return {
+    id,
+    label,
+    command,
+    available,
+    cooldownRemainingMs: remainingMs,
+    remainingMs,
+    hpBlocked,
+    levelBlocked,
+    areaBlocked,
+    unlockLevel,
+    area,
+    areaLabel,
+    reason,
+    blockers
+  };
+}
+
+function getRpgActionUnlockState(profile, config) {
+  const unlockedAreas = getUnlockedRpgAreaIds(profile.level);
+  const areaConfig = getRpgAreaConfig(config.area);
+  const levelBlocked = profile.level < config.unlockLevel;
+  const areaBlocked = !unlockedAreas.includes(config.area);
+  const blockers = [];
+
+  if (levelBlocked) {
+    blockers.push({
+      type: 'level',
+      label: `Lv.${config.unlockLevel} 필요`,
+      currentLevel: profile.level,
+      requiredLevel: config.unlockLevel
+    });
+  }
+
+  if (areaBlocked) {
+    blockers.push({
+      type: 'area',
+      label: `${areaConfig.label} 지역 해금 필요`,
+      area: config.area,
+      areaLabel: areaConfig.label
+    });
+  }
+
+  return {
+    levelBlocked,
+    areaBlocked,
+    unlockLevel: config.unlockLevel,
+    area: config.area,
+    areaLabel: areaConfig.label,
+    blockers
+  };
+}
+
+function getRpgActionCooldownRemaining(lastActionAt, now, cooldownMs) {
+  const safeCooldownMs = normalizeStoredNonNegativeInteger(cooldownMs);
+  if (safeCooldownMs <= 0 || !lastActionAt) return 0;
+
+  const elapsed = now - normalizeStoredNonNegativeInteger(lastActionAt);
+  return elapsed >= safeCooldownMs ? 0 : safeCooldownMs - elapsed;
+}
+
+function assertRpgActionCooldown(profile, actionKey, now, cooldownMs, label) {
+  const remainingMs = getRpgActionCooldownRemaining(profile.rpg[actionKey], now, cooldownMs);
+  if (remainingMs > 0) {
+    throw new Error(`${label}은(는) 아직 다시 할 수 없습니다. 남은 시간: ${formatDurationMs(remainingMs)}`);
+  }
+}
+
+function formatDurationMs(durationMs) {
+  const totalSeconds = Math.max(1, Math.ceil(normalizeStoredNonNegativeInteger(durationMs) / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const parts = [];
+
+  if (hours > 0) parts.push(`${hours}시간`);
+  if (minutes > 0) parts.push(`${minutes}분`);
+  if (seconds > 0 || parts.length === 0) parts.push(`${seconds}초`);
+
+  return parts.join(' ');
 }
 
 function createRpgBossSessionId(now = Date.now()) {
@@ -3453,6 +4020,9 @@ function createRpgPvpSessionFighter(profile, participant = {}) {
   const derivedStats = getProfileRpgDerivedStats(profile);
   const classConfig = getRpgClassConfig(profile.rpg.characterClass);
   const genderConfig = getRpgGenderConfig(profile.rpg.characterGender);
+  const advancedClassConfig = profile.rpg.advancedClass
+    ? getRpgAdvancedClassConfig(profile.rpg.advancedClass)
+    : null;
 
   return {
     userId: profile.userId,
@@ -3463,15 +4033,21 @@ function createRpgPvpSessionFighter(profile, participant = {}) {
     characterClassLabel: classConfig.label,
     characterGender: profile.rpg.characterGender,
     characterGenderLabel: genderConfig.label,
+    advancedClass: profile.rpg.advancedClass,
+    advancedClassLabel: advancedClassConfig?.label ?? null,
     stats: derivedStats,
-    hp: profile.rpg.hp,
+    hp: derivedStats.maxHp,
     maxHp: derivedStats.maxHp,
-    mp: profile.rpg.mp,
+    mp: derivedStats.maxMp,
     maxMp: derivedStats.maxMp,
     guardBonus: 0,
+    inventory: {
+      potion: profile.rpg.inventory.potion ?? 0,
+      mana_potion: profile.rpg.inventory.mana_potion ?? 0
+    },
     availableSkillIds: getAvailableRpgSkillIds(profile.rpg.characterClass),
     assets: {
-      hero: getRpgClassAssetId(profile.rpg.characterClass, profile.rpg.characterGender)
+      hero: getProfileRpgHeroAssetId(profile)
     }
   };
 }
@@ -3500,6 +4076,7 @@ function cloneRpgPvpFighter(fighter = {}) {
   return {
     ...fighter,
     stats: { ...(fighter.stats ?? {}) },
+    inventory: { ...(fighter.inventory ?? {}) },
     availableSkillIds: [...(fighter.availableSkillIds ?? ['basic'])],
     assets: { ...(fighter.assets ?? {}) }
   };
@@ -3548,10 +4125,22 @@ function getRpgPvpDuelRewards(winnerLevel) {
   };
 }
 
-function applyRpgPvpFighterState(profile, fighter) {
-  const derivedStats = getProfileRpgDerivedStats(profile);
-  profile.rpg.hp = Math.max(1, Math.min(derivedStats.maxHp, normalizeStoredNonNegativeInteger(fighter.hp)));
-  profile.rpg.mp = Math.max(0, Math.min(derivedStats.maxMp, normalizeStoredNonNegativeInteger(fighter.mp)));
+function settleRpgUltimateCharge(profile, { usedUltimate = false, chargeGain = 0 } = {}) {
+  const before = Math.min(100, normalizeStoredNonNegativeInteger(profile.rpg.ultimateCharge));
+  const spent = usedUltimate && before >= 100;
+  const afterSpend = spent ? 0 : before;
+  const gained = normalizeStoredNonNegativeInteger(chargeGain);
+  const after = Math.min(100, afterSpend + gained);
+
+  profile.rpg.ultimateCharge = after;
+  return {
+    before,
+    after,
+    gained: after - afterSpend,
+    spent,
+    max: 100,
+    ready: after >= 100
+  };
 }
 
 function createBlockedRpgPvpResult({
@@ -3671,6 +4260,37 @@ function getRpgGearEnhanceCost(gear) {
   return 120 * (enhanceLevel + 1) * power;
 }
 
+function getRpgItemSellValue(item = {}) {
+  if (item.price > 0) {
+    return Math.max(1, Math.floor(item.price * 0.5));
+  }
+
+  if (item.type === 'material') {
+    return 40;
+  }
+
+  const statValue = Object.values(item.stats ?? {})
+    .reduce((sum, value) => sum + Math.max(0, Number(value) || 0), 0);
+  return Math.max(25, 120 + statValue * 35);
+}
+
+function getRpgGearDisassembleRewards(gear = {}) {
+  const rarityBonus = {
+    common: 1,
+    rare: 2,
+    epic: 3,
+    legendary: 4,
+    mythic: 5
+  }[gear.rarity] ?? 1;
+  const enhanceLevel = normalizeStoredNonNegativeInteger(gear.enhanceLevel);
+  const power = Math.max(1, normalizeStoredNonNegativeInteger(gear.power) || 1);
+
+  return {
+    enhancementStones: Math.max(1, rarityBonus + Math.floor(enhanceLevel / 2)),
+    coins: Math.max(40, power * 60 + enhanceLevel * 40)
+  };
+}
+
 function getRpgGearEnhanceSuccessRate(gear) {
   const enhanceLevel = normalizeStoredNonNegativeInteger(gear.enhanceLevel);
   const power = Math.max(1, normalizeStoredNonNegativeInteger(gear.power) || 1);
@@ -3703,7 +4323,7 @@ function getRpgGearEnhanceStatKey(gear) {
   return 'attack';
 }
 
-function getRpgGuildRaidPartyProfiles(data, guildId, guild, leaderProfile, economy) {
+function getRpgGuildRaidPartyProfiles(data, guildId, guild, leaderProfile, economy, raid, now) {
   const profiles = Object.entries(guild.users ?? {})
     .map(([memberId, memberProfile]) => getOrCreateProfile(
       data,
@@ -3712,8 +4332,7 @@ function getRpgGuildRaidPartyProfiles(data, guildId, guild, leaderProfile, econo
       memberProfile?.username,
       economy
     ))
-    .filter((profile) => profile.rpg.startedAt > 0)
-    .filter((profile) => profile.rpg.hp > 1)
+    .filter((profile) => canJoinRpgGuildRaid(profile, raid, economy, now))
     .sort((a, b) => {
       if (a.userId === leaderProfile.userId) return -1;
       if (b.userId === leaderProfile.userId) return 1;
@@ -3731,6 +4350,53 @@ function getRpgGuildRaidPartyProfiles(data, guildId, guild, leaderProfile, econo
     .slice(0, 4);
 }
 
+function getRpgGuildRaidPartyProfilesByIds(data, guildId, guild, leaderProfile, memberIds = [], economy, raid, now) {
+  const orderedIds = [
+    leaderProfile.userId,
+    ...memberIds
+  ]
+    .map((memberId) => String(memberId || '').trim())
+    .filter(Boolean);
+  const uniqueIds = [...new Set(orderedIds)].slice(0, 4);
+  const profiles = uniqueIds
+    .map((memberId) => {
+      const storedProfile = guild.users?.[memberId];
+      return getOrCreateProfile(data, guildId, memberId, storedProfile?.username, economy);
+    })
+    .filter((profile) => canJoinRpgGuildRaid(profile, raid, economy, now));
+
+  if (!profiles.some((profile) => profile.userId === leaderProfile.userId)) {
+    profiles.unshift(leaderProfile);
+  }
+
+  return profiles
+    .filter((profile, index, source) => source.findIndex((entry) => entry.userId === profile.userId) === index)
+    .slice(0, 4);
+}
+
+function assertRpgGuildRaidParticipantAvailable(profile, raid, economy, now, label = '길드 레이드 참가') {
+  if (profile.rpg.startedAt <= 0) {
+    throw new Error('먼저 `/rpg 시작`으로 캐릭터를 만들어야 합니다.');
+  }
+  if (profile.level < raid.unlockLevel) {
+    throw new Error(`${raid.label} ${label}는 Lv.${raid.unlockLevel}부터 가능합니다.`);
+  }
+  assertRpgAreaUnlocked(profile, raid.area);
+  assertRpgActionCooldown(profile, 'lastRaidAt', now, economy.options.rpgRaidCooldownMs, label);
+  if (profile.rpg.hp <= 1) {
+    throw new Error('HP가 부족합니다. `/rpg 휴식` 또는 회복 포션을 사용하세요.');
+  }
+}
+
+function canJoinRpgGuildRaid(profile, raid, economy, now) {
+  try {
+    assertRpgGuildRaidParticipantAvailable(profile, raid, economy, now);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function createRpgGuildRaidMember(profile) {
   return {
     userId: profile.userId,
@@ -3738,6 +4404,7 @@ function createRpgGuildRaidMember(profile) {
     level: profile.level,
     characterClass: profile.rpg.characterClass,
     characterGender: profile.rpg.characterGender,
+    advancedClass: profile.rpg.advancedClass,
     stats: getProfileRpgDerivedStats(profile)
   };
 }
@@ -3811,6 +4478,14 @@ function getProfileRpgDerivedStats(profile, overrides = {}) {
     learnedSkills: overrides.learnedSkills ?? profile.rpg.learnedSkills,
     gearInventory: overrides.gearInventory ?? profile.rpg.gearInventory,
     equippedGear: overrides.equippedGear ?? profile.rpg.equippedGear
+  });
+}
+
+function getProfileRpgHeroAssetId(profile) {
+  return getRpgHeroAssetId({
+    characterClass: profile.rpg.characterClass,
+    characterGender: profile.rpg.characterGender,
+    advancedClass: profile.rpg.advancedClass
   });
 }
 

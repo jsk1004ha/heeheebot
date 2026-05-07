@@ -1,0 +1,28 @@
+{
+  "id": "map_crystal_lake",
+  "label": "수정 호수 전투 배경",
+  "category": "map",
+  "kind": "map",
+  "raw": "assets/rpg/maps/crystal-lake/raw/background.png",
+  "prompt": "assets/rpg/maps/crystal-lake/prompt-used.txt",
+  "status": "generated-contact-sheet-crop",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+  "crop": {
+    "contactSheetColumns": 4,
+    "contactSheetRows": 3,
+    "cellIndex": 6,
+    "cellColumn": 2,
+    "cellRow": 1,
+    "sourceCell": [
+      724,
+      362,
+      1086,
+      724
+    ],
+    "outputSize": [
+      1024,
+      576
+    ]
+  }
+}

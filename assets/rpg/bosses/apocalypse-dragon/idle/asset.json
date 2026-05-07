@@ -1,0 +1,8 @@
+{
+  "id": "boss_apocalypse_dragon_idle",
+  "label": "종말의 용 대기 모션",
+  "category": "monster",
+  "kind": "sprite",
+  "sheet": "3x3",
+  "prompt": "Generated local fallback raid boss sprite for 종말의 용 대기 모션; clean HD RPG boss, 3x3 transparent idle sheet, no text."
+}

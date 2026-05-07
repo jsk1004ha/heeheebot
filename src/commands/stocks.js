@@ -691,7 +691,7 @@ function formatQuote(quote) {
     `상태: **${statusText}**`,
     `현재가: **${quote.price.toLocaleString()}골드** / 변동: ${formatTrendMarker(quote.changePercent)} **${formatSignedPercent(quote.changePercent)}**`,
     `이전가: ${quote.previousPrice.toLocaleString()}골드`,
-    `뉴스: ${quote.news}`
+    quote.news
   ].join('\n');
 }
 
@@ -801,7 +801,7 @@ function formatTradeHistory(user, history) {
 
 function formatStockNews(news) {
   const body = news.entries.length > 0
-    ? news.entries.map((entry) => `- tick #${entry.tickIndex} **${entry.stock.name}** ${formatNewsType(entry.type)}: ${entry.message}`)
+    ? news.entries.map(formatStockNewsLine)
       .join('\n')
     : '최근 시장 뉴스/공시가 없습니다.';
 
@@ -809,6 +809,12 @@ function formatStockNews(news) {
     `🗞️ **주식 뉴스/공시** — tick #${news.tickIndex}`,
     body
   ].join('\n');
+}
+
+function formatStockNewsLine(entry) {
+  const publishedTick = entry.publishedTickIndex ?? Math.max(0, (entry.effectiveTickIndex ?? entry.tickIndex ?? 0) - 1);
+  const effectiveTick = entry.effectiveTickIndex ?? entry.tickIndex ?? publishedTick;
+  return `- tick #${publishedTick} → 반영 #${effectiveTick} **${entry.stock.name}** ${formatNewsType(entry.type)}: ${entry.message}`;
 }
 
 function formatStockChart(chart) {
@@ -991,9 +997,9 @@ function formatTradeType(type) {
 function formatNewsType(type) {
   return {
     ipo: '신규상장',
-    surge: '급등',
-    crash: '급락',
-    delisted: '상장폐지'
+    positive: '시장공시',
+    negative: '시장공시',
+    risk: '시장공시'
   }[type] ?? '뉴스';
 }
 

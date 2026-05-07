@@ -1,0 +1,8 @@
+{
+  "id": "boss_frost_lich_idle",
+  "label": "빙결 리치 대기 모션",
+  "category": "monster",
+  "kind": "sprite",
+  "sheet": "3x3",
+  "prompt": "Generated local fallback raid boss sprite for 빙결 리치 대기 모션; clean HD RPG boss, 3x3 transparent idle sheet, no text."
+}
