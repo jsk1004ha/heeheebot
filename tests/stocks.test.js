@@ -770,6 +770,38 @@ test('전체시세 응답은 실제 결과 길이와 상승/하락 색상 표시
   assert.match(fullMarketInteraction.replies[0], /⚪ — \*\*도훈건설\*\* `DOCO` 1,000골드 \(0%\)/);
 });
 
+test('전체시세 응답은 Discord 2000자 제한을 넘으면 버튼 페이지로 나눈다', async () => {
+  const fullMarketInteraction = createStockInteraction('전체시세');
+  const fakeStocks = {
+    async getMarket() {
+      return {
+        tickIndex: 7,
+        stocks: Array.from({ length: 80 }, (_, index) =>
+          createQuoteForTest(`긴이름테스트상장종목${String(index).padStart(2, '0')}${'가'.repeat(20)}`, `T${index}`)
+        )
+      };
+    }
+  };
+
+  await handleStockCommand(fullMarketInteraction, fakeStocks);
+
+  assert.equal(fullMarketInteraction.replies.length, 1);
+  assert.ok(fullMarketInteraction.replies.every((reply) => reply.length <= 2000));
+  assert.match(fullMarketInteraction.replies[0], /전체 시세 80종목/);
+  assert.match(fullMarketInteraction.replies[0], /페이지 1\/\d+/);
+
+  const nextButtonId = getCustomIds(fullMarketInteraction.replyPayloads[0])
+    .find((customId) => customId.endsWith(':next'));
+  assert.ok(nextButtonId);
+
+  const buttonInteraction = createStockButtonInteraction(nextButtonId);
+  await handleStockCommand(buttonInteraction, fakeStocks);
+
+  assert.equal(buttonInteraction.updates.length, 1);
+  assert.ok(buttonInteraction.updates[0].content.length <= 2000);
+  assert.match(buttonInteraction.updates[0].content, /페이지 2\/\d+/);
+});
+
 test('개별 시세 응답도 상승/하락 색상 표시를 보여준다', async () => {
   const quoteInteraction = createStockInteraction('시세', {
     strings: {
@@ -1099,14 +1131,17 @@ function createStockInteraction(subcommand, options = {}) {
     targetUser = null
   } = options;
   const replies = [];
+  const replyPayloads = [];
 
   return {
     commandName: '주식',
     guildId,
     user,
     replies,
+    replyPayloads,
     deferred: false,
     replied: false,
+    isButton: () => false,
     isChatInputCommand: () => true,
     inGuild: () => true,
     options: {
@@ -1117,12 +1152,60 @@ function createStockInteraction(subcommand, options = {}) {
     },
     async reply(payload) {
       this.replied = true;
-      replies.push(typeof payload === 'string' ? payload : payload.content);
+      const content = getReplyContent(payload);
+      assert.ok(content.length <= 2000, `Discord content limit exceeded: ${content.length}`);
+      replies.push(content);
+      replyPayloads.push(payload);
     },
     async followUp(payload) {
-      replies.push(typeof payload === 'string' ? payload : payload.content);
+      const content = getReplyContent(payload);
+      assert.ok(content.length <= 2000, `Discord content limit exceeded: ${content.length}`);
+      replies.push(content);
+      replyPayloads.push(payload);
     }
   };
+}
+
+function getReplyContent(payload) {
+  return typeof payload === 'string' ? payload : payload.content;
+}
+
+function createStockButtonInteraction(customId, options = {}) {
+  const {
+    guildId = 'guild-1',
+    user = { id: 'user-1', username: '희희' }
+  } = options;
+  const replies = [];
+  const updates = [];
+
+  return {
+    customId,
+    guildId,
+    user,
+    replies,
+    updates,
+    deferred: false,
+    replied: false,
+    isButton: () => true,
+    isChatInputCommand: () => false,
+    inGuild: () => true,
+    async reply(payload) {
+      const content = getReplyContent(payload);
+      assert.ok(content.length <= 2000, `Discord content limit exceeded: ${content.length}`);
+      replies.push(payload);
+    },
+    async update(payload) {
+      assert.ok(payload.content.length <= 2000, `Discord content limit exceeded: ${payload.content.length}`);
+      updates.push(payload);
+    }
+  };
+}
+
+function getCustomIds(payload) {
+  return (payload.components ?? [])
+    .flatMap((row) => row.components ?? [])
+    .map((component) => component.data?.custom_id ?? component.custom_id)
+    .filter(Boolean);
 }
 
 function createQuoteForTest(name, symbol, changePercent = 0, overrides = {}) {

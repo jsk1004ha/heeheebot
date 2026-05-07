@@ -1,7 +1,17 @@
-import { SlashCommandBuilder } from 'discord.js';
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  SlashCommandBuilder
+} from 'discord.js';
 import { getStockCatalog } from '../systems/stocks.js';
 
 const STOCK_AUTOCOMPLETE_LIMIT = 25;
+const DISCORD_CONTENT_MAX_LENGTH = 2000;
+const STOCK_PAGE_CONTENT_MAX_LENGTH = 1900;
+const STOCK_PAGINATION_TTL_MS = 10 * 60 * 1000;
+const STOCK_PAGE_BUTTON_PREFIX = 'stock_page';
+const stockPaginationSessions = new Map();
 
 export const stockCommands = [
   new SlashCommandBuilder()
@@ -350,15 +360,16 @@ export async function handleStockAutocomplete(interaction, stocks) {
 }
 
 export async function handleStockCommand(interaction, stocks) {
+  if (interaction.isButton?.()) {
+    return handleStockPaginationButton(interaction);
+  }
+
   if (!interaction.isChatInputCommand() || interaction.commandName !== '주식') {
     return false;
   }
 
   if (!interaction.inGuild()) {
-    await interaction.reply({
-      content: '서버에서만 사용할 수 있는 명령어입니다.',
-      ephemeral: true
-    });
+    await replyStockContent(interaction, '서버에서만 사용할 수 있는 명령어입니다.', true);
     return true;
   }
 
@@ -380,24 +391,24 @@ async function routeStockCommand(interaction, stocks) {
     const stockId = interaction.options.getString('종목');
     if (stockId) {
       const quote = await stocks.getQuote({ guildId, stockId });
-      await interaction.reply(formatQuote(quote));
+      await replyStockContent(interaction, formatQuote(quote));
       return;
     }
 
     const market = await stocks.getMarket({ guildId, limit: 12 });
-    await interaction.reply(formatMarketSummary(market));
+    await replyStockContent(interaction, formatMarketSummary(market));
     return;
   }
 
   if (subcommand === '전체시세') {
     const market = await stocks.getMarket({ guildId });
-    await interaction.reply(formatFullMarket(market));
+    await replyStockContent(interaction, formatFullMarket(market));
     return;
   }
 
   if (subcommand === '신규상장') {
     const listings = await stocks.getListings({ guildId });
-    await interaction.reply(formatListings(listings));
+    await replyStockContent(interaction, formatListings(listings));
     return;
   }
 
@@ -409,7 +420,7 @@ async function routeStockCommand(interaction, stocks) {
       stockId: interaction.options.getString('종목', true),
       quantity: interaction.options.getInteger('수량', true)
     });
-    await interaction.reply(formatBuyResult(user, result));
+    await replyStockContent(interaction, formatBuyResult(user, result));
     return;
   }
 
@@ -421,7 +432,7 @@ async function routeStockCommand(interaction, stocks) {
       stockId: interaction.options.getString('종목', true),
       quantity: interaction.options.getInteger('수량', true)
     });
-    await interaction.reply(formatSellResult(user, result));
+    await replyStockContent(interaction, formatSellResult(user, result));
     return;
   }
 
@@ -435,7 +446,7 @@ async function routeStockCommand(interaction, stocks) {
       quantity: interaction.options.getInteger('수량', true),
       limitPrice: interaction.options.getInteger('가격', true)
     });
-    await interaction.reply(formatLimitOrderPlaced(user, result));
+    await replyStockContent(interaction, formatLimitOrderPlaced(user, result));
     return;
   }
 
@@ -445,7 +456,7 @@ async function routeStockCommand(interaction, stocks) {
       userId: user.id,
       username: user.username
     });
-    await interaction.reply(formatLimitOrders(user, orders));
+    await replyStockContent(interaction, formatLimitOrders(user, orders));
     return;
   }
 
@@ -456,7 +467,7 @@ async function routeStockCommand(interaction, stocks) {
       username: user.username,
       orderId: interaction.options.getString('주문', true)
     });
-    await interaction.reply(formatLimitOrderCancelled(user, result));
+    await replyStockContent(interaction, formatLimitOrderCancelled(user, result));
     return;
   }
 
@@ -469,7 +480,7 @@ async function routeStockCommand(interaction, stocks) {
       condition: interaction.options.getString('조건', true),
       targetPrice: interaction.options.getInteger('가격', true)
     });
-    await interaction.reply(formatAlertCreated(user, alert));
+    await replyStockContent(interaction, formatAlertCreated(user, alert));
     return;
   }
 
@@ -479,7 +490,7 @@ async function routeStockCommand(interaction, stocks) {
       userId: user.id,
       username: user.username
     });
-    await interaction.reply(formatAlerts(user, alerts));
+    await replyStockContent(interaction, formatAlerts(user, alerts));
     return;
   }
 
@@ -490,7 +501,7 @@ async function routeStockCommand(interaction, stocks) {
       username: user.username,
       alertId: interaction.options.getString('알림', true)
     });
-    await interaction.reply(formatAlertDeleted(user, alert));
+    await replyStockContent(interaction, formatAlertDeleted(user, alert));
     return;
   }
 
@@ -501,7 +512,7 @@ async function routeStockCommand(interaction, stocks) {
       username: user.username,
       limit: interaction.options.getInteger('개수') ?? 10
     });
-    await interaction.reply(formatTradeHistory(user, history));
+    await replyStockContent(interaction, formatTradeHistory(user, history));
     return;
   }
 
@@ -510,7 +521,7 @@ async function routeStockCommand(interaction, stocks) {
       guildId,
       limit: interaction.options.getInteger('개수') ?? 10
     });
-    await interaction.reply(formatStockNews(news));
+    await replyStockContent(interaction, formatStockNews(news));
     return;
   }
 
@@ -520,7 +531,7 @@ async function routeStockCommand(interaction, stocks) {
       stockId: interaction.options.getString('종목', true),
       points: interaction.options.getInteger('개수') ?? 8
     });
-    await interaction.reply(formatStockChart(chart));
+    await replyStockContent(interaction, formatStockChart(chart));
     return;
   }
 
@@ -531,7 +542,7 @@ async function routeStockCommand(interaction, stocks) {
       userId: target.id,
       username: target.username
     });
-    await interaction.reply(formatPortfolio(target, portfolio));
+    await replyStockContent(interaction, formatPortfolio(target, portfolio));
     return;
   }
 
@@ -540,7 +551,7 @@ async function routeStockCommand(interaction, stocks) {
       guildId,
       limit: interaction.options.getInteger('개수') ?? 10
     });
-    await interaction.reply(formatLeaderboard(leaderboard));
+    await replyStockContent(interaction, formatLeaderboard(leaderboard));
     return;
   }
 
@@ -554,7 +565,7 @@ async function routeStockCommand(interaction, stocks) {
       leverage: interaction.options.getInteger('배율', true),
       margin: interaction.options.getInteger('증거금', true)
     });
-    await interaction.reply(formatOpenLeverageResult(user, result));
+    await replyStockContent(interaction, formatOpenLeverageResult(user, result));
     return;
   }
 
@@ -565,7 +576,7 @@ async function routeStockCommand(interaction, stocks) {
       username: user.username,
       positionId: interaction.options.getString('포지션', true)
     });
-    await interaction.reply(formatCloseLeverageResult(user, result));
+    await replyStockContent(interaction, formatCloseLeverageResult(user, result));
     return;
   }
 
@@ -576,11 +587,11 @@ async function routeStockCommand(interaction, stocks) {
       userId: target.id,
       username: target.username
     });
-    await interaction.reply(formatLeveragePortfolio(target, portfolio));
+    await replyStockContent(interaction, formatLeveragePortfolio(target, portfolio));
     return;
   }
 
-  await interaction.reply('알 수 없는 주식 명령입니다. `/주식 시세` 또는 `/주식 전체시세`로 다시 시도해주세요.');
+  await replyStockContent(interaction, '알 수 없는 주식 명령입니다. `/주식 시세` 또는 `/주식 전체시세`로 다시 시도해주세요.');
 }
 
 async function getSellStockAutocompleteChoices(interaction, stocks, query) {
@@ -1012,10 +1023,185 @@ function formatStockStatus(stock) {
 }
 
 async function safeReply(interaction, content, ephemeral = false) {
-  const payload = { content, ephemeral };
+  await replyStockContent(interaction, content, ephemeral);
+}
+
+async function replyStockContent(interaction, content, ephemeral = false) {
+  const contentText = String(content ?? '');
+  if (contentText.length <= DISCORD_CONTENT_MAX_LENGTH) {
+    await sendStockPayload(interaction, { content: contentText, ephemeral });
+    return;
+  }
+
+  cleanupExpiredStockPaginationSessions();
+
+  const pages = splitDiscordContent(contentText, STOCK_PAGE_CONTENT_MAX_LENGTH);
+  const sessionId = createStockPaginationSessionId();
+  const ownerId = interaction.user?.id ?? 'unknown';
+  stockPaginationSessions.set(sessionId, {
+    ownerId,
+    pages,
+    expiresAt: Date.now() + STOCK_PAGINATION_TTL_MS
+  });
+
+  await sendStockPayload(interaction, createStockPagePayload({
+    sessionId,
+    ownerId,
+    pages,
+    pageIndex: 0,
+    ephemeral
+  }));
+}
+
+async function sendStockPayload(interaction, payload) {
   if (interaction.deferred || interaction.replied) {
     await interaction.followUp(payload);
   } else {
     await interaction.reply(payload);
   }
+}
+
+async function handleStockPaginationButton(interaction) {
+  const parsed = parseStockPageCustomId(interaction.customId);
+  if (!parsed) return false;
+
+  cleanupExpiredStockPaginationSessions();
+
+  const { sessionId, ownerId, pageIndex } = parsed;
+  if (interaction.user.id !== ownerId) {
+    await interaction.reply({
+      content: '이 주식 페이지 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
+      ephemeral: true
+    });
+    return true;
+  }
+
+  const session = stockPaginationSessions.get(sessionId);
+  if (!session) {
+    await interaction.reply({
+      content: '주식 페이지가 만료되었습니다. `/주식 전체시세`를 다시 실행해주세요.',
+      ephemeral: true
+    });
+    return true;
+  }
+
+  const nextPageIndex = Math.max(0, Math.min(pageIndex, session.pages.length - 1));
+  session.expiresAt = Date.now() + STOCK_PAGINATION_TTL_MS;
+  await interaction.update(createStockPagePayload({
+    sessionId,
+    ownerId,
+    pages: session.pages,
+    pageIndex: nextPageIndex
+  }));
+  return true;
+}
+
+function createStockPagePayload({
+  sessionId,
+  ownerId,
+  pages,
+  pageIndex,
+  ephemeral = false
+}) {
+  const payload = {
+    content: formatStockPageContent(pages[pageIndex], pageIndex, pages.length),
+    components: createStockPaginationRows({ sessionId, ownerId, pageIndex, pageCount: pages.length })
+  };
+  if (ephemeral) payload.ephemeral = true;
+  return payload;
+}
+
+function formatStockPageContent(page, pageIndex, pageCount) {
+  const footer = `\n\n_페이지 ${pageIndex + 1}/${pageCount} · 버튼으로 넘겨보세요._`;
+  const maxPageLength = DISCORD_CONTENT_MAX_LENGTH - footer.length;
+  return `${page.slice(0, maxPageLength)}${footer}`;
+}
+
+function createStockPaginationRows({ sessionId, ownerId, pageIndex, pageCount }) {
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(createStockPageCustomId(sessionId, ownerId, Math.max(0, pageIndex - 1), 'prev'))
+        .setLabel('이전')
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(pageIndex <= 0),
+      new ButtonBuilder()
+        .setCustomId(createStockPageCustomId(sessionId, ownerId, Math.min(pageCount - 1, pageIndex + 1), 'next'))
+        .setLabel('다음')
+        .setStyle(ButtonStyle.Primary)
+        .setDisabled(pageIndex >= pageCount - 1)
+    )
+  ];
+}
+
+function createStockPageCustomId(sessionId, ownerId, pageIndex, action) {
+  return `${STOCK_PAGE_BUTTON_PREFIX}:${sessionId}:${ownerId}:${pageIndex}:${action}`;
+}
+
+function parseStockPageCustomId(customId) {
+  const parts = String(customId ?? '').split(':');
+  if (parts[0] !== STOCK_PAGE_BUTTON_PREFIX || parts.length !== 5) return null;
+
+  const pageIndex = Number.parseInt(parts[3], 10);
+  if (!Number.isInteger(pageIndex) || pageIndex < 0) return null;
+
+  return {
+    sessionId: parts[1],
+    ownerId: parts[2],
+    pageIndex,
+    action: parts[4]
+  };
+}
+
+function createStockPaginationSessionId() {
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function cleanupExpiredStockPaginationSessions(now = Date.now()) {
+  for (const [sessionId, session] of stockPaginationSessions.entries()) {
+    if (session.expiresAt <= now) {
+      stockPaginationSessions.delete(sessionId);
+    }
+  }
+}
+
+function splitDiscordContent(content, maxLength = DISCORD_CONTENT_MAX_LENGTH) {
+  const normalizedContent = String(content ?? '');
+  if (normalizedContent.length <= maxLength) {
+    return [normalizedContent];
+  }
+
+  const chunks = [];
+  let current = '';
+
+  for (const line of normalizedContent.split('\n')) {
+    if (line.length > maxLength) {
+      if (current) {
+        chunks.push(current);
+        current = '';
+      }
+
+      for (let index = 0; index < line.length; index += maxLength) {
+        chunks.push(line.slice(index, index + maxLength));
+      }
+      continue;
+    }
+
+    const next = current ? `${current}\n${line}` : line;
+    if (next.length <= maxLength) {
+      current = next;
+      continue;
+    }
+
+    if (current) {
+      chunks.push(current);
+    }
+    current = line;
+  }
+
+  if (current || chunks.length === 0) {
+    chunks.push(current);
+  }
+
+  return chunks;
 }
