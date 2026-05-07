@@ -58,6 +58,36 @@ test('주사위와 슬롯 결과를 계산한다', () => {
   assert.equal(dice.payout, 200);
   assert.deepEqual(slot.reels, ['7️⃣', '7️⃣', '7️⃣']);
   assert.equal(slot.payout, 2000);
+
+  const loweredProbabilitySlot = playSlots({
+    bet: 100,
+    randomInt: createSequenceRandom([7, 0, 1])
+  });
+
+  assert.deepEqual(loweredProbabilitySlot.reels, ['🍀', '🍒', '🍋']);
+  assert.equal(loweredProbabilitySlot.payout, 0);
+});
+
+test('슬롯 기대 지급률은 100% 미만이다', () => {
+  const bet = 100;
+  const symbolCount = 10;
+  let totalPayout = 0;
+
+  for (let first = 0; first < symbolCount; first += 1) {
+    for (let second = 0; second < symbolCount; second += 1) {
+      for (let third = 0; third < symbolCount; third += 1) {
+        totalPayout += playSlots({
+          bet,
+          randomInt: createSequenceRandom([first, second, third])
+        }).payout;
+      }
+    }
+  }
+
+  const averagePayout = totalPayout / symbolCount ** 3;
+
+  assert.equal(averagePayout, 92);
+  assert.ok(averagePayout < bet);
 });
 
 test('카지노 명령 payload는 다양한 게임을 등록한다', () => {

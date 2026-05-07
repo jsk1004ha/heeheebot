@@ -65,7 +65,8 @@ const DEFAULT_OPTIONS = Object.freeze({
   messageXpMax: 15,
   firstMessageXpBonus: 50,
   dailyCooldownMs: 24 * 60 * 60 * 1000,
-  dailyCoinReward: 500,
+  dailyCoinRewardMin: 1,
+  dailyCoinRewardMax: 1000,
   dailyXpReward: 100,
   dailyStreakXpBonuses: Object.freeze({
     3: 50,
@@ -171,8 +172,9 @@ export class EconomyService {
       const streakBonuses = getStreakBonuses(streak, this.options.dailyStreakXpBonuses);
       const streakBonusXp = streakBonuses.reduce((sum, bonus) => sum + bonus.xp, 0);
       const xpGained = this.options.dailyXpReward + streakBonusXp;
+      const coinReward = getDailyCoinReward(this);
 
-      profile.balance += this.options.dailyCoinReward;
+      profile.balance += coinReward;
       profile.lastDailyAt = now;
       profile.lastDailyDay = today;
       profile.dailyStreak = streak;
@@ -181,8 +183,8 @@ export class EconomyService {
 
       return {
         claimed: true,
-        reward: this.options.dailyCoinReward,
-        coinReward: this.options.dailyCoinReward,
+        reward: coinReward,
+        coinReward,
         xpGained,
         baseXp: this.options.dailyXpReward,
         streak,
@@ -1996,6 +1998,23 @@ function getStreakBonuses(streak, configuredBonuses) {
     .map(([days, xp]) => ({ days: Number(days), xp }))
     .filter((bonus) => streak > 0 && streak % bonus.days === 0)
     .sort((a, b) => a.days - b.days);
+}
+
+function getDailyCoinReward(service) {
+  if (service.options.dailyCoinReward !== undefined && service.options.dailyCoinReward !== null) {
+    return Math.max(0, Math.floor(Number(service.options.dailyCoinReward)));
+  }
+
+  const min = normalizeRewardBound(service.options.dailyCoinRewardMin, 1);
+  const max = Math.max(min, normalizeRewardBound(service.options.dailyCoinRewardMax, 1000));
+  return service.randomInt(min, max);
+}
+
+function normalizeRewardBound(value, fallback) {
+  const number = Number(value);
+  return Number.isFinite(number)
+    ? Math.max(1, Math.floor(number))
+    : fallback;
 }
 
 function getDayIndex(now, dayOffsetMs = 0) {

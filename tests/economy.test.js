@@ -189,8 +189,14 @@ test('충분한 경험치를 받으면 레벨업 보상을 지급한다', async 
   }
 });
 
-test('출석 보상은 100 XP와 500 코인을 하루 한 번만 지급한다', async () => {
-  const fixture = await createFixture();
+test('출석 보상은 100 XP와 랜덤 1~1000 코인을 하루 한 번만 지급한다', async () => {
+  const fixture = await createFixture({
+    randomInt: (min, max) => {
+      assert.equal(min, 1);
+      assert.equal(max, 1000);
+      return 777;
+    }
+  });
 
   try {
     const first = await fixture.economy.claimDaily({
@@ -207,15 +213,16 @@ test('출석 보상은 100 XP와 500 코인을 하루 한 번만 지급한다', 
     });
 
     assert.equal(first.claimed, true);
-    assert.equal(first.reward, 500);
+    assert.equal(first.reward, 777);
+    assert.equal(first.coinReward, 777);
     assert.equal(first.xpGained, 100);
     assert.equal(first.streak, 1);
     assert.equal(first.profile.level, 2);
     assert.equal(first.profile.xp, 0);
-    assert.equal(first.profile.balance, 700);
+    assert.equal(first.profile.balance, 977);
 
     assert.equal(second.claimed, false);
-    assert.equal(second.profile.balance, 700);
+    assert.equal(second.profile.balance, 977);
   } finally {
     await fixture.cleanup();
   }
