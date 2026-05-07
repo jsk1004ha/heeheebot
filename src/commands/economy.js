@@ -1,7 +1,8 @@
 import { SlashCommandBuilder } from 'discord.js';
 import {
   formatCurrencyAmount,
-  getCurrencyChoices
+  getCurrencyChoices,
+  getCurrencyConfig
 } from '../systems/currencies.js';
 
 export const economyCommands = [
@@ -60,7 +61,10 @@ export const economyCommands = [
         .setDescription('표시할 인원 수')
         .setMinValue(1)
         .setMaxValue(20)
-    )
+    ),
+  new SlashCommandBuilder()
+    .setName('재화정보')
+    .setDescription('재화별 사용처와 환전율을 확인합니다.')
 ];
 
 export function getEconomyCommandPayloads() {
@@ -188,6 +192,11 @@ export async function handleEconomyCommand(interaction, economy) {
     return true;
   }
 
+  if (interaction.commandName === '재화정보') {
+    await interaction.reply(formatCurrencyInfo());
+    return true;
+  }
+
   return false;
 }
 
@@ -213,6 +222,41 @@ function formatExchangeResult(result) {
     `${result.from.label} ${formatCurrencyAmount(result.spent, result.from.id)} → ${result.to.label} ${formatCurrencyAmount(result.received, result.to.id)}${feeText}`,
     `현재 지갑: 메인 **${result.profile.balance.toLocaleString()}원** / 카지노 **${result.profile.wallets.casinoChips.toLocaleString()}칩** / RPG **${result.profile.wallets.rpgGold.toLocaleString()}골드** / 검강화 **${result.profile.wallets.swordCoins.toLocaleString()}코인** / 주식 현금 **${result.profile.wallets.stockCash.toLocaleString()}원**`
   ].join('\n');
+}
+
+function formatCurrencyInfo() {
+  const casino = getCurrencyConfig('casino');
+  const rpg = getCurrencyConfig('rpg');
+  const sword = getCurrencyConfig('sword');
+  const stock = getCurrencyConfig('stock');
+
+  return [
+    '💱 **재화정보 / 환전율**',
+    '모든 재화는 봇 내부 게임머니입니다. 실제 현금 결제, 실제 현금 환전, 실제 투자와 연결되지 않습니다.',
+    '',
+    '📌 **사용처**',
+    '- **메인 코인**: 출석, 송금, 전용 재화 충전의 기준 재화',
+    '- **카지노칩**: 홀짝, 룰렛, 블랙잭, 바카라 등 카지노 게임',
+    '- **RPG 골드**: RPG 상점, 장비, 포션, 가챠',
+    '- **강화 코인**: 검 강화, 보호권, 검배틀 보상',
+    '- **주식 현금**: 가상주식 현물/지정가/레버리지',
+    '',
+    '🔁 **충전율**',
+    `- 메인 → 카지노칩/강화 코인/주식 현금: 1:1`,
+    `- 메인 → RPG 골드: 1:2 (${formatRate(casino.mainToCurrencyBps)} 기준보다 넉넉하게 충전)`,
+    '',
+    '📉 **출금/이동 보정**',
+    `- 카지노칩 → 외부: ${formatRate(casino.cashOutBps)}`,
+    `- RPG 골드 → 외부: ${formatRate(rpg.cashOutBps)}`,
+    `- 강화 코인 → 외부: ${formatRate(sword.cashOutBps)}`,
+    `- 주식 현금 → 외부: ${formatRate(stock.cashOutBps)}`,
+    '',
+    '예: RPG는 게임 내 획득량이 많아서 충전은 1:2지만 밖으로 뺄 때는 30%만 반영됩니다.'
+  ].join('\n');
+}
+
+function formatRate(bps) {
+  return `${(bps / 100).toLocaleString()}%`;
 }
 
 function formatLeaderboard(rows) {
