@@ -500,7 +500,8 @@ async function routeStockCommand(interaction, stocks) {
       username: user.username,
       stockId: interaction.options.getString('종목', true),
       condition: interaction.options.getString('조건', true),
-      targetPrice: interaction.options.getInteger('가격', true)
+      targetPrice: interaction.options.getInteger('가격', true),
+      channelId: interaction.channelId
     });
     await replyStockContent(interaction, formatAlertCreated(user, alert));
     return;
@@ -965,7 +966,7 @@ function formatAlertCreated(user, alert) {
     `🔔 **가격 알림 등록** — ${user}`,
     `알림: \`${alert.id}\` / 종목: **${alert.stock.name}**`,
     `조건: 현재가가 **${alert.targetPrice.toLocaleString()}골드** ${formatAlertCondition(alert.condition)}이면 트리거`,
-    '`/주식 알림`으로 활성/트리거 알림을 확인할 수 있습니다.'
+    '목표가에 닿으면 이 채널에 자동 푸시되고, `/주식 알림`으로 활성/트리거 알림을 확인할 수 있습니다.'
   ].join('\n');
 }
 

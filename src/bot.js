@@ -40,7 +40,10 @@ import {
   MealService,
   scheduleDailyMealAnnouncements
 } from './systems/meals.js';
-import { StockService } from './systems/stocks.js';
+import {
+  StockService,
+  scheduleStockAlertAnnouncements
+} from './systems/stocks.js';
 import { SeasonService } from './systems/seasons.js';
 import { TamagotchiService } from './systems/tamagotchi.js';
 import { TimetableService } from './systems/timetable.js';
@@ -73,6 +76,7 @@ export function createBot({
   const timetable = new TimetableService();
   const moderation = new ModerationService(store);
   let stopMealAnnouncementScheduler = () => {};
+  let stopStockAlertScheduler = () => {};
 
   client.once(Events.ClientReady, (readyClient) => {
     logger.log(`Logged in as ${readyClient.user.tag}`);
@@ -81,6 +85,13 @@ export function createBot({
       logger,
       async sendAnnouncement() {
         await sendDailyMealAnnouncements(readyClient, meals, logger);
+      }
+    });
+
+    stopStockAlertScheduler = scheduleStockAlertAnnouncements({
+      logger,
+      async sendAnnouncements() {
+        await sendStockAlertAnnouncements(readyClient, stocks, logger);
       }
     });
   });
@@ -206,10 +217,58 @@ export function createBot({
     stopMealAnnouncements() {
       stopMealAnnouncementScheduler();
     },
+    stopStockAlerts() {
+      stopStockAlertScheduler();
+    },
     async start(token) {
       await client.login(token);
     }
   };
+}
+
+async function sendStockAlertAnnouncements(client, stocks, logger) {
+  const guilds = [...(client.guilds?.cache?.values?.() ?? [])];
+
+  for (const guild of guilds) {
+    let alerts = [];
+    try {
+      alerts = await stocks.getPendingTriggeredPriceAlerts({
+        guildId: guild.id
+      });
+    } catch (error) {
+      logger.error(`Failed to collect stock alerts for guild ${guild.id}:`, error);
+      continue;
+    }
+
+    for (const alert of alerts) {
+      try {
+        const channel = await client.channels.fetch(alert.channelId);
+
+        if (!channel || typeof channel.send !== 'function') {
+          throw new Error(`채널을 찾을 수 없습니다: ${alert.channelId}`);
+        }
+
+        await channel.send(formatStockAlertAnnouncement(alert));
+        await stocks.markPriceAlertNotified({
+          guildId: guild.id,
+          userId: alert.userId,
+          alertId: alert.id
+        });
+      } catch (error) {
+        logger.error(`Failed to send stock alert ${alert.id} in guild ${guild.id}:`, error);
+      }
+    }
+  }
+}
+
+function formatStockAlertAnnouncement(alert) {
+  const conditionLabel = alert.condition === 'above' ? '이상' : '이하';
+  return [
+    '🔔 **주식 가격 알림 도착**',
+    `<@${alert.userId}>님, **${alert.stock.name}**이(가) 목표가에 도달했습니다.`,
+    `현재가: **${alert.triggeredPrice.toLocaleString()}골드** / 목표: ${alert.targetPrice.toLocaleString()}골드 ${conditionLabel}`,
+    '`/주식 알림`에서 최근 트리거 기록을 확인할 수 있습니다.'
+  ].join('\n');
 }
 
 async function sendDailyMealAnnouncements(client, meals, logger) {

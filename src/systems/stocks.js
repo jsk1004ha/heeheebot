@@ -10,6 +10,7 @@ import {
 } from './currencies.js';
 
 const DEFAULT_TICK_MS = 3 * 60 * 1000;
+const DEFAULT_STOCK_ALERT_INTERVAL_MS = 60 * 1000;
 const DEFAULT_FEE_BPS = 100;
 const DEFAULT_LEVERAGE_FEE_BPS = 200;
 const MAX_CATCH_UP_TICKS = 24;
@@ -496,6 +497,7 @@ export class StockService {
     stockId,
     condition = 'above',
     targetPrice,
+    channelId = null,
     now = Date.now()
   }) {
     const normalizedCondition = normalizeAlertCondition(condition);
@@ -515,10 +517,12 @@ export class StockService {
         stockId: normalizedStockId,
         condition: normalizedCondition,
         targetPrice: normalizedTargetPrice,
+        channelId: normalizeOptionalStringId(channelId),
         status: 'active',
         createdAt: normalizeNonNegativeInteger(now),
         triggeredAt: 0,
         triggeredPrice: 0,
+        notifiedAt: 0,
         deletedAt: 0
       };
 
@@ -552,6 +556,55 @@ export class StockService {
       if (!alert) throw new Error('해당 가격 알림을 찾을 수 없습니다.');
       alert.status = 'deleted';
       alert.deletedAt = normalizeNonNegativeInteger(now);
+      return clonePriceAlert(alert, market);
+    });
+  }
+
+  async getPendingTriggeredPriceAlerts({ guildId, now = Date.now(), limit = RECENT_ALERT_LIMIT } = {}) {
+    const safeLimit = Math.min(50, Math.max(1, Number(limit) || RECENT_ALERT_LIMIT));
+
+    return this.store.update((data) => {
+      const guild = getExistingGuild(data, guildId);
+      if (!guild?.stocks) return [];
+
+      const market = syncMarket(guild, now, this);
+      const pending = [];
+
+      for (const [userId, rawStockUser] of Object.entries(guild.stocks.users ?? {})) {
+        const username = rawStockUser?.username ?? guild.users?.[userId]?.username ?? 'Unknown';
+        const stockUser = getOrCreateStockUser(guild, userId, username);
+
+        for (const alert of Object.values(stockUser.priceAlerts)) {
+          if (alert.status !== 'triggered' || alert.notifiedAt > 0 || !alert.channelId) continue;
+          pending.push(clonePriceAlert(alert, market));
+        }
+      }
+
+      return pending
+        .sort((a, b) => (a.triggeredAt - b.triggeredAt) || a.id.localeCompare(b.id))
+        .slice(0, safeLimit);
+    });
+  }
+
+  async markPriceAlertNotified({ guildId, userId, alertId, now = Date.now() }) {
+    const normalizedAlertId = String(alertId ?? '').trim();
+    if (!normalizedAlertId) throw new Error('알림 id를 입력하세요.');
+
+    return this.store.update((data) => {
+      const guild = getExistingGuild(data, guildId);
+      if (!guild?.stocks?.users?.[userId]) {
+        throw new Error('해당 가격 알림을 찾을 수 없습니다.');
+      }
+
+      const market = syncMarket(guild, now, this);
+      const stockUser = getOrCreateStockUser(guild, userId, guild.users?.[userId]?.username ?? 'Unknown');
+      const alert = stockUser.priceAlerts[normalizedAlertId];
+
+      if (!alert || alert.status !== 'triggered') {
+        throw new Error('해당 가격 알림을 찾을 수 없습니다.');
+      }
+
+      alert.notifiedAt = normalizeNonNegativeInteger(now);
       return clonePriceAlert(alert, market);
     });
   }
@@ -871,6 +924,47 @@ export function getStockConfig(stockId) {
   return STOCKS_BY_ID[normalizeStockId(stockId)];
 }
 
+export function scheduleStockAlertAnnouncements({
+  sendAnnouncements,
+  intervalMs = DEFAULT_STOCK_ALERT_INTERVAL_MS,
+  setTimeoutFn = setTimeout,
+  clearTimeoutFn = clearTimeout,
+  logger = console
+}) {
+  let timer = null;
+  let stopped = false;
+  const safeIntervalMs = Math.max(10_000, Number(intervalMs) || DEFAULT_STOCK_ALERT_INTERVAL_MS);
+
+  const scheduleNext = () => {
+    timer = setTimeoutFn(async () => {
+      if (stopped) return;
+
+      try {
+        await sendAnnouncements();
+      } catch (error) {
+        logger.error('Failed to send stock price alert announcements:', error);
+      }
+
+      if (!stopped) {
+        scheduleNext();
+      }
+    }, safeIntervalMs);
+
+    if (timer && typeof timer.unref === 'function') {
+      timer.unref();
+    }
+  };
+
+  scheduleNext();
+
+  return () => {
+    stopped = true;
+    if (timer) {
+      clearTimeoutFn(timer);
+    }
+  };
+}
+
 function stock(id, name, sector, risk, basePrice, volatilityBps, eventChance, aliases = [], symbol = null, options = {}) {
   const safeOptions = options && typeof options === 'object' ? options : {};
   return Object.freeze({
@@ -941,6 +1035,11 @@ function getOrCreateGuild(data, guildId) {
   data.guilds[guildId] ??= {};
   data.guilds[guildId].users ??= {};
   return data.guilds[guildId];
+}
+
+function getExistingGuild(data, guildId) {
+  if (!guildId) throw new Error('서버에서만 사용할 수 있는 기능입니다.');
+  return data.guilds?.[guildId] ?? null;
 }
 
 function getOrCreateMarket(guild, now) {
@@ -1579,10 +1678,12 @@ function normalizePriceAlert(alert = {}, fallbackId = null, guild = null) {
     stockId: guild ? normalizeStockIdForGuild(safeAlert.stockId, guild) : normalizeStockId(safeAlert.stockId),
     condition: normalizeAlertCondition(safeAlert.condition),
     targetPrice: normalizePositiveStoredInteger(safeAlert.targetPrice, 1),
+    channelId: normalizeOptionalStringId(safeAlert.channelId),
     status: normalizeAlertStatus(safeAlert.status),
     createdAt: normalizeNonNegativeInteger(safeAlert.createdAt),
     triggeredAt: normalizeNonNegativeInteger(safeAlert.triggeredAt),
     triggeredPrice: normalizeNonNegativeInteger(safeAlert.triggeredPrice),
+    notifiedAt: normalizeNonNegativeInteger(safeAlert.notifiedAt),
     deletedAt: normalizeNonNegativeInteger(safeAlert.deletedAt)
   };
 }
@@ -2364,6 +2465,11 @@ function normalizePositiveStoredInteger(value, fallback) {
 function normalizeNonNegativeInteger(value) {
   const normalized = Number(value);
   return Number.isSafeInteger(normalized) && normalized >= 0 ? normalized : 0;
+}
+
+function normalizeOptionalStringId(value) {
+  const normalized = String(value ?? '').trim();
+  return normalized || null;
 }
 
 function normalizeInteger(value) {
