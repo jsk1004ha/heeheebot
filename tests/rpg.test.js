@@ -4,12 +4,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { createSqliteStore } from '../src/storage/sqlite-store.js';
-import { getRpgCommandPayloads } from '../src/commands/rpg.js';
+import { getRpgCommandPayloads, handleRpgCommand } from '../src/commands/rpg.js';
 import { EconomyService } from '../src/systems/economy.js';
 import {
+  getRpgAdventureGuide,
   normalizeRpgDifficulty,
   normalizeRpgGender,
   resolveRpgBattle,
+  resolveRpgBossTurn,
   resolveRpgPvpTurn
 } from '../src/systems/rpg.js';
 
@@ -19,6 +21,7 @@ test('RPG 명령 payload는 전투와 상태 subcommand를 등록한다', () => 
   assert.equal(command.name, 'rpg');
   assert.deepEqual(command.options.map((option) => option.name), [
     '시작',
+    '메뉴',
     '전투',
     '대결',
     '탐험',
@@ -31,6 +34,7 @@ test('RPG 명령 payload는 전투와 상태 subcommand를 등록한다', () => 
     '장비',
     '전리품',
     '퀘스트',
+    '일일',
     '휴식',
     '가챠',
     '스킬트리',
@@ -40,8 +44,9 @@ test('RPG 명령 payload는 전투와 상태 subcommand를 등록한다', () => 
     '레이드',
     '지역'
   ]);
+  const battleCommand = command.options.find((option) => option.name === '전투');
   assert.deepEqual(
-    command.options[1].options[0].choices.map((choice) => choice.name),
+    battleCommand.options[0].choices.map((choice) => choice.name),
     ['쉬움', '보통', '어려움']
   );
   const pvpCommand = command.options.find((option) => option.name === '대결');
@@ -65,6 +70,9 @@ test('RPG 명령 payload는 전투와 상태 subcommand를 등록한다', () => 
   const areaCommand = command.options.find((option) => option.name === '지역');
   assert.deepEqual(areaCommand.options.map((option) => option.name), ['지역']);
   assert.ok(areaCommand.options[0].choices.some((choice) => choice.name.includes('하늘 성채')));
+  const dailyCommand = command.options.find((option) => option.name === '일일');
+  assert.equal(dailyCommand.options[0].required, false);
+  assert.ok(dailyCommand.options[0].choices.some((choice) => choice.name === '승리 계약'));
 });
 
 test('RPG 탐험, 던전, 전리품, 스킬트리, 전직, 스토리, 도감, 레이드는 진행도를 확장한다', async () => {
@@ -87,6 +95,9 @@ test('RPG 탐험, 던전, 전리품, 스킬트리, 전직, 스토리, 도감, �
       userId: 'user-1',
       username: '용사',
       xp: 400
+    });
+    await fixture.store.update((data) => {
+      data.guilds['guild-1'].users['user-1'].rpg.wins = 1;
     });
     const learned = await fixture.economy.learnRpgSkill({
       guildId: 'guild-1',
@@ -672,6 +683,281 @@ test('RPG 전투는 전적, 보상, 쿨다운을 한 번에 정산한다', async
   }
 });
 
+test('RPG 메뉴와 일일 의뢰는 다음 행동과 하루 진행 루프를 제공한다', async () => {
+  const fixture = await createFixture({
+    randomInt: (min) => min,
+    rpgBattleCooldownMs: 0
+  });
+
+  try {
+    const dayOne = 86_400_000;
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      characterClass: 'warrior',
+      now: dayOne
+    });
+    const initialStatus = await fixture.economy.getRpgStatus({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      now: dayOne
+    });
+
+    assert.equal(initialStatus.adventureGuide.levelProgress.current, 0);
+    assert.equal(initialStatus.adventureGuide.levelProgress.required, 100);
+    assert.equal(initialStatus.adventureGuide.recommendedAction.type, 'battle');
+    assert.equal(initialStatus.dailyMissions.length, 4);
+    assert.deepEqual(initialStatus.profile.rpg.daily.claimedMissions, {});
+
+    const battle = await fixture.economy.playRpgBattle({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      difficulty: 'easy',
+      now: dayOne + 1_000
+    });
+    const afterBattleStatus = await fixture.economy.getRpgStatus({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      now: dayOne + 2_000
+    });
+    const victoryMission = afterBattleStatus.dailyMissions.find((mission) => mission.id === 'victory_contract');
+    const trainingMission = afterBattleStatus.dailyMissions.find((mission) => mission.id === 'field_training');
+
+    assert.equal(battle.profile.rpg.daily.battles, 1);
+    assert.equal(battle.profile.rpg.daily.wins, 1);
+    assert.equal(victoryMission.canClaim, true);
+    assert.equal(trainingMission.current, 1);
+    assert.equal(trainingMission.required, 2);
+    assert.equal(afterBattleStatus.adventureGuide.recommendedAction.type, 'daily_claim');
+
+    const claimed = await fixture.economy.claimRpgDailyMission({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      missionId: 'victory_contract',
+      now: dayOne + 3_000
+    });
+    const duplicate = await fixture.economy.claimRpgDailyMission({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      missionId: 'victory_contract',
+      now: dayOne + 4_000
+    }).catch((error) => error);
+    const nextDayStatus = await fixture.economy.getRpgStatus({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      now: dayOne * 2
+    });
+    const pureGuide = getRpgAdventureGuide(nextDayStatus.profile, {
+      now: dayOne * 2,
+      cooldownRemainingMs: 0,
+      xpForNextLevel: fixture.economy.xpForNextLevel.bind(fixture.economy)
+    });
+
+    assert.equal(claimed.rewards.xp, 100);
+    assert.equal(claimed.rewards.coins, 260);
+    assert.equal(claimed.profile.rpg.daily.claimedMissions.victory_contract, dayOne + 3_000);
+    assert.match(duplicate.message, /이미 완료/);
+    assert.equal(nextDayStatus.profile.rpg.daily.battles, 0);
+    assert.deepEqual(nextDayStatus.profile.rpg.daily.claimedMissions, {});
+    assert.equal(nextDayStatus.dailyMissions.find((mission) => mission.id === 'victory_contract').canClaim, false);
+    assert.equal(pureGuide.recommendedAction.type, 'quest_claim');
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('RPG 허브 버튼, 지역 진행도, 직업 숙련, 수동 보스전이 게임 루프를 만든다', async () => {
+  const fixture = await createFixture({
+    randomInt: (_min, max) => max,
+    rpgBattleCooldownMs: 0
+  });
+
+  try {
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      characterClass: 'warrior',
+      now: 10_000
+    });
+    const menuInteraction = createRpgInteraction('메뉴');
+    await handleRpgCommand(menuInteraction, fixture.economy);
+
+    assert.match(menuInteraction.replies[0].embeds[0].data.title, /RPG 메인 허브/);
+    assert.deepEqual(
+      menuInteraction.replies[0].components
+        .flatMap((row) => row.components)
+        .map((button) => button.data.custom_id),
+      [
+        'rpg_quick:user-1:battle',
+        'rpg_quick:user-1:explore',
+        'rpg_quick:user-1:dungeon',
+        'rpg_quick:user-1:daily',
+        'rpg_quick:user-1:area'
+      ]
+    );
+
+    const battle = await fixture.economy.playRpgBattle({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      difficulty: 'easy',
+      now: 11_000
+    });
+    const progressedStatus = await fixture.economy.getRpgStatus({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      now: 12_000
+    });
+    const forestProgress = progressedStatus.areaProgress.find((area) => area.id === 'forest');
+    const berserkerPath = progressedStatus.classPaths.find((entry) => entry.id === 'berserker');
+
+    assert.equal(battle.profile.rpg.classMastery.warrior.level >= 1, true);
+    assert.equal(forestProgress.progress > 0, true);
+    assert.equal(progressedStatus.classMastery.classId, 'warrior');
+    assert.equal(berserkerPath.questReady, true);
+
+    await fixture.economy.awardActivityXp({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      xp: 400
+    });
+    const advanced = await fixture.economy.advanceRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      advancedClass: 'berserker'
+    });
+
+    assert.equal(advanced.profile.rpg.advancedClass, 'berserker');
+
+    const encounter = await fixture.economy.startRpgBossEncounter({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      bossId: 'slime_king',
+      now: 20_000
+    });
+    const firstTurn = await fixture.economy.playRpgBossTurn({
+      guildId: 'guild-1',
+      session: encounter.session,
+      userId: 'user-1',
+      action: 'guard',
+      now: 21_000
+    });
+    const finishingSession = {
+      ...firstTurn.session,
+      boss: {
+        ...firstTurn.session.boss,
+        hp: 1
+      }
+    };
+    const finished = await fixture.economy.playRpgBossTurn({
+      guildId: 'guild-1',
+      session: finishingSession,
+      userId: 'user-1',
+      action: 'power_strike',
+      now: 22_000
+    });
+
+    assert.equal(encounter.session.type, 'boss_turn');
+    assert.equal(firstTurn.completed, false);
+    assert.equal(firstTurn.turn.action, 'guard');
+    assert.equal(firstTurn.turn.bossDamage < encounter.session.boss.power, true);
+    assert.equal(finished.completed, true);
+    assert.equal(finished.battle.win, true);
+    assert.equal(finished.profile.rpg.bossKills.slime_king, 1);
+    assert.equal(finished.profile.rpg.areaProgress.forest >= forestProgress.progress, true);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('RPG 보스 턴 판정은 공격, 방어, 포션 행동을 구분한다', () => {
+  const attack = resolveRpgBossTurn({
+    player: {
+      hp: 70,
+      maxHp: 100,
+      mp: 30,
+      maxMp: 40,
+      level: 3,
+      characterClass: 'warrior',
+      characterGender: 'female',
+      stats: { attack: 10, defense: 2 },
+      inventory: { potion: 1 },
+      availableSkillIds: ['basic', 'power_strike']
+    },
+    boss: {
+      hp: 30,
+      maxHp: 30,
+      power: 12
+    },
+    action: 'power_strike',
+    randomInt: () => 20
+  });
+  const guard = resolveRpgBossTurn({
+    player: {
+      hp: 70,
+      maxHp: 100,
+      mp: 30,
+      maxMp: 40,
+      level: 3,
+      characterClass: 'warrior',
+      characterGender: 'female',
+      stats: { attack: 10, defense: 2 },
+      inventory: { potion: 1 },
+      availableSkillIds: ['basic', 'power_strike']
+    },
+    boss: {
+      hp: 30,
+      maxHp: 30,
+      power: 12
+    },
+    action: 'guard',
+    randomInt: () => 20
+  });
+  const potion = resolveRpgBossTurn({
+    player: {
+      hp: 50,
+      maxHp: 100,
+      mp: 30,
+      maxMp: 40,
+      level: 3,
+      characterClass: 'warrior',
+      characterGender: 'female',
+      stats: { attack: 10, defense: 2 },
+      inventory: { potion: 1 },
+      availableSkillIds: ['basic', 'power_strike']
+    },
+    boss: {
+      hp: 30,
+      maxHp: 30,
+      power: 12
+    },
+    action: 'potion',
+    randomInt: () => 20
+  });
+
+  assert.equal(attack.skillId, 'power_strike');
+  assert.equal(attack.mpCost, 8);
+  assert.equal(attack.bossHpAfter < 30, true);
+  assert.equal(guard.action, 'guard');
+  assert.equal(guard.playerDamage, 0);
+  assert.equal(guard.bossDamage < attack.bossDamage, true);
+  assert.equal(potion.action, 'potion');
+  assert.equal(potion.healed, 40);
+  assert.equal(potion.consumedItemId, 'potion');
+});
+
 test('기존 프로필에 RPG 상태가 없어도 기본값을 채운다', async () => {
   const fixture = await createFixture();
 
@@ -733,6 +1019,51 @@ async function createFixture(options = {}) {
         recursive: true,
         force: true
       });
+    }
+  };
+}
+
+function createRpgInteraction(subcommand, {
+  stringOptions = {},
+  integerOptions = {}
+} = {}) {
+  const replies = [];
+
+  return {
+    guildId: 'guild-1',
+    channelId: 'channel-1',
+    commandName: 'rpg',
+    user: {
+      id: 'user-1',
+      username: '용사',
+      bot: false
+    },
+    replies,
+    isButton() {
+      return false;
+    },
+    isChatInputCommand() {
+      return true;
+    },
+    inGuild() {
+      return true;
+    },
+    options: {
+      getSubcommand() {
+        return subcommand;
+      },
+      getString(name) {
+        return stringOptions[name] ?? null;
+      },
+      getInteger(name) {
+        return integerOptions[name] ?? null;
+      },
+      getUser() {
+        return null;
+      }
+    },
+    async reply(payload) {
+      replies.push(payload);
     }
   };
 }

@@ -13,6 +13,7 @@ import {
   getRpgBossOptions,
   getRpgClassConfig,
   getRpgClassOptions,
+  getRpgDailyMissionOptions,
   getRpgDifficultyOptions,
   getRpgEquipmentItemOptions,
   getRpgGachaBannerOptions,
@@ -35,8 +36,10 @@ import { formatDuration } from './economy.js';
 
 const RPG_PVP_CHALLENGE_TTL_MS = 60_000;
 const RPG_PVP_SESSION_TTL_MS = 10 * 60_000;
+const RPG_BOSS_SESSION_TTL_MS = 10 * 60_000;
 const pendingRpgPvpChallenges = new Map();
 const activeRpgPvpSessions = new Map();
+const activeRpgBossSessions = new Map();
 
 export const rpgCommands = [
   new SlashCommandBuilder()
@@ -58,6 +61,11 @@ export const rpgCommands = [
             .setDescription('캐릭터 외형')
             .addChoices(...getRpgGenderOptions())
         )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('메뉴')
+        .setDescription('RPG 메인 허브에서 다음 목표와 추천 행동을 봅니다.')
     )
     .addSubcommand((subcommand) =>
       subcommand
@@ -125,19 +133,13 @@ export const rpgCommands = [
     .addSubcommand((subcommand) =>
       subcommand
         .setName('보스')
-        .setDescription('강력한 보스에게 도전합니다.')
+        .setDescription('강력한 보스에게 수동 턴제 전투로 도전합니다.')
         .addStringOption((option) =>
           option
             .setName('보스')
             .setDescription('도전할 보스')
             .setRequired(true)
             .addChoices(...getRpgBossOptions())
-        )
-        .addStringOption((option) =>
-          option
-            .setName('스킬')
-            .setDescription('사용할 전투 스킬')
-            .addChoices(...getRpgSkillOptions())
         )
     )
     .addSubcommand((subcommand) =>
@@ -210,6 +212,17 @@ export const rpgCommands = [
             .setName('퀘스트')
             .setDescription('보상을 받을 퀘스트')
             .addChoices(...getRpgQuestOptions())
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('일일')
+        .setDescription('오늘의 RPG 의뢰를 확인하거나 보상을 받습니다.')
+        .addStringOption((option) =>
+          option
+            .setName('임무')
+            .setDescription('보상을 받을 일일 의뢰. 비우면 의뢰판을 봅니다.')
+            .addChoices(...getRpgDailyMissionOptions())
         )
     )
     .addSubcommand((subcommand) =>
@@ -330,6 +343,15 @@ export async function handleRpgCommand(interaction, economy) {
     if (interaction.customId.startsWith('rpg_gear_equip:')) {
       return handleRpgGearEquipButton(interaction, economy);
     }
+    if (interaction.customId.startsWith('rpg_daily:')) {
+      return handleRpgDailyMissionButton(interaction, economy);
+    }
+    if (interaction.customId.startsWith('rpg_quick:')) {
+      return handleRpgQuickButton(interaction, economy);
+    }
+    if (interaction.customId.startsWith('rpg_boss_action:')) {
+      return handleRpgBossActionButton(interaction, economy);
+    }
     return handleRpgPvpButton(interaction, economy);
   }
 
@@ -375,6 +397,21 @@ export async function handleRpgCommand(interaction, economy) {
     });
 
     await replyWithRpgAssets(interaction, formatRpgStart(user, result), [result.heroAssetId]);
+    return true;
+  }
+
+  if (subcommand === '메뉴') {
+    const status = await economy.getRpgStatus({
+      guildId,
+      userId: user.id,
+      username: user.username
+    });
+    await replyWithRpgAssets(
+      interaction,
+      formatRpgMainMenu(user, status),
+      [status.heroAssetId, status.currentArea.backgroundAssetId],
+      { components: createRpgMainMenuRows(status, user.id) }
+    );
     return true;
   }
 
@@ -474,15 +511,13 @@ export async function handleRpgCommand(interaction, economy) {
 
   if (subcommand === '보스') {
     const bossId = interaction.options.getString('보스', true);
-    const skill = interaction.options.getString('스킬') ?? 'basic';
 
     try {
-      const result = await economy.playRpgBossBattle({
+      const result = await economy.startRpgBossEncounter({
         guildId,
         userId: user.id,
         username: user.username,
-        bossId,
-        skill
+        bossId
       });
 
       if (!result.battled) {
@@ -493,7 +528,16 @@ export async function handleRpgCommand(interaction, economy) {
         return true;
       }
 
-      await replyWithRpgAssets(interaction, formatBattleResult(user, result), getBattleAssetIds(result));
+      activeRpgBossSessions.set(result.session.id, {
+        session: result.session,
+        expiresAt: Date.now() + RPG_BOSS_SESSION_TTL_MS
+      });
+      await replyWithRpgAssets(
+        interaction,
+        formatRpgBossEncounter(user, result),
+        getBossEncounterAssetIds(result),
+        { components: [createRpgBossActionRow(result.session)] }
+      );
     } catch (error) {
       await interaction.reply({
         content: `보스전 실패: ${error.message}`,
@@ -665,6 +709,40 @@ export async function handleRpgCommand(interaction, economy) {
     } catch (error) {
       await interaction.reply({
         content: `퀘스트 보상 실패: ${error.message}`,
+        ephemeral: true
+      });
+    }
+
+    return true;
+  }
+
+  if (subcommand === '일일') {
+    const missionId = interaction.options.getString('임무');
+
+    if (!missionId) {
+      const status = await economy.getRpgStatus({
+        guildId,
+        userId: user.id,
+        username: user.username
+      });
+      await interaction.reply({
+        content: formatRpgDailyMissions(status),
+        components: createRpgDailyRows(status, user.id)
+      });
+      return true;
+    }
+
+    try {
+      const result = await economy.claimRpgDailyMission({
+        guildId,
+        userId: user.id,
+        username: user.username,
+        missionId
+      });
+      await interaction.reply(formatRpgDailyClaim(result));
+    } catch (error) {
+      await interaction.reply({
+        content: `일일 의뢰 보상 실패: ${error.message}`,
         ephemeral: true
       });
     }
@@ -1206,6 +1284,190 @@ async function handleRpgGearEquipButton(interaction, economy) {
   return true;
 }
 
+async function handleRpgDailyMissionButton(interaction, economy) {
+  const [, userId, missionId] = interaction.customId.split(':');
+
+  if (interaction.user.id !== userId) {
+    await interaction.reply({
+      content: '이 일일 의뢰 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
+      ephemeral: true
+    });
+    return true;
+  }
+
+  try {
+    const result = await economy.claimRpgDailyMission({
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username,
+      missionId
+    });
+    await interaction.update({
+      content: formatRpgDailyClaim(result),
+      components: []
+    });
+  } catch (error) {
+    await interaction.reply({
+      content: `일일 의뢰 보상 실패: ${error.message}`,
+      ephemeral: true
+    });
+  }
+
+  return true;
+}
+
+async function handleRpgQuickButton(interaction, economy) {
+  const [, userId, action] = interaction.customId.split(':');
+
+  if (interaction.user.id !== userId) {
+    await interaction.reply({
+      content: '이 RPG 메뉴 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
+      ephemeral: true
+    });
+    return true;
+  }
+
+  try {
+    if (action === 'battle') {
+      const result = await economy.playRpgBattle({
+        guildId: interaction.guildId,
+        userId: interaction.user.id,
+        username: interaction.user.username,
+        difficulty: 'normal'
+      });
+
+      if (!result.battled) {
+        await interaction.reply({
+          content: `⏳ 아직 다시 전투할 수 없습니다. 남은 시간: ${formatDuration(result.remainingMs)}`,
+          ephemeral: true
+        });
+        return true;
+      }
+
+      await updateWithRpgAssets(interaction, formatBattleResult(interaction.user, result), getBattleAssetIds(result), {
+        components: []
+      });
+      return true;
+    }
+
+    if (action === 'explore') {
+      const result = await economy.exploreRpg({
+        guildId: interaction.guildId,
+        userId: interaction.user.id,
+        username: interaction.user.username
+      });
+      await updateWithRpgAssets(interaction, formatRpgExplore(interaction.user, result), getExploreAssetIds(result), {
+        components: []
+      });
+      return true;
+    }
+
+    if (action === 'dungeon') {
+      const result = await economy.runRpgDungeon({
+        guildId: interaction.guildId,
+        userId: interaction.user.id,
+        username: interaction.user.username,
+        depth: 3
+      });
+      await updateWithRpgAssets(interaction, formatRpgDungeon(interaction.user, result), getDungeonAssetIds(result), {
+        components: []
+      });
+      return true;
+    }
+
+    const status = await economy.getRpgStatus({
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username
+    });
+
+    if (action === 'daily') {
+      await interaction.update({
+        content: formatRpgDailyMissions(status),
+        components: createRpgDailyRows(status, interaction.user.id)
+      });
+      return true;
+    }
+
+    if (action === 'area') {
+      await interaction.update({
+        content: formatRpgAreas(status),
+        components: createRpgAreaRows(status, interaction.user.id)
+      });
+      return true;
+    }
+  } catch (error) {
+    await interaction.reply({
+      content: `RPG 빠른 실행 실패: ${error.message}`,
+      ephemeral: true
+    });
+    return true;
+  }
+
+  await interaction.reply({
+    content: '알 수 없는 RPG 메뉴 버튼입니다.',
+    ephemeral: true
+  });
+  return true;
+}
+
+async function handleRpgBossActionButton(interaction, economy) {
+  const [, sessionId, action] = interaction.customId.split(':');
+  const entry = activeRpgBossSessions.get(sessionId);
+
+  if (!entry || entry.expiresAt < Date.now()) {
+    activeRpgBossSessions.delete(sessionId);
+    await interaction.reply({
+      content: '만료된 RPG 보스전입니다. `/rpg 보스`로 다시 도전하세요.',
+      ephemeral: true
+    });
+    return true;
+  }
+
+  if (entry.session.userId !== interaction.user.id) {
+    await interaction.reply({
+      content: '이 RPG 보스전은 시작한 유저만 조작할 수 있습니다.',
+      ephemeral: true
+    });
+    return true;
+  }
+
+  try {
+    const result = await economy.playRpgBossTurn({
+      guildId: interaction.guildId,
+      session: entry.session,
+      userId: interaction.user.id,
+      action
+    });
+
+    if (!result.completed) {
+      activeRpgBossSessions.set(sessionId, {
+        session: result.session,
+        expiresAt: Date.now() + RPG_BOSS_SESSION_TTL_MS
+      });
+      await updateWithRpgAssets(
+        interaction,
+        formatRpgBossTurn(interaction.user, result),
+        getBossEncounterAssetIds(result),
+        { components: [createRpgBossActionRow(result.session)] }
+      );
+      return true;
+    }
+
+    activeRpgBossSessions.delete(sessionId);
+    await updateWithRpgAssets(interaction, formatRpgBossFinish(interaction.user, result), getBattleAssetIds(result), {
+      components: []
+    });
+  } catch (error) {
+    await interaction.reply({
+      content: `RPG 보스 행동 실패: ${error.message}`,
+      ephemeral: true
+    });
+  }
+
+  return true;
+}
+
 function formatRpgCharacterCreation(user, status) {
   const { profile, classConfig, genderConfig, currentArea } = status;
   const classRows = profile.rpg.unlockedClasses
@@ -1275,6 +1537,61 @@ function formatBattleResult(user, result) {
     `피해: -${battle.damageTaken.toLocaleString()} HP / 현재 HP: **${profile.rpg.hp.toLocaleString()}** / MP: **${profile.rpg.mp.toLocaleString()}**`,
     `전적: ${profile.rpg.wins}승 ${profile.rpg.losses}패 / 총 ${profile.rpg.battles}전`,
     `현재 잔액: **${profile.balance.toLocaleString()}원**${dropText}${gearText}${levelText}`
+  ].join('\n');
+}
+
+function formatRpgBossEncounter(user, result) {
+  const { session } = result;
+
+  return [
+    `🐲 **수동 보스전 시작** — ${user}`,
+    `보스: **${session.bossLabel}** / 지역: **${session.areaLabel}**`,
+    `내 HP/MP: **${session.player.hp}/${session.player.maxHp} HP**, **${session.player.mp}/${session.player.maxMp} MP**`,
+    `보스 HP: **${session.boss.hp}/${session.boss.maxHp}** / 위협도 **${session.boss.power}**`,
+    '',
+    '아래 버튼으로 공격, 스킬, 방어, 포션을 직접 선택하세요.'
+  ].join('\n');
+}
+
+function formatRpgBossTurn(user, result) {
+  const { session, turn } = result;
+  const actionText = turn.action === 'guard'
+    ? '방어 태세'
+    : turn.action === 'potion'
+      ? `회복 포션 사용 (+${turn.healed} HP)`
+      : `${turn.skillLabel ?? '기본 공격'} (피해 ${turn.playerDamage})`;
+
+  return [
+    `🐲 **수동 보스전** — ${user}`,
+    `보스: **${session.bossLabel}** / ${session.turn}턴`,
+    `행동: **${actionText}**`,
+    `보스 반격: **-${turn.bossDamage} HP**`,
+    `내 HP/MP: **${session.player.hp}/${session.player.maxHp} HP**, **${session.player.mp}/${session.player.maxMp} MP**`,
+    `보스 HP: **${session.boss.hp}/${session.boss.maxHp}**`,
+    '',
+    '다음 행동을 선택하세요.'
+  ].join('\n');
+}
+
+function formatRpgBossFinish(user, result) {
+  const { battle, profile, turn } = result;
+  const outcomeText = battle.win ? '승리' : '패배';
+  const gearText = result.gearDrop
+    ? `\n🧰 보스 전리품: **${formatGearLabel(result.gearDrop)}**`
+    : '';
+  const levelText = result.leveledUp
+    ? `\n🎉 레벨업! Lv.${profile.level} / 레벨 보너스 +${result.levelReward.toLocaleString()}원`
+    : '';
+
+  return [
+    `🐲 **수동 보스전 종료** — ${user}`,
+    `보스: **${battle.bossLabel}** / 결과: **${outcomeText}**`,
+    `마지막 행동 피해: **${turn.playerDamage}** / 보스 반격: **${turn.bossDamage}**`,
+    battle.win
+      ? `보상: +${result.xpGained.toLocaleString()} XP, +${result.coinReward.toLocaleString()}원`
+      : '보상: 없음',
+    `현재 HP/MP: **${profile.rpg.hp.toLocaleString()} / ${profile.rpg.mp.toLocaleString()}**`,
+    `보스 처치: **${profile.rpg.bossKills[battle.bossId] ?? 0}회**${gearText}${levelText}`
   ].join('\n');
 }
 
@@ -1353,6 +1670,38 @@ function formatRpgPvpBlocked(challenge, result) {
   ].join('\n');
 }
 
+function formatRpgMainMenu(user, status) {
+  const {
+    profile,
+    classConfig,
+    genderConfig,
+    advancedClassConfig,
+    currentArea,
+    derivedStats,
+    adventureGuide
+  } = status;
+  const dailySummary = formatDailyMissionSummary(status.dailyMissions);
+  const advancedText = advancedClassConfig ? ` → ${advancedClassConfig.label}` : '';
+  const nextAreaText = adventureGuide.nextLockedArea
+    ? `다음 지역: **${adventureGuide.nextLockedArea.label}** Lv.${adventureGuide.nextLockedArea.unlockLevel}+`
+    : '모든 지역 해금 완료';
+
+  return [
+    `🎮 **RPG 메인 허브** — ${user.username}`,
+    `캐릭터: **${genderConfig.label} ${classConfig.label}${advancedText}** / 지역: **${currentArea.label}**`,
+    `Lv.${profile.level} ${adventureGuide.levelProgress.bar} **${adventureGuide.levelProgress.current}/${adventureGuide.levelProgress.required} XP** (${adventureGuide.levelProgress.percent}%)`,
+    `HP **${profile.rpg.hp}/${derivedStats.maxHp}** / MP **${profile.rpg.mp}/${derivedStats.maxMp}** / 전투력 **${adventureGuide.powerScore}**`,
+    `메인 목표: **${adventureGuide.mainObjective.label}** — ${adventureGuide.mainObjective.progressText}`,
+    `추천 행동: **${adventureGuide.recommendedAction.label}** (\`${adventureGuide.recommendedAction.command}\`)`,
+    `이유: ${adventureGuide.recommendedAction.reason}`,
+    nextAreaText,
+    '',
+    `오늘 의뢰: ${dailySummary}`,
+    '',
+    '빠른 루프: `/rpg 전투` → `/rpg 퀘스트`/`/rpg 일일` → `/rpg 장비` → `/rpg 지역`'
+  ].join('\n');
+}
+
 function formatRpgStatus(user, status) {
   const {
     profile,
@@ -1365,6 +1714,9 @@ function formatRpgStatus(user, status) {
     derivedStats,
     availableSkillIds
   } = status;
+  const { adventureGuide } = status;
+  const classMastery = status.classMastery;
+  const currentAreaProgress = status.areaProgress.find((area) => area.id === profile.rpg.currentArea);
   const winRate = profile.rpg.battles === 0
     ? 0
     : Math.round((profile.rpg.wins / profile.rpg.battles) * 100);
@@ -1380,10 +1732,15 @@ function formatRpgStatus(user, status) {
   return [
     `📜 **${user.username}님의 RPG 상태**`,
     `레벨: **Lv.${profile.level}** / 경험치: **${profile.totalXp.toLocaleString()} XP**`,
+    `레벨 진행: ${adventureGuide.levelProgress.bar} **${adventureGuide.levelProgress.current}/${adventureGuide.levelProgress.required} XP** (${adventureGuide.levelProgress.percent}%)`,
     `HP: **${profile.rpg.hp.toLocaleString()} / ${derivedStats.maxHp.toLocaleString()}**`,
     `MP: **${profile.rpg.mp.toLocaleString()} / ${derivedStats.maxMp.toLocaleString()}**`,
-    `스탯: 공격력 **${derivedStats.attack}** / 방어력 **${derivedStats.defense}**`,
+    `스탯: 공격력 **${derivedStats.attack}** / 방어력 **${derivedStats.defense}** / 전투력 **${adventureGuide.powerScore}**`,
     `직업: **${classConfig.label}**${advancedText} / 성별: **${genderConfig.label}** / 현재 지역: **${currentArea.label}**`,
+    `직업 숙련: **${classMastery.classLabel} Lv.${classMastery.level}** ${classMastery.progressBar} ${classMastery.progress}/${classMastery.required}`,
+    `지역 탐사율: **${currentArea.label} ${currentAreaProgress?.progress ?? 0}%** ${currentAreaProgress?.progressBar ?? ''}`,
+    `다음 목표: **${adventureGuide.mainObjective.label}** — ${adventureGuide.mainObjective.progressText}`,
+    `추천 행동: **${adventureGuide.recommendedAction.label}** (\`${adventureGuide.recommendedAction.command}\`)`,
     `스킬 포인트: **${status.skillPoints.available}/${status.skillPoints.earned} 사용 가능** / 전리품 장비: **${Object.keys(profile.rpg.gearInventory).length}개**`,
     `해금 직업: **${profile.rpg.unlockedClasses.length}개** / 사용 가능 스킬: **${availableSkillIds.length}개**`,
     `해금 지역: **${unlockedAreas.map((area) => area.label).join(', ')}**`,
@@ -1392,7 +1749,39 @@ function formatRpgStatus(user, status) {
     `승률: **${winRate}%** / 발견 몬스터: **${discoveredCount}종**`,
     `가챠: **${profile.rpg.gacha.totalPulls.toLocaleString()}회** / 천장 카운트: **${profile.rpg.gacha.pity.toLocaleString()}**`,
     cooldownText,
+    `오늘 의뢰: ${formatDailyMissionSummary(status.dailyMissions)}`,
     `보유금: **${profile.balance.toLocaleString()}원**`
+  ].join('\n');
+}
+
+function formatRpgDailyMissions(status) {
+  const rows = status.dailyMissions.map((mission) => {
+    const state = mission.claimed ? '✅ 수령 완료' : mission.canClaim ? '🎁 보상 가능' : '진행 중';
+    const itemText = formatRewardItems(mission.rewards.items);
+    return `- **${mission.label}** — ${state} (${mission.current}/${mission.required})\n  ${mission.description} / 보상 ${mission.rewards.xp} XP, ${mission.rewards.coins}원${itemText ? `, ${itemText}` : ''}`;
+  });
+
+  return [
+    '📋 **오늘의 RPG 의뢰판**',
+    `오늘 진행: 전투 **${status.profile.rpg.daily.battles}회**, 승리 **${status.profile.rpg.daily.wins}회**, 탐험 **${status.profile.rpg.daily.explores}회**, 던전 **${status.profile.rpg.daily.dungeons}회**`,
+    rows.join('\n'),
+    '',
+    '보상 가능한 의뢰는 아래 버튼으로 바로 수령하거나 `/rpg 일일 임무:<이름>`으로 받을 수 있습니다.'
+  ].join('\n');
+}
+
+function formatRpgDailyClaim(result) {
+  const itemRewards = formatRewardItems(result.rewards.items);
+  const levelText = result.leveledUp
+    ? `\n🎉 레벨업! Lv.${result.profile.level} / 레벨 보너스 +${result.levelReward.toLocaleString()}원`
+    : '';
+
+  return [
+    '📋 **일일 의뢰 보상 수령**',
+    `의뢰: **${result.mission.label}**`,
+    `보상: +${result.rewards.xp.toLocaleString()} XP, +${result.rewards.coins.toLocaleString()}원${itemRewards ? `, ${itemRewards}` : ''}`,
+    `오늘 완료한 의뢰: **${Object.keys(result.profile.rpg.daily.claimedMissions).length.toLocaleString()}개**`,
+    `현재 경험치: **${result.profile.totalXp.toLocaleString()} XP** / 보유금: **${result.profile.balance.toLocaleString()}원**${levelText}`
   ].join('\n');
 }
 
@@ -1614,21 +2003,20 @@ function formatRpgLearnSkill(result) {
 
 function formatRpgClassPath(status) {
   const { profile, classConfig, advancedClassConfig, derivedStats } = status;
-  const rows = getRpgAdvancedClassOptions().map((option) => {
-    const advanced = getRpgAdvancedClassConfig(option.value);
-    const baseClass = getRpgClassConfig(advanced.baseClass);
-    const isCurrent = profile.rpg.advancedClass === option.value;
-    const isSameLineage = profile.rpg.characterClass === advanced.baseClass;
-    const levelReady = profile.level >= advanced.unlockLevel;
-    const state = isCurrent
+  const rows = status.classPaths.map((advanced) => {
+    const state = advanced.current
       ? '✅ 현재 전직'
-      : !isSameLineage
-        ? `${baseClass.label} 계열 전용`
-        : levelReady
+      : !advanced.classAllowed
+        ? `${advanced.baseClassLabel} 계열 전용`
+        : advanced.canAdvance
           ? '✨ 전직 가능'
-          : `🔒 Lv.${advanced.unlockLevel} 필요`;
+          : [
+              advanced.levelReady ? null : `Lv.${advanced.unlockLevel}`,
+              advanced.masteryReady ? null : `숙련 Lv.${advanced.requiredMasteryLevel}`,
+              advanced.questReady ? null : `${advanced.questLabel} ${advanced.questCurrent}/${advanced.questRequired}`
+            ].filter(Boolean).join(' 필요, ');
 
-    return `- **${advanced.label}** — ${baseClass.label} Lv.${advanced.unlockLevel}+ / ${advanced.description} / ${state}`;
+    return `- **${advanced.label}** — ${advanced.baseClassLabel} Lv.${advanced.unlockLevel}+ / 숙련 Lv.${advanced.requiredMasteryLevel}+ / 전직퀘 ${advanced.questLabel} (${advanced.questCurrent}/${advanced.questRequired}) / ${state}`;
   });
   const currentAdvanced = advancedClassConfig
     ? ` → **${advancedClassConfig.label}**`
@@ -1637,6 +2025,7 @@ function formatRpgClassPath(status) {
   return [
     '🧬 **RPG 전직 트리**',
     `현재 계열: **${classConfig.label}**${currentAdvanced}`,
+    `직업 숙련: **Lv.${status.classMastery.level}** ${status.classMastery.progressBar} ${status.classMastery.progress}/${status.classMastery.required}`,
     `현재 레벨: **Lv.${profile.level}** / 스탯 공격력 **${derivedStats.attack}** · 방어력 **${derivedStats.defense}** · HP **${derivedStats.maxHp}** · MP **${derivedStats.maxMp}**`,
     rows.join('\n'),
     '',
@@ -1772,10 +2161,11 @@ function formatRpgAreas(status) {
   const currentAreaId = status.profile.rpg.currentArea;
   const rows = getRpgAreaOptions().map((option) => {
     const area = getRpgAreaConfig(option.value);
+    const progress = status.areaProgress.find((entry) => entry.id === option.value);
     const unlocked = unlockedAreaIds.has(option.value);
     const current = option.value === currentAreaId ? ' 📍현재' : '';
     const state = unlocked ? `입장 가능${current}` : `🔒 Lv.${area.unlockLevel} 필요`;
-    return `${unlocked ? '✅' : '🔒'} **${area.label}** — ${state} / XP ×${area.xpMultiplier}, 돈 ×${area.coinMultiplier}\n  ${area.description}`;
+    return `${unlocked ? '✅' : '🔒'} **${area.label}** — ${state} / 탐사율 ${progress?.progress ?? 0}% ${progress?.progressBar ?? ''} / XP ×${area.xpMultiplier}, 돈 ×${area.coinMultiplier}\n  ${area.description}`;
   });
 
   return [
@@ -1787,8 +2177,8 @@ function formatRpgAreas(status) {
   ].join('\n');
 }
 
-async function replyWithRpgAssets(interaction, content, assetIds = []) {
-  await sendRpgAssets(interaction, 'reply', content, assetIds);
+async function replyWithRpgAssets(interaction, content, assetIds = [], extraPayload = {}) {
+  await sendRpgAssets(interaction, 'reply', content, assetIds, extraPayload);
 }
 
 async function updateWithRpgAssets(interaction, content, assetIds = [], extraPayload = {}) {
@@ -1865,6 +2255,14 @@ function getDungeonAssetIds(result) {
   ];
 }
 
+function getBossEncounterAssetIds(result) {
+  return [
+    result.session?.assets?.background,
+    result.session?.assets?.hero,
+    result.session?.assets?.monster
+  ];
+}
+
 function getGachaAssetIds(result) {
   return result.pulls
     .map((pull) => pull.reward.type === 'item'
@@ -1902,6 +2300,33 @@ function createRpgPvpActionRow(session) {
   return new ActionRowBuilder().addComponents(...buttons.slice(0, 5));
 }
 
+function createRpgBossActionRow(session) {
+  const buttons = session.player.availableSkillIds.map((skillId) => {
+    const skill = getRpgSkillConfig(skillId);
+    const costText = skill.mpCost > 0 ? ` (${skill.mpCost}MP)` : '';
+
+    return new ButtonBuilder()
+      .setCustomId(`rpg_boss_action:${session.id}:${skillId}`)
+      .setLabel(`${skill.label}${costText}`)
+      .setStyle(skillId === 'basic' ? ButtonStyle.Primary : ButtonStyle.Success)
+      .setDisabled(session.player.mp < skill.mpCost);
+  });
+
+  buttons.push(
+    new ButtonBuilder()
+      .setCustomId(`rpg_boss_action:${session.id}:guard`)
+      .setLabel('방어')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(`rpg_boss_action:${session.id}:potion`)
+      .setLabel(`포션 (${session.player.inventory.potion ?? 0})`)
+      .setStyle(ButtonStyle.Danger)
+      .setDisabled((session.player.inventory.potion ?? 0) <= 0)
+  );
+
+  return new ActionRowBuilder().addComponents(...buttons.slice(0, 5));
+}
+
 function createRpgStartRows(status, userId) {
   const genderOptions = getRpgGenderOptions();
   const buttons = status.profile.rpg.unlockedClasses
@@ -1917,20 +2342,14 @@ function createRpgStartRows(status, userId) {
 }
 
 function createRpgAdvanceRows(status, userId) {
-  const buttons = getRpgAdvancedClassOptions()
-    .filter((option) => {
-      const advanced = getRpgAdvancedClassConfig(option.value);
-      return status.profile.rpg.characterClass === advanced.baseClass
-        && status.profile.level >= advanced.unlockLevel
-        && status.profile.rpg.advancedClass !== option.value;
-    })
-    .map((option) => {
-      const advanced = getRpgAdvancedClassConfig(option.value);
-      return new ButtonBuilder()
-        .setCustomId(`rpg_advance:${userId}:${option.value}`)
+  const buttons = status.classPaths
+    .filter((advanced) => advanced.canAdvance)
+    .map((advanced) =>
+      new ButtonBuilder()
+        .setCustomId(`rpg_advance:${userId}:${advanced.id}`)
         .setLabel(`${advanced.label} 전직`)
-        .setStyle(ButtonStyle.Success);
-    });
+        .setStyle(ButtonStyle.Success)
+    );
 
   return createButtonRows(buttons);
 }
@@ -1974,6 +2393,47 @@ function createRpgGearRows(status, userId) {
   return createButtonRows(buttons);
 }
 
+function createRpgDailyRows(status, userId) {
+  const buttons = status.dailyMissions
+    .filter((mission) => mission.canClaim)
+    .slice(0, 5)
+    .map((mission) =>
+      new ButtonBuilder()
+        .setCustomId(`rpg_daily:${userId}:${mission.id}`)
+        .setLabel(`${mission.label} 보상`)
+        .setStyle(ButtonStyle.Success)
+    );
+
+  return createButtonRows(buttons);
+}
+
+function createRpgMainMenuRows(status, userId) {
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`rpg_quick:${userId}:battle`)
+        .setLabel('전투')
+        .setStyle(ButtonStyle.Danger),
+      new ButtonBuilder()
+        .setCustomId(`rpg_quick:${userId}:explore`)
+        .setLabel('탐험')
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId(`rpg_quick:${userId}:dungeon`)
+        .setLabel('던전')
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId(`rpg_quick:${userId}:daily`)
+        .setLabel(status.dailyMissions.some((mission) => mission.canClaim) ? '일일 보상' : '일일 의뢰')
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId(`rpg_quick:${userId}:area`)
+        .setLabel('월드맵')
+        .setStyle(ButtonStyle.Secondary)
+    )
+  ];
+}
+
 function createButtonRows(buttons) {
   const rows = [];
   for (let index = 0; index < buttons.length; index += 5) {
@@ -2005,6 +2465,23 @@ function shortenButtonLabel(label, maxLength = 70) {
   return label.length > maxLength
     ? `${label.slice(0, maxLength - 1)}…`
     : label;
+}
+
+function formatDailyMissionSummary(dailyMissions = []) {
+  const claimable = dailyMissions.filter((mission) => mission.canClaim);
+  const claimed = dailyMissions.filter((mission) => mission.claimed).length;
+
+  if (claimable.length > 0) {
+    return `🎁 보상 가능 **${claimable.length}개** (${claimable.map((mission) => mission.label).join(', ')})`;
+  }
+
+  return `완료 **${claimed}/${dailyMissions.length}개**`;
+}
+
+function formatRewardItems(items = {}) {
+  return Object.entries(items)
+    .map(([itemId, count]) => `${getRpgItemConfig(itemId).label} × ${count}`)
+    .join(', ');
 }
 
 function assertValidRpgPvpTarget(user, target) {

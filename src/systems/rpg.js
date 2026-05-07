@@ -1,4 +1,6 @@
 const STARTER_CLASS_IDS = Object.freeze(['novice', 'warrior', 'mage', 'ranger']);
+const RPG_DAY_MS = 24 * 60 * 60 * 1000;
+const RPG_CLASS_MASTERY_BASE_REQUIRED = 50;
 
 const RPG_GENDERS = Object.freeze({
   male: Object.freeze({
@@ -425,6 +427,49 @@ const RPG_QUESTS = Object.freeze({
   })
 });
 
+const RPG_DAILY_MISSIONS = Object.freeze({
+  field_training: Object.freeze({
+    label: '전장 훈련',
+    description: '오늘 전투를 2회 진행합니다.',
+    requirement: Object.freeze({ type: 'battles', count: 2 }),
+    rewards: Object.freeze({
+      xp: 120,
+      coins: 300,
+      items: Object.freeze({ potion: 1 })
+    })
+  }),
+  route_scout: Object.freeze({
+    label: '정찰 의뢰',
+    description: '오늘 아무 지역이나 1회 탐험합니다.',
+    requirement: Object.freeze({ type: 'explores', count: 1 }),
+    rewards: Object.freeze({
+      xp: 80,
+      coins: 180,
+      items: Object.freeze({})
+    })
+  }),
+  dungeon_delver: Object.freeze({
+    label: '던전 조사',
+    description: '오늘 던전을 1회 클리어합니다.',
+    requirement: Object.freeze({ type: 'dungeons', count: 1 }),
+    rewards: Object.freeze({
+      xp: 150,
+      coins: 350,
+      items: Object.freeze({ mana_potion: 1 })
+    })
+  }),
+  victory_contract: Object.freeze({
+    label: '승리 계약',
+    description: '오늘 전투에서 1회 승리합니다.',
+    requirement: Object.freeze({ type: 'wins', count: 1 }),
+    rewards: Object.freeze({
+      xp: 100,
+      coins: 260,
+      items: Object.freeze({})
+    })
+  })
+});
+
 const RPG_BOSSES = Object.freeze({
   slime_king: Object.freeze({
     label: '슬라임 킹',
@@ -455,6 +500,11 @@ const RPG_ADVANCED_CLASSES = Object.freeze({
     label: '광전사',
     baseClass: 'warrior',
     unlockLevel: 3,
+    masteryLevel: 1,
+    classQuest: Object.freeze({
+      label: '첫 승전보',
+      requirement: Object.freeze({ type: 'wins', count: 1 })
+    }),
     description: '공격 특화 전직. 공격력 +5, 최대 HP +10',
     stats: Object.freeze({ attack: 5, maxHp: 10 })
   }),
@@ -462,6 +512,11 @@ const RPG_ADVANCED_CLASSES = Object.freeze({
     label: '대마법사',
     baseClass: 'mage',
     unlockLevel: 3,
+    masteryLevel: 1,
+    classQuest: Object.freeze({
+      label: '마력 정찰',
+      requirement: Object.freeze({ type: 'explores', count: 1 })
+    }),
     description: '마력 특화 전직. 공격력 +4, 최대 MP +30',
     stats: Object.freeze({ attack: 4, maxMp: 30 })
   }),
@@ -469,6 +524,11 @@ const RPG_ADVANCED_CLASSES = Object.freeze({
     label: '저격수',
     baseClass: 'ranger',
     unlockLevel: 3,
+    masteryLevel: 1,
+    classQuest: Object.freeze({
+      label: '숲길 정찰',
+      requirement: Object.freeze({ type: 'areaProgress', area: 'forest', count: 20 })
+    }),
     description: '정밀 사격 전직. 공격력 +4, 방어력 +1',
     stats: Object.freeze({ attack: 4, defense: 1 })
   }),
@@ -476,6 +536,11 @@ const RPG_ADVANCED_CLASSES = Object.freeze({
     label: '크루세이더',
     baseClass: 'paladin',
     unlockLevel: 4,
+    masteryLevel: 1,
+    classQuest: Object.freeze({
+      label: '보스 수호 맹세',
+      requirement: Object.freeze({ type: 'bossKills', count: 1 })
+    }),
     description: '성전사 전직. 방어력 +4, 최대 HP +25',
     stats: Object.freeze({ defense: 4, maxHp: 25 })
   }),
@@ -483,6 +548,11 @@ const RPG_ADVANCED_CLASSES = Object.freeze({
     label: '섀도우',
     baseClass: 'rogue',
     unlockLevel: 4,
+    masteryLevel: 1,
+    classQuest: Object.freeze({
+      label: '그림자 결투',
+      requirement: Object.freeze({ type: 'wins', count: 3 })
+    }),
     description: '암살자 전직. 공격력 +6',
     stats: Object.freeze({ attack: 6 })
   }),
@@ -490,6 +560,11 @@ const RPG_ADVANCED_CLASSES = Object.freeze({
     label: '성자',
     baseClass: 'priest',
     unlockLevel: 4,
+    masteryLevel: 1,
+    classQuest: Object.freeze({
+      label: '성소 순례',
+      requirement: Object.freeze({ type: 'explores', count: 3 })
+    }),
     description: '치유 특화 전직. 방어력 +2, 최대 MP +35',
     stats: Object.freeze({ defense: 2, maxMp: 35 })
   })
@@ -578,6 +653,30 @@ const RPG_STORY_CHAPTERS = Object.freeze({
     description: '보스의 흔적을 따라 고대 유적의 봉인을 풉니다.',
     requirement: Object.freeze({ type: 'bossKills', count: 1 }),
     rewards: Object.freeze({ xp: 280, coins: 700, items: Object.freeze({ mystic_ring: 1 }) })
+  }),
+  marsh_plague: Object.freeze({
+    label: '늪의 독안개',
+    description: '그림자 늪의 독안개 원인을 추적합니다.',
+    requirement: Object.freeze({ type: 'areaProgress', area: 'marsh', count: 30 }),
+    rewards: Object.freeze({ xp: 360, coins: 900, items: Object.freeze({ potion: 2 }) })
+  }),
+  volcano_core: Object.freeze({
+    label: '화산 심장부',
+    description: '화산 협곡 깊은 곳의 용암 핵을 조사합니다.',
+    requirement: Object.freeze({ type: 'dungeonClears', area: 'volcano', count: 1 }),
+    rewards: Object.freeze({ xp: 520, coins: 1400, items: Object.freeze({ mana_potion: 2 }) })
+  }),
+  frost_beacon: Object.freeze({
+    label: '빙결 봉화',
+    description: '빙결 봉우리의 고대 봉화를 다시 밝힙니다.',
+    requirement: Object.freeze({ type: 'areaProgress', area: 'frost', count: 50 }),
+    rewards: Object.freeze({ xp: 680, coins: 1900, items: Object.freeze({ guardian_plate: 1 }) })
+  }),
+  sky_throne: Object.freeze({
+    label: '하늘 왕좌',
+    description: '하늘 성채 최상층의 왕좌를 탈환합니다.',
+    requirement: Object.freeze({ type: 'raidClears', raid: 'dragon_rift', count: 1 }),
+    rewards: Object.freeze({ xp: 1000, coins: 3200, items: Object.freeze({ dragon_blade: 1 }) })
   })
 });
 
@@ -717,6 +816,13 @@ export function getRpgQuestOptions() {
   }));
 }
 
+export function getRpgDailyMissionOptions() {
+  return Object.entries(RPG_DAILY_MISSIONS).map(([value, mission]) => ({
+    name: mission.label,
+    value
+  }));
+}
+
 export function getRpgBossOptions() {
   return Object.entries(RPG_BOSSES).map(([value, boss]) => ({
     name: `${boss.label} (Lv.${boss.unlockLevel}+)`,
@@ -774,6 +880,10 @@ export function getRpgClassAssetId(characterClass = 'novice', characterGender = 
   return classConfig.assetIds?.[normalizedGender] ?? classConfig.assetId;
 }
 
+export function getRpgMonsterAssetId(monsterName) {
+  return MONSTER_ASSET_IDS[normalizeRpgMonsterName(monsterName)] ?? 'monster_unknown_idle';
+}
+
 export function getRpgAreaConfig(area = 'forest') {
   return RPG_AREAS[normalizeRpgArea(area)];
 }
@@ -788,6 +898,10 @@ export function getRpgItemConfig(itemId) {
 
 export function getRpgQuestConfig(questId) {
   return RPG_QUESTS[normalizeRpgQuestId(questId)];
+}
+
+export function getRpgDailyMissionConfig(missionId) {
+  return RPG_DAILY_MISSIONS[normalizeRpgDailyMissionId(missionId)];
 }
 
 export function getRpgBossConfig(bossId) {
@@ -903,6 +1017,109 @@ export function getRpgQuestStatus(profile, questId, quest = getRpgQuestConfig(qu
   };
 }
 
+export function getRpgDailyMissionStatuses(profile, now = Date.now()) {
+  const daily = getRpgDailyStatsForDay(profile.rpg?.daily, now);
+
+  return Object.entries(RPG_DAILY_MISSIONS).map(([id, mission]) => {
+    const current = getDailyMissionProgress(daily, mission);
+    const required = mission.requirement.count;
+    const claimed = Boolean(daily.claimedMissions?.[id]);
+
+    return {
+      id,
+      ...mission,
+      current,
+      required,
+      complete: current >= required,
+      claimed,
+      canClaim: current >= required && !claimed
+    };
+  });
+}
+
+export function getRpgAdventureGuide(profile, {
+  now = Date.now(),
+  cooldownRemainingMs = 0,
+  xpForNextLevel = defaultRpgXpForNextLevel
+} = {}) {
+  const level = Math.max(1, Number(profile.level) || 1);
+  const currentXp = Math.max(0, Number(profile.xp) || 0);
+  const requiredXp = Math.max(1, Number(xpForNextLevel(level)) || defaultRpgXpForNextLevel(level));
+  const derivedStats = getRpgDerivedStats({
+    level,
+    characterClass: profile.rpg?.characterClass,
+    equipment: profile.rpg?.equipment,
+    advancedClass: profile.rpg?.advancedClass,
+    learnedSkills: profile.rpg?.learnedSkills,
+    gearInventory: profile.rpg?.gearInventory,
+    equippedGear: profile.rpg?.equippedGear
+  });
+  const dailyMissions = getRpgDailyMissionStatuses(profile, now);
+  const claimableDailyMissions = dailyMissions.filter((mission) => mission.canClaim);
+  const claimableQuests = getRpgQuestStatuses(profile).filter((quest) => quest.canClaim);
+  const storyChapters = getRpgStoryChapterStatuses(profile);
+  const progressableStoryChapters = storyChapters.filter((chapter) => chapter.canProgress);
+  const currentArea = getRpgAreaConfig(profile.rpg?.currentArea);
+  const unlockedAreaIds = getUnlockedRpgAreaIds(level);
+  const highestUnlockedAreaId = unlockedAreaIds[unlockedAreaIds.length - 1] ?? 'forest';
+  const highestUnlockedArea = getRpgAreaConfig(highestUnlockedAreaId);
+  const nextLockedArea = Object.entries(RPG_AREAS)
+    .map(([id, area]) => ({ id, ...area }))
+    .find((area) => !unlockedAreaIds.includes(area.id));
+  const levelProgress = {
+    current: Math.min(currentXp, requiredXp),
+    required: requiredXp,
+    percent: Math.min(100, Math.floor((currentXp / requiredXp) * 100)),
+    bar: createRpgProgressBar(currentXp, requiredXp)
+  };
+  const mainObjective = claimableDailyMissions[0]
+    ? createObjective('daily', claimableDailyMissions[0])
+    : claimableQuests[0]
+      ? createObjective('quest', claimableQuests[0])
+      : progressableStoryChapters[0]
+        ? createObjective('story', progressableStoryChapters[0])
+        : nextLockedArea
+          ? {
+            type: 'area_unlock',
+            label: `${nextLockedArea.label} 해금`,
+            progressText: `Lv.${level}/${nextLockedArea.unlockLevel}`,
+            description: `${nextLockedArea.label} 입장까지 ${Math.max(0, nextLockedArea.unlockLevel - level)}레벨`
+          }
+          : {
+            type: 'endgame',
+            label: '엔드게임 파밍',
+            progressText: `${highestUnlockedArea.label} 진행 중`,
+            description: '레이드, 던전, 전리품 파밍으로 캐릭터를 강화하세요.'
+          };
+
+  return {
+    levelProgress,
+    powerScore: calculateRpgPowerScore(derivedStats),
+    currentArea: {
+      id: normalizeRpgArea(profile.rpg?.currentArea),
+      ...currentArea
+    },
+    highestUnlockedArea: {
+      id: highestUnlockedAreaId,
+      ...highestUnlockedArea
+    },
+    nextLockedArea: nextLockedArea ?? null,
+    mainObjective,
+    claimableDailyMissions,
+    claimableQuests,
+    progressableStoryChapters,
+    recommendedAction: getRecommendedRpgAction({
+      profile,
+      cooldownRemainingMs,
+      claimableDailyMissions,
+      claimableQuests,
+      progressableStoryChapters,
+      currentArea,
+      nextLockedArea
+    })
+  };
+}
+
 export function getRpgSkillPointSummary(profile) {
   const learnedSkills = normalizeRpgSkillTreeNodes(profile.rpg?.learnedSkills ?? []);
   const earned = Math.floor(Math.max(1, Number(profile.level) || 1) / 2);
@@ -927,6 +1144,76 @@ export function getRpgSkillTreeStatuses(profile) {
     classAllowed: skill.classes.includes(characterClass),
     canLearn: !learned.has(id) && skill.classes.includes(characterClass) && points.available >= skill.cost
   }));
+}
+
+export function getRpgAreaProgressStatuses(profile) {
+  const level = Math.max(1, Number(profile.level) || 1);
+  const unlockedAreaIds = new Set(getUnlockedRpgAreaIds(level));
+  const currentArea = normalizeRpgArea(profile.rpg?.currentArea);
+
+  return Object.entries(RPG_AREAS).map(([id, area]) => {
+    const progress = normalizeRpgProgressValue(profile.rpg?.areaProgress?.[id]);
+    return {
+      id,
+      ...area,
+      progress,
+      progressBar: createRpgProgressBar(progress, 100),
+      unlocked: unlockedAreaIds.has(id),
+      current: id === currentArea,
+      mastered: progress >= 100
+    };
+  });
+}
+
+export function getRpgClassMasteryStatus(profile) {
+  const classId = normalizeRpgClass(profile.rpg?.characterClass);
+  const classConfig = getRpgClassConfig(classId);
+  const mastery = normalizeRpgClassMasteryEntry(profile.rpg?.classMastery?.[classId]);
+  const required = getRpgClassMasteryRequired(mastery.level);
+
+  return {
+    classId,
+    classLabel: classConfig.label,
+    level: mastery.level,
+    progress: Math.min(mastery.progress, required),
+    required,
+    percent: Math.min(100, Math.floor((mastery.progress / required) * 100)),
+    progressBar: createRpgProgressBar(mastery.progress, required)
+  };
+}
+
+export function getRpgAdvancedClassStatuses(profile) {
+  const classMastery = profile.rpg?.classMastery ?? {};
+
+  return Object.entries(RPG_ADVANCED_CLASSES).map(([id, advancedClass]) => {
+    const baseClass = getRpgClassConfig(advancedClass.baseClass);
+    const mastery = normalizeRpgClassMasteryEntry(classMastery[advancedClass.baseClass]);
+    const quest = advancedClass.classQuest;
+    const questCurrent = quest ? getRequirementProgress(profile, quest.requirement) : 0;
+    const questRequired = quest?.requirement.count ?? 0;
+    const isCurrent = profile.rpg?.advancedClass === id;
+    const classAllowed = profile.rpg?.characterClass === advancedClass.baseClass;
+    const levelReady = (profile.level ?? 1) >= advancedClass.unlockLevel;
+    const masteryReady = mastery.level >= (advancedClass.masteryLevel ?? 1);
+    const questReady = !quest || questCurrent >= questRequired;
+
+    return {
+      id,
+      ...advancedClass,
+      baseClassLabel: baseClass.label,
+      current: isCurrent,
+      classAllowed,
+      levelReady,
+      masteryLevel: mastery.level,
+      requiredMasteryLevel: advancedClass.masteryLevel ?? 1,
+      masteryReady,
+      questLabel: quest?.label ?? null,
+      questCurrent,
+      questRequired,
+      questReady,
+      canAdvance: !isCurrent && classAllowed && levelReady && masteryReady && questReady
+    };
+  });
 }
 
 export function getRpgStoryChapterStatuses(profile) {
@@ -1028,6 +1315,15 @@ export function normalizeRpgSkillId(skillId = 'basic') {
   throw new Error('알 수 없는 RPG 스킬입니다.');
 }
 
+export function normalizeRpgBossActionId(action = 'basic') {
+  const normalized = String(action || 'basic').trim().toLocaleLowerCase('ko-KR');
+
+  if (['방어', '가드', 'guard', 'defend', 'defense'].includes(normalized)) return 'guard';
+  if (['포션', '회복', 'potion', 'heal'].includes(normalized)) return 'potion';
+
+  return normalizeRpgSkillId(normalized);
+}
+
 export function normalizeRpgItemId(itemId) {
   const normalized = String(itemId || '').trim().toLocaleLowerCase('ko-KR');
 
@@ -1052,6 +1348,17 @@ export function normalizeRpgQuestId(questId) {
   if (['보스 도전자', 'boss_challenger', 'boss challenger'].includes(normalized)) return 'boss_challenger';
 
   throw new Error('알 수 없는 RPG 퀘스트입니다.');
+}
+
+export function normalizeRpgDailyMissionId(missionId) {
+  const normalized = String(missionId || '').trim().toLocaleLowerCase('ko-KR');
+
+  if (['전장 훈련', '전장훈련', 'field_training', 'field training', '훈련'].includes(normalized)) return 'field_training';
+  if (['정찰 의뢰', '정찰의뢰', 'route_scout', 'route scout', '정찰'].includes(normalized)) return 'route_scout';
+  if (['던전 조사', '던전조사', 'dungeon_delver', 'dungeon delver', '던전'].includes(normalized)) return 'dungeon_delver';
+  if (['승리 계약', '승리계약', 'victory_contract', 'victory contract', '승리'].includes(normalized)) return 'victory_contract';
+
+  throw new Error('알 수 없는 일일 의뢰입니다.');
 }
 
 export function normalizeRpgBossId(bossId) {
@@ -1106,6 +1413,10 @@ export function normalizeRpgStoryChapterId(chapterId) {
   if (['숲의 맹세', 'forest_oath', 'forest oath'].includes(normalized)) return 'forest_oath';
   if (['수정 동굴의 신호', '수정동굴의신호', 'cave_signal', 'cave signal'].includes(normalized)) return 'cave_signal';
   if (['유적의 열쇠', '유적의열쇠', 'ruins_key', 'ruins key'].includes(normalized)) return 'ruins_key';
+  if (['늪의 독안개', '늪의독안개', 'marsh_plague', 'marsh plague'].includes(normalized)) return 'marsh_plague';
+  if (['화산 심장부', '화산심장부', 'volcano_core', 'volcano core'].includes(normalized)) return 'volcano_core';
+  if (['빙결 봉화', '빙결봉화', 'frost_beacon', 'frost beacon'].includes(normalized)) return 'frost_beacon';
+  if (['하늘 왕좌', '하늘왕좌', 'sky_throne', 'sky throne'].includes(normalized)) return 'sky_throne';
 
   throw new Error('알 수 없는 스토리 챕터입니다.');
 }
@@ -1272,6 +1583,89 @@ export function resolveRpgPvpTurn({
   };
 }
 
+export function resolveRpgBossTurn({
+  player = {},
+  boss = {},
+  action = 'basic',
+  randomInt = defaultRandomInt
+} = {}) {
+  const normalizedAction = normalizeRpgBossActionId(action);
+  const playerState = createRpgBossTurnPlayer(player);
+  const bossState = createRpgBossTurnBoss(boss);
+  let roll = 0;
+  let attackPower = 0;
+  let playerDamage = 0;
+  let healed = 0;
+  let consumedItemId = null;
+  let skillId = null;
+  let skillLabel = null;
+  let mpCost = 0;
+  let playerMpAfter = playerState.mp;
+  const inventory = { ...playerState.inventory };
+
+  if (normalizedAction === 'potion') {
+    if ((inventory.potion ?? 0) <= 0) {
+      throw new Error('회복 포션이 없습니다.');
+    }
+
+    consumedItemId = 'potion';
+    inventory.potion -= 1;
+    if (inventory.potion <= 0) {
+      delete inventory.potion;
+    }
+    healed = Math.min(40, playerState.maxHp - playerState.hp);
+  } else if (normalizedAction !== 'guard') {
+    const skill = RPG_SKILLS[normalizedAction];
+    if (!playerState.availableSkillIds.includes(normalizedAction)) {
+      throw new Error(`${playerState.characterClassLabel} 직업은 ${skill.label} 스킬을 사용할 수 없습니다.`);
+    }
+    if (playerState.mp < skill.mpCost) {
+      throw new Error(`MP가 부족합니다. 필요 MP: ${skill.mpCost}, 현재 MP: ${playerState.mp}`);
+    }
+
+    skillId = normalizedAction;
+    skillLabel = skill.label;
+    mpCost = skill.mpCost;
+    playerMpAfter = Math.max(0, playerState.mp - skill.mpCost);
+    roll = randomInt(1, 20);
+    attackPower = playerState.stats.attack + skill.attackBonus + playerState.level + roll;
+    playerDamage = Math.max(1, Math.floor(attackPower / 2));
+  }
+
+  const bossHpAfter = Math.max(0, bossState.hp - playerDamage);
+  const bossDefeated = bossHpAfter <= 0;
+  const guardMitigation = normalizedAction === 'guard'
+    ? Math.ceil(bossState.power / 2)
+    : 0;
+  const bossDamage = bossDefeated
+    ? 0
+    : Math.max(1, Math.floor(Math.max(1, bossState.power - playerState.stats.defense - guardMitigation) / 3));
+  const playerHpAfterHeal = Math.min(playerState.maxHp, playerState.hp + healed);
+  const playerHpAfter = Math.max(1, playerHpAfterHeal - bossDamage);
+
+  return {
+    action: normalizedAction,
+    skillId,
+    skillLabel,
+    mpCost,
+    roll,
+    attackPower,
+    playerDamage,
+    healed,
+    consumedItemId,
+    bossDamage,
+    bossHpBefore: bossState.hp,
+    bossHpAfter,
+    playerHpBefore: playerState.hp,
+    playerHpAfter,
+    playerMpBefore: playerState.mp,
+    playerMpAfter,
+    inventory,
+    win: bossDefeated,
+    playerDefeated: playerHpAfter <= 1 && !bossDefeated
+  };
+}
+
 export function resolveRpgBossBattle({
   playerLevel,
   bossId,
@@ -1356,6 +1750,64 @@ function createRpgPvpTurnFighter(fighter) {
     assets: {
       hero: getRpgClassAssetId(normalizedClass, normalizedGender)
     }
+  };
+}
+
+function createRpgBossTurnPlayer(player) {
+  const safePlayer = player && typeof player === 'object' ? player : {};
+  const normalizedClass = normalizeRpgClass(safePlayer.characterClass ?? 'novice');
+  const normalizedGender = normalizeRpgGender(safePlayer.characterGender ?? 'male');
+  const classConfig = RPG_CLASSES[normalizedClass];
+  const genderConfig = RPG_GENDERS[normalizedGender];
+  const safeLevel = Math.max(1, Number(safePlayer.level) || 1);
+  const fallbackStats = getRpgDerivedStats({
+    level: safeLevel,
+    characterClass: normalizedClass
+  });
+  const safeStats = safePlayer.stats && typeof safePlayer.stats === 'object'
+    ? safePlayer.stats
+    : {};
+
+  return {
+    level: safeLevel,
+    characterClass: normalizedClass,
+    characterClassLabel: classConfig.label,
+    characterGender: normalizedGender,
+    characterGenderLabel: genderConfig.label,
+    hp: Math.max(1, Number(safePlayer.hp) || fallbackStats.maxHp),
+    maxHp: Math.max(1, Number(safePlayer.maxHp) || fallbackStats.maxHp),
+    mp: Math.max(0, Number(safePlayer.mp) || 0),
+    maxMp: Math.max(0, Number(safePlayer.maxMp) || fallbackStats.maxMp),
+    stats: {
+      attack: normalizeRpgPvpStat(safeStats.attack, fallbackStats.attack),
+      defense: normalizeRpgPvpStat(safeStats.defense, fallbackStats.defense)
+    },
+    inventory: normalizeRpgBossInventory(safePlayer.inventory),
+    availableSkillIds: Array.isArray(safePlayer.availableSkillIds)
+      ? safePlayer.availableSkillIds.map((skillId) => normalizeRpgSkillId(skillId))
+      : getAvailableRpgSkillIds(normalizedClass),
+    assets: {
+      hero: getRpgClassAssetId(normalizedClass, normalizedGender)
+    }
+  };
+}
+
+function createRpgBossTurnBoss(boss) {
+  const safeBoss = boss && typeof boss === 'object' ? boss : {};
+  const maxHp = Math.max(1, Number(safeBoss.maxHp) || 30);
+
+  return {
+    hp: Math.max(0, Math.min(maxHp, Number(safeBoss.hp) || maxHp)),
+    maxHp,
+    power: Math.max(1, Number(safeBoss.power) || 10)
+  };
+}
+
+function normalizeRpgBossInventory(inventory = {}) {
+  const safeInventory = inventory && typeof inventory === 'object' ? inventory : {};
+  return {
+    potion: Math.max(0, Number(safeInventory.potion) || 0),
+    mana_potion: Math.max(0, Number(safeInventory.mana_potion) || 0)
   };
 }
 
@@ -1586,6 +2038,10 @@ function getRequirementProgress(profile, requirement) {
     return rpg.wins ?? 0;
   }
 
+  if (requirement.type === 'explores') {
+    return rpg.explores ?? 0;
+  }
+
   if (requirement.type === 'level') {
     return profile.level ?? 1;
   }
@@ -1602,7 +2058,187 @@ function getRequirementProgress(profile, requirement) {
     return Object.values(rpg.bossKills ?? {}).reduce((sum, count) => sum + count, 0);
   }
 
+  if (requirement.type === 'dungeonClears') {
+    if (requirement.area) {
+      return rpg.dungeonClears?.[requirement.area] ?? 0;
+    }
+    return Object.values(rpg.dungeonClears ?? {}).reduce((sum, count) => sum + count, 0);
+  }
+
+  if (requirement.type === 'raidClears') {
+    if (requirement.raid) {
+      return rpg.raidClears?.[requirement.raid] ?? 0;
+    }
+    return Object.values(rpg.raidClears ?? {}).reduce((sum, count) => sum + count, 0);
+  }
+
+  if (requirement.type === 'areaProgress') {
+    return rpg.areaProgress?.[requirement.area] ?? 0;
+  }
+
+  if (requirement.type === 'classMastery') {
+    const classId = normalizeRpgClass(requirement.class ?? rpg.characterClass);
+    return normalizeRpgClassMasteryEntry(rpg.classMastery?.[classId]).level;
+  }
+
   return 0;
+}
+
+function normalizeRpgProgressValue(value) {
+  const normalized = Number(value);
+  return Number.isFinite(normalized)
+    ? Math.min(100, Math.max(0, Math.floor(normalized)))
+    : 0;
+}
+
+function normalizeRpgClassMasteryEntry(entry = {}) {
+  const safeEntry = entry && typeof entry === 'object' ? entry : {};
+
+  return {
+    level: Math.max(1, Number.isSafeInteger(Number(safeEntry.level)) ? Number(safeEntry.level) : 1),
+    progress: Math.max(0, Number.isSafeInteger(Number(safeEntry.progress)) ? Number(safeEntry.progress) : 0)
+  };
+}
+
+function getRpgClassMasteryRequired(level) {
+  return RPG_CLASS_MASTERY_BASE_REQUIRED * Math.max(1, Number(level) || 1);
+}
+
+function getRpgDailyStatsForDay(daily = {}, now = Date.now()) {
+  const today = getRpgDayIndex(now);
+  const safeDaily = daily && typeof daily === 'object' ? daily : {};
+
+  if (safeDaily.day !== today) {
+    return {
+      day: today,
+      battles: 0,
+      wins: 0,
+      explores: 0,
+      dungeons: 0,
+      bosses: 0,
+      raids: 0,
+      pvpWins: 0,
+      claimedMissions: {}
+    };
+  }
+
+  return {
+    day: today,
+    battles: Math.max(0, Number(safeDaily.battles) || 0),
+    wins: Math.max(0, Number(safeDaily.wins) || 0),
+    explores: Math.max(0, Number(safeDaily.explores) || 0),
+    dungeons: Math.max(0, Number(safeDaily.dungeons) || 0),
+    bosses: Math.max(0, Number(safeDaily.bosses) || 0),
+    raids: Math.max(0, Number(safeDaily.raids) || 0),
+    pvpWins: Math.max(0, Number(safeDaily.pvpWins) || 0),
+    claimedMissions: { ...(safeDaily.claimedMissions ?? {}) }
+  };
+}
+
+function getDailyMissionProgress(daily, mission) {
+  return Math.max(0, Number(daily[mission.requirement.type]) || 0);
+}
+
+function createObjective(type, entry) {
+  return {
+    type,
+    id: entry.id,
+    label: entry.label,
+    progressText: `${Math.min(entry.current, entry.required)}/${entry.required}`,
+    description: entry.description
+  };
+}
+
+function getRecommendedRpgAction({
+  profile,
+  cooldownRemainingMs,
+  claimableDailyMissions,
+  claimableQuests,
+  progressableStoryChapters,
+  currentArea,
+  nextLockedArea
+}) {
+  if ((profile.rpg?.hp ?? 0) <= 1) {
+    return {
+      type: 'rest',
+      label: '휴식',
+      command: '/rpg 휴식',
+      reason: 'HP가 낮아서 먼저 회복해야 합니다.'
+    };
+  }
+
+  if (claimableDailyMissions.length > 0) {
+    const mission = claimableDailyMissions[0];
+    return {
+      type: 'daily_claim',
+      label: `${mission.label} 보상`,
+      command: `/rpg 일일 임무:${mission.label}`,
+      reason: '오늘 완료한 일일 의뢰 보상이 있습니다.'
+    };
+  }
+
+  if (claimableQuests.length > 0) {
+    const quest = claimableQuests[0];
+    return {
+      type: 'quest_claim',
+      label: `${quest.label} 보상`,
+      command: `/rpg 퀘스트 퀘스트:${quest.label}`,
+      reason: '완료한 일반 퀘스트 보상을 받을 수 있습니다.'
+    };
+  }
+
+  if (cooldownRemainingMs > 0) {
+    return {
+      type: 'explore',
+      label: `${currentArea.label} 탐험`,
+      command: '/rpg 탐험',
+      reason: '전투 대기시간 동안 탐험으로 보상과 전리품을 노릴 수 있습니다.'
+    };
+  }
+
+  if (progressableStoryChapters.length > 0 && (profile.rpg?.battles ?? 0) > 0) {
+    const chapter = progressableStoryChapters[0];
+    return {
+      type: 'story',
+      label: `${chapter.label} 진행`,
+      command: `/rpg 스토리 챕터:${chapter.label}`,
+      reason: '진행 가능한 스토리 챕터가 열렸습니다.'
+    };
+  }
+
+  return {
+    type: 'battle',
+    label: `${currentArea.label} 전투`,
+    command: '/rpg 전투',
+    reason: nextLockedArea
+      ? `${nextLockedArea.label} 해금을 위해 레벨과 장비를 올리는 단계입니다.`
+      : '엔드게임 파밍을 위해 전투와 던전을 반복하세요.'
+  };
+}
+
+function calculateRpgPowerScore(stats) {
+  return Math.floor(
+    stats.attack * 8
+    + stats.defense * 6
+    + stats.maxHp / 3
+    + stats.maxMp / 2
+  );
+}
+
+function createRpgProgressBar(current, required, length = 10) {
+  const safeRequired = Math.max(1, Number(required) || 1);
+  const ratio = Math.max(0, Math.min(1, (Number(current) || 0) / safeRequired));
+  const filled = Math.floor(ratio * length);
+
+  return `${'█'.repeat(filled)}${'░'.repeat(length - filled)}`;
+}
+
+function getRpgDayIndex(now) {
+  return Math.floor(Number(now || 0) / RPG_DAY_MS);
+}
+
+function defaultRpgXpForNextLevel(level) {
+  return Math.floor(100 * Math.max(1, Number(level) || 1) ** 1.5);
 }
 
 function normalizeRpgSkillTreeNodes(skillIds = []) {
