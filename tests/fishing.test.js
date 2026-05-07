@@ -36,6 +36,7 @@ test('낚시 명령 payload는 요청한 명령들을 등록한다', () => {
   assert.equal(fishOption.choices, undefined);
   assert.equal(fishOption.max_length, 50);
   assert.equal(payloads.find((command) => command.name === '물고기배틀').options.length, 2);
+  assert.equal(payloads.some((command) => command.name === '낚시에셋'), false);
 });
 
 test('낚시 에셋 manifest는 agent-sprite-forge 프롬프트와 출력 경로를 전종 제공한다', () => {
@@ -218,25 +219,28 @@ test('물고기팀설정은 보유 물고기만 팀에 넣고 물고기배틀은
   }
 });
 
-test('낚시 명령 핸들러는 /낚시 응답을 반환한다', async () => {
+test('낚시 명령 핸들러는 /낚시 응답을 이미지 embed 카드로 반환한다', async () => {
   const fixture = await createFixture({ randomInt: sequenceRandom(1, 0, 20) });
 
   try {
     const interaction = createInteraction('낚시');
     const handled = await handleFishingCommand(interaction, fixture.fishing);
+    const payload = interaction.lastReply;
 
     assert.equal(handled, true);
-    assert.match(interaction.lastReply.content, /낚시 성공/);
-    assert.match(interaction.lastReply.content, /붕어/);
-    assert.doesNotMatch(interaction.lastReply.content, /이미지 에셋|fish_/);
-    assert.equal(interaction.lastReply.embeds[0].data.image.url, 'attachment://fish_crucian_carp.png');
-    assert.equal(interaction.lastReply.files[0].name, 'fish_crucian_carp.png');
+    assert.equal(typeof payload, 'object');
+    assert.match(payload.embeds[0].data.title, /낚시 성공/);
+    assert.match(payload.embeds[0].data.description, /붕어/);
+    assert.equal(payload.embeds[0].data.image.url, 'attachment://icon.png');
+    assert.deepEqual(payload.files, [getFishConfig('붕어').imagePath]);
+    assert.equal(payload.content, undefined);
+    assert.doesNotMatch(payload.embeds[0].data.description, /이미지 에셋|fish_/);
   } finally {
     await fixture.cleanup();
   }
 });
 
-test('낚시강화 응답은 낚싯대 이미지를 embed로 첨부하고 에셋 id를 노출하지 않는다', async () => {
+test('낚시강화 응답은 낚싯대 이미지를 embed 카드로 첨부하고 에셋 id를 노출하지 않는다', async () => {
   const fixture = await createFixture({ randomInt: sequenceRandom(1) });
 
   try {
@@ -247,18 +251,26 @@ test('낚시강화 응답은 낚싯대 이미지를 embed로 첨부하고 에셋
 
     const interaction = createInteraction('낚시강화');
     const handled = await handleFishingCommand(interaction, fixture.fishing);
+    const payload = interaction.lastReply;
 
     assert.equal(handled, true);
-    assert.match(interaction.lastReply.content, /낚싯대 강화/);
-    assert.doesNotMatch(interaction.lastReply.content, /rod_|이미지 에셋/);
-    assert.equal(interaction.lastReply.embeds[0].data.image.url, 'attachment://rod_05.png');
-    assert.deepEqual(interaction.lastReply.files, [{
-      attachment: join(process.cwd(), getFishingRodAssetForLevel(5).imagePath),
-      name: 'rod_05.png'
-    }]);
+    assert.match(payload.embeds[0].data.title, /낚싯대 강화/);
+    assert.match(payload.embeds[0].data.description, /성공/);
+    assert.doesNotMatch(payload.embeds[0].data.description, /rod_|이미지 에셋/);
+    assert.equal(payload.embeds[0].data.image.url, 'attachment://icon.png');
+    assert.deepEqual(payload.files, [getFishingRodAssetForLevel(5).imagePath]);
   } finally {
     await fixture.cleanup();
   }
+});
+
+test('낚시에셋 명령은 사용자 명령으로 처리하지 않는다', async () => {
+  const interaction = createInteraction('낚시에셋');
+
+  const handled = await handleFishingCommand(interaction, {});
+
+  assert.equal(handled, false);
+  assert.equal(interaction.replies.length, 0);
 });
 
 function createInput(overrides = {}) {

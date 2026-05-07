@@ -12,6 +12,7 @@ import { getStockCommandPayloads } from './commands/stocks.js';
 import { getSwordCommandPayloads } from './commands/sword.js';
 import { getTamagotchiCommandPayloads } from './commands/tamagotchi.js';
 import { getTimetableCommandPayloads } from './commands/timetable.js';
+import { getTodayCommandPayloads } from './commands/today.js';
 import { getWordChainCommandPayloads } from './commands/wordchain.js';
 import { loadConfig, requireBotConfig } from './config.js';
 
@@ -23,6 +24,7 @@ const commands = [
   ...getEconomyCommandPayloads(),
   ...getCommunityCommandPayloads(),
   ...getFortuneCommandPayloads(),
+  ...getTodayCommandPayloads(),
   ...getModerationCommandPayloads(),
   ...getWordChainCommandPayloads(),
   ...getMealCommandPayloads(),

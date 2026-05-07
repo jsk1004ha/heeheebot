@@ -3,14 +3,13 @@
 낚시 물고기 이미지는 `agent-sprite-forge`의 `$generate2dsprite`를 사용해 생성한다.
 현재 manifest는 `src/systems/fishing-assets.js`에서 145종 전체를 제공한다.
 
-## 코드에서 배치 확인
+## 내부 배치 확인
 
-```js
-import { getFishingAssetBatch } from '../src/systems/fishing-assets.js';
+`/낚시에셋`은 사용자용 Discord 명령으로 등록하지 않는다.
+운영자가 에셋 배치를 확인할 때는 코드/테스트에서 manifest helper를 직접 조회한다.
 
-getFishingAssetBatch({ rarity: 'all', limit: 8, offset: 0 });
-getFishingAssetBatch({ rarity: 'hidden', limit: 10 });
-getFishingAssetBatch({ rarity: 'legendary', limit: 11 });
+```bash
+node --input-type=module -e "import { getFishingAssetBatch } from './src/systems/fishing-assets.js'; console.log(getFishingAssetBatch({ rarity: 'legendary', limit: 5 }));"
 ```
 
 각 항목은 다음 정보를 제공한다.

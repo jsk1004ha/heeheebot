@@ -1,6 +1,9 @@
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { EmbedBuilder, SlashCommandBuilder } from 'discord.js';
+import { basename } from 'node:path';
+import {
+  EmbedBuilder,
+  SlashCommandBuilder
+} from 'discord.js';
 import {
   getFishingRodAssetForLevel
 } from '../systems/fishing-assets.js';
@@ -93,7 +96,7 @@ async function routeFishingCommand(interaction, fishing) {
       userId: user.id,
       username: user.username
     });
-    await replyWithFishImage(interaction, formatCatchResult(user, result), result.fish);
+    await replyWithFishCard(interaction, formatCatchResult(user, result), result.fish);
     return;
   }
 
@@ -103,7 +106,7 @@ async function routeFishingCommand(interaction, fishing) {
       userId: user.id,
       username: user.username
     });
-    await replyWithRodImage(interaction, formatEnhancementResult(user, result), result.afterLevel);
+    await replyWithRodCard(interaction, formatEnhancementResult(user, result), result.afterLevel);
     return;
   }
 
@@ -125,7 +128,7 @@ async function routeFishingCommand(interaction, fishing) {
       slot: interaction.options.getInteger('슬롯', true),
       fishId: interaction.options.getString('물고기', true)
     });
-    await replyWithFishImage(interaction, formatTeamResult(user, result), result.fish);
+    await replyWithFishCard(interaction, formatTeamResult(user, result), result.fish);
     return;
   }
 
@@ -146,7 +149,6 @@ async function routeFishingCommand(interaction, fishing) {
     await interaction.reply(formatBattleResult(user, opponent, result));
     return;
   }
-
 }
 
 function formatCatchResult(user, result) {
@@ -262,59 +264,65 @@ function isFishingCommand(commandName) {
   return fishingCommands.some((command) => command.name === commandName);
 }
 
-async function replyWithFishImage(interaction, content, fish) {
-  const attachment = getFishingImageAttachment(fish?.imagePath, fish?.assetId ?? 'fish');
-  if (attachment) {
-    await interaction.reply(createFishingImageEmbedPayload({
-      content,
-      attachment,
-      title: fish?.label ?? '낚시 이미지',
-      footer: '낚시 물고기 이미지'
-    }));
-    return;
-  }
-
-  await interaction.reply(content);
+async function replyWithFishCard(interaction, content, fish) {
+  const imagePath = fish?.imagePath;
+  await interaction.reply(createFishingCardPayload(content, {
+    imagePath: imagePath && existsSync(imagePath) ? imagePath : null,
+    color: getFishingEmbedColor(fish?.rarity),
+    footer: '낚시 결과 카드'
+  }));
 }
 
-async function replyWithRodImage(interaction, content, rodLevel) {
+async function replyWithRodCard(interaction, content, rodLevel) {
   const rodAsset = getFishingRodAssetForLevel(rodLevel);
-  const attachment = getFishingImageAttachment(rodAsset?.imagePath, rodAsset?.id ?? `rod_${rodLevel}`);
-  if (attachment) {
-    await interaction.reply(createFishingImageEmbedPayload({
-      content,
-      attachment,
-      title: rodAsset?.label ?? `+${rodLevel} 낚싯대`,
-      footer: '낚싯대 이미지'
-    }));
-    return;
+  await interaction.reply(createFishingCardPayload(content, {
+    imagePath: rodAsset?.imagePath && existsSync(rodAsset.imagePath) ? rodAsset.imagePath : null,
+    color: getRodEmbedColor(rodLevel),
+    footer: '낚싯대 강화 카드'
+  }));
+}
+
+function createFishingCardPayload(content, { imagePath = null, color = 0x38bdf8, footer = '낚시 카드' } = {}) {
+  const [rawTitle, ...bodyLines] = String(content).split('\n');
+  const title = rawTitle.replace(/\*\*/g, '').slice(0, 256);
+  const description = truncateEmbedText(bodyLines.join('\n').trim() || rawTitle);
+  const embed = new EmbedBuilder()
+    .setColor(color)
+    .setTitle(title)
+    .setDescription(description)
+    .setFooter({ text: footer });
+
+  const payload = { embeds: [embed] };
+  if (imagePath) {
+    embed.setImage(`attachment://${basename(imagePath)}`);
+    payload.files = [imagePath];
   }
 
-  await interaction.reply(content);
+  return payload;
 }
 
-function createFishingImageEmbedPayload({ content, attachment, title, footer }) {
+function getFishingEmbedColor(rarity) {
   return {
-    content,
-    embeds: [
-      new EmbedBuilder()
-        .setTitle(title)
-        .setImage(`attachment://${attachment.name}`)
-        .setColor(0x38bdf8)
-        .setFooter({ text: footer })
-    ],
-    files: [attachment]
-  };
+    common: 0x94a3b8,
+    uncommon: 0x22c55e,
+    rare: 0x3b82f6,
+    epic: 0xa855f7,
+    legendary: 0xf59e0b,
+    hidden: 0xec4899
+  }[rarity] ?? 0x38bdf8;
 }
 
-function getFishingImageAttachment(imagePath, fallbackName) {
-  if (!imagePath) return null;
+function getRodEmbedColor(level) {
+  if (level >= 20) return 0xfacc15;
+  if (level >= 15) return 0xa855f7;
+  if (level >= 10) return 0x3b82f6;
+  if (level >= 5) return 0x22c55e;
+  return 0x94a3b8;
+}
 
-  const filePath = join(process.cwd(), imagePath);
-  if (!existsSync(filePath)) return null;
-
-  return {
-    attachment: filePath,
-    name: `${fallbackName}.png`
-  };
+function truncateEmbedText(text) {
+  const normalized = String(text || '').trim();
+  return normalized.length > 4096
+    ? `${normalized.slice(0, 4092)}…`
+    : normalized;
 }

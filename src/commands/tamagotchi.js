@@ -11,11 +11,8 @@ import {
   TAMAGOTCHI_LEISURES
 } from '../systems/tamagotchi.js';
 import {
-  getTamagotchiAssetSummary,
   getTamagotchiDecorationAttachment,
   getTamagotchiDecorations,
-  getTamagotchiGrowthStages,
-  getTamagotchiPreviewAttachments,
   getTamagotchiStageSkinAttachment,
   getTamagotchiSkins
 } from '../systems/tamagotchi-assets.js';
@@ -78,10 +75,7 @@ export const tamagotchiCommands = [
         .setDescription('시켜줄 여가')
         .setRequired(true)
         .addChoices(...LEISURE_CHOICES)
-    ),
-  new SlashCommandBuilder()
-    .setName('희진에셋')
-    .setDescription('생성된 희진 다마고치 도트 스킨과 꾸미기 에셋 목록을 확인합니다.')
+    )
 ];
 
 export function getTamagotchiCommandPayloads() {
@@ -183,10 +177,6 @@ async function routeTamagotchiCommand(interaction, tamagotchi) {
     const result = await tamagotchi.leisure({ ...context, leisureId });
     await interaction.reply(createTamagotchiReplyPayload(interaction.user, result));
     return;
-  }
-
-  if (interaction.commandName === '희진에셋') {
-    await interaction.reply(createTamagotchiAssetCatalogPayload());
   }
 }
 
@@ -295,85 +285,6 @@ function formatTamagotchiStatus(user, result) {
     `🧸 꾸미기: **${decoration?.label ?? pet.cosmetic.decorationId}**`,
     `🎮 최애 여가: **${favoriteLeisure}**`,
     `총 케어: **${pet.counters.totalCareActions.toLocaleString()}회** / 부활: **${pet.counters.revivals.toLocaleString()}회**`
-  ].join('\n');
-}
-
-function createTamagotchiAssetCatalogPayload() {
-  const previewAttachments = getTamagotchiPreviewAttachments();
-  const previewById = new Map(previewAttachments.map((attachment) => [attachment.id, attachment]));
-  const growthPreview = previewById.get('growthStages');
-  const skinsPreview = previewById.get('skins');
-  const decorationsPreview = previewById.get('decorations');
-  const referencePreview = previewById.get('reference');
-  const embeds = [
-    buildAssetCatalogEmbed(formatTamagotchiAssetCatalog(), growthPreview)
-  ];
-
-  if (skinsPreview) {
-    embeds.push(new EmbedBuilder()
-      .setTitle('🎨 희진 스킨 미리보기')
-      .setColor(STATUS_COLOR)
-      .setImage(`attachment://${skinsPreview.name}`));
-  }
-
-  if (decorationsPreview) {
-    embeds.push(new EmbedBuilder()
-      .setTitle('🧸 희진 꾸미기/도구 미리보기')
-      .setColor(STATUS_COLOR)
-      .setImage(`attachment://${decorationsPreview.name}`));
-  }
-
-  if (referencePreview) {
-    embeds.push(new EmbedBuilder()
-      .setTitle('🖼️ 희진 원본 팔레트 도트 레퍼런스')
-      .setColor(STATUS_COLOR)
-      .setImage(`attachment://${referencePreview.name}`));
-  }
-
-  return {
-    embeds,
-    files: previewAttachments.map(({ id, ...attachment }) => attachment)
-  };
-}
-
-function buildAssetCatalogEmbed(description, growthPreview) {
-  const embed = new EmbedBuilder()
-    .setTitle('🎨 희진 다마고치 도트 에셋')
-    .setDescription(description)
-    .setColor(STATUS_COLOR);
-
-  if (growthPreview) {
-    embed.setImage(`attachment://${growthPreview.name}`);
-  }
-
-  return embed;
-}
-
-function formatTamagotchiAssetCatalog() {
-  const summary = getTamagotchiAssetSummary();
-  const stageList = getTamagotchiGrowthStages()
-    .map((stage) => `${stage.label}(${stage.minAgeDays}일+)`)
-    .join(' → ');
-  const skinList = getTamagotchiSkins()
-    .slice(0, 24)
-    .map((skin) => `- **${skin.label}** \`${skin.id}\``)
-    .join('\n');
-  const decorationList = getTamagotchiDecorations()
-    .slice(0, 32)
-    .map((decoration) => `- **${decoration.label}** \`${decoration.id}\` (${decoration.category})`)
-    .join('\n');
-
-  return [
-    `성장 단계 **${summary.stageCount}개**, 스킨 **${summary.skinCount}개**, 꾸미기/도구 **${summary.decorationCount}개**가 생성되어 있어요.`,
-    `성장 순서: ${stageList || '알 → 유아기 → 유년기 → 청소년기 → 성년기'}`,
-    `원본 기반 도트 레퍼런스: \`${summary.referencePath}\``,
-    `성장 단계 미리보기: \`${summary.growthStagePreviewPath}\``,
-    '',
-    '**스킨**',
-    skinList || '- 없음',
-    '',
-    '**꾸미기/도구**',
-    decorationList || '- 없음'
   ].join('\n');
 }
 
