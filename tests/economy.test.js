@@ -189,10 +189,10 @@ test('충분한 경험치를 받으면 레벨업 보상을 지급한다', async 
   }
 });
 
-test('출석 보상은 100 XP와 랜덤 1~1000 코인을 하루 한 번만 지급한다', async () => {
+test('출석 보상은 100 XP와 랜덤 100~1000 코인을 하루 한 번만 지급한다', async () => {
   const fixture = await createFixture({
     randomInt: (min, max) => {
-      assert.equal(min, 1);
+      assert.equal(min, 100);
       assert.equal(max, 1000);
       return 777;
     }

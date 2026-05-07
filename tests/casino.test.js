@@ -15,7 +15,9 @@ import {
   playBaccarat,
   playCraps,
   playDice,
+  playHighLow,
   playKeno,
+  playLuckySeven,
   playOddEven,
   playPlayerBlackjack,
   playRoulette,
@@ -55,7 +57,7 @@ test('주사위와 슬롯 결과를 계산한다', () => {
   });
 
   assert.equal(dice.win, true);
-  assert.equal(dice.payout, 200);
+  assert.equal(dice.payout, 190);
   assert.deepEqual(slot.reels, ['7️⃣', '7️⃣', '7️⃣']);
   assert.equal(slot.payout, 2000);
 
@@ -97,6 +99,8 @@ test('카지노 명령 payload는 다양한 게임을 등록한다', () => {
     '홀짝',
     '주사위',
     '슬롯',
+    '럭키세븐',
+    '하이로우',
     '블랙잭',
     '룰렛',
     '바카라',
@@ -145,7 +149,45 @@ test('룰렛, 바카라, 크랩스, 시크보, 키노 결과를 계산한다', (
   assert.equal(sicBo.payout, 200);
   assert.deepEqual(parseKenoNumbers('3, 1, 2'), [1, 2, 3]);
   assert.deepEqual(keno.hits, [1, 2, 3]);
-  assert.equal(keno.payout, 4500);
+  assert.equal(keno.payout, 17000);
+});
+
+test('키노 배수표는 적은 적중도 일부 환급하고 선택 개수별 기대수익률을 완화한다', () => {
+  const oneHitFivePick = playKeno({
+    numbers: '1 2 3 4 5',
+    bet: 100,
+    randomInt: createSequenceRandom([0, 9, 18, 27, 36, 45, 54, 63, 70, 70])
+  });
+
+  assert.deepEqual(oneHitFivePick.hits, [1]);
+  assert.equal(oneHitFivePick.multiplier, 1);
+  assert.equal(oneHitFivePick.payout, 100);
+});
+
+test('럭키세븐과 하이로우는 하우스 엣지와 무승부 환급을 반영한다', () => {
+  const luckySeven = playLuckySeven({
+    bet: 100,
+    randomInt: createSequenceRandom([3, 4])
+  });
+  const highLowWin = playHighLow({
+    choice: '높음',
+    bet: 100,
+    randomInt: createSequenceRandom([4, 9])
+  });
+  const highLowPush = playHighLow({
+    choice: '낮음',
+    bet: 100,
+    randomInt: createSequenceRandom([7, 7])
+  });
+
+  assert.deepEqual(luckySeven.dice, [3, 4]);
+  assert.equal(luckySeven.total, 7);
+  assert.equal(luckySeven.multiplier, 5.5);
+  assert.equal(luckySeven.payout, 550);
+  assert.equal(highLowWin.outcome, 'high');
+  assert.equal(highLowWin.payout, 190);
+  assert.equal(highLowPush.push, true);
+  assert.equal(highLowPush.payout, 100);
 });
 
 test('수동 블랙잭은 히트/스탠드 선택으로 정산된다', () => {

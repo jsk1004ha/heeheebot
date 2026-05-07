@@ -6,11 +6,11 @@ const KENO_MAX_NUMBER = 80;
 const KENO_DRAW_COUNT = 10;
 const KENO_MAX_PICKS = 5;
 const KENO_MULTIPLIERS = Object.freeze({
-  1: Object.freeze({ 1: 3 }),
-  2: Object.freeze({ 2: 12 }),
-  3: Object.freeze({ 2: 2, 3: 45 }),
-  4: Object.freeze({ 2: 1, 3: 8, 4: 120 }),
-  5: Object.freeze({ 3: 4, 4: 20, 5: 400 })
+  1: Object.freeze({ 1: 7 }),
+  2: Object.freeze({ 1: 1, 2: 45 }),
+  3: Object.freeze({ 1: 1, 2: 8, 3: 170 }),
+  4: Object.freeze({ 1: 1, 2: 3, 3: 40, 4: 1000 }),
+  5: Object.freeze({ 1: 1, 2: 2, 3: 14, 4: 120, 5: 3000 })
 });
 
 export function playOddEven({ choice, bet, randomInt = defaultRandomInt }) {
@@ -36,7 +36,7 @@ export function playDice({ choice, bet, randomInt = defaultRandomInt }) {
   const roll = randomInt(1, 6);
   const outcome = roll >= 4 ? 'high' : 'low';
   const win = normalizedChoice === outcome;
-  const payout = win ? bet * 2 : 0;
+  const payout = win ? Math.floor(bet * 1.9) : 0;
 
   return {
     game: '주사위',
@@ -44,7 +44,7 @@ export function playDice({ choice, bet, randomInt = defaultRandomInt }) {
     roll,
     outcome,
     win,
-    multiplier: win ? 2 : 0,
+    multiplier: win ? 1.9 : 0,
     payout
   };
 }
@@ -70,6 +70,55 @@ export function playSlots({ bet, randomInt = defaultRandomInt }) {
     win: multiplier > 0,
     multiplier,
     payout: bet * multiplier
+  };
+}
+
+export function playLuckySeven({ bet, randomInt = defaultRandomInt }) {
+  const dice = [
+    randomInt(1, 6),
+    randomInt(1, 6)
+  ];
+  const total = dice[0] + dice[1];
+  const win = total === 7;
+  const multiplier = win ? 5.5 : 0;
+
+  return {
+    game: '럭키세븐',
+    dice,
+    total,
+    win,
+    multiplier,
+    payout: win ? Math.floor(bet * multiplier) : 0
+  };
+}
+
+export function playHighLow({ choice, bet, randomInt = defaultRandomInt }) {
+  const normalizedChoice = normalizeHighLowChoice(choice);
+  const firstCard = drawCard(randomInt);
+  const secondCard = drawCard(randomInt);
+  const firstValue = getCardRankValue(firstCard);
+  const secondValue = getCardRankValue(secondCard);
+  const outcome = secondValue > firstValue
+    ? 'high'
+    : secondValue < firstValue
+      ? 'low'
+      : 'tie';
+  const push = outcome === 'tie';
+  const win = normalizedChoice === outcome;
+  const multiplier = win ? 1.9 : push ? 1 : 0;
+
+  return {
+    game: '하이로우',
+    choice: normalizedChoice,
+    firstCard,
+    secondCard,
+    firstValue,
+    secondValue,
+    outcome,
+    win,
+    push,
+    multiplier,
+    payout: Math.floor(bet * multiplier)
   };
 }
 
@@ -378,6 +427,15 @@ export function normalizeDiceChoice(choice) {
   throw new Error('높음(4~6) 또는 낮음(1~3) 중 하나를 선택해주세요.');
 }
 
+export function normalizeHighLowChoice(choice) {
+  const normalized = String(choice).trim().toLocaleLowerCase('ko-KR');
+
+  if (['높음', '하이', 'high', 'h', 'up'].includes(normalized)) return 'high';
+  if (['낮음', '로우', 'low', 'l', 'down'].includes(normalized)) return 'low';
+
+  throw new Error('하이로우 선택은 높음 또는 낮음 중 하나여야 합니다.');
+}
+
 export function normalizeRouletteChoice(choice) {
   const normalized = String(choice).trim().toLocaleLowerCase('ko-KR');
 
@@ -559,6 +617,10 @@ function handValue(hand) {
   }
 
   return { value };
+}
+
+function getCardRankValue(card) {
+  return CARD_RANKS.indexOf(card) + 1;
 }
 
 function drawCard(randomInt) {

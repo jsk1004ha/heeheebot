@@ -15,7 +15,9 @@ import {
   playBaccarat,
   playCraps,
   playDice,
+  playHighLow,
   playKeno,
+  playLuckySeven,
   playOddEven,
   playRoulette,
   playSicBo,
@@ -52,7 +54,7 @@ export const casinoCommands = [
     ),
   new SlashCommandBuilder()
     .setName('주사위')
-    .setDescription('주사위가 높음(4~6)/낮음(1~3)인지 맞히면 2배를 받습니다.')
+    .setDescription('주사위가 높음(4~6)/낮음(1~3)인지 맞히면 약 1.9배를 받습니다.')
     .addIntegerOption((option) =>
       option
         .setName('돈')
@@ -79,6 +81,36 @@ export const casinoCommands = [
         .setDescription('베팅할 돈')
         .setMinValue(1)
         .setRequired(true)
+    ),
+  new SlashCommandBuilder()
+    .setName('럭키세븐')
+    .setDescription('주사위 2개의 합이 7이면 5.5배를 받습니다.')
+    .addIntegerOption((option) =>
+      option
+        .setName('돈')
+        .setDescription('베팅할 돈')
+        .setMinValue(1)
+        .setRequired(true)
+    ),
+  new SlashCommandBuilder()
+    .setName('하이로우')
+    .setDescription('두 번째 카드가 첫 카드보다 높을지 낮을지 맞힙니다. 같은 숫자는 환불됩니다.')
+    .addIntegerOption((option) =>
+      option
+        .setName('돈')
+        .setDescription('베팅할 돈')
+        .setMinValue(1)
+        .setRequired(true)
+    )
+    .addStringOption((option) =>
+      option
+        .setName('선택')
+        .setDescription('높음 또는 낮음')
+        .setRequired(true)
+        .addChoices(
+          { name: '높음', value: 'high' },
+          { name: '낮음', value: 'low' }
+        )
     ),
   new SlashCommandBuilder()
     .setName('블랙잭')
@@ -282,72 +314,92 @@ async function routeCasinoCommand(interaction, economy) {
     return;
   }
 
-	  if (interaction.commandName === '블랙잭') {
-	    const opponent = interaction.options.getUser('상대');
+  if (interaction.commandName === '럭키세븐') {
+    const game = playLuckySeven({ bet });
+    const settlement = await settleGame(interaction, economy, bet, game.payout);
+
+    await interaction.reply(formatLuckySevenResult(interaction.user, game, settlement));
+    return;
+  }
+
+  if (interaction.commandName === '하이로우') {
+    const game = playHighLow({
+      choice: interaction.options.getString('선택', true),
+      bet
+    });
+    const settlement = await settleGame(interaction, economy, bet, game.payout);
+
+    await interaction.reply(formatHighLowResult(interaction.user, game, settlement));
+    return;
+  }
+
+  if (interaction.commandName === '블랙잭') {
+    const opponent = interaction.options.getUser('상대');
 
     if (!opponent) {
       await playAiBlackjack(interaction, economy, bet);
       return;
     }
 
-	    await createPlayerBlackjackChallenge(interaction, economy, bet, opponent);
-	    return;
-	  }
+    await createPlayerBlackjackChallenge(interaction, economy, bet, opponent);
+    return;
+  }
 
-	  if (interaction.commandName === '룰렛') {
-	    const game = playRoulette({
-	      choice: interaction.options.getString('선택', true),
-	      bet
-	    });
-	    const settlement = await settleGame(interaction, economy, bet, game.payout);
+  if (interaction.commandName === '룰렛') {
+    const game = playRoulette({
+      choice: interaction.options.getString('선택', true),
+      bet
+    });
+    const settlement = await settleGame(interaction, economy, bet, game.payout);
 
-	    await interaction.reply(formatRouletteResult(interaction.user, game, settlement));
-	    return;
-	  }
+    await interaction.reply(formatRouletteResult(interaction.user, game, settlement));
+    return;
+  }
 
-	  if (interaction.commandName === '바카라') {
-	    const game = playBaccarat({
-	      choice: interaction.options.getString('선택', true),
-	      bet
-	    });
-	    const settlement = await settleGame(interaction, economy, bet, game.payout);
+  if (interaction.commandName === '바카라') {
+    const game = playBaccarat({
+      choice: interaction.options.getString('선택', true),
+      bet
+    });
+    const settlement = await settleGame(interaction, economy, bet, game.payout);
 
-	    await interaction.reply(formatBaccaratResult(interaction.user, game, settlement));
-	    return;
-	  }
+    await interaction.reply(formatBaccaratResult(interaction.user, game, settlement));
+    return;
+  }
 
-	  if (interaction.commandName === '크랩스') {
-	    const game = playCraps({
-	      choice: interaction.options.getString('선택', true),
-	      bet
-	    });
-	    const settlement = await settleGame(interaction, economy, bet, game.payout);
+  if (interaction.commandName === '크랩스') {
+    const game = playCraps({
+      choice: interaction.options.getString('선택', true),
+      bet
+    });
+    const settlement = await settleGame(interaction, economy, bet, game.payout);
 
-	    await interaction.reply(formatCrapsResult(interaction.user, game, settlement));
-	    return;
-	  }
+    await interaction.reply(formatCrapsResult(interaction.user, game, settlement));
+    return;
+  }
 
-	  if (interaction.commandName === '시크보') {
-	    const game = playSicBo({
-	      choice: interaction.options.getString('선택', true),
-	      bet
-	    });
-	    const settlement = await settleGame(interaction, economy, bet, game.payout);
+  if (interaction.commandName === '시크보') {
+    const game = playSicBo({
+      choice: interaction.options.getString('선택', true),
+      bet
+    });
+    const settlement = await settleGame(interaction, economy, bet, game.payout);
 
-	    await interaction.reply(formatSicBoResult(interaction.user, game, settlement));
-	    return;
-	  }
+    await interaction.reply(formatSicBoResult(interaction.user, game, settlement));
+    return;
+  }
 
-	  if (interaction.commandName === '키노') {
-	    const game = playKeno({
-	      numbers: interaction.options.getString('번호들', true),
-	      bet
-	    });
-	    const settlement = await settleGame(interaction, economy, bet, game.payout);
+  if (interaction.commandName === '키노') {
+    const game = playKeno({
+      numbers: interaction.options.getString('번호들', true),
+      bet
+    });
+    const settlement = await settleGame(interaction, economy, bet, game.payout);
 
-	    await interaction.reply(formatKenoResult(interaction.user, game, settlement));
-	  }
-	}
+    await interaction.reply(formatKenoResult(interaction.user, game, settlement));
+    return;
+  }
+}
 
 async function playAiBlackjack(interaction, economy, bet) {
   let reserved = false;
@@ -764,6 +816,30 @@ function formatSlotResult(user, game, settlement) {
   ].join('\n');
 }
 
+function formatLuckySevenResult(user, game, settlement) {
+  return [
+    `🎲 **럭키세븐** — ${user}`,
+    `주사위: ${game.dice.join(' + ')} = ${game.total}`,
+    game.win ? `합계 7 적중! 배수: ${game.multiplier}배` : '합계 7 실패',
+    formatSettlement(game.win, settlement)
+  ].join('\n');
+}
+
+function formatHighLowResult(user, game, settlement) {
+  const outcomeText = {
+    high: '높음',
+    low: '낮음',
+    tie: '같음'
+  }[game.outcome];
+
+  return [
+    `🃏 **하이로우** — ${user}`,
+    `선택: ${formatHighLowChoice(game.choice)} / 카드: ${game.firstCard} → ${game.secondCard} (${outcomeText})`,
+    game.push ? '같은 숫자라 베팅금이 환불됩니다.' : '',
+    formatSettlement(game.win || game.push, settlement)
+  ].filter(Boolean).join('\n');
+}
+
 function formatRouletteResult(user, game, settlement) {
   return [
     `🎡 **룰렛** — ${user}`,
@@ -973,6 +1049,13 @@ function formatSicBoChoice(choice) {
     small: '작음',
     big: '큼',
     triple: '트리플'
+  }[choice];
+}
+
+function formatHighLowChoice(choice) {
+  return {
+    high: '높음',
+    low: '낮음'
   }[choice];
 }
 

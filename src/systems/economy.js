@@ -76,7 +76,7 @@ const DEFAULT_OPTIONS = Object.freeze({
   messageXpMax: 15,
   firstMessageXpBonus: 50,
   dailyCooldownMs: 24 * 60 * 60 * 1000,
-  dailyCoinRewardMin: 1,
+  dailyCoinRewardMin: 100,
   dailyCoinRewardMax: 1000,
   dailyXpReward: 100,
   dailyStreakXpBonuses: Object.freeze({
