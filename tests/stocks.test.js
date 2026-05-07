@@ -678,6 +678,37 @@ test('주식 시세 빠른 버튼은 소유자만 TOP/신규상장/보유 화면
   assert.match(replies[0].content, /명령어를 실행한 유저만/);
 });
 
+test('주식 매수와 매도 결과에도 다음 확인 버튼을 붙인다', async () => {
+  const fakeStocks = {
+    async buyStock() {
+      return createStockTradeResultForTest({ remainingQuantity: 3 });
+    },
+    async sellStock() {
+      return createStockTradeResultForTest({ remainingQuantity: 1, realizedProfit: 120 });
+    }
+  };
+  const buyInteraction = createStockInteraction('매수', {
+    strings: { 종목: '희진전자' },
+    integers: { 수량: 3 }
+  });
+  const sellInteraction = createStockInteraction('매도', {
+    strings: { 종목: '희진전자' },
+    integers: { 수량: 2 }
+  });
+
+  assert.equal(await handleStockCommand(buyInteraction, fakeStocks), true);
+  assert.equal(await handleStockCommand(sellInteraction, fakeStocks), true);
+
+  assert.match(buyInteraction.replies[0], /매수 완료/);
+  assert.match(sellInteraction.replies[0], /매도 완료/);
+  for (const interaction of [buyInteraction, sellInteraction]) {
+    assert.deepEqual(
+      interaction.rawReplies[0].components[0].components.map((component) => component.data.label),
+      ['상승 TOP', '하락 TOP', '신규상장', '내 보유']
+    );
+  }
+});
+
 test('주식 확장 명령은 신규상장, 지정가 주문, 알림 응답을 출력한다', async () => {
   const ipoInteraction = createStockInteraction('신규상장');
   const limitBuyInteraction = createStockInteraction('지정가매수', {
@@ -1348,6 +1379,22 @@ function createQuoteForTest(name, symbol, changePercent = 0, overrides = {}) {
     eventType: null,
     listedFromTick: 0,
     ...overrides
+  };
+}
+
+function createStockTradeResultForTest({ remainingQuantity = 1, realizedProfit = 0 } = {}) {
+  return {
+    stock: createQuoteForTest('희진전자', 'HEEL'),
+    quantity: 2,
+    price: 800,
+    subtotal: 1_600,
+    fee: 16,
+    realizedProfit,
+    profile: { balance: 98_384 },
+    holding: {
+      quantity: remainingQuantity,
+      averageCost: 800
+    }
   };
 }
 

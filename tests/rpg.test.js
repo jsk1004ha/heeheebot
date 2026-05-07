@@ -1701,33 +1701,32 @@ test('RPG 허브 버튼, 지역 진행도, 직업 숙련, 수동 보스전이 �
     await handleRpgCommand(menuInteraction, fixture.economy);
 
     assert.match(menuInteraction.replies[0].embeds[0].data.title, /RPG 메인 허브/);
-    assert.deepEqual(
-      menuInteraction.replies[0].components
-        .flatMap((row) => row.components)
-        .map((button) => button.data.custom_id),
-      [
-        'rpg_quick:user-1:battle',
-        'rpg_quick:user-1:explore',
-        'rpg_quick:user-1:dungeon',
-        'rpg_quick:user-1:area',
-        'rpg_quick:user-1:rest',
-        'rpg_quick:user-1:daily',
-        'rpg_quick:user-1:quest',
-        'rpg_quick:user-1:story',
-        'rpg_quick:user-1:codex',
-        'rpg_quick:user-1:status',
-        'rpg_quick:user-1:equipment',
-        'rpg_quick:user-1:gear',
-        'rpg_quick:user-1:enhance',
-        'rpg_quick:user-1:disassemble',
-        'rpg_quick:user-1:skill_tree',
-        'rpg_quick:user-1:class_path',
-        'rpg_quick:user-1:shop',
-        'rpg_quick:user-1:inventory',
-        'rpg_quick:user-1:raid',
-        'rpg_quick:user-1:guild_raid'
-      ]
-    );
+    const menuIds = getComponentCustomIds(menuInteraction.replies[0]);
+    assert.equal(menuIds.length <= 10, true);
+    assert.ok(menuIds.includes('rpg_quick:user-1:battle'));
+    assert.ok(menuIds.includes('rpg_quick:user-1:combat'));
+    assert.ok(menuIds.includes('rpg_quick:user-1:adventure'));
+    assert.ok(menuIds.includes('rpg_quick:user-1:growth'));
+    assert.ok(menuIds.includes('rpg_quick:user-1:manage'));
+    assert.ok(menuIds.includes('rpg_quick:user-1:today'));
+    assert.ok(!menuIds.includes('rpg_quick:user-1:shop'));
+    assert.deepEqual(getComponentLabels(menuInteraction.replies[0]).slice(-5), [
+      '⚔️ 전투',
+      '🌍 모험',
+      '📈 성장',
+      '🎒 관리',
+      '✅ 오늘 할 일'
+    ]);
+
+    const combatMenu = createRpgButtonInteraction('rpg_quick:user-1:combat');
+    await handleRpgCommand(combatMenu, fixture.economy);
+    assert.match(combatMenu.updates[0].embeds[0].data.title, /RPG 전투 메뉴/);
+    assert.ok(getComponentCustomIds(combatMenu.updates[0]).includes('rpg_quick:user-1:dungeon'));
+
+    const growthMenu = createRpgButtonInteraction('rpg_quick:user-1:growth');
+    await handleRpgCommand(growthMenu, fixture.economy);
+    assert.match(growthMenu.updates[0].embeds[0].data.title, /RPG 성장 메뉴/);
+    assert.ok(getComponentCustomIds(growthMenu.updates[0]).includes('rpg_quick:user-1:skill_tree'));
 
     const battle = await fixture.economy.playRpgBattle({
       guildId: 'guild-1',
@@ -1925,10 +1924,12 @@ test('RPG 진행 화면은 내부 id 대신 한글 라벨과 다음 조작을 �
 
     const menuText = getReplyText(menu.replies[0]);
     assert.match(menuText, /다음 행동/);
-    assert.match(menuText, /추천 루프/);
-    assert.match(menuText, /1\) 전투\/탐험/);
-    assert.match(menuText, /2\) 보상 수령/);
-    assert.match(menuText, /3\) 성장 정리/);
+    assert.match(menuText, /스마트 추천/);
+    assert.match(menuText, /전투/);
+    assert.match(menuText, /모험/);
+    assert.match(menuText, /성장/);
+    assert.match(menuText, /관리/);
+    assert.match(menuText, /오늘 할 일/);
     assert.match(menuText, /버튼 배치/);
     assert.ok(getComponentCustomIds(skillTree.replies[0]).includes('rpg_quick:user-1:menu'));
     assert.ok(getComponentCustomIds(quests.replies[0]).includes('rpg_quick:user-1:battle'));
@@ -2086,7 +2087,11 @@ test('RPG 상점은 메뉴 버튼과 구매 버튼으로 장비를 사고 포션
 
     const menu = createRpgInteraction('메뉴');
     await handleRpgCommand(menu, fixture.economy);
-    assert.ok(getComponentCustomIds(menu.replies[0]).includes('rpg_quick:user-1:shop'));
+    assert.ok(getComponentCustomIds(menu.replies[0]).includes('rpg_quick:user-1:manage'));
+    const manage = createRpgButtonInteraction('rpg_quick:user-1:manage');
+    await handleRpgCommand(manage, fixture.economy);
+    assert.match(manage.updates[0].embeds[0].data.title, /RPG 관리 메뉴/);
+    assert.ok(getComponentCustomIds(manage.updates[0]).includes('rpg_quick:user-1:shop'));
 
     const shop = createRpgButtonInteraction('rpg_quick:user-1:shop');
     await handleRpgCommand(shop, fixture.economy);
@@ -2663,6 +2668,13 @@ function getComponentCustomIds(payload) {
   return (payload.components ?? [])
     .flatMap((row) => row.components ?? [])
     .map((component) => component.data.custom_id)
+    .filter(Boolean);
+}
+
+function getComponentLabels(payload) {
+  return (payload.components ?? [])
+    .flatMap((row) => row.components ?? [])
+    .map((component) => component.data.label)
     .filter(Boolean);
 }
 

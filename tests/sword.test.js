@@ -195,6 +195,51 @@ test('검강화 명령 응답은 강화 단계 이미지와 대장장이 축하 
   assert.equal(replies[0].embeds[0].data.thumbnail.url, 'attachment://blacksmith_success.png');
 });
 
+test('검강화 응답 버튼은 같은 유저가 강화와 판매 흐름을 이어가게 한다', async () => {
+  const replies = [];
+  const updates = [];
+  const interaction = createSwordInteraction({ commandName: '검강화', replies });
+  let enhanceCalls = 0;
+  const economy = {
+    async enhanceSword() {
+      enhanceCalls += 1;
+      return swordEnhancementResult({ beforeLevel: enhanceCalls - 1, afterLevel: enhanceCalls });
+    },
+    async getSwordStatus() {
+      return swordStatusResult({ level: 12, highestLevel: 12, balance: 5_000 });
+    }
+  };
+
+  await handleSwordCommand(interaction, economy, silentLogger);
+
+  const components = replies[0].components[0].components;
+  assert.deepEqual(components.map((component) => component.data.label), ['검강화', '상급강화', '검판매']);
+
+  const enhanceButton = createSwordButtonInteraction({
+    customId: 'sword_quick:enhance:user-1',
+    updates,
+    replies: []
+  });
+  await handleSwordCommand(enhanceButton, economy, silentLogger);
+
+  assert.equal(enhanceCalls, 2);
+  assert.match(updates[0].content, /현재 검: \*\*\+2 /);
+  assert.deepEqual(
+    updates[0].components[0].components.map((component) => component.data.label),
+    ['검강화', '상급강화', '검판매']
+  );
+
+  const saleButton = createSwordButtonInteraction({
+    customId: 'sword_quick:sell:user-1',
+    updates,
+    replies: []
+  });
+  await handleSwordCommand(saleButton, economy, silentLogger);
+
+  assert.match(updates[1].content, /검판매 확인/);
+  assert.equal(updates[1].components[0].components[0].data.custom_id, 'sword_sell_confirm:user-1');
+});
+
 test('검강화 실패 계열 응답은 대장장이 위로와 놀림 메시지를 구분한다', async () => {
   const maintain = await replyWithEnhancementResult(swordEnhancementResult({
     beforeLevel: 40,

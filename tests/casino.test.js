@@ -125,6 +125,53 @@ test('카지노정보 명령은 베팅금 없이 게임 배수와 환급 규칙�
   assert.doesNotMatch(interaction.replied.content, /기대|지급률|RTP|%/);
   assert.match(interaction.replied.content, /실제 현금/);
   assert.match(interaction.replied.content, /골드/);
+  assert.equal(interaction.replied.components?.length ?? 0, 0);
+});
+
+test('단순 도박 결과만 같은 베팅 재시도 버튼을 제공하고 카지노정보에는 기본 베팅 버튼을 붙이지 않는다', async () => {
+  const settled = [];
+  const fakeEconomy = {
+    async settleWager(payload) {
+      settled.push(payload);
+      return {
+        bet: payload.bet,
+        payout: payload.payout,
+        profit: payload.payout - payload.bet,
+        profile: { balance: 10_000 + payload.payout - payload.bet }
+      };
+    }
+  };
+  const slotInteraction = createChatInputInteraction('슬롯', {
+    integers: { 돈: 250 }
+  });
+
+  assert.equal(await handleCasinoCommand(slotInteraction, fakeEconomy, quietLogger), true);
+
+  assert.equal(settled[0].bet, 250);
+  assert.match(slotInteraction.replied.content, /슬롯/);
+  const resultButtons = slotInteraction.replied.components[0].components;
+  assert.deepEqual(
+    resultButtons.map((component) => component.data.label),
+    ['다시 슬롯', '카지노정보']
+  );
+  assert.match(resultButtons[0].data.custom_id, /casino_quick:slots:250:-:user-1/);
+
+  const replayButton = createCasinoButtonInteraction({
+    customId: resultButtons[0].data.custom_id,
+    userId: 'user-1'
+  });
+  assert.equal(await handleCasinoCommand(replayButton, fakeEconomy, quietLogger), true);
+  assert.equal(settled[1].bet, 250);
+  assert.equal(settled[1].userId, 'user-1');
+  assert.match(replayButton.updated.content, /슬롯/);
+
+  const otherUserButton = createCasinoButtonInteraction({
+    customId: resultButtons[0].data.custom_id,
+    userId: 'user-2'
+  });
+  assert.equal(await handleCasinoCommand(otherUserButton, fakeEconomy, quietLogger), true);
+  assert.equal(otherUserButton.replied.ephemeral, true);
+  assert.match(otherUserButton.replied.content, /명령어를 실행한 유저만/);
 });
 
 test('룰렛, 바카라, 크랩스, 시크보, 키노 결과를 계산한다', () => {
@@ -487,7 +534,9 @@ function createSequenceRandom(values) {
   return () => values[index++ % values.length];
 }
 
-function createChatInputInteraction(commandName) {
+function createChatInputInteraction(commandName, options = {}) {
+  const { integers = {}, strings = {}, targetUser = null } = options;
+
   return {
     commandName,
     guildId: 'guild-1',
@@ -497,14 +546,20 @@ function createChatInputInteraction(commandName) {
       toString: () => '<@user-1>'
     },
     options: {
-      getInteger() {
-        throw new Error('카지노정보는 돈 옵션을 읽지 않아야 합니다.');
+      getInteger(name) {
+        if (commandName === '카지노정보') {
+          throw new Error('카지노정보는 돈 옵션을 읽지 않아야 합니다.');
+        }
+        return integers[name] ?? null;
       },
-      getString() {
-        throw new Error('카지노정보는 선택 옵션을 읽지 않아야 합니다.');
+      getString(name) {
+        if (commandName === '카지노정보') {
+          throw new Error('카지노정보는 선택 옵션을 읽지 않아야 합니다.');
+        }
+        return strings[name] ?? null;
       },
       getUser() {
-        return null;
+        return targetUser;
       }
     },
     isButton: () => false,
@@ -514,6 +569,29 @@ function createChatInputInteraction(commandName) {
       this.replied = typeof payload === 'string'
         ? { content: payload }
         : payload;
+    }
+  };
+}
+
+function createCasinoButtonInteraction({ customId, userId = 'user-1' }) {
+  return {
+    customId,
+    guildId: 'guild-1',
+    user: {
+      id: userId,
+      username: userId === 'user-1' ? '도박러' : '구경꾼',
+      toString: () => `<@${userId}>`
+    },
+    isButton: () => true,
+    isChatInputCommand: () => false,
+    inGuild: () => true,
+    async reply(payload) {
+      this.replied = typeof payload === 'string'
+        ? { content: payload }
+        : payload;
+    },
+    async update(payload) {
+      this.updated = payload;
     }
   };
 }

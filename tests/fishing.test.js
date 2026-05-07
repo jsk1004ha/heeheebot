@@ -241,6 +241,45 @@ test('낚시 명령 핸들러는 /낚시 응답을 이미지 embed 카드로 반
   }
 });
 
+test('낚시 카드 버튼은 같은 유저가 낚시와 강화 흐름을 이어가게 한다', async () => {
+  const fixture = await createFixture({ randomInt: sequenceRandom(1, 0, 20, 1) });
+
+  try {
+    await seedFishingProfile(fixture.store, { fishingPoints: 100_000 });
+    const interaction = createInteraction('낚시');
+    await handleFishingCommand(interaction, fixture.fishing);
+
+    const row = interaction.lastReply.components[0];
+    assert.deepEqual(row.components.map((component) => component.data.label), ['낚시', '낚싯대 강화']);
+
+    const updates = [];
+    const replies = [];
+    const fishButton = createFishingButtonInteraction({
+      customId: 'fishing_quick:fish:user-1',
+      updates,
+      replies
+    });
+    await handleFishingCommand(fishButton, fixture.fishing);
+
+    assert.match(updates[0].embeds[0].data.title, /낚시 성공/);
+    assert.deepEqual(
+      updates[0].components[0].components.map((component) => component.data.label),
+      ['낚시', '낚싯대 강화']
+    );
+
+    const blocked = createFishingButtonInteraction({
+      customId: 'fishing_quick:enhance:user-1',
+      userId: 'other-user',
+      updates: [],
+      replies: []
+    });
+    await handleFishingCommand(blocked, fixture.fishing);
+    assert.match(blocked.replies[0].content, /명령어를 실행한 유저만/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 test('낚시강화 응답은 낚싯대 이미지를 embed 카드로 첨부하고 에셋 id를 노출하지 않는다', async () => {
   const fixture = await createFixture({ randomInt: sequenceRandom(1) });
 
@@ -317,6 +356,38 @@ function createInteraction(commandName, options = {}) {
 	    }
 	  };
 }
+
+function createFishingButtonInteraction({
+  customId,
+  userId = 'user-1',
+  username = '테스터',
+  updates = [],
+  replies = []
+}) {
+  return {
+    customId,
+    guildId: 'guild-1',
+    user: { id: userId, username },
+    updates,
+    replies,
+    isChatInputCommand() {
+      return false;
+    },
+    isButton() {
+      return true;
+    },
+    inGuild() {
+      return true;
+    },
+    async update(payload) {
+      updates.push(payload);
+    },
+    async reply(payload) {
+      replies.push(payload);
+    }
+  };
+}
+
 
 async function seedFishingProfile(store, overrides = {}) {
   await store.update((data) => {

@@ -1948,6 +1948,21 @@ async function handleRpgQuickButton(interaction, economy) {
       return true;
     }
 
+    if (isRpgMenuSectionAction(action)) {
+      const status = await economy.getRpgStatus({
+        guildId: interaction.guildId,
+        userId: interaction.user.id,
+        username: interaction.user.username
+      });
+      await updateWithRpgAssets(
+        interaction,
+        formatRpgSectionMenu(interaction.user, status, action),
+        getRpgSectionAssetIds(status, action),
+        { components: createRpgSectionRows(status, interaction.user.id, action) }
+      );
+      return true;
+    }
+
     if (action === 'battle') {
       const result = await economy.playRpgBattle({
         guildId: interaction.guildId,
@@ -2623,7 +2638,7 @@ function formatRpgMainMenu(user, status) {
   const actionAvailabilityText = formatRpgActionAvailability(status.actionAvailability);
 
   return [
-    `🎮 **RPG 메인 허브 · 모험 보드** — ${user.username}`,
+    `🎮 **RPG 메인 허브 · 스마트 허브** — ${user.username}`,
     `🧙 캐릭터: **${genderConfig.label} ${classConfig.label}${advancedText}** · 지역 **${currentArea.label}** · 전투력 **${adventureGuide.powerScore}**`,
     `📈 Lv.${profile.level} ${adventureGuide.levelProgress.bar} **${adventureGuide.levelProgress.current}/${adventureGuide.levelProgress.required} XP** (${adventureGuide.levelProgress.percent}%)`,
     `❤️ HP **${profile.rpg.hp}/${derivedStats.maxHp}** · 🔷 MP **${profile.rpg.mp}/${derivedStats.maxMp}** · 🪙 골드 **${getRpgGold(profile).toLocaleString()}**`,
@@ -2637,14 +2652,43 @@ function formatRpgMainMenu(user, status) {
     '',
     `📋 오늘 의뢰: ${dailySummary}`,
     '',
-    '**추천 루프**',
-    '1) 전투/탐험: `전투` → `탐험` → `던전`으로 XP, 지역 탐사율, 전리품 확보',
-    '2) 보상 수령: `일일`, `퀘스트`, `스토리`, `도감`에서 열린 보상 수령',
-    '3) 성장 정리: `전리품`, `강화`, `스킬`, `전직`, `월드맵` 순서로 다음 사냥터 준비',
+    `**스마트 추천**`,
+    formatRpgSmartRecommendationSummary(status),
     '',
     '**버튼 배치**',
-    '첫 줄은 바로 행동, 둘째 줄은 보상/기록, 셋째 줄은 장비 성장, 마지막 줄은 상점·레이드입니다.'
+    '첫 줄은 지금 할 만한 추천 행동입니다.',
+    '아래 허브에서 `전투`, `모험`, `성장`, `관리`, `오늘 할 일`만 골라 들어가면 됩니다.'
   ].join('\n');
+}
+
+function formatRpgSectionMenu(user, status, section) {
+  const { profile, currentArea, derivedStats, adventureGuide } = status;
+  const sectionConfig = getRpgMenuSectionConfig(section);
+  const hpText = `${profile.rpg.hp}/${derivedStats.maxHp}`;
+  const mpText = `${profile.rpg.mp}/${derivedStats.maxMp}`;
+
+  return [
+    `${sectionConfig.emoji} **RPG ${sectionConfig.label} 메뉴** — ${user.username}`,
+    `현재 지역 **${currentArea.label}** · Lv.${profile.level} · 전투력 **${adventureGuide.powerScore}** · HP **${hpText}** · MP **${mpText}**`,
+    `다음 추천: **${adventureGuide.recommendedAction.label}** — ${adventureGuide.recommendedAction.reason}`,
+    '',
+    sectionConfig.description,
+    '',
+    `빠른 판단: ${formatRpgSmartRecommendationSummary(status)}`
+  ].join('\n');
+}
+
+function formatRpgSmartRecommendationSummary(status) {
+  const recommendations = getRpgSmartRecommendations(status);
+
+  if (recommendations.length <= 0) {
+    return '특별히 밀린 보상은 없습니다. `전투`나 `모험` 허브에서 다음 파밍을 이어가세요.';
+  }
+
+  return recommendations
+    .slice(0, 3)
+    .map((recommendation, index) => `${index + 1}) **${recommendation.label}**`)
+    .join(' · ');
 }
 
 function formatRpgStatus(user, status) {
@@ -3821,160 +3865,221 @@ function createRpgClassPathViewRows(status, userId) {
   ].slice(0, 5);
 }
 
+const RPG_MENU_SECTION_CONFIGS = Object.freeze({
+  combat: Object.freeze({
+    label: '전투',
+    emoji: '⚔️',
+    description: '사냥, 던전, 레이드, 회복처럼 전투 직후 바로 눌러야 하는 행동만 모았습니다.'
+  }),
+  adventure: Object.freeze({
+    label: '모험',
+    emoji: '🌍',
+    description: '탐험, 월드맵 이동, 스토리, 도감처럼 지역 진행과 기록을 이어가는 메뉴입니다.'
+  }),
+  growth: Object.freeze({
+    label: '성장',
+    emoji: '📈',
+    description: '장비 장착, 전리품 관리, 강화, 스킬, 전직처럼 캐릭터를 강하게 만드는 메뉴입니다.'
+  }),
+  manage: Object.freeze({
+    label: '관리',
+    emoji: '🎒',
+    description: '상태, 인벤토리, 상점, 도감을 한곳에서 확인하는 정비 메뉴입니다.'
+  }),
+  today: Object.freeze({
+    label: '오늘 할 일',
+    emoji: '✅',
+    description: '일일 의뢰, 퀘스트, 스토리, 도감 보상처럼 오늘 먼저 챙길 보상을 모았습니다.'
+  })
+});
+
+function isRpgMenuSectionAction(action) {
+  return Object.hasOwn(RPG_MENU_SECTION_CONFIGS, action);
+}
+
+function getRpgMenuSectionConfig(section) {
+  return RPG_MENU_SECTION_CONFIGS[section] ?? RPG_MENU_SECTION_CONFIGS.combat;
+}
+
+function getRpgSectionAssetIds(status, section) {
+  if (section === 'combat' || section === 'adventure' || section === 'today') {
+    return [status.currentArea.backgroundAssetId, status.heroAssetId];
+  }
+
+  return [status.heroAssetId, status.currentArea.backgroundAssetId];
+}
+
+function createRpgQuickButton(userId, action, label, style = ButtonStyle.Secondary, disabled = false) {
+  return new ButtonBuilder()
+    .setCustomId(`rpg_quick:${userId}:${action}`)
+    .setLabel(label)
+    .setStyle(style)
+    .setDisabled(disabled);
+}
+
+function getRpgSmartRecommendations(status) {
+  const recommendations = [];
+  const usedActions = new Set();
+  const add = (action, label, style = ButtonStyle.Primary, disabled = false) => {
+    if (usedActions.has(action)) return;
+    usedActions.add(action);
+    recommendations.push({ action, label, style, disabled });
+  };
+  const recommended = status.adventureGuide?.recommendedAction;
+  const hpRatio = status.derivedStats.maxHp > 0
+    ? status.profile.rpg.hp / status.derivedStats.maxHp
+    : 1;
+  const claimableDailyCount = status.dailyMissions.filter((mission) => mission.canClaim).length;
+  const claimableQuestCount = status.quests.filter((quest) => quest.canClaim).length;
+  const progressableStoryCount = status.storyChapters.filter((chapter) => chapter.canProgress).length;
+  const claimableCodexCount = status.codex.filter((entry) => entry.canClaim).length;
+  const canAdvanceCount = status.classPaths.filter((advanced) => advanced.canAdvance).length;
+  const gearCount = Object.keys(status.profile.rpg.gearInventory ?? {}).length;
+  const skillPointCount = status.skillPoints?.available ?? 0;
+
+  if (hpRatio <= 0.45 || recommended?.type === 'rest') {
+    add('rest', '💤 HP 회복 필요', ButtonStyle.Success);
+  }
+  if (claimableDailyCount > 0) {
+    add('daily', `🎁 일일 보상 ${claimableDailyCount}개`, ButtonStyle.Success);
+  }
+  if (claimableQuestCount > 0) {
+    add('quest', `✅ 퀘스트 보상 ${claimableQuestCount}개`, ButtonStyle.Success);
+  }
+  if (canAdvanceCount > 0) {
+    add('class_path', `🌟 전직 가능 ${canAdvanceCount}개`, ButtonStyle.Primary);
+  }
+  if (skillPointCount > 0) {
+    add('skill_tree', `✨ 스킬 포인트 ${skillPointCount}개`, ButtonStyle.Primary);
+  }
+  if (gearCount > 0) {
+    add('gear', `🛡️ 전리품 ${gearCount}개 확인`, ButtonStyle.Primary);
+  }
+  if (progressableStoryCount > 0) {
+    add('story', `📖 스토리 진행 ${progressableStoryCount}개`, ButtonStyle.Primary);
+  }
+  if (claimableCodexCount > 0) {
+    add('codex', `📚 도감 보상 ${claimableCodexCount}개`, ButtonStyle.Success);
+  }
+
+  if (recommended) {
+    const actionByType = {
+      battle: 'battle',
+      daily_claim: 'daily',
+      quest_claim: 'quest',
+      story: 'story',
+      explore: 'explore',
+      dungeon: 'dungeon',
+      rest: 'rest',
+      wait: 'status'
+    };
+    const action = actionByType[recommended.type] ?? 'status';
+    add(action, `➡️ ${shortenButtonLabel(recommended.label)}`, ButtonStyle.Primary);
+  }
+
+  if (recommendations.length <= 0) {
+    add('combat', '⚔️ 전투부터 하기', ButtonStyle.Danger);
+  }
+
+  return recommendations.slice(0, 5);
+}
+
+function createRpgSmartRecommendationRows(status, userId) {
+  return createButtonRows(
+    getRpgSmartRecommendations(status).map((recommendation) =>
+      createRpgQuickButton(
+        userId,
+        recommendation.action,
+        recommendation.label,
+        recommendation.style,
+        recommendation.disabled
+      )
+    )
+  );
+}
+
+function createRpgSectionRows(status, userId, section) {
+  const raidLocked = status.profile.level < getRpgRaidConfig('slime_horde').unlockLevel;
+  const hasGear = Object.keys(status.profile.rpg.gearInventory ?? {}).length > 0;
+  const hasSkillPoints = (status.skillPoints?.available ?? 0) > 0;
+  const hasAdvance = status.classPaths.some((advanced) => advanced.canAdvance);
+  const hasDailyClaim = status.dailyMissions.some((mission) => mission.canClaim);
+  const hasQuestClaim = status.quests.some((quest) => quest.canClaim);
+  const hasStoryProgress = status.storyChapters.some((chapter) => chapter.canProgress);
+  const hasCodexClaim = status.codex.some((entry) => entry.canClaim);
+
+  if (section === 'combat') {
+    return createButtonRows([
+      createRpgQuickButton(userId, 'battle', '⚔️ 사냥', ButtonStyle.Danger),
+      createRpgQuickButton(userId, 'dungeon', '🏰 던전', ButtonStyle.Primary),
+      createRpgQuickButton(userId, 'raid', '🐉 레이드', ButtonStyle.Danger, raidLocked),
+      createRpgQuickButton(userId, 'guild_raid', '👥 길드 레이드', ButtonStyle.Danger, raidLocked),
+      createRpgQuickButton(userId, 'rest', '💤 휴식', ButtonStyle.Success),
+      createRpgQuickButton(userId, 'menu', '🎮 허브', ButtonStyle.Secondary)
+    ]);
+  }
+
+  if (section === 'adventure') {
+    return createButtonRows([
+      createRpgQuickButton(userId, 'explore', '🧭 탐험', ButtonStyle.Primary),
+      createRpgQuickButton(userId, 'area', '🗺️ 월드맵', ButtonStyle.Secondary),
+      createRpgQuickButton(userId, 'story', hasStoryProgress ? '📖 스토리 진행' : '📖 스토리', ButtonStyle.Primary),
+      createRpgQuickButton(userId, 'codex', hasCodexClaim ? '📚 도감 보상' : '📚 도감', ButtonStyle.Success),
+      createRpgQuickButton(userId, 'menu', '🎮 허브', ButtonStyle.Secondary)
+    ]);
+  }
+
+  if (section === 'growth') {
+    return createButtonRows([
+      createRpgQuickButton(userId, 'equipment', '🧥 기본 장비', ButtonStyle.Primary),
+      createRpgQuickButton(userId, 'gear', hasGear ? '🛡️ 전리품 장착' : '🛡️ 전리품 없음', ButtonStyle.Primary, !hasGear),
+      createRpgQuickButton(userId, 'enhance', hasGear ? '🛠️ 장비 강화' : '🛠️ 강화할 장비 없음', ButtonStyle.Success, !hasGear),
+      createRpgQuickButton(userId, 'disassemble', hasGear ? '♻️ 전리품 분해' : '♻️ 분해 없음', ButtonStyle.Danger, !hasGear),
+      createRpgQuickButton(userId, 'skill_tree', hasSkillPoints ? `✨ 스킬 ${hasSkillPoints}점` : '✨ 스킬', ButtonStyle.Primary),
+      createRpgQuickButton(userId, 'class_path', hasAdvance ? '🌟 전직 가능' : '🌟 전직 트리', ButtonStyle.Primary),
+      createRpgQuickButton(userId, 'menu', '🎮 허브', ButtonStyle.Secondary)
+    ]);
+  }
+
+  if (section === 'manage') {
+    return createButtonRows([
+      createRpgQuickButton(userId, 'status', '📊 내 캐릭터', ButtonStyle.Secondary),
+      createRpgQuickButton(userId, 'inventory', '🎒 인벤토리', ButtonStyle.Secondary),
+      createRpgQuickButton(userId, 'shop', '🏪 상점', ButtonStyle.Success),
+      createRpgQuickButton(userId, 'codex', hasCodexClaim ? '📚 도감 보상' : '📚 도감', ButtonStyle.Primary),
+      createRpgQuickButton(userId, 'menu', '🎮 허브', ButtonStyle.Secondary)
+    ]);
+  }
+
+  return createButtonRows([
+    createRpgQuickButton(userId, 'daily', hasDailyClaim ? '🎁 일일 보상 받기' : '📋 일일 의뢰', ButtonStyle.Success),
+    createRpgQuickButton(userId, 'quest', hasQuestClaim ? '✅ 퀘스트 보상' : '🧾 퀘스트', ButtonStyle.Success),
+    createRpgQuickButton(userId, 'story', hasStoryProgress ? '📖 스토리 진행' : '📖 스토리', ButtonStyle.Primary),
+    createRpgQuickButton(userId, 'codex', hasCodexClaim ? '📚 도감 보상' : '📚 도감', ButtonStyle.Primary),
+    createRpgQuickButton(userId, 'menu', '🎮 허브', ButtonStyle.Secondary)
+  ]);
+}
+
 function createRpgMainMenuRows(status, userId) {
   return [
+    ...createRpgSmartRecommendationRows(status, userId).slice(0, 1),
     new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`rpg_quick:${userId}:battle`)
-        .setLabel('전투')
-        .setStyle(ButtonStyle.Danger),
-      new ButtonBuilder()
-        .setCustomId(`rpg_quick:${userId}:explore`)
-        .setLabel('탐험')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId(`rpg_quick:${userId}:dungeon`)
-        .setLabel('던전')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId(`rpg_quick:${userId}:area`)
-        .setLabel('월드맵')
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId(`rpg_quick:${userId}:rest`)
-        .setLabel('휴식')
-        .setStyle(ButtonStyle.Secondary)
-    ),
-    new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`rpg_quick:${userId}:daily`)
-        .setLabel(status.dailyMissions.some((mission) => mission.canClaim) ? '일일 보상' : '일일 의뢰')
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
-        .setCustomId(`rpg_quick:${userId}:quest`)
-        .setLabel(status.quests.some((quest) => quest.canClaim) ? '퀘스트 보상' : '퀘스트')
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
-        .setCustomId(`rpg_quick:${userId}:story`)
-        .setLabel(status.storyChapters.some((chapter) => chapter.canProgress) ? '스토리 진행' : '스토리')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId(`rpg_quick:${userId}:codex`)
-        .setLabel(status.codex.some((entry) => entry.canClaim) ? '도감 보상' : '도감')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId(`rpg_quick:${userId}:status`)
-        .setLabel('상태')
-        .setStyle(ButtonStyle.Secondary)
-    ),
-    new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`rpg_quick:${userId}:equipment`)
-        .setLabel('장비')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId(`rpg_quick:${userId}:gear`)
-        .setLabel('전리품')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId(`rpg_quick:${userId}:enhance`)
-        .setLabel('강화')
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
-        .setCustomId(`rpg_quick:${userId}:disassemble`)
-        .setLabel('분해')
-        .setStyle(ButtonStyle.Danger)
-        .setDisabled(Object.keys(status.profile.rpg.gearInventory).length <= 0),
-      new ButtonBuilder()
-        .setCustomId(`rpg_quick:${userId}:skill_tree`)
-        .setLabel('스킬')
-        .setStyle(ButtonStyle.Primary)
-    ),
-    new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`rpg_quick:${userId}:class_path`)
-        .setLabel('전직')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId(`rpg_quick:${userId}:shop`)
-        .setLabel('상점')
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
-        .setCustomId(`rpg_quick:${userId}:inventory`)
-        .setLabel('인벤토리')
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId(`rpg_quick:${userId}:raid`)
-        .setLabel('레이드')
-        .setStyle(ButtonStyle.Danger)
-        .setDisabled(status.profile.level < getRpgRaidConfig('slime_horde').unlockLevel),
-      new ButtonBuilder()
-        .setCustomId(`rpg_quick:${userId}:guild_raid`)
-        .setLabel('길드레이드')
-        .setStyle(ButtonStyle.Danger)
-        .setDisabled(status.profile.level < getRpgRaidConfig('slime_horde').unlockLevel)
+      createRpgQuickButton(userId, 'combat', '⚔️ 전투', ButtonStyle.Danger),
+      createRpgQuickButton(userId, 'adventure', '🌍 모험', ButtonStyle.Primary),
+      createRpgQuickButton(userId, 'growth', '📈 성장', ButtonStyle.Primary),
+      createRpgQuickButton(userId, 'manage', '🎒 관리', ButtonStyle.Secondary),
+      createRpgQuickButton(userId, 'today', '✅ 오늘 할 일', ButtonStyle.Success)
     )
   ];
 }
 
 function createRpgActionLoopRows(userId) {
   return createButtonRows([
-    new ButtonBuilder()
-      .setCustomId(`rpg_quick:${userId}:battle`)
-      .setLabel('전투')
-      .setStyle(ButtonStyle.Danger),
-    new ButtonBuilder()
-      .setCustomId(`rpg_quick:${userId}:explore`)
-      .setLabel('탐험')
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId(`rpg_quick:${userId}:dungeon`)
-      .setLabel('던전')
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId(`rpg_quick:${userId}:area`)
-      .setLabel('월드맵')
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId(`rpg_quick:${userId}:menu`)
-      .setLabel('메인 허브')
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId(`rpg_quick:${userId}:daily`)
-      .setLabel('일일')
-      .setStyle(ButtonStyle.Success),
-    new ButtonBuilder()
-      .setCustomId(`rpg_quick:${userId}:quest`)
-      .setLabel('퀘스트')
-      .setStyle(ButtonStyle.Success),
-    new ButtonBuilder()
-      .setCustomId(`rpg_quick:${userId}:status`)
-      .setLabel('상태')
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId(`rpg_quick:${userId}:gear`)
-      .setLabel('전리품')
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId(`rpg_quick:${userId}:enhance`)
-      .setLabel('강화')
-      .setStyle(ButtonStyle.Success),
-    new ButtonBuilder()
-      .setCustomId(`rpg_quick:${userId}:rest`)
-      .setLabel('휴식')
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId(`rpg_quick:${userId}:shop`)
-      .setLabel('상점')
-      .setStyle(ButtonStyle.Success),
-    new ButtonBuilder()
-      .setCustomId(`rpg_quick:${userId}:inventory`)
-      .setLabel('인벤토리')
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId(`rpg_quick:${userId}:disassemble`)
-      .setLabel('분해')
-      .setStyle(ButtonStyle.Danger)
+    createRpgQuickButton(userId, 'battle', '⚔️ 다시 전투', ButtonStyle.Danger),
+    createRpgQuickButton(userId, 'explore', '🧭 탐험', ButtonStyle.Primary),
+    createRpgQuickButton(userId, 'today', '✅ 오늘', ButtonStyle.Success),
+    createRpgQuickButton(userId, 'growth', '📈 성장', ButtonStyle.Primary),
+    createRpgQuickButton(userId, 'menu', '🎮 허브', ButtonStyle.Secondary)
   ]);
 }
 

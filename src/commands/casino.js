@@ -242,6 +242,9 @@ export function getCasinoCommandPayloads() {
 
 export async function handleCasinoCommand(interaction, economy, logger = console) {
   if (interaction.isButton()) {
+    if (interaction.customId?.startsWith('casino_quick:')) {
+      return handleCasinoQuickButton(interaction, economy, logger);
+    }
     return handleBlackjackButton(interaction, economy, logger);
   }
 
@@ -272,7 +275,7 @@ export async function handleCasinoCommand(interaction, economy, logger = console
 
 async function routeCasinoCommand(interaction, economy) {
   if (interaction.commandName === '카지노정보') {
-    await interaction.reply(formatCasinoInfo());
+    await interaction.reply(createCasinoInfoPayload());
     return;
   }
 
@@ -289,7 +292,13 @@ async function routeCasinoCommand(interaction, economy) {
       payout: game.payout
     });
 
-    await interaction.reply(formatOddEvenResult(interaction.user, game, settlement));
+    await interaction.reply(createCasinoGamePayload({
+      content: formatOddEvenResult(interaction.user, game, settlement),
+      userId: interaction.user.id,
+      game: 'odd_even',
+      bet,
+      choice
+    }));
     return;
   }
 
@@ -304,7 +313,13 @@ async function routeCasinoCommand(interaction, economy) {
       payout: game.payout
     });
 
-    await interaction.reply(formatDiceResult(interaction.user, game, settlement));
+    await interaction.reply(createCasinoGamePayload({
+      content: formatDiceResult(interaction.user, game, settlement),
+      userId: interaction.user.id,
+      game: 'dice',
+      bet,
+      choice
+    }));
     return;
   }
 
@@ -318,7 +333,12 @@ async function routeCasinoCommand(interaction, economy) {
       payout: game.payout
     });
 
-    await interaction.reply(formatSlotResult(interaction.user, game, settlement));
+    await interaction.reply(createCasinoGamePayload({
+      content: formatSlotResult(interaction.user, game, settlement),
+      userId: interaction.user.id,
+      game: 'slots',
+      bet
+    }));
     return;
   }
 
@@ -427,6 +447,46 @@ function formatCasinoInfo() {
     '- `/시크보`: 작음/큼 2배, 트리플 31배',
     '- `/키노`: 번호 1~5개 선택, 10개 추첨과 비교. 1개 이상 맞히면 선택 개수별 배수표로 환급 또는 당첨'
   ].join('\n');
+}
+
+function createCasinoInfoPayload() {
+  return {
+    content: formatCasinoInfo(),
+    components: []
+  };
+}
+
+function createCasinoGamePayload({ content, userId, game, bet, choice = '-' }) {
+  return {
+    content,
+    components: createCasinoReplayRows({ userId, game, bet, choice })
+  };
+}
+
+function createCasinoReplayRows({ userId, game, bet, choice = '-' }) {
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(createCasinoQuickCustomId({ action: game, bet, choice, userId }))
+        .setLabel(`다시 ${getCasinoQuickGameLabel(game)}`)
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId(createCasinoQuickCustomId({ action: 'info', bet: 0, userId }))
+        .setLabel('카지노정보')
+        .setStyle(ButtonStyle.Secondary)
+    )
+  ];
+}
+
+function createCasinoQuickCustomId({ action, bet, choice = '-', userId }) {
+  return `casino_quick:${action}:${bet}:${choice}:${userId}`;
+}
+
+function getCasinoQuickGameLabel(game) {
+  if (game === 'slots') return '슬롯';
+  if (game === 'odd_even') return '홀짝';
+  if (game === 'dice') return '주사위';
+  return '게임';
 }
 
 async function playAiBlackjack(interaction, economy, bet) {
@@ -553,6 +613,95 @@ async function handleBlackjackButton(interaction, economy, logger) {
   }
 
   return handleBlackjackChallengeButton(interaction, economy, logger);
+}
+
+async function handleCasinoQuickButton(interaction, economy, logger) {
+  const [, action, rawBet, choice = '-', ownerId] = interaction.customId.split(':');
+
+  if (ownerId && interaction.user.id !== ownerId) {
+    await interaction.reply({
+      content: '이 카지노 버튼은 명령어를 실행한 유저만 사용할 수 있습니다.',
+      ephemeral: true
+    });
+    return true;
+  }
+
+  if (action === 'info') {
+    await interaction.update(createCasinoInfoPayload());
+    return true;
+  }
+
+  if (!interaction.inGuild()) {
+    await interaction.reply({
+      content: '서버에서만 사용할 수 있는 명령어입니다.',
+      ephemeral: true
+    });
+    return true;
+  }
+
+  const bet = Number.parseInt(rawBet, 10);
+  if (!Number.isSafeInteger(bet) || bet <= 0) {
+    await interaction.reply({
+      content: '버튼 베팅금이 올바르지 않습니다.',
+      ephemeral: true
+    });
+    return true;
+  }
+
+  try {
+    if (action === 'slots') {
+      const game = playSlots({ bet });
+      const settlement = await settleGame(interaction, economy, bet, game.payout);
+      await interaction.update(createCasinoGamePayload({
+        content: formatSlotResult(interaction.user, game, settlement),
+        userId: interaction.user.id,
+        game: action,
+        bet
+      }));
+      return true;
+    }
+
+    if (action === 'odd_even') {
+      const normalizedChoice = normalizeOddEvenChoice(choice);
+      const game = playOddEven({ choice: normalizedChoice, bet });
+      const settlement = await settleGame(interaction, economy, bet, game.payout);
+      await interaction.update(createCasinoGamePayload({
+        content: formatOddEvenResult(interaction.user, game, settlement),
+        userId: interaction.user.id,
+        game: action,
+        bet,
+        choice: normalizedChoice
+      }));
+      return true;
+    }
+
+    if (action === 'dice') {
+      const normalizedChoice = normalizeDiceChoice(choice);
+      const game = playDice({ choice: normalizedChoice, bet });
+      const settlement = await settleGame(interaction, economy, bet, game.payout);
+      await interaction.update(createCasinoGamePayload({
+        content: formatDiceResult(interaction.user, game, settlement),
+        userId: interaction.user.id,
+        game: action,
+        bet,
+        choice: normalizedChoice
+      }));
+      return true;
+    }
+
+    await interaction.reply({
+      content: '알 수 없는 카지노 빠른 버튼입니다.',
+      ephemeral: true
+    });
+  } catch (error) {
+    logger.error(error);
+    await interaction.reply({
+      content: `게임 실패: ${error.message}`,
+      ephemeral: true
+    });
+  }
+
+  return true;
 }
 
 async function handleBlackjackChallengeButton(interaction, economy, logger) {

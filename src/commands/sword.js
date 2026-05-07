@@ -140,15 +140,7 @@ async function routeSwordCommand(interaction, economy) {
       userId: user.id,
       username: user.username
     });
-    await interaction.reply(createSwordReplyPayload(
-      formatSwordEnhancement(user, result),
-      getSwordEnhancementImageLevel(result),
-      getSwordEnhancementImageTitle(result),
-      {
-        includeBlacksmith: true,
-        blacksmithOutcome: result.outcome
-      }
-    ));
+    await interaction.reply(createSwordEnhancementReplyPayload(user, result));
     return;
   }
 
@@ -158,15 +150,7 @@ async function routeSwordCommand(interaction, economy) {
       userId: user.id,
       username: user.username
     });
-    await interaction.reply(createSwordReplyPayload(
-      formatSwordEnhancement(user, result),
-      getSwordEnhancementImageLevel(result),
-      getSwordEnhancementImageTitle(result),
-      {
-        includeBlacksmith: true,
-        blacksmithOutcome: result.outcome
-      }
-    ));
+    await interaction.reply(createSwordEnhancementReplyPayload(user, result));
     return;
   }
 
@@ -339,10 +323,12 @@ async function routeSwordCommand(interaction, economy) {
 }
 
 async function handleSwordButton(interaction, economy, logger = console) {
+  if (interaction.customId?.startsWith('sword_quick:')) {
+    return handleSwordQuickButton(interaction, economy, logger);
+  }
   if (!interaction.customId?.startsWith('sword_sell_')) return false;
 
   const [action, userId] = interaction.customId.split(':');
-
   if (interaction.user.id !== userId) {
     await interaction.reply({
       content: '이 검 판매 확인 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
@@ -388,6 +374,90 @@ async function handleSwordButton(interaction, economy, logger = console) {
   }
 
   return true;
+}
+
+async function handleSwordQuickButton(interaction, economy, logger = console) {
+  const [, action, userId] = interaction.customId.split(':');
+
+  if (interaction.user.id !== userId) {
+    await interaction.reply({
+      content: '이 검 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
+      ephemeral: true
+    });
+    return true;
+  }
+
+  try {
+    if (action === 'enhance') {
+      const result = await economy.enhanceSword({
+        guildId: interaction.guildId,
+        userId: interaction.user.id,
+        username: interaction.user.username
+      });
+      await interaction.update(createSwordEnhancementReplyPayload(interaction.user, result));
+      return true;
+    }
+
+    if (action === 'advanced') {
+      const result = await economy.advancedEnhanceSword({
+        guildId: interaction.guildId,
+        userId: interaction.user.id,
+        username: interaction.user.username
+      });
+      await interaction.update(createSwordEnhancementReplyPayload(interaction.user, result));
+      return true;
+    }
+
+    if (action === 'sell') {
+      const result = await economy.getSwordStatus({
+        guildId: interaction.guildId,
+        userId: interaction.user.id,
+        username: interaction.user.username
+      });
+
+      if (result.saleValue <= 0) {
+        await interaction.reply({
+          content: '판매할 검이 없습니다. +1 이상 강화된 검만 판매할 수 있습니다.',
+          ephemeral: true
+        });
+        return true;
+      }
+
+      await interaction.update(createSwordReplyPayload(
+        formatSwordSalePreview(interaction.user, result),
+        result.profile.sword.level,
+        `판매 예정 검 — ${getSwordAssetLabel(result.profile.sword.level)}`,
+        { components: [createSwordSellConfirmRow(interaction.user.id)] }
+      ));
+      return true;
+    }
+
+    await interaction.reply({
+      content: '알 수 없는 검 버튼입니다.',
+      ephemeral: true
+    });
+    return true;
+  } catch (error) {
+    logger.error(error);
+    await interaction.reply({
+      content: `검 시스템 처리 실패: ${error.message}`,
+      ephemeral: true
+    });
+    return true;
+  }
+}
+
+function createSwordEnhancementReplyPayload(user, result) {
+  return createSwordReplyPayload(
+    formatSwordEnhancement(user, result),
+    getSwordEnhancementImageLevel(result),
+    getSwordEnhancementImageTitle(result),
+    {
+      includeBlacksmith: true,
+      blacksmithOutcome: result.outcome,
+      components: [createSwordQuickActionRow(user.id)]
+    }
+  );
 }
 
 function formatSwordEnhancement(user, result) {
@@ -695,6 +765,23 @@ export function createSwordReplyPayload(content, swordLevel, title = null, optio
     files,
     ...(options.components ? { components: options.components } : {})
   };
+}
+
+function createSwordQuickActionRow(userId) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`sword_quick:enhance:${userId}`)
+      .setLabel('검강화')
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId(`sword_quick:advanced:${userId}`)
+      .setLabel('상급강화')
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`sword_quick:sell:${userId}`)
+      .setLabel('검판매')
+      .setStyle(ButtonStyle.Secondary)
+  );
 }
 
 function createSwordSellConfirmRow(userId) {

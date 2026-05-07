@@ -1,6 +1,9 @@
 import { existsSync } from 'node:fs';
 import { basename } from 'node:path';
 import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   EmbedBuilder,
   SlashCommandBuilder
 } from 'discord.js';
@@ -62,6 +65,10 @@ export function getFishingCommandPayloads() {
 }
 
 export async function handleFishingCommand(interaction, fishing) {
+  if (interaction.isButton?.()) {
+    return handleFishingButton(interaction, fishing);
+  }
+
   if (!interaction.isChatInputCommand() || !isFishingCommand(interaction.commandName)) {
     return false;
   }
@@ -86,6 +93,61 @@ export async function handleFishingCommand(interaction, fishing) {
   return true;
 }
 
+async function handleFishingButton(interaction, fishing) {
+  if (!interaction.customId?.startsWith('fishing_quick:')) return false;
+
+  const [, action, ownerId] = interaction.customId.split(':');
+  if (ownerId && interaction.user.id !== ownerId) {
+    await interaction.reply({
+      content: '이 낚시 버튼은 명령어를 실행한 유저만 사용할 수 있습니다.',
+      ephemeral: true
+    });
+    return true;
+  }
+
+  if (!interaction.inGuild()) {
+    await interaction.reply({
+      content: '서버에서만 사용할 수 있는 명령어입니다.',
+      ephemeral: true
+    });
+    return true;
+  }
+
+  try {
+    if (action === 'fish') {
+      const result = await fishing.catchFish({
+        guildId: interaction.guildId,
+        userId: interaction.user.id,
+        username: interaction.user.username
+      });
+      await updateWithFishCard(interaction, formatCatchResult(interaction.user, result), result.fish, interaction.user.id);
+      return true;
+    }
+
+    if (action === 'enhance') {
+      const result = await fishing.enhanceRod({
+        guildId: interaction.guildId,
+        userId: interaction.user.id,
+        username: interaction.user.username
+      });
+      await updateWithRodCard(interaction, formatEnhancementResult(interaction.user, result), result.afterLevel, interaction.user.id);
+      return true;
+    }
+
+    await interaction.reply({
+      content: '알 수 없는 낚시 버튼입니다.',
+      ephemeral: true
+    });
+    return true;
+  } catch (error) {
+    await interaction.reply({
+      content: `낚시 처리 실패: ${error.message}`,
+      ephemeral: true
+    });
+    return true;
+  }
+}
+
 async function routeFishingCommand(interaction, fishing) {
   const guildId = interaction.guildId;
   const user = interaction.user;
@@ -96,7 +158,7 @@ async function routeFishingCommand(interaction, fishing) {
       userId: user.id,
       username: user.username
     });
-    await replyWithFishCard(interaction, formatCatchResult(user, result), result.fish);
+    await replyWithFishCard(interaction, formatCatchResult(user, result), result.fish, user.id);
     return;
   }
 
@@ -106,7 +168,7 @@ async function routeFishingCommand(interaction, fishing) {
       userId: user.id,
       username: user.username
     });
-    await replyWithRodCard(interaction, formatEnhancementResult(user, result), result.afterLevel);
+    await replyWithRodCard(interaction, formatEnhancementResult(user, result), result.afterLevel, user.id);
     return;
   }
 
@@ -264,23 +326,41 @@ function isFishingCommand(commandName) {
   return fishingCommands.some((command) => command.name === commandName);
 }
 
-async function replyWithFishCard(interaction, content, fish) {
+async function replyWithFishCard(interaction, content, fish, userId = null) {
+  await interaction.reply(createFishCardPayload(content, fish, userId));
+}
+
+async function updateWithFishCard(interaction, content, fish, userId = null) {
+  await interaction.update(createFishCardPayload(content, fish, userId));
+}
+
+function createFishCardPayload(content, fish, userId = null) {
   const imagePath = fish?.imagePath;
-  await interaction.reply(createFishingCardPayload(content, {
+  return createFishingCardPayload(content, {
     imagePath: imagePath && existsSync(imagePath) ? imagePath : null,
-    color: getFishingEmbedColor(fish?.rarity)
-  }));
+    color: getFishingEmbedColor(fish?.rarity),
+    components: createFishingQuickRows(userId)
+  });
 }
 
-async function replyWithRodCard(interaction, content, rodLevel) {
+async function replyWithRodCard(interaction, content, rodLevel, userId = null) {
+  await interaction.reply(createRodCardPayload(content, rodLevel, userId));
+}
+
+async function updateWithRodCard(interaction, content, rodLevel, userId = null) {
+  await interaction.update(createRodCardPayload(content, rodLevel, userId));
+}
+
+function createRodCardPayload(content, rodLevel, userId = null) {
   const rodAsset = getFishingRodAssetForLevel(rodLevel);
-  await interaction.reply(createFishingCardPayload(content, {
+  return createFishingCardPayload(content, {
     imagePath: rodAsset?.imagePath && existsSync(rodAsset.imagePath) ? rodAsset.imagePath : null,
-    color: getRodEmbedColor(rodLevel)
-  }));
+    color: getRodEmbedColor(rodLevel),
+    components: createFishingQuickRows(userId)
+  });
 }
 
-function createFishingCardPayload(content, { imagePath = null, color = 0x38bdf8 } = {}) {
+function createFishingCardPayload(content, { imagePath = null, color = 0x38bdf8, components = [] } = {}) {
   const [rawTitle, ...bodyLines] = String(content).split('\n');
   const title = rawTitle.replace(/\*\*/g, '').slice(0, 256);
   const description = truncateEmbedText(bodyLines.join('\n').trim() || rawTitle);
@@ -290,12 +370,29 @@ function createFishingCardPayload(content, { imagePath = null, color = 0x38bdf8 
     .setDescription(description);
 
   const payload = { embeds: [embed] };
+  if (components.length > 0) payload.components = components;
   if (imagePath) {
     embed.setImage(`attachment://${basename(imagePath)}`);
     payload.files = [imagePath];
   }
 
   return payload;
+}
+
+function createFishingQuickRows(userId) {
+  if (!userId) return [];
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`fishing_quick:fish:${userId}`)
+        .setLabel('낚시')
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId(`fishing_quick:enhance:${userId}`)
+        .setLabel('낚싯대 강화')
+        .setStyle(ButtonStyle.Success)
+    )
+  ];
 }
 
 function getFishingEmbedColor(rarity) {

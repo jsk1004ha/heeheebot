@@ -433,7 +433,9 @@ async function routeStockCommand(interaction, stocks) {
       stockId: interaction.options.getString('종목', true),
       quantity: interaction.options.getInteger('수량', true)
     });
-    await replyStockContent(interaction, formatBuyResult(user, result));
+    await replyStockContent(interaction, formatBuyResult(user, result), {
+      components: createStockQuickRows(user.id)
+    });
     return;
   }
 
@@ -445,7 +447,9 @@ async function routeStockCommand(interaction, stocks) {
       stockId: interaction.options.getString('종목', true),
       quantity: interaction.options.getInteger('수량', true)
     });
-    await replyStockContent(interaction, formatSellResult(user, result));
+    await replyStockContent(interaction, formatSellResult(user, result), {
+      components: createStockQuickRows(user.id)
+    });
     return;
   }
 
