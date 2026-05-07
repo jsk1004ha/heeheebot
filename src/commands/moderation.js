@@ -91,6 +91,16 @@ export const moderationCommands = [
         .setRequired(true)
     ),
   new SlashCommandBuilder()
+    .setName('슬로우모드풀기')
+    .setDescription('자동 도배로 적용된 유저 슬로우모드를 해제합니다.')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
+    .addUserOption((option) =>
+      option
+        .setName('유저')
+        .setDescription('슬로우모드를 해제할 유저')
+        .setRequired(true)
+    ),
+  new SlashCommandBuilder()
     .setName('킥')
     .setDescription('유저를 서버에서 추방합니다.')
     .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
@@ -237,8 +247,7 @@ export async function inspectMessageForModeration(message, moderation, logger = 
       message.author.id,
       spamResult.punishment,
       spamResult.reason,
-      logger,
-      message.channel
+      logger
     );
     await sendModerationLog(
       message.guild,
@@ -367,6 +376,14 @@ async function routeModerationCommand(interaction, moderation, logger) {
     return;
   }
 
+  if (commandName === '슬로우모드풀기') {
+    const target = interaction.options.getUser('유저', true);
+    await timeoutMember(interaction.guild, target.id, null, '유저 슬로우모드 해제');
+    await interaction.reply(`✅ ${target}님의 유저 슬로우모드를 해제했습니다.`);
+    await sendModerationLog(interaction.guild, moderation, `✅ 유저 슬로우모드 해제: ${target} / 관리자: ${interaction.user}`);
+    return;
+  }
+
   if (commandName === '킥') {
     const target = interaction.options.getUser('유저', true);
     const reason = interaction.options.getString('사유') ?? '사유 없음';
@@ -438,15 +455,15 @@ async function handleModerationSettings(interaction, moderation) {
   }
 }
 
-async function applyPunishment(guild, userId, punishment, reason, logger, channel = null) {
+async function applyPunishment(guild, userId, punishment, reason, logger) {
   try {
     if (punishment.action === 'slowmode') {
-      if (!channel?.setRateLimitPerUser) {
-        throw new Error('슬로우모드를 적용할 수 없는 채널입니다.');
+      if (!Number.isSafeInteger(punishment.durationMs) || punishment.durationMs < 1) {
+        throw new Error('유저 슬로우모드 시간이 올바르지 않습니다.');
       }
 
-      await channel.setRateLimitPerUser(punishment.slowmodeSeconds, reason);
-      return `${punishment.slowmodeSeconds}초 슬로우모드`;
+      await timeoutMember(guild, userId, punishment.durationMs, reason);
+      return `${formatDurationMs(punishment.durationMs)} 유저 슬로우모드`;
     }
 
     if (punishment.action === 'mute') {

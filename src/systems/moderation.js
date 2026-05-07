@@ -7,7 +7,7 @@ const DEFAULT_SETTINGS = Object.freeze({
     windowMs: 5_000,
     messageLimit: 5,
     duplicateLimit: 3,
-    slowmodeSeconds: 10,
+    userSlowmodeDurationMs: 10 * 60 * 1000,
     banAfterOffenses: 2,
     offenseResetMs: 10 * 60 * 1000
   })
@@ -188,8 +188,7 @@ export class ModerationService {
         offenseCount,
         punishment: {
           action: shouldBan ? 'ban' : 'slowmode',
-          durationMs: null,
-          slowmodeSeconds: shouldBan ? null : settings.slowmodeSeconds
+          durationMs: shouldBan ? null : settings.userSlowmodeDurationMs
         },
         reason: duplicateCount >= settings.duplicateLimit
           ? `자동 도배 감지: 같은 메시지 ${duplicateCount}회 반복`
@@ -246,7 +245,7 @@ export function formatDurationMs(ms) {
 
 export function formatAction(action) {
   return {
-    slowmode: '슬로우모드',
+    slowmode: '유저 슬로우모드',
     mute: '뮤트',
     kick: '킥',
     ban: '밴'
