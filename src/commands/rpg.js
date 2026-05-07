@@ -384,6 +384,12 @@ export async function handleRpgCommand(interaction, economy) {
     if (interaction.customId.startsWith('rpg_quest:')) {
       return handleRpgQuestButton(interaction, economy);
     }
+    if (interaction.customId.startsWith('rpg_skill:')) {
+      return handleRpgSkillButton(interaction, economy);
+    }
+    if (interaction.customId.startsWith('rpg_story:')) {
+      return handleRpgStoryButton(interaction, economy);
+    }
     if (interaction.customId.startsWith('rpg_quick:')) {
       return handleRpgQuickButton(interaction, economy);
     }
@@ -777,7 +783,10 @@ export async function handleRpgCommand(interaction, economy) {
         userId: user.id,
         username: user.username
       });
-      await interaction.reply(formatRpgQuests(status));
+      await interaction.reply({
+        content: formatRpgQuests(status),
+        components: createRpgQuestViewRows(status, user.id)
+      });
       return true;
     }
 
@@ -875,7 +884,10 @@ export async function handleRpgCommand(interaction, economy) {
         userId: user.id,
         username: user.username
       });
-      await interaction.reply(formatRpgSkillTree(status));
+      await interaction.reply({
+        content: formatRpgSkillTree(status),
+        components: createRpgSkillTreeViewRows(status, user.id)
+      });
       return true;
     }
 
@@ -940,7 +952,10 @@ export async function handleRpgCommand(interaction, economy) {
         userId: user.id,
         username: user.username
       });
-      await interaction.reply(formatRpgStory(status));
+      await interaction.reply({
+        content: formatRpgStory(status),
+        components: createRpgStoryViewRows(status, user.id)
+      });
       return true;
     }
 
@@ -1519,6 +1534,68 @@ async function handleRpgQuestButton(interaction, economy) {
   return true;
 }
 
+async function handleRpgSkillButton(interaction, economy) {
+  const [, userId, skillId] = interaction.customId.split(':');
+
+  if (interaction.user.id !== userId) {
+    await interaction.reply({
+      content: '이 스킬트리 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
+      ephemeral: true
+    });
+    return true;
+  }
+
+  try {
+    const result = await economy.learnRpgSkill({
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username,
+      skillId
+    });
+    await updateWithRpgAssets(interaction, formatRpgLearnSkill(result), [result.heroAssetId], {
+      components: createRpgActionLoopRows(interaction.user.id)
+    });
+  } catch (error) {
+    await interaction.reply({
+      content: `스킬트리 학습 실패: ${error.message}`,
+      ephemeral: true
+    });
+  }
+
+  return true;
+}
+
+async function handleRpgStoryButton(interaction, economy) {
+  const [, userId, chapterId] = interaction.customId.split(':');
+
+  if (interaction.user.id !== userId) {
+    await interaction.reply({
+      content: '이 스토리 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
+      ephemeral: true
+    });
+    return true;
+  }
+
+  try {
+    const result = await economy.progressRpgStory({
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username,
+      chapterId
+    });
+    await updateWithRpgAssets(interaction, formatRpgStoryProgress(result), [], {
+      components: createRpgActionLoopRows(interaction.user.id)
+    });
+  } catch (error) {
+    await interaction.reply({
+      content: `스토리 진행 실패: ${error.message}`,
+      ephemeral: true
+    });
+  }
+
+  return true;
+}
+
 async function handleRpgQuickButton(interaction, economy) {
   const [, userId, action] = interaction.customId.split(':');
 
@@ -1646,7 +1723,7 @@ async function handleRpgQuickButton(interaction, economy) {
 
     if (action === 'quest') {
       await updateWithRpgAssets(interaction, formatRpgQuests(status), [], {
-        components: createRpgQuestRows(status, interaction.user.id)
+        components: createRpgQuestViewRows(status, interaction.user.id)
       });
       return true;
     }
@@ -1704,7 +1781,7 @@ async function handleRpgQuickButton(interaction, economy) {
 
     if (action === 'skill_tree') {
       await updateWithRpgAssets(interaction, formatRpgSkillTree(status), [status.heroAssetId], {
-        components: createRpgActionLoopRows(interaction.user.id)
+        components: createRpgSkillTreeViewRows(status, interaction.user.id)
       });
       return true;
     }
@@ -2023,18 +2100,21 @@ function formatRpgMainMenu(user, status) {
     : '모든 지역 해금 완료';
 
   return [
-    `🎮 **RPG 메인 허브** — ${user.username}`,
-    `캐릭터: **${genderConfig.label} ${classConfig.label}${advancedText}** / 지역: **${currentArea.label}**`,
-    `Lv.${profile.level} ${adventureGuide.levelProgress.bar} **${adventureGuide.levelProgress.current}/${adventureGuide.levelProgress.required} XP** (${adventureGuide.levelProgress.percent}%)`,
-    `HP **${profile.rpg.hp}/${derivedStats.maxHp}** / MP **${profile.rpg.mp}/${derivedStats.maxMp}** / 전투력 **${adventureGuide.powerScore}**`,
-    `메인 목표: **${adventureGuide.mainObjective.label}** — ${adventureGuide.mainObjective.progressText}`,
-    `추천 행동: **${adventureGuide.recommendedAction.label}** (\`${adventureGuide.recommendedAction.command}\`)`,
-    `이유: ${adventureGuide.recommendedAction.reason}`,
-    nextAreaText,
+    `🎮 **RPG 메인 허브 · 모험 보드** — ${user.username}`,
+    `🧙 캐릭터: **${genderConfig.label} ${classConfig.label}${advancedText}** · 지역 **${currentArea.label}** · 전투력 **${adventureGuide.powerScore}**`,
+    `📈 Lv.${profile.level} ${adventureGuide.levelProgress.bar} **${adventureGuide.levelProgress.current}/${adventureGuide.levelProgress.required} XP** (${adventureGuide.levelProgress.percent}%)`,
+    `❤️ HP **${profile.rpg.hp}/${derivedStats.maxHp}** · 🔷 MP **${profile.rpg.mp}/${derivedStats.maxMp}** · 🪙 골드 **${getRpgGold(profile).toLocaleString()}**`,
+    `🎯 메인 목표: **${adventureGuide.mainObjective.label}** — ${adventureGuide.mainObjective.progressText}`,
+    `➡️ 다음 행동: **${adventureGuide.recommendedAction.label}** · 버튼 또는 \`${adventureGuide.recommendedAction.command}\``,
+    `   └ ${adventureGuide.recommendedAction.reason}`,
+    `🗺️ ${nextAreaText}`,
     '',
-    `오늘 의뢰: ${dailySummary}`,
+    `📋 오늘 의뢰: ${dailySummary}`,
     '',
-    '빠른 루프: `/rpg 전투` → `/rpg 퀘스트`/`/rpg 일일` → `/rpg 장비` → `/rpg 지역`'
+    '**추천 루프**',
+    '1) 전투/탐험: 아래 `전투`, `탐험`, `던전` 버튼으로 진행도와 장비 파밍',
+    '2) 보상 수령: `일일 의뢰`, `퀘스트`에서 받을 수 있는 보상 정리',
+    '3) 성장 정리: `장비`, `전리품`, `스킬트리`, `전직`, `월드맵` 순서로 캐릭터 강화'
   ].join('\n');
 }
 
@@ -2076,7 +2156,7 @@ function formatRpgStatus(user, status) {
     `직업 숙련: **${classMastery.classLabel} Lv.${classMastery.level}** ${classMastery.progressBar} ${classMastery.progress}/${classMastery.required}`,
     `지역 탐사율: **${currentArea.label} ${currentAreaProgress?.progress ?? 0}%** ${currentAreaProgress?.progressBar ?? ''}`,
     `다음 목표: **${adventureGuide.mainObjective.label}** — ${adventureGuide.mainObjective.progressText}`,
-    `추천 행동: **${adventureGuide.recommendedAction.label}** (\`${adventureGuide.recommendedAction.command}\`)`,
+    `다음 행동: **${adventureGuide.recommendedAction.label}** · 버튼 또는 \`${adventureGuide.recommendedAction.command}\``,
     `스킬 포인트: **${status.skillPoints.available}/${status.skillPoints.earned} 사용 가능** / 전리품 장비: **${Object.keys(profile.rpg.gearInventory).length}개**`,
     `해금 직업: **${profile.rpg.unlockedClasses.length}개** / 사용 가능 스킬: **${availableSkillIds.length}개**`,
     `해금 지역: **${unlockedAreas.map((area) => area.label).join(', ')}**`,
@@ -2094,7 +2174,7 @@ function formatRpgDailyMissions(status) {
   const rows = status.dailyMissions.map((mission) => {
     const state = mission.claimed ? '✅ 수령 완료' : mission.canClaim ? '🎁 보상 가능' : '진행 중';
     const itemText = formatRewardItems(mission.rewards.items);
-    return `- **${mission.label}** — ${state} (${mission.current}/${mission.required})\n  ${mission.description} / 보상 ${mission.rewards.xp} XP, ${mission.rewards.coins}골드${itemText ? `, ${itemText}` : ''}`;
+    return `- **${mission.label}** — ${state} · 진행도 ${formatRpgProgress(mission.current, mission.required)}\n  ${mission.description} · 보상 ${mission.rewards.xp} XP, ${mission.rewards.coins}골드${itemText ? `, ${itemText}` : ''}`;
   });
 
   return [
@@ -2125,7 +2205,8 @@ function formatRpgShop(status = null) {
   const rows = getRpgShopItemOptions().map((option) => {
     const item = getRpgItemConfig(option.value);
     const typeLabel = item.type === 'equipment' ? `장비/${formatEquipmentSlot(item.slot)}` : '소비품';
-    return `- **${item.label}** \`${option.value}\` — ${item.price.toLocaleString()}골드 / ${typeLabel} / ${item.description}`;
+    const statText = item.stats ? formatGearStats(item.stats) : '';
+    return `- **${item.label}** — ${item.price.toLocaleString()}골드 · ${typeLabel}${statText ? ` · ${statText}` : ''}\n  ${item.description}`;
   });
   const goldText = status
     ? `보유 골드: **${getRpgGold(status.profile).toLocaleString()}골드**`
@@ -2136,7 +2217,8 @@ function formatRpgShop(status = null) {
     goldText,
     rows.join('\n'),
     '',
-    '아래 구매 버튼으로 바로 살 수 있습니다. 포션은 구매 후 인벤토리에 보관되고, 장비는 구매 후 바로 장착 버튼이 표시됩니다.'
+    '아래 구매 버튼으로 바로 살 수 있습니다. 아이템 이름만 보여주고 내부 코드는 숨깁니다.',
+    '포션은 인벤토리에 보관되고, 장비는 구매 후 바로 장착 버튼이 표시됩니다.'
   ].join('\n');
 }
 
@@ -2282,11 +2364,17 @@ function formatRpgGearEnhance(result) {
 
 function formatRpgQuests(status) {
   const rows = status.quests.map((quest) => {
-    const state = quest.claimed ? '완료' : quest.canClaim ? '보상 가능' : '진행 중';
-    return `- \`${quest.id}\` **${quest.label}** — ${state} (${quest.current}/${quest.required}) / 보상 ${quest.rewards.xp} XP, ${quest.rewards.coins}골드`;
+    const state = quest.claimed ? '✅ 완료' : quest.canClaim ? '🎁 보상 가능' : '진행 중';
+    const rewardText = formatRpgRewardSummary(quest.rewards);
+    return `- **${quest.label}** — ${state} · 진행도 ${formatRpgProgress(quest.current, quest.required)}\n  보상 ${rewardText}`;
   });
 
-  return `📜 **RPG 퀘스트**\n${rows.join('\n')}\n\n보상 받기: \`/rpg 퀘스트 퀘스트:<이름>\``;
+  return [
+    '📜 **RPG 퀘스트 보드**',
+    rows.join('\n'),
+    '',
+    '보상 가능한 퀘스트는 버튼으로 바로 받을 수 있습니다. 명령어로 받을 때도 한글 이름을 선택하세요.'
+  ].join('\n');
 }
 
 function formatRpgRest(result) {
@@ -2337,7 +2425,7 @@ function formatRpgDungeon(user, result) {
 function formatRpgGacha(result) {
   const rows = result.pulls.map((pull, index) => {
     const rewardText = formatGachaReward(pull);
-    return `${index + 1}. **${pull.rarity.toUpperCase()}** — ${rewardText}`;
+    return `${index + 1}. **${formatGachaRarity(pull.rarity)}** — ${rewardText}`;
   });
 
   return [
@@ -2352,10 +2440,11 @@ function formatGachaReward(pull) {
   const reward = pull.reward;
 
   if (reward.type === 'class') {
+    const classLabel = getRpgClassConfig(reward.classId).label;
     const suffix = pull.newUnlock
       ? ' 해금!'
       : ` 중복 보상 +${pull.duplicateCompensation?.toLocaleString() ?? 0}골드`;
-    return `직업 \`${reward.classId}\`${suffix}`;
+    return `직업 **${classLabel}**${suffix}`;
   }
 
   return `${getRpgItemConfig(reward.itemId).label} × ${reward.quantity ?? 1}`;
@@ -2363,16 +2452,22 @@ function formatGachaReward(pull) {
 
 function formatRpgSkillTree(status) {
   const rows = status.skillTree.map((skill) => {
-    const state = skill.learned ? '✅ 습득' : skill.canLearn ? '✨ 학습 가능' : skill.classAllowed ? '대기' : '직업 불가';
-    return `- \`${skill.id}\` **${skill.label}** — ${state} / ${skill.description}`;
+    const state = skill.learned
+      ? '✅ 습득 완료'
+      : skill.canLearn
+        ? '✨ 학습 가능'
+        : skill.classAllowed
+          ? `스킬 포인트 ${skill.cost}점 필요`
+          : '현재 직업으로 학습 불가';
+    return `- **${skill.label}** — ${state} · 비용 ${skill.cost}SP\n  효과: ${skill.description}`;
   });
 
   return [
-    `🌟 **RPG 스킬트리**`,
-    `스킬 포인트: **${status.skillPoints.available}점 사용 가능** / 획득 ${status.skillPoints.earned}점 / 사용 ${status.skillPoints.spent}점`,
+    `🌟 **RPG 스킬 보드**`,
+    `스킬 포인트: **${status.skillPoints.available}점 사용 가능** · 총 ${status.skillPoints.earned}점 · 사용 ${status.skillPoints.spent}점`,
     rows.join('\n'),
     '',
-    '학습: `/rpg 스킬트리 스킬:<이름>`'
+    '학습 가능한 스킬은 버튼으로 바로 배울 수 있습니다. 명령어를 쓸 때도 한글 스킬 이름을 선택하세요.'
   ].join('\n');
 }
 
@@ -2452,11 +2547,16 @@ function formatRpgAreaEnter(result) {
 
 function formatRpgStory(status) {
   const rows = status.storyChapters.map((chapter) => {
-    const state = chapter.completed ? '완료' : chapter.canProgress ? '진행 가능' : '조건 미달';
-    return `- \`${chapter.id}\` **${chapter.label}** — ${state} (${chapter.current}/${chapter.required}) / ${chapter.description}`;
+    const state = chapter.completed ? '✅ 완료' : chapter.canProgress ? '✨ 진행 가능' : '🔒 조건 미달';
+    return `- **${chapter.label}** — ${state} · 진행도 ${formatRpgProgress(chapter.current, chapter.required)}\n  ${chapter.description}`;
   });
 
-  return `📖 **RPG 스토리**\n${rows.join('\n')}\n\n진행: \`/rpg 스토리 챕터:<이름>\``;
+  return [
+    '📖 **RPG 스토리 로그**',
+    rows.join('\n'),
+    '',
+    '진행 가능한 챕터는 버튼으로 바로 완료할 수 있습니다. 명령어를 쓸 때도 한글 챕터 이름을 선택하세요.'
+  ].join('\n');
 }
 
 function formatRpgStoryProgress(result) {
@@ -2904,6 +3004,55 @@ function createRpgQuestRows(status, userId) {
   return createButtonRows(buttons);
 }
 
+function createRpgQuestViewRows(status, userId) {
+  return [
+    ...createRpgQuestRows(status, userId),
+    ...createRpgActionLoopRows(userId)
+  ].slice(0, 5);
+}
+
+function createRpgSkillTreeRows(status, userId) {
+  const buttons = status.skillTree
+    .filter((skill) => skill.canLearn)
+    .slice(0, 5)
+    .map((skill) =>
+      new ButtonBuilder()
+        .setCustomId(`rpg_skill:${userId}:${skill.id}`)
+        .setLabel(`${skill.label} 학습`)
+        .setStyle(ButtonStyle.Success)
+    );
+
+  return createButtonRows(buttons);
+}
+
+function createRpgSkillTreeViewRows(status, userId) {
+  return [
+    ...createRpgSkillTreeRows(status, userId),
+    ...createRpgActionLoopRows(userId)
+  ].slice(0, 5);
+}
+
+function createRpgStoryRows(status, userId) {
+  const buttons = status.storyChapters
+    .filter((chapter) => chapter.canProgress)
+    .slice(0, 5)
+    .map((chapter) =>
+      new ButtonBuilder()
+        .setCustomId(`rpg_story:${userId}:${chapter.id}`)
+        .setLabel(`${chapter.label} 진행`)
+        .setStyle(ButtonStyle.Success)
+    );
+
+  return createButtonRows(buttons);
+}
+
+function createRpgStoryViewRows(status, userId) {
+  return [
+    ...createRpgStoryRows(status, userId),
+    ...createRpgActionLoopRows(userId)
+  ].slice(0, 5);
+}
+
 function createRpgMainMenuRows(status, userId) {
   return [
     new ActionRowBuilder().addComponents(
@@ -3073,6 +3222,34 @@ function shortenButtonLabel(label, maxLength = 70) {
   return label.length > maxLength
     ? `${label.slice(0, maxLength - 1)}…`
     : label;
+}
+
+function formatRpgProgress(current, required) {
+  const safeCurrent = Math.max(0, Number(current) || 0);
+  const safeRequired = Math.max(1, Number(required) || 1);
+  const cappedCurrent = Math.min(safeCurrent, safeRequired);
+  const percent = Math.round((cappedCurrent / safeRequired) * 100);
+  const filled = Math.round((percent / 100) * 8);
+  const bar = '▰'.repeat(filled) + '▱'.repeat(8 - filled);
+
+  return `${bar} **${safeCurrent.toLocaleString()}/${safeRequired.toLocaleString()}** (${percent}%)`;
+}
+
+function formatRpgRewardSummary(rewards = {}) {
+  const parts = [];
+  if (rewards.xp) parts.push(`+${rewards.xp.toLocaleString()} XP`);
+  if (rewards.coins) parts.push(`+${rewards.coins.toLocaleString()}골드`);
+  const itemText = formatRewardItems(rewards.items);
+  if (itemText) parts.push(itemText);
+  return parts.join(', ') || '없음';
+}
+
+function formatGachaRarity(rarity) {
+  return {
+    ssr: 'SSR 전설',
+    sr: 'SR 희귀',
+    r: 'R 일반'
+  }[rarity] ?? String(rarity).toUpperCase();
 }
 
 function formatDailyMissionSummary(dailyMissions = []) {
