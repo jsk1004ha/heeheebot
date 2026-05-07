@@ -50,6 +50,7 @@ import {
   resolveRpgBattle,
   resolveRpgBossBattle,
   resolveRpgBossTurn,
+  resolveRpgGuildRaidBattle,
   resolveRpgPvpTurn,
   resolveRpgRaidBattle,
   rollRpgGearDrop,
@@ -69,6 +70,18 @@ import {
   resolveSwordBattle as resolveSwordBattleResult,
   resolveSwordEnhancement
 } from './sword.js';
+import {
+  CURRENCY_CASINO,
+  CURRENCY_RPG,
+  CURRENCY_SWORD,
+  cloneWallets,
+  creditCurrency,
+  debitCurrency,
+  exchangeCurrency,
+  getCurrencyBalance,
+  getCurrencyBalances,
+  normalizeWallets
+} from './currencies.js';
 
 const DEFAULT_OPTIONS = Object.freeze({
   messageCooldownMs: 60_000,
@@ -99,6 +112,65 @@ const DEFAULT_OPTIONS = Object.freeze({
 });
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const SWORD_PROTECTION_SCROLL_COST = 15_000;
+
+const SWORD_ACHIEVEMENTS = Object.freeze([
+  swordAchievement(
+    'sword_level_50',
+    '+50 달성',
+    '검 최고 강화 +50 달성',
+    (sword) => sword.highestLevel >= 50,
+    (sword) => `+${Math.min(sword.highestLevel, 50)} / +50`,
+    { swordCoins: 5_000, protectionScrolls: 2 }
+  ),
+  swordAchievement(
+    'sword_level_80',
+    '+80 고지',
+    '검 최고 강화 +80 달성',
+    (sword) => sword.highestLevel >= 80,
+    (sword) => `+${Math.min(sword.highestLevel, 80)} / +80`,
+    { swordCoins: 20_000, refineStones: 5 }
+  ),
+  swordAchievement(
+    'sword_level_100',
+    '+100 전설',
+    '검 최고 강화 +100 달성',
+    (sword) => sword.highestLevel >= 100,
+    (sword) => `+${Math.min(sword.highestLevel, 100)} / +100`,
+    { swordCoins: 100_000, protectionScrolls: 10, refineStones: 20 }
+  ),
+  swordAchievement(
+    'sword_destroy_5',
+    '터져도 다시',
+    '검 파괴 5회',
+    (sword) => sword.destructions >= 5,
+    (sword) => `${Math.min(sword.destructions, 5)} / 5`,
+    { protectionScrolls: 3 }
+  ),
+  swordAchievement(
+    'sword_sales_10000',
+    '검 장사꾼',
+    '검 판매 누적 10,000코인',
+    (sword) => sword.saleEarnings >= 10_000,
+    (sword) => `${Math.min(sword.saleEarnings, 10_000).toLocaleString()} / 10,000코인`,
+    { swordCoins: 10_000 }
+  )
+]);
+
+function swordAchievement(id, title, description, isComplete, getProgressText, rewards) {
+  return Object.freeze({
+    id,
+    title,
+    description,
+    isComplete,
+    getProgressText,
+    rewards: Object.freeze({
+      swordCoins: rewards.swordCoins ?? 0,
+      refineStones: rewards.refineStones ?? 0,
+      protectionScrolls: rewards.protectionScrolls ?? 0
+    })
+  });
+}
 
 export class EconomyService {
   constructor(store, options = {}) {
@@ -123,6 +195,22 @@ export class EconomyService {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
       return cloneProfile(profile);
+    });
+  }
+
+  async exchangeWallet({ guildId, userId, username, fromCurrency, toCurrency, amount }) {
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, this);
+      const exchange = exchangeCurrency(profile, {
+        fromCurrency,
+        toCurrency,
+        amount
+      });
+
+      return {
+        ...exchange,
+        profile: cloneProfile(profile)
+      };
     });
   }
 
@@ -364,11 +452,7 @@ export class EconomyService {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
 
-      if (profile.balance < totalPrice) {
-        throw new Error('잔액이 부족합니다.');
-      }
-
-      profile.balance -= totalPrice;
+      debitCurrency(profile, CURRENCY_RPG, totalPrice, 'RPG 골드가 부족합니다.');
       addInventoryItem(profile.rpg.inventory, normalizedItemId, normalizedQuantity);
 
       return {
@@ -471,7 +555,7 @@ export class EconomyService {
         throw new Error('이미 보상을 받은 퀘스트입니다.');
       }
 
-      profile.balance += quest.rewards.coins;
+      creditCurrency(profile, CURRENCY_RPG, quest.rewards.coins);
       for (const [rewardItemId, count] of Object.entries(quest.rewards.items)) {
         addInventoryItem(profile.rpg.inventory, rewardItemId, count);
       }
@@ -506,7 +590,7 @@ export class EconomyService {
         throw new Error('이미 완료 보상을 받은 일일 의뢰입니다.');
       }
 
-      profile.balance += mission.rewards.coins;
+      creditCurrency(profile, CURRENCY_RPG, mission.rewards.coins);
       for (const [rewardItemId, count] of Object.entries(mission.rewards.items)) {
         addInventoryItem(profile.rpg.inventory, rewardItemId, count);
       }
@@ -678,7 +762,7 @@ export class EconomyService {
         stats.wins += 1;
         stats.monsterKills[battle.monster] = (stats.monsterKills[battle.monster] ?? 0) + 1;
         stats.areaWins[normalizedArea] = (stats.areaWins[normalizedArea] ?? 0) + 1;
-        profile.balance += battle.rewards.coins;
+        creditCurrency(profile, CURRENCY_RPG, battle.rewards.coins);
         if (drop) {
           addInventoryItem(profile.rpg.inventory, drop.itemId, drop.quantity);
         }
@@ -788,7 +872,7 @@ export class EconomyService {
       if (battle.win) {
         stats.wins += 1;
         stats.bossKills[normalizedBossId] = (stats.bossKills[normalizedBossId] ?? 0) + 1;
-        profile.balance += battle.rewards.coins;
+        creditCurrency(profile, CURRENCY_RPG, battle.rewards.coins);
         if (drop) {
           addInventoryItem(profile.rpg.inventory, drop.itemId, drop.quantity);
         }
@@ -943,6 +1027,8 @@ export class EconomyService {
       player: nextSession.player,
       boss: nextSession.boss,
       action,
+      bossId: nextSession.bossId,
+      turnNumber: nextSession.turn,
       randomInt: this.randomInt
     });
 
@@ -1018,7 +1104,7 @@ export class EconomyService {
       if (win) {
         profile.rpg.wins += 1;
         profile.rpg.bossKills[nextSession.bossId] = (profile.rpg.bossKills[nextSession.bossId] ?? 0) + 1;
-        profile.balance += boss.coinReward;
+        creditCurrency(profile, CURRENCY_RPG, boss.coinReward);
         gearDrop = addRpgGear(profile, rollRpgGearDrop({
           source: 'boss',
           area: boss.area,
@@ -1234,7 +1320,7 @@ export class EconomyService {
         pvpWins: winnerProfile === opponentProfile ? 1 : 0
       });
       grantRpgClassMastery(opponentProfile, winnerProfile === opponentProfile ? 15 : 6);
-      winnerProfile.balance += rewards.coins;
+      creditCurrency(winnerProfile, CURRENCY_RPG, rewards.coins);
       levelResult = addXp(winnerProfile, rewards.xp, this);
 
       return {
@@ -1284,11 +1370,7 @@ export class EconomyService {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
 
-      if (profile.balance < totalCost) {
-        throw new Error('잔액이 부족합니다.');
-      }
-
-      profile.balance -= totalCost;
+      debitCurrency(profile, CURRENCY_RPG, totalCost, 'RPG 골드가 부족합니다.');
       const pulls = [];
 
       for (let index = 0; index < normalizedCount; index += 1) {
@@ -1346,7 +1428,7 @@ export class EconomyService {
       grantRpgClassMastery(profile, 4);
       profile.rpg.hp = Math.max(1, Math.min(derivedStats.maxHp, profile.rpg.hp - exploration.damageTaken + exploration.hpRecovered));
       profile.rpg.mp = Math.max(0, Math.min(derivedStats.maxMp, profile.rpg.mp + exploration.mpRecovered));
-      profile.balance += exploration.rewards.coins;
+      creditCurrency(profile, CURRENCY_RPG, exploration.rewards.coins);
       if (exploration.rewards.xp > 0) {
         levelResult = addXp(profile, exploration.rewards.xp, this);
       }
@@ -1416,7 +1498,7 @@ export class EconomyService {
       grantRpgClassMastery(profile, safeDepth * 8);
       profile.rpg.hp = Math.max(1, Math.min(derivedStats.maxHp, profile.rpg.hp - totalDamage + safeDepth * 3));
       profile.rpg.mp = Math.max(0, Math.min(derivedStats.maxMp, profile.rpg.mp - safeDepth));
-      profile.balance += totalCoins;
+      creditCurrency(profile, CURRENCY_RPG, totalCoins);
       profile.rpg.dungeonClears[normalizedArea] = (profile.rpg.dungeonClears[normalizedArea] ?? 0) + 1;
       const levelResult = addXp(profile, totalXp, this);
       const blueprint = rollRpgGearDrop({
@@ -1456,6 +1538,47 @@ export class EconomyService {
 
       return {
         gear,
+        slot: gear.slot,
+        derivedStats,
+        profile: cloneProfile(profile)
+      };
+    });
+  }
+
+  async enhanceRpgGear({ guildId, userId, username, gearId, now = Date.now() }) {
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, this);
+      const gear = resolveOwnedRpgGear(profile, gearId);
+      const beforeGear = cloneRpgGear(gear);
+      const cost = getRpgGearEnhanceCost(gear);
+      const successRate = getRpgGearEnhanceSuccessRate(gear);
+      const roll = this.randomInt(1, 100);
+      const success = roll <= successRate;
+
+      debitCurrency(
+        profile,
+        CURRENCY_RPG,
+        cost,
+        `RPG 골드가 부족합니다. 장비 강화 비용: ${cost.toLocaleString()}골드`
+      );
+
+      if (success) {
+        applyRpgGearEnhancement(gear, now);
+      } else {
+        gear.lastEnhancedAt = now;
+      }
+
+      const derivedStats = getProfileRpgDerivedStats(profile);
+      profile.rpg.hp = Math.min(profile.rpg.hp, derivedStats.maxHp);
+      profile.rpg.mp = Math.min(profile.rpg.mp, derivedStats.maxMp);
+
+      return {
+        success,
+        roll,
+        successRate,
+        cost,
+        beforeGear,
+        gear: cloneRpgGear(gear),
         slot: gear.slot,
         derivedStats,
         profile: cloneProfile(profile)
@@ -1549,7 +1672,7 @@ export class EconomyService {
       }
 
       profile.rpg.storyChapters[normalizedChapterId] = now;
-      profile.balance += chapter.rewards.coins;
+      creditCurrency(profile, CURRENCY_RPG, chapter.rewards.coins);
       for (const [itemId, count] of Object.entries(chapter.rewards.items)) {
         addInventoryItem(profile.rpg.inventory, itemId, count);
       }
@@ -1577,7 +1700,7 @@ export class EconomyService {
       }
 
       profile.rpg.codexClaims[normalizedMonster] = now;
-      profile.balance += codex.rewards.coins;
+      creditCurrency(profile, CURRENCY_RPG, codex.rewards.coins);
       const levelResult = addXp(profile, codex.rewards.xp, this);
 
       return {
@@ -1637,7 +1760,7 @@ export class EconomyService {
         profile.rpg.wins += 1;
         profile.rpg.raidClears[normalizedRaidId] = (profile.rpg.raidClears[normalizedRaidId] ?? 0) + 1;
         profile.rpg.monsterKills[battle.monster] = (profile.rpg.monsterKills[battle.monster] ?? 0) + 1;
-        profile.balance += battle.rewards.coins;
+        creditCurrency(profile, CURRENCY_RPG, battle.rewards.coins);
         gearDrop = addRpgGear(profile, rollRpgGearDrop({
           source: 'raid',
           area: battle.area,
@@ -1654,6 +1777,100 @@ export class EconomyService {
         battle,
         assets: battle.assets,
         gearDrop,
+        xpGained: battle.rewards.xp,
+        coinReward: battle.rewards.coins,
+        ...levelResult,
+        profile: cloneProfile(profile)
+      };
+    });
+  }
+
+  async playRpgGuildRaid({ guildId, userId, username, raidId = 'slime_horde', skill = 'basic', now = Date.now() }) {
+    const normalizedRaidId = normalizeRpgRaidId(raidId);
+    const raid = getRpgRaidConfig(normalizedRaidId);
+
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, this);
+      const guild = data.guilds[guildId];
+      if (profile.level < raid.unlockLevel) {
+        throw new Error(`${raid.label} 길드 레이드는 Lv.${raid.unlockLevel}부터 지휘할 수 있습니다.`);
+      }
+      assertRpgAreaUnlocked(profile, raid.area);
+      if (profile.rpg.hp <= 1) {
+        throw new Error('HP가 부족합니다. `/rpg 휴식` 또는 회복 포션을 사용하세요.');
+      }
+
+      const skillConfig = prepareRpgSkill(profile, skill);
+      const partyProfiles = getRpgGuildRaidPartyProfiles(data, guildId, guild, profile, this);
+      const battle = resolveRpgGuildRaidBattle({
+        playerLevel: profile.level,
+        raidId: normalizedRaidId,
+        characterClass: profile.rpg.characterClass,
+        characterGender: profile.rpg.characterGender,
+        skillId: skillConfig.id,
+        statBonuses: getRpgCombatBonuses(profile),
+        partyMembers: partyProfiles.map((partyProfile) => createRpgGuildRaidMember(partyProfile)),
+        randomInt: this.randomInt
+      });
+      let gearDrop = null;
+      let levelResult = {
+        leveledUp: false,
+        levelsGained: 0,
+        levelReward: 0
+      };
+      const supportRewards = [];
+
+      profile.rpg.battles += 1;
+      profile.rpg.lastBattleAt = now;
+      profile.rpg.mp = Math.max(0, profile.rpg.mp - skillConfig.mpCost);
+      profile.rpg.hp = Math.max(1, profile.rpg.hp - battle.damageTaken);
+      profile.rpg.discoveredMonsters[battle.monster] = (profile.rpg.discoveredMonsters[battle.monster] ?? 0) + 1;
+      incrementRpgDailyStats(profile.rpg, now, {
+        battles: 1,
+        wins: battle.win ? 1 : 0,
+        raids: battle.win ? 1 : 0
+      });
+      increaseRpgAreaProgress(profile.rpg, battle.area, battle.win ? 34 : 12);
+      grantRpgClassMastery(profile, battle.win ? 40 : 14);
+
+      if (battle.win) {
+        profile.rpg.wins += 1;
+        profile.rpg.raidClears[normalizedRaidId] = (profile.rpg.raidClears[normalizedRaidId] ?? 0) + 1;
+        profile.rpg.monsterKills[battle.monster] = (profile.rpg.monsterKills[battle.monster] ?? 0) + 1;
+        creditCurrency(profile, CURRENCY_RPG, battle.rewards.coins);
+        gearDrop = addRpgGear(profile, rollRpgGearDrop({
+          source: 'raid',
+          area: battle.area,
+          difficulty: 'hard',
+          randomInt: this.randomInt
+        }), now);
+        levelResult = addXp(profile, battle.rewards.xp, this);
+
+        for (const supportProfile of partyProfiles.slice(1)) {
+          creditCurrency(supportProfile, CURRENCY_RPG, battle.supportRewards.coins);
+          const supportLevelResult = addXp(supportProfile, battle.supportRewards.xp, this);
+          supportProfile.rpg.discoveredMonsters[battle.monster] = (supportProfile.rpg.discoveredMonsters[battle.monster] ?? 0) + 1;
+          supportProfile.rpg.raidClears[normalizedRaidId] = (supportProfile.rpg.raidClears[normalizedRaidId] ?? 0) + 1;
+          grantRpgClassMastery(supportProfile, 15);
+          supportRewards.push({
+            userId: supportProfile.userId,
+            username: supportProfile.username,
+            xpGained: battle.supportRewards.xp,
+            coinReward: battle.supportRewards.coins,
+            ...supportLevelResult,
+            profile: cloneProfile(supportProfile)
+          });
+        }
+      } else {
+        profile.rpg.losses += 1;
+      }
+
+      return {
+        battled: true,
+        battle,
+        assets: battle.assets,
+        gearDrop,
+        supportRewards,
         xpGained: battle.rewards.xp,
         coinReward: battle.rewards.coins,
         ...levelResult,
@@ -1735,20 +1952,92 @@ export class EconomyService {
     });
   }
 
+  async buySwordProtectionScrolls({ guildId, userId, username, quantity = 1, now = Date.now() }) {
+    const normalizedQuantity = Math.min(10, normalizePositiveInteger(quantity, '보호권 수량'));
+    const totalCost = SWORD_PROTECTION_SCROLL_COST * normalizedQuantity;
+
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, this);
+      debitCurrency(
+        profile,
+        CURRENCY_SWORD,
+        totalCost,
+        `강화 코인이 부족합니다. 필요 금액: ${totalCost.toLocaleString()}코인`
+      );
+      profile.sword.protectionScrolls += normalizedQuantity;
+
+      return {
+        quantity: normalizedQuantity,
+        unitCost: SWORD_PROTECTION_SCROLL_COST,
+        totalCost,
+        profile: cloneProfile(profile),
+        now
+      };
+    });
+  }
+
+  async getSwordAchievements({ guildId, userId, username, now = Date.now() }) {
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, this);
+      return buildSwordAchievementSummary(profile, now);
+    });
+  }
+
+  async claimSwordAchievement({ guildId, userId, username, achievementId, now = Date.now() }) {
+    const normalizedAchievementId = String(achievementId ?? '').trim();
+    const achievement = SWORD_ACHIEVEMENTS.find((entry) => entry.id === normalizedAchievementId);
+    if (!achievement) throw new Error('알 수 없는 검 업적입니다.');
+
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, this);
+      const status = buildSwordAchievementStatus(profile, achievement);
+
+      if (!status.complete) {
+        throw new Error(`${achievement.title} 업적 조건을 아직 달성하지 못했습니다.`);
+      }
+
+      if (status.claimed) {
+        throw new Error('이미 보상을 받은 검 업적입니다.');
+      }
+
+      applySwordAchievementRewards(profile, achievement.rewards);
+      profile.sword.claimedAchievements[achievement.id] = now;
+
+      return {
+        achievement: buildSwordAchievementStatus(profile, achievement),
+        rewards: achievement.rewards,
+        profile: cloneProfile(profile)
+      };
+    });
+  }
+
   async enhanceSword({ guildId, userId, username, now = Date.now() }) {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
-      const enhancement = resolveSwordEnhancement({
+      let enhancement = resolveSwordEnhancement({
         level: profile.sword.level,
         mode: 'normal',
         randomInt: this.randomInt
       });
 
-      if (profile.balance < enhancement.moneyCost) {
-        throw new Error(`잔액이 부족합니다. 필요 금액: ${enhancement.moneyCost.toLocaleString()}원`);
+      debitCurrency(
+        profile,
+        CURRENCY_SWORD,
+        enhancement.moneyCost,
+        `강화 코인이 부족합니다. 필요 금액: ${enhancement.moneyCost.toLocaleString()}코인`
+      );
+      if (enhancement.outcome === 'destroy' && profile.sword.protectionScrolls > 0) {
+        profile.sword.protectionScrolls -= 1;
+        enhancement = {
+          ...enhancement,
+          afterLevel: enhancement.beforeLevel,
+          outcome: 'protect',
+          outcomeLabel: '보호',
+          originalOutcome: 'destroy',
+          protected: true,
+          refineStoneReward: 0
+        };
       }
-
-      profile.balance -= enhancement.moneyCost;
       applySwordEnhancement(profile, enhancement, now, 'normal');
 
       return {
@@ -1767,15 +2056,15 @@ export class EconomyService {
         randomInt: this.randomInt
       });
 
-      if (profile.balance < enhancement.moneyCost) {
-        throw new Error(`잔액이 부족합니다. 필요 금액: ${enhancement.moneyCost.toLocaleString()}원`);
+      if (getCurrencyBalance(profile, CURRENCY_SWORD) < enhancement.moneyCost) {
+        throw new Error(`강화 코인이 부족합니다. 필요 금액: ${enhancement.moneyCost.toLocaleString()}코인`);
       }
 
       if (profile.sword.refineStones < enhancement.stoneCost) {
         throw new Error(`제련석이 부족합니다. 필요 제련석: ${enhancement.stoneCost.toLocaleString()}개`);
       }
 
-      profile.balance -= enhancement.moneyCost;
+      debitCurrency(profile, CURRENCY_SWORD, enhancement.moneyCost);
       profile.sword.refineStones -= enhancement.stoneCost;
       applySwordEnhancement(profile, enhancement, now, 'advanced');
 
@@ -1796,7 +2085,7 @@ export class EconomyService {
         throw new Error('판매할 검이 없습니다. +1 이상 강화된 검만 판매할 수 있습니다.');
       }
 
-      profile.balance += saleValue;
+      creditCurrency(profile, CURRENCY_SWORD, saleValue);
       profile.sword.level = 0;
       profile.sword.soldCount += 1;
       profile.sword.saleEarnings += saleValue;
@@ -1849,7 +2138,7 @@ export class EconomyService {
 
       if (battle.winnerSide === 'challenger') {
         profile.sword.battleWins += 1;
-        profile.balance += battle.rewards.money;
+        creditCurrency(profile, CURRENCY_SWORD, battle.rewards.money);
         Object.assign(levelResult, addXp(profile, battle.rewards.xp, this));
         rewards.xp = battle.rewards.xp;
         rewards.money = battle.rewards.money;
@@ -1908,7 +2197,7 @@ export class EconomyService {
       opponentProfile.sword.lastBattleAt = now;
       winnerProfile.sword.battleWins += 1;
       loserProfile.sword.battleLosses += 1;
-      winnerProfile.balance += battle.rewards.money;
+      creditCurrency(winnerProfile, CURRENCY_SWORD, battle.rewards.money);
       Object.assign(levelResult, addXp(winnerProfile, battle.rewards.xp, this));
       const refineStones = grantSwordBattleStones(winnerProfile.sword, now, battle.rewards.refineStones);
 
@@ -1987,11 +2276,8 @@ export class EconomyService {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
 
-      if (profile.balance < normalizedBet) {
-        throw new Error('잔액이 부족합니다.');
-      }
-
-      profile.balance = profile.balance - normalizedBet + normalizedPayout;
+      debitCurrency(profile, CURRENCY_CASINO, normalizedBet, '카지노칩이 부족합니다.');
+      creditCurrency(profile, CURRENCY_CASINO, normalizedPayout);
 
       return {
         bet: normalizedBet,
@@ -2008,11 +2294,7 @@ export class EconomyService {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
 
-      if (profile.balance < normalizedBet) {
-        throw new Error('잔액이 부족합니다.');
-      }
-
-      profile.balance -= normalizedBet;
+      debitCurrency(profile, CURRENCY_CASINO, normalizedBet, '카지노칩이 부족합니다.');
 
       return {
         bet: normalizedBet,
@@ -2027,7 +2309,7 @@ export class EconomyService {
 
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
-      profile.balance += normalizedPayout;
+      creditCurrency(profile, CURRENCY_CASINO, normalizedPayout);
 
       return {
         bet: normalizedBet,
@@ -2059,16 +2341,16 @@ export class EconomyService {
       const challengerProfile = getOrCreateProfile(data, guildId, challenger.userId, challenger.username, this);
       const opponentProfile = getOrCreateProfile(data, guildId, opponent.userId, opponent.username, this);
 
-      if (challengerProfile.balance < normalizedBet) {
-        throw new Error(`${challengerProfile.username}님의 잔액이 부족합니다.`);
+      if (getCurrencyBalance(challengerProfile, CURRENCY_CASINO) < normalizedBet) {
+        throw new Error(`${challengerProfile.username}님의 카지노칩이 부족합니다.`);
       }
 
-      if (opponentProfile.balance < normalizedBet) {
-        throw new Error(`${opponentProfile.username}님의 잔액이 부족합니다.`);
+      if (getCurrencyBalance(opponentProfile, CURRENCY_CASINO) < normalizedBet) {
+        throw new Error(`${opponentProfile.username}님의 카지노칩이 부족합니다.`);
       }
 
-      challengerProfile.balance -= normalizedBet;
-      opponentProfile.balance -= normalizedBet;
+      debitCurrency(challengerProfile, CURRENCY_CASINO, normalizedBet);
+      debitCurrency(opponentProfile, CURRENCY_CASINO, normalizedBet);
 
       return {
         bet: normalizedBet,
@@ -2088,8 +2370,8 @@ export class EconomyService {
       const pot = normalizedBet * 2;
 
       if (!winnerUserId) {
-        challengerProfile.balance += normalizedBet;
-        opponentProfile.balance += normalizedBet;
+        creditCurrency(challengerProfile, CURRENCY_CASINO, normalizedBet);
+        creditCurrency(opponentProfile, CURRENCY_CASINO, normalizedBet);
 
         return {
           bet: normalizedBet,
@@ -2107,7 +2389,7 @@ export class EconomyService {
       const winnerProfile = winnerUserId === challenger.userId
         ? challengerProfile
         : opponentProfile;
-      winnerProfile.balance += pot;
+      creditCurrency(winnerProfile, CURRENCY_CASINO, pot);
 
       return {
         bet: normalizedBet,
@@ -2130,12 +2412,12 @@ export class EconomyService {
       const challengerProfile = getOrCreateProfile(data, guildId, challenger.userId, challenger.username, this);
       const opponentProfile = getOrCreateProfile(data, guildId, opponent.userId, opponent.username, this);
 
-      if (challengerProfile.balance < normalizedBet) {
-        throw new Error(`${challengerProfile.username}님의 잔액이 부족합니다.`);
+      if (getCurrencyBalance(challengerProfile, CURRENCY_CASINO) < normalizedBet) {
+        throw new Error(`${challengerProfile.username}님의 카지노칩이 부족합니다.`);
       }
 
-      if (opponentProfile.balance < normalizedBet) {
-        throw new Error(`${opponentProfile.username}님의 잔액이 부족합니다.`);
+      if (getCurrencyBalance(opponentProfile, CURRENCY_CASINO) < normalizedBet) {
+        throw new Error(`${opponentProfile.username}님의 카지노칩이 부족합니다.`);
       }
 
       if (!winnerUserId) {
@@ -2152,13 +2434,13 @@ export class EconomyService {
         throw new Error('승자는 대결 참여자 중 한 명이어야 합니다.');
       }
 
-      challengerProfile.balance -= normalizedBet;
-      opponentProfile.balance -= normalizedBet;
+      debitCurrency(challengerProfile, CURRENCY_CASINO, normalizedBet);
+      debitCurrency(opponentProfile, CURRENCY_CASINO, normalizedBet);
 
       const winnerProfile = winnerUserId === challenger.userId
         ? challengerProfile
         : opponentProfile;
-      winnerProfile.balance += normalizedBet * 2;
+      creditCurrency(winnerProfile, CURRENCY_CASINO, normalizedBet * 2);
 
       return {
         bet: normalizedBet,
@@ -2256,6 +2538,7 @@ function getOrCreateProfile(data, guildId, userId, username, economy) {
     xp: 0,
     totalXp: 0,
     balance: 0,
+    wallets: normalizeWallets(),
     lastMessageRewardAt: 0,
     lastDailyAt: 0,
     lastDailyDay: null,
@@ -2274,6 +2557,7 @@ function getOrCreateProfile(data, guildId, userId, username, economy) {
   profile.xp = normalizeStoredNonNegativeInteger(profile.xp);
   profile.totalXp = normalizeStoredNonNegativeInteger(profile.totalXp);
   profile.balance = normalizeStoredNonNegativeInteger(profile.balance);
+  profile.wallets = normalizeWallets(profile.wallets);
   profile.lastMessageRewardAt = normalizeStoredNonNegativeInteger(profile.lastMessageRewardAt);
   profile.lastDailyAt = normalizeStoredNonNegativeInteger(profile.lastDailyAt);
   profile.lastDailyDay = profile.lastDailyDay ?? (profile.lastDailyAt > 0
@@ -2299,6 +2583,8 @@ function cloneProfile(profile) {
     xp: profile.xp,
     totalXp: profile.totalXp,
     balance: profile.balance,
+    wallets: cloneWallets(profile.wallets),
+    currencyBalances: getCurrencyBalances(profile),
     lastMessageRewardAt: profile.lastMessageRewardAt,
     lastDailyAt: profile.lastDailyAt,
     lastDailyDay: profile.lastDailyDay,
@@ -2313,7 +2599,10 @@ function cloneProfile(profile) {
 
 
 function cloneSwordStats(sword) {
-  return { ...sword };
+  return {
+    ...sword,
+    claimedAchievements: { ...(sword.claimedAchievements ?? {}) }
+  };
 }
 
 function cloneRpgStats(rpg) {
@@ -2441,6 +2730,9 @@ function createDefaultSwordStats() {
     battleStonesToday: 0,
     lastGiftDay: null,
     lastEnhancedAt: 0,
+    protectionScrolls: 0,
+    protectedDestructions: 0,
+    claimedAchievements: {},
     lastBattleAt: 0,
     soldCount: 0,
     saleEarnings: 0,
@@ -2472,11 +2764,69 @@ function normalizeSwordStats(stats = {}) {
     battleStonesToday: normalizeStoredNonNegativeInteger(safeStats.battleStonesToday),
     lastGiftDay: normalizeStoredNullableInteger(safeStats.lastGiftDay),
     lastEnhancedAt: normalizeStoredNonNegativeInteger(safeStats.lastEnhancedAt),
+    protectionScrolls: normalizeStoredNonNegativeInteger(safeStats.protectionScrolls),
+    protectedDestructions: normalizeStoredNonNegativeInteger(safeStats.protectedDestructions),
+    claimedAchievements: normalizeSwordClaimedAchievements(safeStats.claimedAchievements),
     lastBattleAt: normalizeStoredNonNegativeInteger(safeStats.lastBattleAt),
     soldCount: normalizeStoredNonNegativeInteger(safeStats.soldCount),
     saleEarnings: normalizeStoredNonNegativeInteger(safeStats.saleEarnings),
     lastSoldAt: normalizeStoredNonNegativeInteger(safeStats.lastSoldAt)
   };
+}
+
+function normalizeSwordClaimedAchievements(claimedAchievements = {}) {
+  const safeClaimed = claimedAchievements && typeof claimedAchievements === 'object'
+    ? claimedAchievements
+    : {};
+
+  return Object.fromEntries(
+    Object.entries(safeClaimed)
+      .filter(([achievementId]) => SWORD_ACHIEVEMENTS.some((achievement) => achievement.id === achievementId))
+      .map(([achievementId, claimedAt]) => [achievementId, normalizeStoredNonNegativeInteger(claimedAt)])
+  );
+}
+
+function buildSwordAchievementSummary(profile, now = Date.now()) {
+  return {
+    now,
+    achievements: SWORD_ACHIEVEMENTS.map((achievement) =>
+      buildSwordAchievementStatus(profile, achievement)
+    )
+  };
+}
+
+function buildSwordAchievementStatus(profile, achievement) {
+  const sword = profile.sword;
+  const complete = Boolean(achievement.isComplete(sword));
+  const claimedAt = sword.claimedAchievements[achievement.id] ?? 0;
+
+  return {
+    id: achievement.id,
+    title: achievement.title,
+    description: achievement.description,
+    complete,
+    claimed: claimedAt > 0,
+    claimedAt,
+    progressText: achievement.getProgressText(sword),
+    rewards: achievement.rewards,
+    rewardText: formatSwordAchievementRewardText(achievement.rewards)
+  };
+}
+
+function applySwordAchievementRewards(profile, rewards) {
+  if (rewards.swordCoins > 0) {
+    creditCurrency(profile, CURRENCY_SWORD, rewards.swordCoins);
+  }
+  profile.sword.refineStones += rewards.refineStones;
+  profile.sword.protectionScrolls += rewards.protectionScrolls;
+}
+
+function formatSwordAchievementRewardText(rewards) {
+  const parts = [];
+  if (rewards.swordCoins > 0) parts.push(`${rewards.swordCoins.toLocaleString()}코인`);
+  if (rewards.refineStones > 0) parts.push(`제련석 ${rewards.refineStones.toLocaleString()}개`);
+  if (rewards.protectionScrolls > 0) parts.push(`보호권 ${rewards.protectionScrolls.toLocaleString()}개`);
+  return parts.join(', ') || '보상 없음';
 }
 
 function applySwordEnhancement(profile, enhancement, now, mode) {
@@ -2498,6 +2848,11 @@ function applySwordEnhancement(profile, enhancement, now, mode) {
   if (enhancement.outcome === 'destroy') {
     profile.sword.destructions += 1;
     profile.sword.refineStones += enhancement.refineStoneReward;
+    return;
+  }
+
+  if (enhancement.outcome === 'protect') {
+    profile.sword.protectedDestructions += 1;
     return;
   }
 
@@ -2745,6 +3100,8 @@ function normalizeGearInventory(gearInventory = {}) {
         ...gear,
         id: gear.id || gearId,
         stats: normalizeGearStats(gear.stats),
+        enhanceLevel: normalizeStoredNonNegativeInteger(gear.enhanceLevel),
+        power: Math.max(1, normalizeStoredNonNegativeInteger(gear.power) || 1),
         acquiredAt: normalizeStoredNonNegativeInteger(gear.acquiredAt)
       }])
   );
@@ -3283,6 +3640,91 @@ function addRpgGear(profile, blueprint, now = Date.now()) {
   return gear;
 }
 
+function cloneRpgGear(gear) {
+  return {
+    ...gear,
+    stats: { ...(gear.stats ?? {}) }
+  };
+}
+
+function getRpgGearEnhanceCost(gear) {
+  const enhanceLevel = normalizeStoredNonNegativeInteger(gear.enhanceLevel);
+  const power = Math.max(1, normalizeStoredNonNegativeInteger(gear.power) || 1);
+
+  return 120 * (enhanceLevel + 1) * power;
+}
+
+function getRpgGearEnhanceSuccessRate(gear) {
+  const enhanceLevel = normalizeStoredNonNegativeInteger(gear.enhanceLevel);
+  const power = Math.max(1, normalizeStoredNonNegativeInteger(gear.power) || 1);
+
+  return Math.max(35, 92 - enhanceLevel * 7 - power * 2);
+}
+
+function applyRpgGearEnhancement(gear, now = Date.now()) {
+  const nextLevel = normalizeStoredNonNegativeInteger(gear.enhanceLevel) + 1;
+  const statKey = getRpgGearEnhanceStatKey(gear);
+  const statGain = 1 + Math.ceil(nextLevel / 2);
+
+  gear.stats = normalizeGearStats(gear.stats);
+  gear.stats[statKey] = (gear.stats[statKey] ?? 0) + statGain;
+  gear.enhanceLevel = nextLevel;
+  gear.power = Math.max(1, normalizeStoredNonNegativeInteger(gear.power) || 1) + 1;
+  gear.lastEnhancedAt = now;
+
+  return gear;
+}
+
+function getRpgGearEnhanceStatKey(gear) {
+  if (gear.slot === 'armor') return 'defense';
+  if (gear.slot === 'accessory') {
+    return (gear.stats?.maxHp ?? 0) >= (gear.stats?.maxMp ?? 0)
+      ? 'maxHp'
+      : 'maxMp';
+  }
+
+  return 'attack';
+}
+
+function getRpgGuildRaidPartyProfiles(data, guildId, guild, leaderProfile, economy) {
+  const profiles = Object.entries(guild.users ?? {})
+    .map(([memberId, memberProfile]) => getOrCreateProfile(
+      data,
+      guildId,
+      memberId,
+      memberProfile?.username,
+      economy
+    ))
+    .filter((profile) => profile.rpg.startedAt > 0)
+    .filter((profile) => profile.rpg.hp > 1)
+    .sort((a, b) => {
+      if (a.userId === leaderProfile.userId) return -1;
+      if (b.userId === leaderProfile.userId) return 1;
+      if (b.level !== a.level) return b.level - a.level;
+      return a.username.localeCompare(b.username, 'ko-KR');
+    })
+    .slice(0, 4);
+
+  if (!profiles.some((profile) => profile.userId === leaderProfile.userId)) {
+    profiles.unshift(leaderProfile);
+  }
+
+  return profiles
+    .filter((profile, index, source) => source.findIndex((entry) => entry.userId === profile.userId) === index)
+    .slice(0, 4);
+}
+
+function createRpgGuildRaidMember(profile) {
+  return {
+    userId: profile.userId,
+    username: profile.username,
+    level: profile.level,
+    characterClass: profile.rpg.characterClass,
+    characterGender: profile.rpg.characterGender,
+    stats: getProfileRpgDerivedStats(profile)
+  };
+}
+
 function resolveOwnedRpgGear(profile, selector) {
   const rawSelector = String(selector || '').trim();
 
@@ -3406,7 +3848,7 @@ function applyGachaReward(profile, pull) {
       return;
     }
 
-    profile.balance += 150;
+    creditCurrency(profile, CURRENCY_RPG, 150);
     pull.duplicateCompensation = 150;
   }
 }

@@ -208,7 +208,8 @@ export function getSwordOutcomeLabel(outcome) {
   return {
     success: '강화',
     maintain: '유지',
-    destroy: '파괴'
+    destroy: '파괴',
+    protect: '보호'
   }[outcome] ?? outcome;
 }
 

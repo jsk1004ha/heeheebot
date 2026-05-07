@@ -162,6 +162,60 @@ const RPG_SKILLS = Object.freeze({
     attackBonus: 2,
     defenseBonus: 5,
     classes: Object.freeze(['paladin', 'priest'])
+  }),
+  blade_storm: Object.freeze({
+    label: '검의 폭풍',
+    description: '전사의 궁극기. 몰아치는 참격으로 전투력 +12',
+    mpCost: 24,
+    attackBonus: 12,
+    defenseBonus: 0,
+    ultimate: true,
+    classes: Object.freeze(['warrior'])
+  }),
+  meteor_storm: Object.freeze({
+    label: '메테오 스톰',
+    description: '마법사의 궁극기. 운석 폭격으로 전투력 +14',
+    mpCost: 26,
+    attackBonus: 14,
+    defenseBonus: 0,
+    ultimate: true,
+    classes: Object.freeze(['mage'])
+  }),
+  arrow_tempest: Object.freeze({
+    label: '화살 폭우',
+    description: '궁수의 궁극기. 빗발치는 사격으로 전투력 +11',
+    mpCost: 24,
+    attackBonus: 11,
+    defenseBonus: 0,
+    ultimate: true,
+    classes: Object.freeze(['ranger'])
+  }),
+  divine_aegis: Object.freeze({
+    label: '신성한 방벽',
+    description: '팔라딘의 궁극기. 성역을 펼쳐 전투력 +7, 방어 +9',
+    mpCost: 24,
+    attackBonus: 7,
+    defenseBonus: 9,
+    ultimate: true,
+    classes: Object.freeze(['paladin'])
+  }),
+  shadow_execute: Object.freeze({
+    label: '그림자 처형',
+    description: '도적의 궁극기. 급소를 베어 전투력 +13',
+    mpCost: 24,
+    attackBonus: 13,
+    defenseBonus: 0,
+    ultimate: true,
+    classes: Object.freeze(['rogue'])
+  }),
+  miracle_judgement: Object.freeze({
+    label: '기적의 심판',
+    description: '사제의 궁극기. 빛의 심판으로 전투력 +6, 방어 +8',
+    mpCost: 24,
+    attackBonus: 6,
+    defenseBonus: 8,
+    ultimate: true,
+    classes: Object.freeze(['priest'])
   })
 });
 
@@ -495,6 +549,55 @@ const RPG_BOSSES = Object.freeze({
   })
 });
 
+const RPG_BOSS_PATTERNS = Object.freeze({
+  slime_king: Object.freeze([
+    Object.freeze({
+      id: 'crown_bounce',
+      label: '왕관 튕기기',
+      description: '가벼운 왕관 돌진. 다음 큰 공격 전 예열 패턴입니다.',
+      damageMultiplier: 1,
+      guardMitigationRate: 0.55
+    }),
+    Object.freeze({
+      id: 'royal_slam',
+      label: '왕관 내려찍기',
+      description: '슬라임 킹이 크게 뛰어올라 찍어누릅니다. 방어 효율이 높습니다.',
+      damageMultiplier: 1.5,
+      guardMitigationRate: 0.7
+    }),
+    Object.freeze({
+      id: 'slime_split',
+      label: '슬라임 분열',
+      description: '분열체를 뿌려 누적 피해를 노리는 패턴입니다.',
+      damageMultiplier: 1.15,
+      guardMitigationRate: 0.6
+    })
+  ]),
+  ancient_dragon: Object.freeze([
+    Object.freeze({
+      id: 'ember_breath',
+      label: '잿불 숨결',
+      description: '고대 드래곤이 전장을 불길로 덮습니다.',
+      damageMultiplier: 1.2,
+      guardMitigationRate: 0.55
+    }),
+    Object.freeze({
+      id: 'tail_crash',
+      label: '꼬리 붕괴',
+      description: '육중한 꼬리로 방어선을 부숩니다.',
+      damageMultiplier: 1.45,
+      guardMitigationRate: 0.65
+    }),
+    Object.freeze({
+      id: 'ancient_nova',
+      label: '고대의 신성',
+      description: '가장 위험한 광역 폭발 패턴입니다.',
+      damageMultiplier: 1.8,
+      guardMitigationRate: 0.75
+    })
+  ])
+});
+
 const RPG_ADVANCED_CLASSES = Object.freeze({
   berserker: Object.freeze({
     label: '광전사',
@@ -786,7 +889,7 @@ export function getRpgShopItemOptions() {
   return Object.entries(RPG_ITEMS)
     .filter(([, item]) => !item.gachaOnly)
     .map(([value, item]) => ({
-      name: `${item.label} (${item.price}원)`,
+      name: `${item.label} (${item.price}골드)`,
       value
     }));
 }
@@ -832,7 +935,7 @@ export function getRpgBossOptions() {
 
 export function getRpgGachaBannerOptions() {
   return Object.entries(RPG_GACHA_BANNERS).map(([value, banner]) => ({
-    name: `${banner.label} (${banner.cost}원)`,
+    name: `${banner.label} (${banner.cost}골드)`,
     value
   }));
 }
@@ -906,6 +1009,14 @@ export function getRpgDailyMissionConfig(missionId) {
 
 export function getRpgBossConfig(bossId) {
   return RPG_BOSSES[normalizeRpgBossId(bossId)];
+}
+
+export function getRpgBossPattern(bossId = 'slime_king', turnNumber = 1) {
+  const normalizedBossId = normalizeRpgBossId(bossId);
+  const patterns = RPG_BOSS_PATTERNS[normalizedBossId] ?? RPG_BOSS_PATTERNS.slime_king;
+  const safeTurn = Math.max(1, Number(turnNumber) || 1);
+
+  return patterns[(safeTurn - 1) % patterns.length];
 }
 
 export function getRpgGachaBannerConfig(bannerId = 'standard') {
@@ -1311,6 +1422,12 @@ export function normalizeRpgSkillId(skillId = 'basic') {
   if (['조준 사격', '조준사격', 'aimed_shot', 'aimed shot'].includes(normalized)) return 'aimed_shot';
   if (['백스탭', 'backstab'].includes(normalized)) return 'backstab';
   if (['성스러운 방패', '성스러운방패', 'holy_guard', 'holy guard'].includes(normalized)) return 'holy_guard';
+  if (['검의 폭풍', '검의폭풍', '블레이드 스톰', '블레이드스톰', 'blade_storm', 'blade storm'].includes(normalized)) return 'blade_storm';
+  if (['메테오 스톰', '메테오스톰', 'meteor_storm', 'meteor storm'].includes(normalized)) return 'meteor_storm';
+  if (['화살 폭우', '화살폭우', '애로우 템페스트', 'arrow_tempest', 'arrow tempest'].includes(normalized)) return 'arrow_tempest';
+  if (['신성한 방벽', '신성한방벽', 'divine_aegis', 'divine aegis'].includes(normalized)) return 'divine_aegis';
+  if (['그림자 처형', '그림자처형', 'shadow_execute', 'shadow execute'].includes(normalized)) return 'shadow_execute';
+  if (['기적의 심판', '기적의심판', 'miracle_judgement', 'miracle judgement', 'miracle_judgment', 'miracle judgment'].includes(normalized)) return 'miracle_judgement';
 
   throw new Error('알 수 없는 RPG 스킬입니다.');
 }
@@ -1524,6 +1641,7 @@ export function resolveRpgBattle({
     skillId: normalizedSkillId,
     skillLabel: skill.label,
     skillMpCost: skill.mpCost,
+    ultimate: Boolean(skill.ultimate),
     area: normalizedArea,
     areaLabel: areaConfig.label,
     monster,
@@ -1570,6 +1688,7 @@ export function resolveRpgPvpTurn({
     skillId: normalizedSkillId,
     skillLabel: skill.label,
     skillMpCost: skill.mpCost,
+    ultimate: Boolean(skill.ultimate),
     roll,
     attackBonus,
     guardBonus: Math.max(0, Number(skill.defenseBonus) || 0),
@@ -1587,11 +1706,14 @@ export function resolveRpgBossTurn({
   player = {},
   boss = {},
   action = 'basic',
+  bossId = 'slime_king',
+  turnNumber = 1,
   randomInt = defaultRandomInt
 } = {}) {
   const normalizedAction = normalizeRpgBossActionId(action);
   const playerState = createRpgBossTurnPlayer(player);
   const bossState = createRpgBossTurnBoss(boss);
+  const bossPattern = getRpgBossPattern(bossId, turnNumber);
   let roll = 0;
   let attackPower = 0;
   let playerDamage = 0;
@@ -1600,6 +1722,7 @@ export function resolveRpgBossTurn({
   let skillId = null;
   let skillLabel = null;
   let mpCost = 0;
+  let ultimate = false;
   let playerMpAfter = playerState.mp;
   const inventory = { ...playerState.inventory };
 
@@ -1626,6 +1749,7 @@ export function resolveRpgBossTurn({
     skillId = normalizedAction;
     skillLabel = skill.label;
     mpCost = skill.mpCost;
+    ultimate = Boolean(skill.ultimate);
     playerMpAfter = Math.max(0, playerState.mp - skill.mpCost);
     roll = randomInt(1, 20);
     attackPower = playerState.stats.attack + skill.attackBonus + playerState.level + roll;
@@ -1634,12 +1758,13 @@ export function resolveRpgBossTurn({
 
   const bossHpAfter = Math.max(0, bossState.hp - playerDamage);
   const bossDefeated = bossHpAfter <= 0;
+  const patternedBossPower = Math.max(1, Math.ceil(bossState.power * bossPattern.damageMultiplier));
   const guardMitigation = normalizedAction === 'guard'
-    ? Math.ceil(bossState.power / 2)
+    ? Math.ceil(patternedBossPower * bossPattern.guardMitigationRate)
     : 0;
   const bossDamage = bossDefeated
     ? 0
-    : Math.max(1, Math.floor(Math.max(1, bossState.power - playerState.stats.defense - guardMitigation) / 3));
+    : Math.max(1, Math.floor(Math.max(1, patternedBossPower - playerState.stats.defense - guardMitigation) / 3));
   const playerHpAfterHeal = Math.min(playerState.maxHp, playerState.hp + healed);
   const playerHpAfter = Math.max(1, playerHpAfterHeal - bossDamage);
 
@@ -1648,11 +1773,13 @@ export function resolveRpgBossTurn({
     skillId,
     skillLabel,
     mpCost,
+    ultimate,
     roll,
     attackPower,
     playerDamage,
     healed,
     consumedItemId,
+    bossPattern,
     bossDamage,
     bossHpBefore: bossState.hp,
     bossHpAfter,
@@ -1707,6 +1834,7 @@ export function resolveRpgBossBattle({
     skillId: normalizedSkillId,
     skillLabel: skill.label,
     skillMpCost: skill.mpCost,
+    ultimate: Boolean(skill.ultimate),
     area: boss.area,
     areaLabel: RPG_AREAS[boss.area].label,
     monster: boss.monster,
@@ -1828,6 +1956,38 @@ function normalizeRpgPvpStat(value, fallback) {
     : fallback;
 }
 
+function normalizeRpgGuildRaidMembers(partyMembers = []) {
+  const source = Array.isArray(partyMembers) ? partyMembers : [];
+  return source
+    .filter((member) => member && typeof member === 'object')
+    .map((member, index) => {
+      const characterClass = normalizeRpgClass(member.characterClass ?? 'novice');
+      const characterGender = normalizeRpgGender(member.characterGender ?? 'male');
+      const level = Math.max(1, Number(member.level) || 1);
+      const fallbackStats = getRpgDerivedStats({ level, characterClass });
+      const stats = member.stats && typeof member.stats === 'object'
+        ? member.stats
+        : fallbackStats;
+      const attack = normalizeRpgPvpStat(stats.attack, fallbackStats.attack);
+      const defense = normalizeRpgPvpStat(stats.defense, fallbackStats.defense);
+
+      return {
+        userId: member.userId ?? `member-${index + 1}`,
+        username: member.username ?? `파티원 ${index + 1}`,
+        level,
+        characterClass,
+        characterClassLabel: RPG_CLASSES[characterClass].label,
+        characterGender,
+        characterGenderLabel: RPG_GENDERS[characterGender].label,
+        stats: { attack, defense },
+        power: Math.max(1, attack + Math.floor(defense / 2) + Math.floor(level / 2)),
+        assets: {
+          hero: getRpgClassAssetId(characterClass, characterGender)
+        }
+      };
+    });
+}
+
 export function resolveRpgExploration({
   playerLevel,
   area = 'forest',
@@ -1913,6 +2073,7 @@ export function resolveRpgRaidBattle({
     skillId: normalizedSkillId,
     skillLabel: skill.label,
     skillMpCost: skill.mpCost,
+    ultimate: Boolean(skill.ultimate),
     area: raid.area,
     areaLabel: RPG_AREAS[raid.area].label,
     monster: raid.monster,
@@ -1929,6 +2090,85 @@ export function resolveRpgRaidBattle({
     rewards: {
       xp: win ? raid.xpReward : 0,
       coins: win ? raid.coinReward : 0
+    },
+    assets: {
+      hero: getRpgClassAssetId(normalizedClass, normalizedGender),
+      monster: MONSTER_ASSET_IDS[raid.monster] ?? 'boss_unknown_idle',
+      background: raid.backgroundAssetId
+    }
+  };
+}
+
+export function resolveRpgGuildRaidBattle({
+  playerLevel,
+  raidId,
+  characterClass = 'novice',
+  characterGender = 'male',
+  skillId = 'basic',
+  statBonuses = {},
+  partyMembers = [],
+  randomInt = defaultRandomInt
+}) {
+  const normalizedRaidId = normalizeRpgRaidId(raidId);
+  const raid = RPG_RAIDS[normalizedRaidId];
+  const normalizedClass = normalizeRpgClass(characterClass);
+  const normalizedGender = normalizeRpgGender(characterGender);
+  const classConfig = RPG_CLASSES[normalizedClass];
+  const genderConfig = RPG_GENDERS[normalizedGender];
+  const normalizedSkillId = normalizeRpgSkillId(skillId);
+  const skill = RPG_SKILLS[normalizedSkillId];
+  const safeLevel = Math.max(1, Number(playerLevel) || 1);
+  const members = normalizeRpgGuildRaidMembers(partyMembers);
+  const supportMembers = members.slice(1);
+  const playerRoll = randomInt(1, 20);
+  const supportPower = supportMembers.reduce((sum, member) => sum + member.power, 0);
+  const raidPower = randomInt(raid.powerMin, raid.powerMax);
+  const attackBonus = Math.max(0, Number(statBonuses.attack) || 0) + skill.attackBonus;
+  const defenseBonus = Math.max(0, Number(statBonuses.defense) || 0) + skill.defenseBonus;
+  const partyPower = safeLevel * 2 + playerRoll + supportPower + classConfig.powerBonus + attackBonus;
+  const mitigatedRaidPower = Math.max(1, raidPower - defenseBonus - Math.floor(supportMembers.length / 2));
+  const win = partyPower >= mitigatedRaidPower;
+  const damageTaken = win
+    ? Math.max(4, Math.floor(mitigatedRaidPower / 5))
+    : Math.max(12, Math.floor(mitigatedRaidPower / 2));
+
+  return {
+    type: 'guild_raid',
+    raidId: normalizedRaidId,
+    raidLabel: raid.label,
+    difficulty: 'guild_raid',
+    difficultyLabel: '길드 레이드',
+    characterClass: normalizedClass,
+    characterClassLabel: classConfig.label,
+    characterGender: normalizedGender,
+    characterGenderLabel: genderConfig.label,
+    skillId: normalizedSkillId,
+    skillLabel: skill.label,
+    skillMpCost: skill.mpCost,
+    ultimate: Boolean(skill.ultimate),
+    area: raid.area,
+    areaLabel: RPG_AREAS[raid.area].label,
+    monster: raid.monster,
+    playerLevel: safeLevel,
+    playerRoll,
+    allyPower: supportPower,
+    supportPower,
+    partySize: members.length,
+    partyMembers: members,
+    playerPower: partyPower,
+    monsterPower: raidPower,
+    mitigatedMonsterPower: mitigatedRaidPower,
+    attackBonus,
+    defenseBonus,
+    damageTaken,
+    win,
+    rewards: {
+      xp: win ? raid.xpReward : 0,
+      coins: win ? raid.coinReward : 0
+    },
+    supportRewards: {
+      xp: win ? Math.floor(raid.xpReward / 4) : 0,
+      coins: win ? Math.floor(raid.coinReward / 4) : 0
     },
     assets: {
       hero: getRpgClassAssetId(normalizedClass, normalizedGender),
@@ -1991,6 +2231,7 @@ export function createRpgGearBlueprint({ baseItemId, rarity = 'common', randomIn
     label: `${rarityConfig.label} ${item.label}`,
     stats,
     power: rarityConfig.power,
+    enhanceLevel: 0,
     assetId: item.assetId
   };
 }

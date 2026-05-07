@@ -321,37 +321,41 @@
       "id": "map_shadow_marsh",
       "category": "map",
       "kind": "map",
-      "source": "procedural-placeholder",
+      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_0bd4e574af6750910169fbef9abc708191bcc139a8539bb94e.png",
       "raw": "assets/rpg/maps/shadow-marsh/raw/background.png",
       "prompt": "assets/rpg/maps/shadow-marsh/prompt-used.txt",
-      "status": "procedural-placeholder"
+      "status": "generated",
+      "generatedWith": "agent-sprite-forge:$generate2dmap"
     },
     {
       "id": "map_volcanic_rift",
       "category": "map",
       "kind": "map",
-      "source": "procedural-placeholder",
+      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_0bd4e574af6750910169fbefeb38d48191a1bf8f6be6b5ab52.png",
       "raw": "assets/rpg/maps/volcanic-rift/raw/background.png",
       "prompt": "assets/rpg/maps/volcanic-rift/prompt-used.txt",
-      "status": "procedural-placeholder"
+      "status": "generated",
+      "generatedWith": "agent-sprite-forge:$generate2dmap"
     },
     {
       "id": "map_frozen_peak",
       "category": "map",
       "kind": "map",
-      "source": "procedural-placeholder",
+      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_0bd4e574af6750910169fbf02f235c8191b8ef1a3c729351b3.png",
       "raw": "assets/rpg/maps/frozen-peak/raw/background.png",
       "prompt": "assets/rpg/maps/frozen-peak/prompt-used.txt",
-      "status": "procedural-placeholder"
+      "status": "generated",
+      "generatedWith": "agent-sprite-forge:$generate2dmap"
     },
     {
       "id": "map_sky_citadel",
       "category": "map",
       "kind": "map",
-      "source": "procedural-placeholder",
+      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_0bd4e574af6750910169fbf05df4788191b00be09a5beba390.png",
       "raw": "assets/rpg/maps/sky-citadel/raw/background.png",
       "prompt": "assets/rpg/maps/sky-citadel/prompt-used.txt",
-      "status": "procedural-placeholder"
+      "status": "generated",
+      "generatedWith": "agent-sprite-forge:$generate2dmap"
     },
     {
       "id": "item_potion_icon",

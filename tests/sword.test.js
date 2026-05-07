@@ -25,22 +25,26 @@ import {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-test('검 명령 payload는 강화, 상급강화, 정보, 판매, 랭킹, 배틀, 선물받기를 등록한다', () => {
+test('검 명령 payload는 강화, 보호권, 업적, 판매, 랭킹, 배틀, 선물받기를 등록한다', () => {
   const payloads = getSwordCommandPayloads();
 
   assert.deepEqual(payloads.map((command) => command.name), [
     '검강화',
     '검상급강화',
     '검정보',
+    '검보호권',
+    '검업적',
     '검판매',
     '검랭킹',
     '검배틀',
     '선물받기'
   ]);
-  assert.equal(payloads[4].options[0].name, '종류');
-  assert.equal(payloads[4].options[0].choices.length, 3);
-  assert.equal(payloads[5].options[0].name, '상대');
-  assert.equal(payloads[5].options[0].required, false);
+  assert.equal(payloads[3].options[0].name, '수량');
+  assert.equal(payloads[4].options[0].name, '업적');
+  assert.equal(payloads[6].options[0].name, '종류');
+  assert.equal(payloads[6].options[0].choices.length, 3);
+  assert.equal(payloads[7].options[0].name, '상대');
+  assert.equal(payloads[7].options[0].required, false);
 });
 
 test('검 강화 확률표는 1~100강 확장표와 상급강화 보정을 따른다', () => {
@@ -206,8 +210,107 @@ test('검정보 명령은 현재 검, 다음 강화, 판매가를 보여준다',
   assert.match(replies[0].content, /검정보/);
   assert.match(replies[0].content, /현재 검: \*\*\+12/);
   assert.match(replies[0].content, /다음 일반 강화: \*\*\+12 → \+13\*\*/);
-  assert.match(replies[0].content, /판매 예상가: \*\*1,014원\*\*/);
+  assert.match(replies[0].content, /보호권: \*\*0개\*\*/);
+  assert.match(replies[0].content, /판매 예상가: \*\*1,014강화코인\*\*/);
   assert.equal(replies[0].files[0].name, 'sword_012.png');
+});
+
+test('검보호권 명령은 돈으로 파괴 방지권을 구매한다', async () => {
+  const replies = [];
+  const interaction = createSwordInteraction({
+    commandName: '검보호권',
+    replies,
+    integerOptions: { 수량: 2 }
+  });
+  const economy = {
+    async buySwordProtectionScrolls(payload) {
+      assert.equal(payload.quantity, 2);
+      return {
+        quantity: 2,
+        unitCost: 15_000,
+        totalCost: 30_000,
+        profile: {
+          balance: 20_000,
+          sword: {
+            level: 12,
+            protectionScrolls: 2,
+            refineStones: 0
+          }
+        }
+      };
+    }
+  };
+
+  const handled = await handleSwordCommand(interaction, economy, silentLogger);
+
+  assert.equal(handled, true);
+  assert.match(replies[0].content, /검 보호권 구매/);
+  assert.match(replies[0].content, /보호권 \+2개/);
+  assert.match(replies[0].content, /강화 코인: \*\*20,000코인\*\*/);
+});
+
+test('검업적 명령은 달성 현황을 보여주고 선택하면 보상을 수령한다', async () => {
+  const listReplies = [];
+  const claimReplies = [];
+  const listInteraction = createSwordInteraction({
+    commandName: '검업적',
+    replies: listReplies
+  });
+  const claimInteraction = createSwordInteraction({
+    commandName: '검업적',
+    replies: claimReplies,
+    stringOptions: { 업적: 'sword_level_50' }
+  });
+  const economy = {
+    async getSwordAchievements() {
+      return {
+        achievements: [
+          {
+            id: 'sword_level_50',
+            title: '+50 달성',
+            description: '검 최고 강화 +50 달성',
+            complete: true,
+            claimed: false,
+            progressText: '+50 / +50',
+            rewardText: '5,000원, 보호권 2개'
+          },
+          {
+            id: 'sword_destroy_5',
+            title: '터져도 다시',
+            description: '검 파괴 5회',
+            complete: false,
+            claimed: false,
+            progressText: '1 / 5',
+            rewardText: '보호권 3개'
+          }
+        ]
+      };
+    },
+    async claimSwordAchievement(payload) {
+      assert.equal(payload.achievementId, 'sword_level_50');
+      return {
+        achievement: {
+          title: '+50 달성',
+          rewardText: '5,000원, 보호권 2개'
+        },
+        profile: {
+          balance: 5_000,
+          sword: {
+            protectionScrolls: 2,
+            refineStones: 0
+          }
+        }
+      };
+    }
+  };
+
+  await handleSwordCommand(listInteraction, economy, silentLogger);
+  await handleSwordCommand(claimInteraction, economy, silentLogger);
+
+  assert.match(listReplies[0], /검 업적/);
+  assert.match(listReplies[0], /수령 가능/);
+  assert.match(claimReplies[0], /업적 보상 수령/);
+  assert.match(claimReplies[0], /\+50 달성/);
 });
 
 test('검판매 명령은 판매 전 확인 버튼을 먼저 보여준다', async () => {
@@ -236,7 +339,7 @@ test('검판매 명령은 판매 전 확인 버튼을 먼저 보여준다', asyn
   assert.equal(sold, false);
   assert.equal(replies.length, 1);
   assert.match(replies[0].content, /검판매 확인/);
-  assert.match(replies[0].content, /판매 예상가: \*\*1,014원\*\*/);
+  assert.match(replies[0].content, /판매 예상가: \*\*1,014강화코인\*\*/);
   assert.equal(replies[0].components[0].components[0].data.custom_id, 'sword_sell_confirm:user-1');
   assert.equal(replies[0].components[0].components[1].data.custom_id, 'sword_sell_cancel:user-1');
   assert.equal(replies[0].files[0].name, 'sword_012.png');
@@ -261,7 +364,7 @@ test('검판매 확인 버튼은 같은 유저만 판매를 확정하고 취소 
   assert.equal(handled, true);
   assert.equal(updates.length, 1);
   assert.match(updates[0].content, /검판매/);
-  assert.match(updates[0].content, /판매 금액: \*\*750원\*\*/);
+  assert.match(updates[0].content, /판매 금액: \*\*750강화코인\*\*/);
   assert.match(updates[0].content, /현재 검: \*\*\+0 기본 검\*\*/);
   assert.equal(updates[0].components.length, 0);
   assert.equal(updates[0].files[0].name, 'sword_012.png');
@@ -310,7 +413,7 @@ test('검랭킹 명령은 최고강화, 판매금, 파괴횟수 랭킹을 출력
 
   assert.equal(handled, true);
   assert.match(replies[0], /검 판매금 랭킹/);
-  assert.match(replies[0], /1\. \*\*판매왕\*\* — 3,000원/);
+  assert.match(replies[0], /1\. \*\*판매왕\*\* — 3,000강화코인/);
 });
 
 test('검 랭킹 서비스는 카테고리별 상위 유저를 정렬한다', async () => {
@@ -451,13 +554,99 @@ test('검 강화 서비스는 돈과 제련석을 원자적으로 갱신한다',
 
     assert.equal(normal.outcome, 'success');
     assert.equal(normal.profile.sword.level, 1);
-    assert.equal(normal.profile.balance, 900);
+    assert.equal(normal.profile.wallets.swordCoins, 900);
     assert.equal(normal.profile.sword.normalAttempts, 1);
     assert.equal(advanced.outcome, 'success');
     assert.equal(advanced.profile.sword.level, 2);
     assert.equal(advanced.profile.sword.refineStones, 0);
     assert.equal(advanced.profile.sword.advancedAttempts, 1);
     assert.equal(advanced.profile.sword.highestLevel, 2);
+    assert.equal(advanced.profile.wallets.swordCoins, 775);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('검 보호권은 일반 강화 파괴를 막고 보호권만 소모한다', async () => {
+  const fixture = await createFixture({ randomInt: () => 100 });
+
+  try {
+    await seedProfile(fixture.store, {
+      userId: 'user-1',
+      username: '보호러',
+      balance: 20_000,
+      sword: {
+        level: 95,
+        highestLevel: 95,
+        refineStones: 0,
+        protectionScrolls: 1
+      }
+    });
+
+    const result = await fixture.economy.enhanceSword({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '보호러',
+      now: 10_000
+    });
+
+    assert.equal(result.outcome, 'protect');
+    assert.equal(result.beforeLevel, 95);
+    assert.equal(result.afterLevel, 95);
+    assert.equal(result.profile.sword.level, 95);
+    assert.equal(result.profile.sword.protectionScrolls, 0);
+    assert.equal(result.profile.sword.destructions, 0);
+    assert.equal(result.profile.sword.refineStones, 0);
+    assert.equal(result.profile.sword.protectedDestructions, 1);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('검 보호권 구매와 업적 보상은 프로필에 누적된다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await seedProfile(fixture.store, {
+      userId: 'user-1',
+      username: '업적러',
+      balance: 50_000,
+      sword: {
+        level: 50,
+        highestLevel: 50
+      }
+    });
+
+    const purchase = await fixture.economy.buySwordProtectionScrolls({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '업적러',
+      quantity: 2
+    });
+    const claimed = await fixture.economy.claimSwordAchievement({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '업적러',
+      achievementId: 'sword_level_50',
+      now: 20_000
+    });
+
+    assert.equal(purchase.totalCost, 30_000);
+    assert.equal(purchase.profile.wallets.swordCoins, 20_000);
+    assert.equal(purchase.profile.sword.protectionScrolls, 2);
+    assert.equal(claimed.profile.wallets.swordCoins, 25_000);
+    assert.equal(claimed.profile.sword.protectionScrolls, 4);
+    assert.equal(claimed.profile.sword.claimedAchievements.sword_level_50, 20_000);
+    await assert.rejects(
+      () => fixture.economy.claimSwordAchievement({
+        guildId: 'guild-1',
+        userId: 'user-1',
+        username: '업적러',
+        achievementId: 'sword_level_50',
+        now: 30_000
+      }),
+      /이미 보상을 받은/
+    );
   } finally {
     await fixture.cleanup();
   }
@@ -489,7 +678,7 @@ test('검 판매 서비스는 판매 금액을 지급하고 검 레벨만 초기
 
     assert.equal(result.beforeLevel, 12);
     assert.equal(result.saleValue, 1_014);
-    assert.equal(result.profile.balance, 6_014);
+    assert.equal(result.profile.wallets.swordCoins, 6_014);
     assert.equal(result.profile.sword.level, 0);
     assert.equal(result.profile.sword.highestLevel, 15);
     assert.equal(result.profile.sword.refineStones, 4);
@@ -589,7 +778,7 @@ test('랜덤 검배틀은 상대 없이 진행되고 승리 보상과 하루 제
     assert.equal(last.profile.sword.battlesToday, 10);
     assert.equal(last.profile.sword.battleStonesToday, 3);
     assert.equal(last.profile.sword.refineStones, 3);
-    assert.equal(last.profile.balance > 0, true);
+    assert.equal(last.profile.wallets.swordCoins > 0, true);
     assert.equal(blocked.battled, false);
   } finally {
     await fixture.cleanup();
@@ -623,7 +812,8 @@ test('유저 검배틀은 양쪽 일일 횟수를 쓰고 승자만 돈과 경험
     });
 
     assert.equal(result.winnerUserId, 'challenger');
-    assert.equal(result.challenger.balance, result.rewards.money + result.levelReward);
+    assert.equal(result.challenger.wallets.swordCoins, result.rewards.money);
+    assert.equal(result.challenger.balance, result.levelReward);
     assert.equal(result.challenger.totalXp, result.rewards.xp);
     assert.equal(result.challenger.sword.battleWins, 1);
     assert.equal(result.challenger.sword.battlesToday, 1);
@@ -661,6 +851,7 @@ async function seedProfile(store, {
   xp = 0,
   totalXp = 0,
   balance = 0,
+  wallets = {},
   sword = {}
 }) {
   await store.update((data) => {
@@ -672,6 +863,10 @@ async function seedProfile(store, {
       xp,
       totalXp,
       balance,
+      wallets: {
+        swordCoins: balance,
+        ...wallets
+      },
       sword
     };
   });
@@ -685,6 +880,9 @@ function legacyProfile(userId, username) {
     xp: 0,
     totalXp: 0,
     balance: 0,
+    wallets: {
+      swordCoins: 0
+    },
     lastMessageRewardAt: 0,
     lastDailyAt: 0,
     lastDailyDay: null,
@@ -799,6 +997,7 @@ function swordStatusResult({
   level,
   highestLevel,
   refineStones = 0,
+  protectionScrolls = 0,
   balance = 0,
   soldCount = 0,
   saleEarnings = 0,
@@ -813,6 +1012,7 @@ function swordStatusResult({
         level,
         highestLevel,
         refineStones,
+        protectionScrolls,
         soldCount,
         saleEarnings,
         destructions,
@@ -876,7 +1076,8 @@ function swordEnhancementResult({
     outcomeLabel: {
       success: '강화',
       maintain: '유지',
-      destroy: '파괴'
+      destroy: '파괴',
+      protect: '보호'
     }[outcome] ?? outcome,
     refineStoneReward,
     profile: {

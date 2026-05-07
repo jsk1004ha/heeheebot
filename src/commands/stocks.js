@@ -26,8 +26,13 @@ export const stockCommands = [
     )
     .addSubcommand((subcommand) =>
       subcommand
+        .setName('신규상장')
+        .setDescription('최근 상장된 종목과 상장 예정 종목을 봅니다.')
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
         .setName('매수')
-        .setDescription('보유금으로 가상주식을 매수합니다.')
+        .setDescription('현금으로 가상주식을 매수합니다.')
         .addStringOption((option) =>
           option
             .setName('종목')
@@ -64,6 +69,170 @@ export const stockCommands = [
             .setMinValue(1)
             .setMaxValue(10_000)
             .setRequired(true)
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('지정가매수')
+        .setDescription('목표 가격 이하가 되면 자동 매수되는 주문을 예약합니다.')
+        .addStringOption((option) =>
+          option
+            .setName('종목')
+            .setDescription('지정가 매수할 종목명 또는 id')
+            .setMaxLength(50)
+            .setAutocomplete(true)
+            .setRequired(true)
+        )
+        .addIntegerOption((option) =>
+          option
+            .setName('수량')
+            .setDescription('예약 매수 수량')
+            .setMinValue(1)
+            .setMaxValue(10_000)
+            .setRequired(true)
+        )
+        .addIntegerOption((option) =>
+          option
+            .setName('가격')
+            .setDescription('이 가격 이하가 되면 매수')
+            .setMinValue(1)
+            .setRequired(true)
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('지정가매도')
+        .setDescription('목표 가격 이상이 되면 자동 매도되는 주문을 예약합니다.')
+        .addStringOption((option) =>
+          option
+            .setName('종목')
+            .setDescription('지정가 매도할 종목명 또는 id')
+            .setMaxLength(50)
+            .setAutocomplete(true)
+            .setRequired(true)
+        )
+        .addIntegerOption((option) =>
+          option
+            .setName('수량')
+            .setDescription('예약 매도 수량')
+            .setMinValue(1)
+            .setMaxValue(10_000)
+            .setRequired(true)
+        )
+        .addIntegerOption((option) =>
+          option
+            .setName('가격')
+            .setDescription('이 가격 이상이 되면 매도')
+            .setMinValue(1)
+            .setRequired(true)
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('주문')
+        .setDescription('내 지정가 미체결 주문과 최근 체결/취소 주문을 봅니다.')
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('주문취소')
+        .setDescription('미체결 지정가 주문을 취소합니다.')
+        .addStringOption((option) =>
+          option
+            .setName('주문')
+            .setDescription('/주식 주문에서 보이는 주문 id')
+            .setMaxLength(50)
+            .setRequired(true)
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('알림설정')
+        .setDescription('가격이 목표가 이상/이하가 되면 조회 시 알림 상태로 표시합니다.')
+        .addStringOption((option) =>
+          option
+            .setName('종목')
+            .setDescription('알림을 걸 종목명 또는 id')
+            .setMaxLength(50)
+            .setAutocomplete(true)
+            .setRequired(true)
+        )
+        .addStringOption((option) =>
+          option
+            .setName('조건')
+            .setDescription('목표가 이상 또는 이하')
+            .setRequired(true)
+            .addChoices(
+              { name: '이상', value: 'above' },
+              { name: '이하', value: 'below' }
+            )
+        )
+        .addIntegerOption((option) =>
+          option
+            .setName('가격')
+            .setDescription('알림 목표 가격')
+            .setMinValue(1)
+            .setRequired(true)
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('알림')
+        .setDescription('내 활성 가격 알림과 최근 트리거 알림을 봅니다.')
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('알림삭제')
+        .setDescription('가격 알림을 삭제합니다.')
+        .addStringOption((option) =>
+          option
+            .setName('알림')
+            .setDescription('/주식 알림에서 보이는 알림 id')
+            .setMaxLength(50)
+            .setRequired(true)
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('거래내역')
+        .setDescription('내 최근 현물, 지정가, 레버리지 거래내역을 봅니다.')
+        .addIntegerOption((option) =>
+          option
+            .setName('개수')
+            .setDescription('표시할 거래 개수')
+            .setMinValue(1)
+            .setMaxValue(20)
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('뉴스')
+        .setDescription('최근 시장 뉴스와 공시를 봅니다.')
+        .addIntegerOption((option) =>
+          option
+            .setName('개수')
+            .setDescription('표시할 뉴스 개수')
+            .setMinValue(1)
+            .setMaxValue(20)
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('차트')
+        .setDescription('종목의 최근 tick 가격 차트를 봅니다.')
+        .addStringOption((option) =>
+          option
+            .setName('종목')
+            .setDescription('차트를 볼 종목명 또는 id')
+            .setMaxLength(50)
+            .setAutocomplete(true)
+            .setRequired(true)
+        )
+        .addIntegerOption((option) =>
+          option
+            .setName('개수')
+            .setDescription('표시할 가격 포인트 수')
+            .setMinValue(2)
+            .setMaxValue(20)
         )
     )
     .addSubcommand((subcommand) =>
@@ -121,7 +290,7 @@ export const stockCommands = [
         .addIntegerOption((option) =>
           option
             .setName('증거금')
-            .setDescription('포지션에 넣을 보유금')
+            .setDescription('포지션에 넣을 현금')
             .setMinValue(1)
             .setRequired(true)
         )
@@ -172,9 +341,9 @@ export async function handleStockAutocomplete(interaction, stocks) {
 
   const subcommand = interaction.options.getSubcommand(false);
   const query = String(focused.value ?? '');
-  const choices = subcommand === '매도'
+  const choices = ['매도', '지정가매도'].includes(subcommand)
     ? await getSellStockAutocompleteChoices(interaction, stocks, query)
-    : getCatalogAutocompleteChoices(query);
+    : await getTradableStockAutocompleteChoices(interaction, stocks, query);
 
   await interaction.respond(choices.slice(0, STOCK_AUTOCOMPLETE_LIMIT));
   return true;
@@ -226,6 +395,12 @@ async function routeStockCommand(interaction, stocks) {
     return;
   }
 
+  if (subcommand === '신규상장') {
+    const listings = await stocks.getListings({ guildId });
+    await interaction.reply(formatListings(listings));
+    return;
+  }
+
   if (subcommand === '매수') {
     const result = await stocks.buyStock({
       guildId,
@@ -247,6 +422,105 @@ async function routeStockCommand(interaction, stocks) {
       quantity: interaction.options.getInteger('수량', true)
     });
     await interaction.reply(formatSellResult(user, result));
+    return;
+  }
+
+  if (subcommand === '지정가매수' || subcommand === '지정가매도') {
+    const result = await stocks.placeLimitOrder({
+      guildId,
+      userId: user.id,
+      username: user.username,
+      stockId: interaction.options.getString('종목', true),
+      side: subcommand === '지정가매수' ? 'buy' : 'sell',
+      quantity: interaction.options.getInteger('수량', true),
+      limitPrice: interaction.options.getInteger('가격', true)
+    });
+    await interaction.reply(formatLimitOrderPlaced(user, result));
+    return;
+  }
+
+  if (subcommand === '주문') {
+    const orders = await stocks.getLimitOrders({
+      guildId,
+      userId: user.id,
+      username: user.username
+    });
+    await interaction.reply(formatLimitOrders(user, orders));
+    return;
+  }
+
+  if (subcommand === '주문취소') {
+    const result = await stocks.cancelLimitOrder({
+      guildId,
+      userId: user.id,
+      username: user.username,
+      orderId: interaction.options.getString('주문', true)
+    });
+    await interaction.reply(formatLimitOrderCancelled(user, result));
+    return;
+  }
+
+  if (subcommand === '알림설정') {
+    const alert = await stocks.setPriceAlert({
+      guildId,
+      userId: user.id,
+      username: user.username,
+      stockId: interaction.options.getString('종목', true),
+      condition: interaction.options.getString('조건', true),
+      targetPrice: interaction.options.getInteger('가격', true)
+    });
+    await interaction.reply(formatAlertCreated(user, alert));
+    return;
+  }
+
+  if (subcommand === '알림') {
+    const alerts = await stocks.getPriceAlerts({
+      guildId,
+      userId: user.id,
+      username: user.username
+    });
+    await interaction.reply(formatAlerts(user, alerts));
+    return;
+  }
+
+  if (subcommand === '알림삭제') {
+    const alert = await stocks.deletePriceAlert({
+      guildId,
+      userId: user.id,
+      username: user.username,
+      alertId: interaction.options.getString('알림', true)
+    });
+    await interaction.reply(formatAlertDeleted(user, alert));
+    return;
+  }
+
+  if (subcommand === '거래내역') {
+    const history = await stocks.getTradeHistory({
+      guildId,
+      userId: user.id,
+      username: user.username,
+      limit: interaction.options.getInteger('개수') ?? 10
+    });
+    await interaction.reply(formatTradeHistory(user, history));
+    return;
+  }
+
+  if (subcommand === '뉴스') {
+    const news = await stocks.getNews({
+      guildId,
+      limit: interaction.options.getInteger('개수') ?? 10
+    });
+    await interaction.reply(formatStockNews(news));
+    return;
+  }
+
+  if (subcommand === '차트') {
+    const chart = await stocks.getChart({
+      guildId,
+      stockId: interaction.options.getString('종목', true),
+      points: interaction.options.getInteger('개수') ?? 8
+    });
+    await interaction.reply(formatStockChart(chart));
     return;
   }
 
@@ -326,6 +600,23 @@ async function getSellStockAutocompleteChoices(interaction, stocks, query) {
     }));
 }
 
+async function getTradableStockAutocompleteChoices(interaction, stocks, query) {
+  if (!interaction.guildId || !stocks?.getMarket) return getCatalogAutocompleteChoices(query);
+
+  try {
+    const market = await stocks.getMarket({ guildId: interaction.guildId });
+    return market.stocks
+      .filter((stock) => stock.status !== 'delisted')
+      .filter((stock) => matchesStockQuery(stock, query))
+      .map((stock) => ({
+        name: `${stock.name} · ${stock.symbol} · ${stock.sector} · ${formatRisk(stock.risk)}${stock.dynamic ? ' · 자동상장' : ''}`,
+        value: stock.id
+      }));
+  } catch {
+    return getCatalogAutocompleteChoices(query);
+  }
+}
+
 function getCatalogAutocompleteChoices(query) {
   return getStockCatalog()
     .filter((stock) => matchesStockQuery(stock, query))
@@ -371,9 +662,33 @@ function formatFullMarket(market) {
   return `📊 **디코밈 가상주식 전체 시세 ${market.stocks.length}종목** — tick #${market.tickIndex}\n${body}`;
 }
 
+function formatListings(listings) {
+  const recent = listings.recent.length > 0
+    ? listings.recent
+      .map((stock) => `- 🆕 **${stock.name}** \`${stock.symbol}\` ${stock.price.toLocaleString()}원 / tick #${stock.listedAtTick ?? stock.listedFromTick ?? 0}`)
+      .join('\n')
+    : '최근 신규상장 종목이 없습니다.';
+  const upcoming = listings.upcoming.length > 0
+    ? listings.upcoming
+      .map((stock) => `- 예정 tick #${stock.listedFromTick}: **${stock.name}** \`${stock.symbol}\` (${stock.sector})`)
+      .join('\n')
+    : '상장 예정 종목이 없습니다.';
+
+  return [
+    `🆕 **신규상장 보드** — 현재 tick #${listings.tickIndex}`,
+    '**최근 상장**',
+    recent,
+    '',
+    '**상장 예정**',
+    upcoming
+  ].join('\n');
+}
+
 function formatQuote(quote) {
+  const statusText = formatStockStatus(quote);
   return [
     `📌 **${quote.name}** (${quote.sector} / ${formatRisk(quote.risk)})`,
+    `상태: **${statusText}**`,
     `현재가: **${quote.price.toLocaleString()}원** / 변동: ${formatTrendMarker(quote.changePercent)} **${formatSignedPercent(quote.changePercent)}**`,
     `이전가: ${quote.previousPrice.toLocaleString()}원`,
     `뉴스: ${quote.news}`
@@ -385,7 +700,7 @@ function formatBuyResult(user, result) {
     `🛒 **가상주식 매수 완료** — ${user}`,
     `종목: **${result.stock.name}** × ${result.quantity.toLocaleString()}주`,
     `단가: ${result.price.toLocaleString()}원 / 매수금액: ${result.subtotal.toLocaleString()}원 / 수수료: ${result.fee.toLocaleString()}원`,
-    `잔액: **${result.profile.balance.toLocaleString()}원** / 보유: ${result.holding.quantity.toLocaleString()}주 / 평단: ${result.holding.averageCost.toLocaleString()}원`
+    `현금: **${result.profile.balance.toLocaleString()}원** / 보유: ${result.holding.quantity.toLocaleString()}주 / 평단: ${result.holding.averageCost.toLocaleString()}원`
   ].join('\n');
 }
 
@@ -394,7 +709,118 @@ function formatSellResult(user, result) {
     `💸 **가상주식 매도 완료** — ${user}`,
     `종목: **${result.stock.name}** × ${result.quantity.toLocaleString()}주`,
     `단가: ${result.price.toLocaleString()}원 / 매도금액: ${result.subtotal.toLocaleString()}원 / 수수료: ${result.fee.toLocaleString()}원`,
-    `실현손익: **${formatSignedMoney(result.realizedProfit)}** / 잔액: **${result.profile.balance.toLocaleString()}원** / 남은 보유: ${result.holding.quantity.toLocaleString()}주`
+    `실현손익: **${formatSignedMoney(result.realizedProfit)}** / 현금: **${result.profile.balance.toLocaleString()}원** / 남은 보유: ${result.holding.quantity.toLocaleString()}주`
+  ].join('\n');
+}
+
+function formatLimitOrderPlaced(user, result) {
+  const sideLabel = formatOrderSide(result.side);
+  const reserveText = result.side === 'buy'
+    ? `예약금: **${result.reservedCash.toLocaleString()}원**`
+    : `예약 수량: **${result.reservedQuantity.toLocaleString()}주**`;
+
+  return [
+    `🧾 **지정가 ${sideLabel} 주문 등록** — ${user}`,
+    `주문: \`${result.id}\` / 종목: **${result.stock.name}** × ${result.quantity.toLocaleString()}주`,
+    `조건: ${result.side === 'buy' ? '현재가가' : '현재가가'} **${result.limitPrice.toLocaleString()}원** ${result.side === 'buy' ? '이하' : '이상'}이면 체결`,
+    reserveText,
+    '`/주식 주문`에서 미체결 주문을 확인하고 `/주식 주문취소`로 취소할 수 있습니다.'
+  ].join('\n');
+}
+
+function formatLimitOrders(user, orders) {
+  const open = orders.open.length > 0
+    ? orders.open.map(formatOrderLine).join('\n')
+    : '미체결 주문이 없습니다.';
+  const recent = orders.recent.length > 0
+    ? orders.recent.map(formatOrderLine).join('\n')
+    : '최근 체결/취소 주문이 없습니다.';
+
+  return [
+    `🧾 **${user.username}님의 지정가 주문**`,
+    '**미체결 주문**',
+    open,
+    '',
+    '**최근 주문**',
+    recent
+  ].join('\n');
+}
+
+function formatLimitOrderCancelled(user, order) {
+  return [
+    `🧾 **지정가 주문 취소** — ${user}`,
+    `주문: \`${order.id}\` / 종목: **${order.stock.name}** / ${formatOrderSide(order.side)} ${order.quantity.toLocaleString()}주`,
+    '예약 현금/주식은 지갑과 보유량으로 되돌렸습니다.'
+  ].join('\n');
+}
+
+function formatAlertCreated(user, alert) {
+  return [
+    `🔔 **가격 알림 등록** — ${user}`,
+    `알림: \`${alert.id}\` / 종목: **${alert.stock.name}**`,
+    `조건: 현재가가 **${alert.targetPrice.toLocaleString()}원** ${formatAlertCondition(alert.condition)}이면 트리거`,
+    '`/주식 알림`으로 활성/트리거 알림을 확인할 수 있습니다.'
+  ].join('\n');
+}
+
+function formatAlerts(user, alerts) {
+  const active = alerts.active.length > 0
+    ? alerts.active.map(formatAlertLine).join('\n')
+    : '활성 알림이 없습니다.';
+  const triggered = alerts.triggered.length > 0
+    ? alerts.triggered.map(formatAlertLine).join('\n')
+    : '최근 트리거 알림이 없습니다.';
+
+  return [
+    `🔔 **${user.username}님의 가격 알림**`,
+    '**활성 알림**',
+    active,
+    '',
+    '**최근 트리거**',
+    triggered
+  ].join('\n');
+}
+
+function formatAlertDeleted(user, alert) {
+  return [
+    `🔕 **가격 알림 삭제** — ${user}`,
+    `알림: \`${alert.id}\` / 종목: **${alert.stock.name}**`
+  ].join('\n');
+}
+
+function formatTradeHistory(user, history) {
+  const body = history.entries.length > 0
+    ? history.entries.map(formatTradeHistoryLine).join('\n')
+    : '최근 거래내역이 없습니다.';
+
+  return [
+    `🧾 **${user.username}님의 주식 거래내역**`,
+    body
+  ].join('\n');
+}
+
+function formatStockNews(news) {
+  const body = news.entries.length > 0
+    ? news.entries.map((entry) => `- tick #${entry.tickIndex} **${entry.stock.name}** ${formatNewsType(entry.type)}: ${entry.message}`)
+      .join('\n')
+    : '최근 시장 뉴스/공시가 없습니다.';
+
+  return [
+    `🗞️ **주식 뉴스/공시** — tick #${news.tickIndex}`,
+    body
+  ].join('\n');
+}
+
+function formatStockChart(chart) {
+  const body = chart.history.length > 0
+    ? chart.history
+      .map((point) => `- tick #${point.tickIndex}: ${point.price.toLocaleString()}원`)
+      .join('\n')
+    : '표시할 가격 기록이 없습니다.';
+
+  return [
+    `📉 **${chart.stock.name} 가격 차트**`,
+    body
   ].join('\n');
 }
 
@@ -434,7 +860,7 @@ function formatOpenLeverageResult(user, result) {
     `⚡ **레버리지 ${sideLabel} 진입 완료** — ${user}`,
     `포지션: \`${position.id}\` / 종목: **${position.stock.name}** / 배율: **${position.leverage}배**`,
     `진입가: ${position.entryPrice.toLocaleString()}원 / 증거금: ${position.margin.toLocaleString()}원 / 수수료: ${result.fee.toLocaleString()}원`,
-    `잔액: **${result.profile.balance.toLocaleString()}원**`,
+    `현금: **${result.profile.balance.toLocaleString()}원**`,
     '손실이 증거금 100%에 도달하면 자동 청산됩니다.'
   ].join('\n');
 }
@@ -446,7 +872,7 @@ function formatCloseLeverageResult(user, result) {
       `💥 **레버리지 포지션 자동 청산** — ${user}`,
       `포지션: \`${position.id}\` / 종목: **${position.stock.name}** / ${formatLeverageSide(position.side)} ${position.leverage}배`,
       `손익: **${formatSignedMoney(result.realizedProfit)}** / 지급액: 0원`,
-      `잔액: **${result.profile.balance.toLocaleString()}원**`
+      `현금: **${result.profile.balance.toLocaleString()}원**`
     ].join('\n');
   }
 
@@ -455,7 +881,7 @@ function formatCloseLeverageResult(user, result) {
     `포지션: \`${position.id}\` / 종목: **${position.stock.name}** / ${formatLeverageSide(position.side)} ${position.leverage}배`,
     `진입가: ${position.entryPrice.toLocaleString()}원 → 청산가: ${position.currentPrice.toLocaleString()}원`,
     `손익: **${formatSignedMoney(result.realizedProfit)}** / 지급액: **${result.payout.toLocaleString()}원**`,
-    `잔액: **${result.profile.balance.toLocaleString()}원**`
+    `현금: **${result.profile.balance.toLocaleString()}원**`
   ].join('\n');
 }
 
@@ -483,7 +909,43 @@ function formatLeveragePortfolio(user, portfolio) {
 }
 
 function formatMarketLine(stock) {
-  return `- ${formatTrendMarker(stock.changePercent)} **${stock.name}** \`${stock.symbol}\` ${stock.price.toLocaleString()}원 (${formatSignedPercent(stock.changePercent)})`;
+  const status = stock.status === 'delisted'
+    ? ' ⛔상폐'
+    : stock.eventType === 'ipo'
+      ? ' 🆕신규'
+      : stock.eventType === 'surge'
+        ? ' 🚀급등'
+        : stock.eventType === 'crash'
+          ? ' ⚠️급락'
+          : '';
+  return `- ${formatTrendMarker(stock.changePercent)} **${stock.name}** \`${stock.symbol}\` ${stock.price.toLocaleString()}원 (${formatSignedPercent(stock.changePercent)})${status}`;
+}
+
+function formatOrderLine(order) {
+  let status = '미체결';
+  if (order.status === 'filled') {
+    status = `체결 ${(order.fillPrice ?? 0).toLocaleString()}원`;
+  } else if (order.status === 'cancelled') {
+    status = `취소${order.cancelReason ? `(${order.cancelReason})` : ''}`;
+  } else if (order.status !== 'open') {
+    status = order.status;
+  }
+  return `- \`${order.id}\` **${order.stock.name}** ${formatOrderSide(order.side)} ${order.quantity.toLocaleString()}주 @ ${order.limitPrice.toLocaleString()}원 — ${status}`;
+}
+
+function formatAlertLine(alert) {
+  const status = alert.status === 'triggered'
+    ? `트리거 ${alert.triggeredPrice.toLocaleString()}원`
+    : '대기 중';
+  return `- \`${alert.id}\` **${alert.stock.name}** ${alert.targetPrice.toLocaleString()}원 ${formatAlertCondition(alert.condition)} — ${status}`;
+}
+
+function formatTradeHistoryLine(entry) {
+  const quantity = entry.quantity ? ` ${entry.quantity.toLocaleString()}주` : '';
+  const price = entry.price ? ` @ ${entry.price.toLocaleString()}원` : '';
+  const total = entry.total ? ` / 총액 ${entry.total.toLocaleString()}원` : '';
+  const profit = entry.realizedProfit ? ` / 손익 ${formatSignedMoney(entry.realizedProfit)}` : '';
+  return `- ${formatTradeType(entry.type)} **${entry.stock.name}**${quantity}${price}${total}${profit}`;
 }
 
 function formatSignedPercent(percent) {
@@ -504,6 +966,43 @@ function formatSignedMoney(amount) {
 
 function formatLeverageSide(side) {
   return side === 'short' ? '숏' : '롱';
+}
+
+function formatOrderSide(side) {
+  return side === 'sell' ? '매도' : '매수';
+}
+
+function formatAlertCondition(condition) {
+  return condition === 'below' ? '이하' : '이상';
+}
+
+function formatTradeType(type) {
+  return {
+    buy: '현물 매수',
+    sell: '현물 매도',
+    limit_buy_fill: '지정가 매수 체결',
+    limit_sell_fill: '지정가 매도 체결',
+    leverage_open: '레버리지 진입',
+    leverage_close: '레버리지 청산',
+    leverage_liquidation: '레버리지 자동청산'
+  }[type] ?? type;
+}
+
+function formatNewsType(type) {
+  return {
+    ipo: '신규상장',
+    surge: '급등',
+    crash: '급락',
+    delisted: '상장폐지'
+  }[type] ?? '뉴스';
+}
+
+function formatStockStatus(stock) {
+  if (stock.status === 'delisted') return '상장폐지';
+  if (stock.eventType === 'ipo') return '신규상장';
+  if (stock.eventType === 'surge') return '급등 이벤트';
+  if (stock.eventType === 'crash') return '급락 이벤트';
+  return '정상 거래';
 }
 
 function formatRisk(risk) {

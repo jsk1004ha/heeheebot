@@ -1,8 +1,25 @@
+import {
+  CURRENCY_STOCK,
+  cloneWallets,
+  creditCurrency,
+  debitCurrency,
+  getCurrencyBalance,
+  normalizeWallets
+} from './currencies.js';
+
 const DEFAULT_TICK_MS = 3 * 60 * 1000;
 const DEFAULT_FEE_BPS = 100;
 const DEFAULT_LEVERAGE_FEE_BPS = 200;
 const MAX_CATCH_UP_TICKS = 24;
 const MIN_STOCK_PRICE = 10;
+const RECENT_ORDER_LIMIT = 10;
+const RECENT_ALERT_LIMIT = 10;
+const RECENT_TRADE_LIMIT = 20;
+const RECENT_NEWS_LIMIT = 20;
+const PRICE_HISTORY_LIMIT = 48;
+const AUTO_IPO_CHECK_TICKS = 5;
+const DEFAULT_AUTO_IPO_CHANCE_BPS = 1_500;
+const DEFAULT_MAX_DYNAMIC_STOCKS = 50;
 
 const STOCK_DEFINITIONS = Object.freeze([
   stock('heejin_electronics', '희진전자', '전자', 'stable', 800, 800, 12),
@@ -40,7 +57,19 @@ const STOCK_DEFINITIONS = Object.freeze([
   stock('monkey_bio', '원숭이바이오', '바이오', 'meme', 420, 1900, 26),
   stock('dohun_construction', '도훈건설', '건설', 'meme', 330, 1500, 22),
   stock('dohun_heavy', '도훈중공업', '중공업', 'cyclical', 410, 1050, 14),
-  stock('dohun_steel', '도훈철강', '철강', 'meme', 290, 1650, 23)
+  stock('dohun_steel', '도훈철강', '철강', 'meme', 290, 1650, 23),
+  stock('heejin_ai', '희진AI', 'AI', 'growth', 1_240, 1450, 18, ['희진인공지능'], 'HEAI', { listedFromTick: 2 }),
+  stock('jaesung_robotics', '재성로보틱스', '로봇', 'growth', 880, 1350, 17, [], 'JARO', { listedFromTick: 3 }),
+  stock('junseo_streaming', '준서스트리밍', '플랫폼', 'meme', 760, 1650, 22, [], 'JUST', { listedFromTick: 4 }),
+  stock('jio_quant', '지오퀀트', '핀테크', 'volatile', 1_180, 1500, 19, [], 'JIQU', { listedFromTick: 5 }),
+  stock('hyeongyeom_defense', '현겸방산', '방산', 'cyclical', 930, 1000, 13, [], 'HYDE', { listedFromTick: 6 }),
+  stock('jimin_foods', '지민푸드', '식품', 'stable', 540, 750, 10, [], 'JIFO', { listedFromTick: 7 }),
+  stock('yongha_entertainment', '용하엔터', '엔터', 'meme', 690, 1550, 21, [], 'YHEN', { listedFromTick: 8 }),
+  stock('mingeon_motors', '민건모터스', '자동차', 'growth', 810, 1200, 16, [], 'MIMO', { listedFromTick: 9 }),
+  stock('dohye_cosmetics', '도혜화장품', '화장품', 'growth', 620, 1100, 14, [], 'DHBE', { listedFromTick: 10 }),
+  stock('seojeong_medical', '서정메디컬', '의료기기', 'volatile', 730, 1450, 18, [], 'SEME', { listedFromTick: 11 }),
+  stock('monkey_airlines', '원숭이항공', '항공', 'meme', 450, 1750, 25, ['원숭이항공사'], 'MOAI', { listedFromTick: 12 }),
+  stock('dohun_reits', '도훈리츠', '부동산', 'stable', 510, 800, 11, [], 'DORE', { listedFromTick: 13 })
 ]);
 
 const STOCKS_BY_ID = Object.freeze(Object.fromEntries(
@@ -84,51 +113,86 @@ const NEWS_TEMPLATES = Object.freeze({
   ])
 });
 
+const AUTO_IPO_PREFIXES = Object.freeze([
+  '희진',
+  '재성',
+  '준서',
+  '지오',
+  '현겸',
+  '지민',
+  '용하',
+  '민건',
+  '도혜',
+  '서정',
+  '원숭이',
+  '도훈'
+]);
+
+const AUTO_IPO_THEMES = Object.freeze([
+  Object.freeze({ suffix: 'AI랩스', sector: 'AI', risk: 'growth', basePriceMin: 650, basePriceMax: 1_600, volatilityBps: 1450, eventChance: 18 }),
+  Object.freeze({ suffix: '로켓모빌리티', sector: '모빌리티', risk: 'meme', basePriceMin: 420, basePriceMax: 1_250, volatilityBps: 1700, eventChance: 24 }),
+  Object.freeze({ suffix: '바이오텍', sector: '바이오', risk: 'volatile', basePriceMin: 380, basePriceMax: 1_450, volatilityBps: 1800, eventChance: 25 }),
+  Object.freeze({ suffix: '클라우드', sector: '클라우드', risk: 'growth', basePriceMin: 700, basePriceMax: 1_500, volatilityBps: 1250, eventChance: 16 }),
+  Object.freeze({ suffix: '푸드', sector: '식품', risk: 'stable', basePriceMin: 320, basePriceMax: 800, volatilityBps: 750, eventChance: 10 }),
+  Object.freeze({ suffix: '엔터', sector: '엔터', risk: 'meme', basePriceMin: 450, basePriceMax: 1_200, volatilityBps: 1600, eventChance: 22 }),
+  Object.freeze({ suffix: '리츠', sector: '부동산', risk: 'stable', basePriceMin: 350, basePriceMax: 900, volatilityBps: 800, eventChance: 11 }),
+  Object.freeze({ suffix: '퀀트', sector: '핀테크', risk: 'volatile', basePriceMin: 500, basePriceMax: 1_700, volatilityBps: 1500, eventChance: 20 })
+]);
+
 export class StockService {
   constructor(store, options = {}) {
+    const hasCustomRandomInt = options.randomInt !== undefined;
     this.store = store;
     this.randomInt = options.randomInt ?? randomInt;
+    this.ipoRandomInt = options.ipoRandomInt ?? (hasCustomRandomInt ? null : randomInt);
     this.tickMs = options.tickMs ?? DEFAULT_TICK_MS;
     this.feeBps = options.feeBps ?? DEFAULT_FEE_BPS;
     this.leverageFeeBps = options.leverageFeeBps ?? DEFAULT_LEVERAGE_FEE_BPS;
+    this.autoIpoChanceBps = options.autoIpoChanceBps ?? (hasCustomRandomInt ? 0 : DEFAULT_AUTO_IPO_CHANCE_BPS);
+    this.maxDynamicStocks = options.maxDynamicStocks ?? DEFAULT_MAX_DYNAMIC_STOCKS;
   }
 
   async getMarket({ guildId, now = Date.now(), limit = null } = {}) {
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = getOrCreateMarket(guild, now);
-      advanceMarket(market, now, this);
+      const market = syncMarket(guild, now, this);
       return cloneMarket(market, limit);
     });
   }
 
   async getQuote({ guildId, stockId, now = Date.now() }) {
-    const normalizedStockId = normalizeStockId(stockId);
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = getOrCreateMarket(guild, now);
-      advanceMarket(market, now, this);
+      const market = syncMarket(guild, now, this);
+      const normalizedStockId = normalizeStockIdForGuild(stockId, guild);
       return cloneQuote(normalizedStockId, market.symbols[normalizedStockId]);
     });
   }
 
+  async getListings({ guildId, now = Date.now() }) {
+    return this.store.update((data) => {
+      const guild = getOrCreateGuild(data, guildId);
+      const market = syncMarket(guild, now, this);
+      return buildListingSummary(market);
+    });
+  }
+
   async buyStock({ guildId, userId, username, stockId, quantity, now = Date.now() }) {
-    const normalizedStockId = normalizeStockId(stockId);
     const normalizedQuantity = normalizePositiveInteger(quantity, '수량');
 
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = getOrCreateMarket(guild, now);
-      advanceMarket(market, now, this);
+      const market = syncMarket(guild, now, this);
+      const normalizedStockId = normalizeStockIdForGuild(stockId, guild);
       const profile = getOrCreateMoneyProfile(guild, userId, username, now);
       const stockUser = getOrCreateStockUser(guild, userId, username);
-      const quote = cloneQuote(normalizedStockId, market.symbols[normalizedStockId]);
+      const quote = getTradableQuote(normalizedStockId, market);
       const subtotal = quote.price * normalizedQuantity;
       const fee = calculateFee(subtotal, this.feeBps);
       const totalCost = subtotal + fee;
 
-      if (profile.balance < totalCost) {
-        throw new Error(`잔액이 부족합니다. 필요 금액: ${totalCost.toLocaleString()}원`);
+      if (getCurrencyBalance(profile, CURRENCY_STOCK) < totalCost) {
+        throw new Error(`현금이 부족합니다. 필요 금액: ${totalCost.toLocaleString()}원`);
       }
 
       const holding = stockUser.holdings[normalizedStockId] ?? createEmptyHolding();
@@ -137,13 +201,24 @@ export class StockService {
       const beforeCost = holding.averageCost * beforeQuantity;
       const afterCost = beforeCost + subtotal;
 
-      profile.balance -= totalCost;
+      debitCurrency(profile, CURRENCY_STOCK, totalCost);
       stockUser.tradeCount += 1;
       stockUser.lastTradeAt = now;
       stockUser.holdings[normalizedStockId] = {
         quantity: afterQuantity,
         averageCost: Math.round(afterCost / afterQuantity)
       };
+      recordTrade(stockUser, {
+        type: 'buy',
+        stockId: normalizedStockId,
+        stock: quote,
+        quantity: normalizedQuantity,
+        price: quote.price,
+        fee,
+        total: totalCost,
+        realizedProfit: 0,
+        at: now
+      });
 
       return {
         type: 'buy',
@@ -161,13 +236,12 @@ export class StockService {
   }
 
   async sellStock({ guildId, userId, username, stockId, quantity, now = Date.now() }) {
-    const normalizedStockId = normalizeStockId(stockId);
     const normalizedQuantity = normalizePositiveInteger(quantity, '수량');
 
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = getOrCreateMarket(guild, now);
-      advanceMarket(market, now, this);
+      const market = syncMarket(guild, now, this);
+      const normalizedStockId = normalizeStockIdForGuild(stockId, guild);
       const profile = getOrCreateMoneyProfile(guild, userId, username, now);
       const stockUser = getOrCreateStockUser(guild, userId, username);
       const holding = stockUser.holdings[normalizedStockId];
@@ -183,7 +257,7 @@ export class StockService {
       const realizedProfit = proceeds - holding.averageCost * normalizedQuantity;
       const remainingQuantity = holding.quantity - normalizedQuantity;
 
-      profile.balance += proceeds;
+      creditCurrency(profile, CURRENCY_STOCK, proceeds);
       stockUser.realizedProfit += realizedProfit;
       stockUser.tradeCount += 1;
       stockUser.lastTradeAt = now;
@@ -196,6 +270,17 @@ export class StockService {
           averageCost: holding.averageCost
         };
       }
+      recordTrade(stockUser, {
+        type: 'sell',
+        stockId: normalizedStockId,
+        stock: quote,
+        quantity: normalizedQuantity,
+        price: quote.price,
+        fee,
+        total: proceeds,
+        realizedProfit,
+        at: now
+      });
 
       return {
         type: 'sell',
@@ -214,6 +299,225 @@ export class StockService {
     });
   }
 
+  async placeLimitOrder({
+    guildId,
+    userId,
+    username,
+    stockId,
+    side = 'buy',
+    quantity,
+    limitPrice,
+    now = Date.now()
+  }) {
+    const normalizedSide = normalizeLimitOrderSide(side);
+    const normalizedQuantity = normalizePositiveInteger(quantity, '수량');
+    const normalizedLimitPrice = normalizePositiveInteger(limitPrice, '지정가');
+
+    return this.store.update((data) => {
+      const guild = getOrCreateGuild(data, guildId);
+      const market = syncMarket(guild, now, this);
+      const normalizedStockId = normalizeStockIdForGuild(stockId, guild);
+      const profile = getOrCreateMoneyProfile(guild, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username);
+      const quote = getTradableQuote(normalizedStockId, market);
+      const order = {
+        id: createStockOrderId(now, stockUser.nextOrderSeq + 1),
+        userId,
+        username: username || stockUser.username,
+        stockId: normalizedStockId,
+        side: normalizedSide,
+        quantity: normalizedQuantity,
+        limitPrice: normalizedLimitPrice,
+        status: 'open',
+        createdAt: normalizeNonNegativeInteger(now),
+        filledAt: 0,
+        cancelledAt: 0,
+        fillPrice: 0,
+        fee: 0,
+        reservedCash: 0,
+        reservedQuantity: 0,
+        averageCost: 0,
+        realizedProfit: 0,
+        cancelReason: null
+      };
+
+      if (normalizedSide === 'buy') {
+        const subtotal = normalizedLimitPrice * normalizedQuantity;
+        const fee = calculateFee(subtotal, this.feeBps);
+        const reservedCash = subtotal + fee;
+        if (getCurrencyBalance(profile, CURRENCY_STOCK) < reservedCash) {
+          throw new Error(`현금이 부족합니다. 필요 예약금: ${reservedCash.toLocaleString()}원`);
+        }
+        debitCurrency(profile, CURRENCY_STOCK, reservedCash);
+        order.reservedCash = reservedCash;
+      } else {
+        const holding = stockUser.holdings[normalizedStockId];
+        if (!holding || holding.quantity < normalizedQuantity) {
+          throw new Error('보유 주식 수량이 부족합니다.');
+        }
+        order.reservedQuantity = normalizedQuantity;
+        order.averageCost = holding.averageCost;
+        removeHolding(stockUser, normalizedStockId, normalizedQuantity);
+      }
+
+      stockUser.nextOrderSeq += 1;
+      stockUser.limitOrders[order.id] = order;
+
+      return cloneLimitOrder(order, market, quote);
+    });
+  }
+
+  async getLimitOrders({ guildId, userId, username, now = Date.now() }) {
+    return this.store.update((data) => {
+      const guild = getOrCreateGuild(data, guildId);
+      const market = syncMarket(guild, now, this);
+      getOrCreateMoneyProfile(guild, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username);
+      return buildLimitOrderSummary(stockUser, market);
+    });
+  }
+
+  async cancelLimitOrder({ guildId, userId, username, orderId, now = Date.now() }) {
+    const normalizedOrderId = String(orderId ?? '').trim();
+    if (!normalizedOrderId) throw new Error('주문 id를 입력하세요.');
+
+    return this.store.update((data) => {
+      const guild = getOrCreateGuild(data, guildId);
+      const market = syncMarket(guild, now, this);
+      const profile = getOrCreateMoneyProfile(guild, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username);
+      const order = stockUser.limitOrders[normalizedOrderId];
+
+      if (!order) throw new Error('해당 지정가 주문을 찾을 수 없습니다.');
+      if (order.status !== 'open') throw new Error('이미 체결되었거나 취소된 주문입니다.');
+
+      cancelOpenLimitOrder(profile, stockUser, order, now, '사용자 취소');
+      return cloneLimitOrder(order, market);
+    });
+  }
+
+  async setPriceAlert({
+    guildId,
+    userId,
+    username,
+    stockId,
+    condition = 'above',
+    targetPrice,
+    now = Date.now()
+  }) {
+    const normalizedCondition = normalizeAlertCondition(condition);
+    const normalizedTargetPrice = normalizePositiveInteger(targetPrice, '알림 가격');
+
+    return this.store.update((data) => {
+      const guild = getOrCreateGuild(data, guildId);
+      const market = syncMarket(guild, now, this);
+      const normalizedStockId = normalizeStockIdForGuild(stockId, guild);
+      getOrCreateMoneyProfile(guild, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username);
+      const quote = getTradableQuote(normalizedStockId, market);
+      const alert = {
+        id: createStockAlertId(now, stockUser.nextAlertSeq + 1),
+        userId,
+        username: username || stockUser.username,
+        stockId: normalizedStockId,
+        condition: normalizedCondition,
+        targetPrice: normalizedTargetPrice,
+        status: 'active',
+        createdAt: normalizeNonNegativeInteger(now),
+        triggeredAt: 0,
+        triggeredPrice: 0,
+        deletedAt: 0
+      };
+
+      stockUser.nextAlertSeq += 1;
+      stockUser.priceAlerts[alert.id] = alert;
+      return clonePriceAlert(alert, market, quote);
+    });
+  }
+
+  async getPriceAlerts({ guildId, userId, username, now = Date.now() }) {
+    return this.store.update((data) => {
+      const guild = getOrCreateGuild(data, guildId);
+      const market = syncMarket(guild, now, this);
+      getOrCreateMoneyProfile(guild, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username);
+      return buildPriceAlertSummary(stockUser, market);
+    });
+  }
+
+  async deletePriceAlert({ guildId, userId, username, alertId, now = Date.now() }) {
+    const normalizedAlertId = String(alertId ?? '').trim();
+    if (!normalizedAlertId) throw new Error('알림 id를 입력하세요.');
+
+    return this.store.update((data) => {
+      const guild = getOrCreateGuild(data, guildId);
+      const market = syncMarket(guild, now, this);
+      getOrCreateMoneyProfile(guild, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username);
+      const alert = stockUser.priceAlerts[normalizedAlertId];
+
+      if (!alert) throw new Error('해당 가격 알림을 찾을 수 없습니다.');
+      alert.status = 'deleted';
+      alert.deletedAt = normalizeNonNegativeInteger(now);
+      return clonePriceAlert(alert, market);
+    });
+  }
+
+  async getTradeHistory({ guildId, userId, username, limit = RECENT_TRADE_LIMIT, now = Date.now() }) {
+    const safeLimit = Math.min(RECENT_TRADE_LIMIT, Math.max(1, Number(limit) || RECENT_TRADE_LIMIT));
+
+    return this.store.update((data) => {
+      const guild = getOrCreateGuild(data, guildId);
+      const market = syncMarket(guild, now, this);
+      getOrCreateMoneyProfile(guild, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username);
+
+      return {
+        userId: stockUser.userId,
+        username: stockUser.username,
+        entries: stockUser.tradeHistory
+          .map((entry) => cloneTradeHistoryEntry(entry, market))
+          .sort(compareTimelineEntries)
+          .slice(0, safeLimit)
+      };
+    });
+  }
+
+  async getNews({ guildId, limit = RECENT_NEWS_LIMIT, now = Date.now() }) {
+    const safeLimit = Math.min(RECENT_NEWS_LIMIT, Math.max(1, Number(limit) || RECENT_NEWS_LIMIT));
+
+    return this.store.update((data) => {
+      const guild = getOrCreateGuild(data, guildId);
+      const market = syncMarket(guild, now, this);
+
+      return {
+        tickIndex: market.tickIndex,
+        entries: normalizeMarketNews(guild.stocks.marketNews, guild)
+          .map((entry) => cloneMarketNewsEntry(entry, market))
+          .sort(compareMarketNewsEntries)
+          .slice(0, safeLimit)
+      };
+    });
+  }
+
+  async getChart({ guildId, stockId, points = 12, now = Date.now() }) {
+    const safePoints = Math.min(PRICE_HISTORY_LIMIT, Math.max(2, Number(points) || 12));
+
+    return this.store.update((data) => {
+      const guild = getOrCreateGuild(data, guildId);
+      const market = syncMarket(guild, now, this);
+      const normalizedStockId = normalizeStockIdForGuild(stockId, guild);
+      const stock = cloneQuote(normalizedStockId, market.symbols[normalizedStockId]);
+      const history = normalizePriceHistory(market.symbols[normalizedStockId]?.history, market.symbols[normalizedStockId], market.tickIndex, market.lastTickAt)
+        .slice(-safePoints);
+
+      return {
+        stock,
+        history
+      };
+    });
+  }
+
   async openLeveragedPosition({
     guildId,
     userId,
@@ -224,27 +528,26 @@ export class StockService {
     margin,
     now = Date.now()
   }) {
-    const normalizedStockId = normalizeStockId(stockId);
     const normalizedSide = normalizeLeverageSide(side);
     const normalizedLeverage = normalizeLeverage(leverage);
     const normalizedMargin = normalizePositiveInteger(margin, '증거금');
 
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = getOrCreateMarket(guild, now);
-      advanceMarket(market, now, this);
+      const market = syncMarket(guild, now, this);
+      const normalizedStockId = normalizeStockIdForGuild(stockId, guild);
       const profile = getOrCreateMoneyProfile(guild, userId, username, now);
       const stockUser = getOrCreateStockUser(guild, userId, username);
       const liquidated = liquidateLeveragedPositions(profile, stockUser, market);
-      const quote = cloneQuote(normalizedStockId, market.symbols[normalizedStockId]);
+      const quote = getTradableQuote(normalizedStockId, market);
       const fee = calculateFee(normalizedMargin, this.leverageFeeBps);
       const totalCost = normalizedMargin + fee;
 
-      if (profile.balance < totalCost) {
-        throw new Error(`잔액이 부족합니다. 필요 금액: ${totalCost.toLocaleString()}원`);
+      if (getCurrencyBalance(profile, CURRENCY_STOCK) < totalCost) {
+        throw new Error(`현금이 부족합니다. 필요 금액: ${totalCost.toLocaleString()}원`);
       }
 
-      profile.balance -= totalCost;
+      debitCurrency(profile, CURRENCY_STOCK, totalCost);
       stockUser.nextPositionSeq += 1;
       stockUser.leveragedTradeCount += 1;
       stockUser.lastTradeAt = now;
@@ -259,6 +562,21 @@ export class StockService {
         openedAt: now
       };
       stockUser.leveragedPositions[position.id] = position;
+      recordTrade(stockUser, {
+        type: 'leverage_open',
+        stockId: normalizedStockId,
+        stock: quote,
+        quantity: 0,
+        price: quote.price,
+        fee,
+        total: totalCost,
+        realizedProfit: 0,
+        at: now,
+        positionId: position.id,
+        side: normalizedSide,
+        leverage: normalizedLeverage,
+        margin: normalizedMargin
+      });
 
       return {
         type: 'open_leverage',
@@ -279,8 +597,7 @@ export class StockService {
   async closeLeveragedPosition({ guildId, userId, username, positionId, now = Date.now() }) {
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = getOrCreateMarket(guild, now);
-      advanceMarket(market, now, this);
+      const market = syncMarket(guild, now, this);
       const profile = getOrCreateMoneyProfile(guild, userId, username, now);
       const stockUser = getOrCreateStockUser(guild, userId, username);
       const position = stockUser.leveragedPositions[positionId];
@@ -298,6 +615,21 @@ export class StockService {
       if (evaluated.liquidated) {
         const realizedProfit = -position.margin;
         stockUser.realizedLeveragedProfit += realizedProfit;
+        recordTrade(stockUser, {
+          type: 'leverage_close',
+          stockId: position.stockId,
+          stock: quote,
+          quantity: 0,
+          price: quote.price,
+          fee: 0,
+          total: 0,
+          realizedProfit,
+          at: now,
+          positionId: position.id,
+          side: position.side,
+          leverage: position.leverage,
+          margin: position.margin
+        });
         return {
           type: 'close_leverage',
           liquidated: true,
@@ -311,8 +643,23 @@ export class StockService {
 
       const payout = evaluated.equity;
       const realizedProfit = payout - position.margin;
-      profile.balance += payout;
+      creditCurrency(profile, CURRENCY_STOCK, payout);
       stockUser.realizedLeveragedProfit += realizedProfit;
+      recordTrade(stockUser, {
+        type: 'leverage_close',
+        stockId: position.stockId,
+        stock: quote,
+        quantity: 0,
+        price: quote.price,
+        fee: 0,
+        total: payout,
+        realizedProfit,
+        at: now,
+        positionId: position.id,
+        side: position.side,
+        leverage: position.leverage,
+        margin: position.margin
+      });
 
       return {
         type: 'close_leverage',
@@ -329,8 +676,7 @@ export class StockService {
   async getLeveragePortfolio({ guildId, userId, username, now = Date.now() }) {
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = getOrCreateMarket(guild, now);
-      advanceMarket(market, now, this);
+      const market = syncMarket(guild, now, this);
       const profile = getOrCreateMoneyProfile(guild, userId, username, now);
       const stockUser = getOrCreateStockUser(guild, userId, username);
       const liquidated = liquidateLeveragedPositions(profile, stockUser, market);
@@ -342,7 +688,7 @@ export class StockService {
       return {
         userId: profile.userId,
         username: profile.username,
-        cash: profile.balance,
+        cash: getCurrencyBalance(profile, CURRENCY_STOCK),
         positions,
         liquidated,
         marginTotal,
@@ -357,8 +703,7 @@ export class StockService {
   async getPortfolio({ guildId, userId, username, now = Date.now() }) {
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = getOrCreateMarket(guild, now);
-      advanceMarket(market, now, this);
+      const market = syncMarket(guild, now, this);
       const profile = getOrCreateMoneyProfile(guild, userId, username, now);
       const stockUser = getOrCreateStockUser(guild, userId, username);
       liquidateLeveragedPositions(profile, stockUser, market);
@@ -371,8 +716,7 @@ export class StockService {
 
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = getOrCreateMarket(guild, now);
-      advanceMarket(market, now, this);
+      const market = syncMarket(guild, now, this);
       const userIds = new Set([
         ...Object.keys(guild.users ?? {}),
         ...Object.keys(guild.stocks?.users ?? {})
@@ -412,11 +756,30 @@ export function normalizeStockId(stockId) {
   return matched;
 }
 
+function normalizeStockIdForGuild(stockId, guild) {
+  const normalized = normalizeLookupKey(stockId);
+  const staticMatched = STOCK_LOOKUP.get(normalized);
+  if (staticMatched) return staticMatched;
+
+  for (const definition of getDynamicStockDefinitions(guild)) {
+    const keys = [
+      definition.id,
+      definition.name,
+      definition.symbol,
+      ...(definition.aliases ?? [])
+    ].map(normalizeLookupKey);
+    if (keys.includes(normalized)) return definition.id;
+  }
+
+  throw new Error('알 수 없는 가상주식 종목입니다. `/주식 전체시세`에서 종목명을 확인하세요.');
+}
+
 export function getStockConfig(stockId) {
   return STOCKS_BY_ID[normalizeStockId(stockId)];
 }
 
-function stock(id, name, sector, risk, basePrice, volatilityBps, eventChance, aliases = [], symbol = null) {
+function stock(id, name, sector, risk, basePrice, volatilityBps, eventChance, aliases = [], symbol = null, options = {}) {
+  const safeOptions = options && typeof options === 'object' ? options : {};
   return Object.freeze({
     id,
     name,
@@ -426,8 +789,57 @@ function stock(id, name, sector, risk, basePrice, volatilityBps, eventChance, al
     basePrice,
     volatilityBps,
     eventChance,
+    listedFromTick: normalizeNonNegativeInteger(safeOptions.listedFromTick),
+    dynamic: Boolean(safeOptions.dynamic),
     aliases: Object.freeze(aliases)
   });
+}
+
+function normalizeDynamicStockDefinitions(definitions = {}) {
+  const safeDefinitions = definitions && typeof definitions === 'object' ? definitions : {};
+  const entries = [];
+
+  for (const [stockId, definition] of Object.entries(safeDefinitions)) {
+    try {
+      const normalized = normalizeDynamicStockDefinition(definition, stockId);
+      entries.push([normalized.id, normalized]);
+    } catch {
+      // Ignore invalid generated IPO definitions.
+    }
+  }
+
+  return Object.fromEntries(entries);
+}
+
+function normalizeDynamicStockDefinition(definition = {}, fallbackId = null) {
+  const safeDefinition = definition && typeof definition === 'object' ? definition : {};
+  const id = String(safeDefinition.id ?? fallbackId ?? '').trim();
+  const name = String(safeDefinition.name ?? '').trim();
+  const symbol = String(safeDefinition.symbol ?? '').trim();
+  const sector = String(safeDefinition.sector ?? '밈').trim() || '밈';
+  const risk = normalizeStockRisk(safeDefinition.risk);
+
+  if (!id || !name || !symbol) throw new Error('동적 상장 종목 정의가 불완전합니다.');
+
+  return {
+    id,
+    name,
+    symbol,
+    sector,
+    risk,
+    basePrice: normalizePositiveStoredInteger(safeDefinition.basePrice, 500),
+    volatilityBps: normalizePositiveStoredInteger(safeDefinition.volatilityBps, 1_200),
+    eventChance: clampInteger(normalizePositiveStoredInteger(safeDefinition.eventChance, 15), 1, 50),
+    listedFromTick: normalizeNonNegativeInteger(safeDefinition.listedFromTick),
+    dynamic: true,
+    aliases: Array.isArray(safeDefinition.aliases)
+      ? safeDefinition.aliases.map((alias) => String(alias).trim()).filter(Boolean)
+      : []
+  };
+}
+
+function getDynamicStockDefinitions(guild) {
+  return Object.values(guild?.stocks?.dynamicDefinitions ?? {});
 }
 
 function getOrCreateGuild(data, guildId) {
@@ -441,22 +853,29 @@ function getOrCreateGuild(data, guildId) {
 function getOrCreateMarket(guild, now) {
   guild.stocks ??= {};
   guild.stocks.users ??= {};
+  guild.stocks.dynamicDefinitions = normalizeDynamicStockDefinitions(guild.stocks.dynamicDefinitions);
+  guild.stocks.nextDynamicStockSeq = normalizeNonNegativeInteger(guild.stocks.nextDynamicStockSeq);
+  guild.stocks.marketNews = normalizeMarketNews(guild.stocks.marketNews, guild);
 
   if (!guild.stocks.market) {
     guild.stocks.market = createInitialMarket(now);
   }
 
   guild.stocks.market.symbols ??= {};
+  guild.stocks.market.lastTickAt = normalizeNonNegativeInteger(guild.stocks.market.lastTickAt);
+  guild.stocks.market.tickIndex = normalizeNonNegativeInteger(guild.stocks.market.tickIndex);
   for (const definition of STOCK_DEFINITIONS) {
+    const existingState = guild.stocks.market.symbols[definition.id];
+    if (!existingState && definition.listedFromTick > guild.stocks.market.tickIndex) continue;
+    guild.stocks.market.symbols[definition.id] = normalizeSymbolState(existingState, definition, now);
+  }
+  for (const definition of getDynamicStockDefinitions(guild)) {
     guild.stocks.market.symbols[definition.id] = normalizeSymbolState(
       guild.stocks.market.symbols[definition.id],
       definition,
       now
     );
   }
-
-  guild.stocks.market.lastTickAt = normalizeNonNegativeInteger(guild.stocks.market.lastTickAt);
-  guild.stocks.market.tickIndex = normalizeNonNegativeInteger(guild.stocks.market.tickIndex);
   return guild.stocks.market;
 }
 
@@ -465,27 +884,48 @@ function createInitialMarket(now) {
     lastTickAt: normalizeNonNegativeInteger(now),
     tickIndex: 0,
     symbols: Object.fromEntries(
-      STOCK_DEFINITIONS.map((definition) => [
-        definition.id,
-        createInitialSymbolState(definition, now)
-      ])
+      STOCK_DEFINITIONS
+        .filter((definition) => definition.listedFromTick <= 0)
+        .map((definition) => [
+          definition.id,
+          createInitialSymbolState(definition, now)
+        ])
     )
   };
 }
 
-function createInitialSymbolState(definition, now) {
+function createInitialSymbolState(definition, now, eventType = null, listedAtTick = definition.listedFromTick) {
+  const safeNow = normalizeNonNegativeInteger(now);
   return {
     price: definition.basePrice,
     previousPrice: definition.basePrice,
     changeBps: 0,
-    news: `${definition.name} 상장 첫날, 디코 투자자들이 밈 뉴스를 기다리는 중`,
-    updatedAt: normalizeNonNegativeInteger(now)
+    news: definition.dynamic && eventType === 'ipo'
+      ? `자동 신규상장: ${definition.name}이(가) 시장에 갑자기 등장했습니다`
+      : eventType === 'ipo'
+      ? `신규상장: ${definition.name} 상장 첫날, 디코 투자자들이 호가창을 새로고침합니다`
+      : `${definition.name} 상장 첫날, 디코 투자자들이 밈 뉴스를 기다리는 중`,
+    status: 'listed',
+    eventType,
+    listedAtTick,
+    definition: definition.dynamic ? cloneStoredStockDefinition(definition) : null,
+    updatedAt: safeNow,
+    history: [
+      {
+        tickIndex: normalizeNonNegativeInteger(listedAtTick),
+        price: definition.basePrice,
+        at: safeNow
+      }
+    ]
   };
 }
 
 function normalizeSymbolState(state, definition, now) {
   const safeState = state && typeof state === 'object' ? state : {};
-  const price = Math.max(MIN_STOCK_PRICE, normalizePositiveStoredInteger(safeState.price, definition.basePrice));
+  const status = safeState.status === 'delisted' ? 'delisted' : 'listed';
+  const price = status === 'delisted'
+    ? 0
+    : Math.max(MIN_STOCK_PRICE, normalizePositiveStoredInteger(safeState.price, definition.basePrice));
   const previousPrice = Math.max(MIN_STOCK_PRICE, normalizePositiveStoredInteger(safeState.previousPrice, price));
 
   return {
@@ -495,11 +935,26 @@ function normalizeSymbolState(state, definition, now) {
     news: typeof safeState.news === 'string' && safeState.news.trim()
       ? safeState.news
       : `${definition.name} 시장 뉴스: 조용한 장세`,
-    updatedAt: normalizeNonNegativeInteger(safeState.updatedAt) || normalizeNonNegativeInteger(now)
+    status,
+    eventType: typeof safeState.eventType === 'string' ? safeState.eventType : null,
+    listedAtTick: normalizeNonNegativeInteger(safeState.listedAtTick ?? definition.listedFromTick),
+    delistedAtTick: normalizeNonNegativeInteger(safeState.delistedAtTick),
+    definition: definition.dynamic ? cloneStoredStockDefinition(definition) : null,
+    updatedAt: normalizeNonNegativeInteger(safeState.updatedAt) || normalizeNonNegativeInteger(now),
+    history: normalizePriceHistory(safeState.history, {
+      price,
+      updatedAt: normalizeNonNegativeInteger(safeState.updatedAt) || normalizeNonNegativeInteger(now)
+    }, normalizeNonNegativeInteger(safeState.listedAtTick ?? definition.listedFromTick), now)
   };
 }
 
-function advanceMarket(market, now, service) {
+function syncMarket(guild, now, service) {
+  const market = getOrCreateMarket(guild, now);
+  advanceMarket(guild, market, now, service);
+  return market;
+}
+
+function advanceMarket(guild, market, now, service) {
   const safeNow = normalizeNonNegativeInteger(now);
   const elapsed = safeNow - market.lastTickAt;
   if (elapsed < service.tickMs) return;
@@ -508,13 +963,24 @@ function advanceMarket(market, now, service) {
   for (let index = 0; index < ticks; index += 1) {
     market.tickIndex += 1;
     market.lastTickAt += service.tickMs;
-    for (const definition of STOCK_DEFINITIONS) {
-      market.symbols[definition.id] = advanceSymbol(definition, market.symbols[definition.id], market.tickIndex, service.randomInt, market.lastTickAt);
+    for (const definition of getActiveStockDefinitions(guild, market)) {
+      const state = market.symbols[definition.id];
+      if (!state || state.status === 'delisted') continue;
+      const nextState = advanceSymbol(definition, state, market.tickIndex, service.randomInt, market.lastTickAt);
+      market.symbols[definition.id] = nextState;
+      if (nextState.eventType) {
+        recordMarketNews(guild, definition, nextState, market.tickIndex, market.lastTickAt);
+      }
     }
+    listScheduledStocks(guild, market);
+    maybeAutoListStock(guild, market, service);
+    processMarketSideEffects(guild, market, service);
   }
 }
 
 function advanceSymbol(definition, state, tickIndex, randomIntFn, updatedAt) {
+  if (state.status === 'delisted') return state;
+
   const previousPrice = state.price;
   const baseMoveBps = randomIntFn(-definition.volatilityBps, definition.volatilityBps);
   const eventRoll = randomIntFn(1, 100);
@@ -522,25 +988,165 @@ function advanceSymbol(definition, state, tickIndex, randomIntFn, updatedAt) {
     ? randomIntFn(-Math.floor(definition.volatilityBps * 1.4), Math.floor(definition.volatilityBps * 1.4))
     : 0;
   const totalMoveBps = clampInteger(baseMoveBps + eventMoveBps, -3000, 3000);
+  const eventType = getMarketEventType(definition, totalMoveBps);
+
+  if (eventType === 'delisted') {
+    return {
+      price: 0,
+      previousPrice,
+      changeBps: -10_000,
+      news: `상장폐지: ${definition.name} 거래가 정지되고 보유 평가는 0원이 됐습니다`,
+      status: 'delisted',
+      eventType,
+      listedAtTick: normalizeNonNegativeInteger(state.listedAtTick ?? definition.listedFromTick),
+      delistedAtTick: tickIndex,
+      definition: definition.dynamic ? cloneStoredStockDefinition(definition) : null,
+      updatedAt,
+      history: appendPriceHistory(state.history, {
+        tickIndex,
+        price: 0,
+        at: updatedAt
+      })
+    };
+  }
+
   const price = Math.max(MIN_STOCK_PRICE, Math.round(previousPrice * (10_000 + totalMoveBps) / 10_000));
 
   return {
     price,
     previousPrice,
     changeBps: calculateChangeBps(price, previousPrice),
-    news: createNews(definition, totalMoveBps, tickIndex),
-    updatedAt
+    news: createNews(definition, totalMoveBps, tickIndex, eventType),
+    status: 'listed',
+    eventType,
+    listedAtTick: normalizeNonNegativeInteger(state.listedAtTick ?? definition.listedFromTick),
+    delistedAtTick: 0,
+    definition: definition.dynamic ? cloneStoredStockDefinition(definition) : null,
+    updatedAt,
+    history: appendPriceHistory(state.history, {
+      tickIndex,
+      price,
+      at: updatedAt
+    })
   };
 }
 
-function createNews(definition, moveBps, tickIndex) {
+function listScheduledStocks(guild, market) {
+  for (const definition of STOCK_DEFINITIONS) {
+    if (market.symbols[definition.id]) continue;
+    if (definition.listedFromTick > market.tickIndex) continue;
+    market.symbols[definition.id] = createInitialSymbolState(
+      definition,
+      market.lastTickAt,
+      definition.listedFromTick > 0 ? 'ipo' : null,
+      market.tickIndex
+    );
+    if (definition.listedFromTick > 0) {
+      recordMarketNews(guild, definition, market.symbols[definition.id], market.tickIndex, market.lastTickAt);
+    }
+  }
+}
+
+function maybeAutoListStock(guild, market, service) {
+  if (!service.ipoRandomInt) return;
+  if (market.tickIndex < AUTO_IPO_CHECK_TICKS || market.tickIndex % AUTO_IPO_CHECK_TICKS !== 0) return;
+  if (getDynamicStockDefinitions(guild).length >= service.maxDynamicStocks) return;
+
+  const chance = clampInteger(Number(service.autoIpoChanceBps) || 0, 0, 10_000);
+  if (chance <= 0) return;
+
+  const shouldGuaranteeFirstAutoIpo = getDynamicStockDefinitions(guild).length === 0;
+  if (!shouldGuaranteeFirstAutoIpo) {
+    const roll = service.ipoRandomInt(1, 10_000);
+    if (roll > chance) return;
+  }
+
+  const definition = createAutomaticIpoDefinition(guild, market, service.ipoRandomInt);
+  guild.stocks.dynamicDefinitions[definition.id] = definition;
+  market.symbols[definition.id] = createInitialSymbolState(definition, market.lastTickAt, 'ipo', market.tickIndex);
+  recordMarketNews(guild, definition, market.symbols[definition.id], market.tickIndex, market.lastTickAt);
+}
+
+function createAutomaticIpoDefinition(guild, market, randomIntFn) {
+  const nextSequence = normalizeNonNegativeInteger(guild.stocks.nextDynamicStockSeq) + 1;
+  guild.stocks.nextDynamicStockSeq = nextSequence;
+
+  const prefix = AUTO_IPO_PREFIXES[randomIntFn(0, AUTO_IPO_PREFIXES.length - 1)];
+  const theme = AUTO_IPO_THEMES[randomIntFn(0, AUTO_IPO_THEMES.length - 1)];
+  const baseName = `${prefix}${theme.suffix}`;
+  const existingNames = new Set([
+    ...STOCK_DEFINITIONS.map((definition) => definition.name),
+    ...getDynamicStockDefinitions(guild).map((definition) => definition.name)
+  ]);
+  const name = existingNames.has(baseName) ? `${baseName}${nextSequence}호` : baseName;
+  const id = `auto_ipo_${market.tickIndex}_${nextSequence}`;
+  const symbol = createAutomaticIpoSymbol(prefix, theme, nextSequence);
+
+  return stock(
+    id,
+    name,
+    theme.sector,
+    theme.risk,
+    randomIntFn(theme.basePriceMin, theme.basePriceMax),
+    theme.volatilityBps,
+    theme.eventChance,
+    [`${prefix}${theme.sector}`, `${name}상장`],
+    symbol,
+    {
+      listedFromTick: market.tickIndex,
+      dynamic: true
+    }
+  );
+}
+
+function createAutomaticIpoSymbol(prefix, theme, sequence) {
+  const prefixPart = normalizeLookupKey(prefix).slice(0, 2).toUpperCase() || 'IP';
+  const sectorPart = normalizeLookupKey(theme.sector).slice(0, 2).toUpperCase() || 'O';
+  return `${prefixPart}${sectorPart}${sequence.toString(36).toUpperCase()}`.slice(0, 6);
+}
+
+function getActiveStockDefinitions(guild, market) {
+  return [
+    ...STOCK_DEFINITIONS.filter((definition) => market.symbols[definition.id]),
+    ...getDynamicStockDefinitions(guild).filter((definition) => market.symbols[definition.id])
+  ];
+}
+
+function cloneStoredStockDefinition(definition) {
+  return {
+    id: definition.id,
+    name: definition.name,
+    symbol: definition.symbol,
+    sector: definition.sector,
+    risk: definition.risk,
+    basePrice: definition.basePrice,
+    volatilityBps: definition.volatilityBps,
+    eventChance: definition.eventChance,
+    listedFromTick: definition.listedFromTick,
+    dynamic: Boolean(definition.dynamic),
+    aliases: [...(definition.aliases ?? [])]
+  };
+}
+
+function getMarketEventType(definition, moveBps) {
+  if (moveBps <= -2800 && ['meme', 'volatile'].includes(definition.risk)) return 'delisted';
+  if (moveBps >= 1500) return 'surge';
+  if (moveBps <= -1500) return 'crash';
+  return null;
+}
+
+function createNews(definition, moveBps, tickIndex, eventType = null) {
   const templates = NEWS_TEMPLATES[definition.risk] ?? NEWS_TEMPLATES.stable;
   const template = templates[tickIndex % templates.length];
-  const prefix = moveBps >= 900
-    ? '급등 뉴스'
-    : moveBps <= -900
-      ? '급락 뉴스'
-      : '시장 뉴스';
+  const prefix = eventType === 'surge'
+    ? '급등 이벤트'
+    : eventType === 'crash'
+      ? '급락 이벤트'
+      : moveBps >= 900
+        ? '급등 뉴스'
+        : moveBps <= -900
+          ? '급락 뉴스'
+          : '시장 뉴스';
 
   return `${prefix}: ${template.replaceAll('{name}', definition.name)}`;
 }
@@ -554,6 +1160,7 @@ function getOrCreateMoneyProfile(guild, userId, username, now) {
     xp: 0,
     totalXp: 0,
     balance: 0,
+    wallets: normalizeWallets(),
     lastMessageRewardAt: 0,
     lastDailyAt: 0,
     lastDailyDay: null,
@@ -566,6 +1173,7 @@ function getOrCreateMoneyProfile(guild, userId, username, now) {
   profile.userId = userId;
   profile.username = username || profile.username || 'Unknown';
   profile.balance = normalizeNonNegativeInteger(profile.balance);
+  profile.wallets = normalizeWallets(profile.wallets);
   profile.level = normalizePositiveStoredInteger(profile.level, 1);
   profile.xp = normalizeNonNegativeInteger(profile.xp);
   profile.totalXp = normalizeNonNegativeInteger(profile.totalXp);
@@ -580,36 +1188,51 @@ function getOrCreateStockUser(guild, userId, username) {
     userId,
     username,
     holdings: {},
+    limitOrders: {},
+    priceAlerts: {},
     leveragedPositions: {},
+    tradeHistory: [],
     realizedProfit: 0,
     realizedLeveragedProfit: 0,
     tradeCount: 0,
     leveragedTradeCount: 0,
+    nextOrderSeq: 0,
+    nextAlertSeq: 0,
     nextPositionSeq: 0,
+    nextTradeSeq: 0,
     lastTradeAt: 0
   };
 
   const stockUser = guild.stocks.users[userId];
   stockUser.userId = userId;
   stockUser.username = username || stockUser.username || 'Unknown';
-  stockUser.holdings = normalizeHoldings(stockUser.holdings);
-  stockUser.leveragedPositions = normalizeLeveragedPositions(stockUser.leveragedPositions);
+  stockUser.holdings = normalizeHoldings(stockUser.holdings, guild);
+  stockUser.limitOrders = normalizeLimitOrders(stockUser.limitOrders, guild);
+  stockUser.priceAlerts = normalizePriceAlerts(stockUser.priceAlerts, guild);
+  stockUser.leveragedPositions = normalizeLeveragedPositions(stockUser.leveragedPositions, guild);
+  stockUser.tradeHistory = normalizeTradeHistory(stockUser.tradeHistory, guild);
   stockUser.realizedProfit = normalizeInteger(stockUser.realizedProfit);
   stockUser.realizedLeveragedProfit = normalizeInteger(stockUser.realizedLeveragedProfit);
   stockUser.tradeCount = normalizeNonNegativeInteger(stockUser.tradeCount);
   stockUser.leveragedTradeCount = normalizeNonNegativeInteger(stockUser.leveragedTradeCount);
+  stockUser.nextOrderSeq = normalizeNonNegativeInteger(stockUser.nextOrderSeq);
+  stockUser.nextAlertSeq = normalizeNonNegativeInteger(stockUser.nextAlertSeq);
   stockUser.nextPositionSeq = normalizeNonNegativeInteger(stockUser.nextPositionSeq);
+  stockUser.nextTradeSeq = Math.max(
+    normalizeNonNegativeInteger(stockUser.nextTradeSeq),
+    stockUser.tradeHistory.reduce((max, entry) => Math.max(max, normalizeNonNegativeInteger(entry.sequence)), 0)
+  );
   stockUser.lastTradeAt = normalizeNonNegativeInteger(stockUser.lastTradeAt);
   return stockUser;
 }
 
-function normalizeHoldings(holdings = {}) {
+function normalizeHoldings(holdings = {}, guild = null) {
   const safeHoldings = holdings && typeof holdings === 'object' ? holdings : {};
   const entries = [];
 
   for (const [stockId, holding] of Object.entries(safeHoldings)) {
     try {
-      const normalizedStockId = normalizeStockId(stockId);
+      const normalizedStockId = guild ? normalizeStockIdForGuild(stockId, guild) : normalizeStockId(stockId);
       const normalizedHolding = normalizeHolding(holding);
       if (normalizedHolding.quantity > 0) entries.push([normalizedStockId, normalizedHolding]);
     } catch {
@@ -628,13 +1251,92 @@ function normalizeHolding(holding = {}) {
   };
 }
 
-function normalizeLeveragedPositions(positions = {}) {
+function normalizeLimitOrders(orders = {}, guild = null) {
+  const safeOrders = orders && typeof orders === 'object' ? orders : {};
+  const entries = [];
+
+  for (const [orderId, order] of Object.entries(safeOrders)) {
+    try {
+      const normalizedOrder = normalizeLimitOrder(order, orderId, guild);
+      entries.push([normalizedOrder.id, normalizedOrder]);
+    } catch {
+      // Ignore invalid legacy orders.
+    }
+  }
+
+  return Object.fromEntries(entries);
+}
+
+function normalizeLimitOrder(order = {}, fallbackId = null, guild = null) {
+  const safeOrder = order && typeof order === 'object' ? order : {};
+  const id = String(safeOrder.id ?? fallbackId ?? '').trim();
+  if (!id) throw new Error('지정가 주문 id가 없습니다.');
+
+  return {
+    id,
+    userId: String(safeOrder.userId ?? '').trim(),
+    username: String(safeOrder.username ?? 'Unknown').trim() || 'Unknown',
+    stockId: guild ? normalizeStockIdForGuild(safeOrder.stockId, guild) : normalizeStockId(safeOrder.stockId),
+    side: normalizeLimitOrderSide(safeOrder.side),
+    quantity: normalizePositiveStoredInteger(safeOrder.quantity, 1),
+    limitPrice: normalizePositiveStoredInteger(safeOrder.limitPrice, 1),
+    status: normalizeOrderStatus(safeOrder.status),
+    createdAt: normalizeNonNegativeInteger(safeOrder.createdAt),
+    filledAt: normalizeNonNegativeInteger(safeOrder.filledAt),
+    cancelledAt: normalizeNonNegativeInteger(safeOrder.cancelledAt),
+    fillPrice: normalizeNonNegativeInteger(safeOrder.fillPrice),
+    fee: normalizeNonNegativeInteger(safeOrder.fee),
+    reservedCash: normalizeNonNegativeInteger(safeOrder.reservedCash),
+    reservedQuantity: normalizeNonNegativeInteger(safeOrder.reservedQuantity),
+    averageCost: normalizeNonNegativeInteger(safeOrder.averageCost),
+    realizedProfit: normalizeInteger(safeOrder.realizedProfit),
+    cancelReason: typeof safeOrder.cancelReason === 'string' ? safeOrder.cancelReason : null
+  };
+}
+
+function normalizePriceAlerts(alerts = {}, guild = null) {
+  const safeAlerts = alerts && typeof alerts === 'object' ? alerts : {};
+  const entries = [];
+
+  for (const [alertId, alert] of Object.entries(safeAlerts)) {
+    try {
+      const normalizedAlert = normalizePriceAlert(alert, alertId, guild);
+      entries.push([normalizedAlert.id, normalizedAlert]);
+    } catch {
+      // Ignore invalid legacy alerts.
+    }
+  }
+
+  return Object.fromEntries(entries);
+}
+
+function normalizePriceAlert(alert = {}, fallbackId = null, guild = null) {
+  const safeAlert = alert && typeof alert === 'object' ? alert : {};
+  const id = String(safeAlert.id ?? fallbackId ?? '').trim();
+  if (!id) throw new Error('가격 알림 id가 없습니다.');
+
+  return {
+    id,
+    userId: String(safeAlert.userId ?? '').trim(),
+    username: String(safeAlert.username ?? 'Unknown').trim() || 'Unknown',
+    stockId: guild ? normalizeStockIdForGuild(safeAlert.stockId, guild) : normalizeStockId(safeAlert.stockId),
+    condition: normalizeAlertCondition(safeAlert.condition),
+    targetPrice: normalizePositiveStoredInteger(safeAlert.targetPrice, 1),
+    status: normalizeAlertStatus(safeAlert.status),
+    createdAt: normalizeNonNegativeInteger(safeAlert.createdAt),
+    triggeredAt: normalizeNonNegativeInteger(safeAlert.triggeredAt),
+    triggeredPrice: normalizeNonNegativeInteger(safeAlert.triggeredPrice),
+    deletedAt: normalizeNonNegativeInteger(safeAlert.deletedAt)
+  };
+}
+
+function normalizeLeveragedPositions(positions = {}, guild = null) {
   const safePositions = positions && typeof positions === 'object' ? positions : {};
   const entries = [];
 
   for (const [positionId, position] of Object.entries(safePositions)) {
     try {
-      const normalizedPosition = normalizeLeveragedPosition(position, positionId);
+      const normalizedPosition = normalizeLeveragedPosition(position, positionId, guild);
       entries.push([normalizedPosition.id, normalizedPosition]);
     } catch {
       // Ignore invalid legacy leveraged positions.
@@ -644,14 +1346,14 @@ function normalizeLeveragedPositions(positions = {}) {
   return Object.fromEntries(entries);
 }
 
-function normalizeLeveragedPosition(position = {}, fallbackId) {
+function normalizeLeveragedPosition(position = {}, fallbackId, guild = null) {
   const safePosition = position && typeof position === 'object' ? position : {};
   const id = String(safePosition.id ?? fallbackId ?? '').trim();
   if (!id) throw new Error('레버리지 포지션 id가 없습니다.');
 
   return {
     id,
-    stockId: normalizeStockId(safePosition.stockId),
+    stockId: guild ? normalizeStockIdForGuild(safePosition.stockId, guild) : normalizeStockId(safePosition.stockId),
     side: normalizeLeverageSide(safePosition.side),
     leverage: normalizeLeverage(safePosition.leverage),
     margin: normalizePositiveInteger(safePosition.margin, '증거금'),
@@ -660,8 +1362,233 @@ function normalizeLeveragedPosition(position = {}, fallbackId) {
   };
 }
 
+function normalizeTradeHistory(history = [], guild = null) {
+  const source = Array.isArray(history) ? history : [];
+  return source
+    .map((entry, index) => {
+      try {
+        return normalizeTradeHistoryEntry(entry, `tr_legacy_${index + 1}`, guild);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean)
+    .sort(compareTimelineEntries)
+    .slice(0, RECENT_TRADE_LIMIT);
+}
+
+function normalizeTradeHistoryEntry(entry = {}, fallbackId = null, guild = null) {
+  const safeEntry = entry && typeof entry === 'object' ? entry : {};
+  const id = String(safeEntry.id ?? fallbackId ?? '').trim();
+  if (!id) throw new Error('거래내역 id가 없습니다.');
+
+  return {
+    id,
+    sequence: normalizeNonNegativeInteger(safeEntry.sequence),
+    type: normalizeTradeType(safeEntry.type),
+    stockId: normalizeStoredStockId(safeEntry.stockId, guild),
+    quantity: normalizeNonNegativeInteger(safeEntry.quantity),
+    price: normalizeNonNegativeInteger(safeEntry.price),
+    fee: normalizeNonNegativeInteger(safeEntry.fee),
+    total: normalizeNonNegativeInteger(safeEntry.total),
+    realizedProfit: normalizeInteger(safeEntry.realizedProfit),
+    at: normalizeNonNegativeInteger(safeEntry.at),
+    positionId: typeof safeEntry.positionId === 'string' ? safeEntry.positionId : null,
+    side: typeof safeEntry.side === 'string' ? safeEntry.side : null,
+    leverage: normalizeNonNegativeInteger(safeEntry.leverage),
+    margin: normalizeNonNegativeInteger(safeEntry.margin)
+  };
+}
+
+function normalizeTradeType(type) {
+  const normalized = String(type ?? '').trim();
+  return [
+    'buy',
+    'sell',
+    'limit_buy_fill',
+    'limit_sell_fill',
+    'leverage_open',
+    'leverage_close',
+    'leverage_liquidation'
+  ].includes(normalized)
+    ? normalized
+    : 'buy';
+}
+
+function normalizeMarketNews(news = [], guild = null) {
+  const source = Array.isArray(news) ? news : [];
+  return source
+    .map((entry, index) => {
+      try {
+        return normalizeMarketNewsEntry(entry, `news_legacy_${index + 1}`, guild);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean)
+    .sort(compareMarketNewsEntries)
+    .slice(0, RECENT_NEWS_LIMIT);
+}
+
+function normalizeMarketNewsEntry(entry = {}, fallbackId = null, guild = null) {
+  const safeEntry = entry && typeof entry === 'object' ? entry : {};
+  const id = String(safeEntry.id ?? fallbackId ?? '').trim();
+  if (!id) throw new Error('뉴스 id가 없습니다.');
+
+  return {
+    id,
+    sequence: normalizeNonNegativeInteger(safeEntry.sequence),
+    type: normalizeMarketNewsType(safeEntry.type),
+    stockId: normalizeStoredStockId(safeEntry.stockId, guild),
+    title: String(safeEntry.title ?? '').trim() || '시장 뉴스',
+    message: String(safeEntry.message ?? '').trim() || '시장 뉴스가 없습니다.',
+    tickIndex: normalizeNonNegativeInteger(safeEntry.tickIndex),
+    at: normalizeNonNegativeInteger(safeEntry.at)
+  };
+}
+
+function normalizeMarketNewsType(type) {
+  const normalized = String(type ?? '').trim();
+  return ['ipo', 'surge', 'crash', 'delisted'].includes(normalized) ? normalized : 'news';
+}
+
+function normalizePriceHistory(history = [], fallbackState = null, fallbackTickIndex = 0, fallbackAt = 0) {
+  const source = Array.isArray(history) ? history : [];
+  const points = source
+    .map(normalizePriceHistoryPoint)
+    .filter(Boolean)
+    .sort(comparePriceHistoryPoints);
+
+  if (points.length === 0 && fallbackState) {
+    const fallbackPoint = normalizePriceHistoryPoint({
+      tickIndex: fallbackTickIndex,
+      price: fallbackState.price,
+      at: fallbackState.updatedAt ?? fallbackAt
+    });
+    if (fallbackPoint) points.push(fallbackPoint);
+  }
+
+  return dedupePriceHistory(points).slice(-PRICE_HISTORY_LIMIT);
+}
+
+function appendPriceHistory(history = [], point) {
+  const normalizedPoint = normalizePriceHistoryPoint(point);
+  const points = normalizePriceHistory(history);
+  if (!normalizedPoint) return points;
+  return dedupePriceHistory([...points, normalizedPoint]).slice(-PRICE_HISTORY_LIMIT);
+}
+
+function normalizePriceHistoryPoint(point = {}) {
+  const safePoint = point && typeof point === 'object' ? point : {};
+  const price = normalizeNonNegativeInteger(safePoint.price);
+  if (price <= 0 && safePoint.price !== 0) return null;
+  return {
+    tickIndex: normalizeNonNegativeInteger(safePoint.tickIndex),
+    price,
+    at: normalizeNonNegativeInteger(safePoint.at)
+  };
+}
+
+function dedupePriceHistory(points) {
+  const byTick = new Map();
+  for (const point of points.sort(comparePriceHistoryPoints)) {
+    byTick.set(point.tickIndex, point);
+  }
+  return [...byTick.values()].sort(comparePriceHistoryPoints);
+}
+
+function comparePriceHistoryPoints(a, b) {
+  if (a.tickIndex !== b.tickIndex) return a.tickIndex - b.tickIndex;
+  return a.at - b.at;
+}
+
+function normalizeStoredStockId(stockId, guild = null) {
+  const rawStockId = String(stockId ?? '').trim();
+  if (!rawStockId) throw new Error('주식 종목 id가 없습니다.');
+  if (guild) return normalizeStockIdForGuild(rawStockId, guild);
+  const staticMatched = STOCK_LOOKUP.get(normalizeLookupKey(rawStockId));
+  return staticMatched ?? rawStockId;
+}
+
+function compareTimelineEntries(a, b) {
+  if (b.at !== a.at) return b.at - a.at;
+  if ((b.tickIndex ?? 0) !== (a.tickIndex ?? 0)) return (b.tickIndex ?? 0) - (a.tickIndex ?? 0);
+  return (b.sequence ?? 0) - (a.sequence ?? 0);
+}
+
+function compareMarketNewsEntries(a, b) {
+  if ((b.at ?? 0) !== (a.at ?? 0)) return (b.at ?? 0) - (a.at ?? 0);
+  if ((b.tickIndex ?? 0) !== (a.tickIndex ?? 0)) return (b.tickIndex ?? 0) - (a.tickIndex ?? 0);
+  return (a.sequence ?? 0) - (b.sequence ?? 0);
+}
+
+function recordTrade(stockUser, entry) {
+  stockUser.tradeHistory = normalizeTradeHistory(stockUser.tradeHistory);
+  const maxSequence = stockUser.tradeHistory.reduce((max, item) => Math.max(max, item.sequence), 0);
+  const sequence = Math.max(normalizeNonNegativeInteger(stockUser.nextTradeSeq), maxSequence) + 1;
+  stockUser.nextTradeSeq = sequence;
+  const at = normalizeNonNegativeInteger(entry.at);
+  const normalized = normalizeTradeHistoryEntry({
+    id: createStockTradeId(at, sequence),
+    sequence,
+    ...entry,
+    at
+  });
+  stockUser.tradeHistory = [normalized, ...stockUser.tradeHistory]
+    .sort(compareTimelineEntries)
+    .slice(0, RECENT_TRADE_LIMIT);
+}
+
+function recordMarketNews(guild, definition, state, tickIndex, at) {
+  const type = normalizeMarketNewsType(state.eventType);
+  guild.stocks.marketNews = normalizeMarketNews(guild.stocks.marketNews, guild);
+  const sequence = guild.stocks.marketNews.reduce((max, item) => Math.max(max, item.sequence), 0) + 1;
+  const normalized = normalizeMarketNewsEntry({
+    id: createMarketNewsId(tickIndex, definition.id),
+    sequence,
+    type,
+    stockId: definition.id,
+    title: formatMarketNewsTitle(type),
+    message: `${formatMarketNewsTitle(type)}: ${state.news}`,
+    tickIndex,
+    at
+  }, null, guild);
+  guild.stocks.marketNews = [
+    normalized,
+    ...guild.stocks.marketNews.filter((entry) => entry.id !== normalized.id)
+  ]
+    .sort(compareMarketNewsEntries)
+    .slice(0, RECENT_NEWS_LIMIT);
+}
+
+function cloneTradeHistoryEntry(entry, market) {
+  const stock = safeCloneQuote(entry.stockId, market) ?? stockSnapshot(entry.stockId);
+  return {
+    ...entry,
+    stock
+  };
+}
+
+function cloneMarketNewsEntry(entry, market) {
+  const stock = safeCloneQuote(entry.stockId, market) ?? stockSnapshot(entry.stockId);
+  return {
+    ...entry,
+    stock
+  };
+}
+
+function formatMarketNewsTitle(type) {
+  return {
+    ipo: '신규상장 공시',
+    surge: '급등 공시',
+    crash: '급락 공시',
+    delisted: '상장폐지 공시'
+  }[type] ?? '시장 뉴스';
+}
+
 function buildPortfolio(profile, stockUser, market) {
   const positions = Object.entries(stockUser.holdings)
+    .filter(([stockId]) => market.symbols[stockId])
     .map(([stockId, holding]) => {
       const quote = cloneQuote(stockId, market.symbols[stockId]);
       const marketValue = quote.price * holding.quantity;
@@ -687,10 +1614,10 @@ function buildPortfolio(profile, stockUser, market) {
   return {
     userId: profile.userId,
     username: profile.username,
-    cash: profile.balance,
+    cash: getCurrencyBalance(profile, CURRENCY_STOCK),
     stockValue,
     leveragedEquity,
-    totalAssets: profile.balance + stockValue + leveragedEquity,
+    totalAssets: getCurrencyBalance(profile, CURRENCY_STOCK) + stockValue + leveragedEquity,
     costBasis,
     unrealizedProfit: stockValue - costBasis,
     leveragedUnrealizedProfit,
@@ -705,9 +1632,9 @@ function buildPortfolio(profile, stockUser, market) {
 function cloneMarket(market, limit = null) {
   const safeLimit = limit === null || limit === undefined
     ? null
-    : Math.min(STOCK_DEFINITIONS.length, Math.max(1, Number(limit) || 12));
-  const stocks = STOCK_DEFINITIONS
-    .map((definition) => cloneQuote(definition.id, market.symbols[definition.id]))
+    : Math.min(Object.keys(market.symbols).length, Math.max(1, Number(limit) || 12));
+  const stocks = Object.keys(market.symbols)
+    .map((stockId) => cloneQuote(stockId, market.symbols[stockId]))
     .sort((a, b) => Math.abs(b.changeBps) - Math.abs(a.changeBps));
 
   return {
@@ -718,7 +1645,11 @@ function cloneMarket(market, limit = null) {
 }
 
 function cloneQuote(stockId, state) {
-  const definition = STOCKS_BY_ID[stockId];
+  const definition = STOCKS_BY_ID[stockId] ?? (state?.definition ? normalizeDynamicStockDefinition(state.definition, stockId) : null);
+  if (!definition || !state) {
+    const name = definition?.name ?? stockId;
+    throw new Error(`${name}은(는) 아직 상장되지 않았습니다.`);
+  }
   return {
     ...definition,
     aliases: [...definition.aliases],
@@ -727,6 +1658,10 @@ function cloneQuote(stockId, state) {
     changeBps: state.changeBps,
     changePercent: Math.round((state.changeBps / 100) * 100) / 100,
     news: state.news,
+    status: state.status,
+    eventType: state.eventType,
+    listedAtTick: state.listedAtTick,
+    delistedAtTick: state.delistedAtTick,
     updatedAt: state.updatedAt
   };
 }
@@ -735,7 +1670,8 @@ function cloneMoneyProfile(profile) {
   return {
     userId: profile.userId,
     username: profile.username,
-    balance: profile.balance
+    balance: getCurrencyBalance(profile, CURRENCY_STOCK),
+    wallets: cloneWallets(profile.wallets)
   };
 }
 
@@ -744,13 +1680,254 @@ function cloneStockUser(stockUser) {
     userId: stockUser.userId,
     username: stockUser.username,
     holdings: Object.fromEntries(Object.entries(stockUser.holdings).map(([stockId, holding]) => [stockId, cloneHolding(holding)])),
+    limitOrders: structuredClone(stockUser.limitOrders),
+    priceAlerts: structuredClone(stockUser.priceAlerts),
     leveragedPositions: structuredClone(stockUser.leveragedPositions),
+    tradeHistory: structuredClone(stockUser.tradeHistory),
     realizedProfit: stockUser.realizedProfit,
     realizedLeveragedProfit: stockUser.realizedLeveragedProfit,
     tradeCount: stockUser.tradeCount,
     leveragedTradeCount: stockUser.leveragedTradeCount,
+    nextOrderSeq: stockUser.nextOrderSeq,
+    nextAlertSeq: stockUser.nextAlertSeq,
     nextPositionSeq: stockUser.nextPositionSeq,
+    nextTradeSeq: stockUser.nextTradeSeq,
     lastTradeAt: stockUser.lastTradeAt
+  };
+}
+
+function buildListingSummary(market) {
+  const recent = Object.entries(market.symbols)
+    .map(([stockId, state]) => cloneQuote(stockId, state))
+    .filter((stock) => stock.eventType === 'ipo' && stock.status === 'listed')
+    .sort((a, b) => b.listedAtTick - a.listedAtTick)
+    .slice(0, 10);
+  const upcoming = STOCK_DEFINITIONS
+    .filter((definition) => !market.symbols[definition.id])
+    .sort((a, b) => a.listedFromTick - b.listedFromTick)
+    .slice(0, 10)
+    .map((definition) => ({
+      ...definition,
+      aliases: [...definition.aliases],
+      status: 'upcoming'
+    }));
+
+  return {
+    tickIndex: market.tickIndex,
+    recent,
+    upcoming
+  };
+}
+
+function buildLimitOrderSummary(stockUser, market) {
+  const orders = Object.values(stockUser.limitOrders)
+    .map((order) => cloneLimitOrder(order, market))
+    .sort((a, b) => b.createdAt - a.createdAt);
+
+  return {
+    open: orders.filter((order) => order.status === 'open'),
+    recent: orders
+      .filter((order) => order.status !== 'open')
+      .slice(0, RECENT_ORDER_LIMIT)
+  };
+}
+
+function buildPriceAlertSummary(stockUser, market) {
+  const alerts = Object.values(stockUser.priceAlerts)
+    .filter((alert) => alert.status !== 'deleted')
+    .map((alert) => clonePriceAlert(alert, market))
+    .sort((a, b) => b.createdAt - a.createdAt);
+
+  return {
+    active: alerts.filter((alert) => alert.status === 'active'),
+    triggered: alerts
+      .filter((alert) => alert.status === 'triggered')
+      .slice(0, RECENT_ALERT_LIMIT)
+  };
+}
+
+function getTradableQuote(stockId, market) {
+  const quote = cloneQuote(stockId, market.symbols[stockId]);
+  if (quote.status === 'delisted') {
+    throw new Error(`${quote.name}은(는) 상장폐지되어 신규 매수할 수 없습니다.`);
+  }
+  return quote;
+}
+
+function processMarketSideEffects(guild, market, service) {
+  const users = guild.stocks?.users ?? {};
+  for (const [userId, rawStockUser] of Object.entries(users)) {
+    const username = rawStockUser?.username ?? guild.users?.[userId]?.username ?? 'Unknown';
+    const profile = getOrCreateMoneyProfile(guild, userId, username, market.lastTickAt);
+    const stockUser = getOrCreateStockUser(guild, userId, username);
+    processLimitOrders(profile, stockUser, market, service);
+    triggerPriceAlerts(stockUser, market);
+  }
+}
+
+function processLimitOrders(profile, stockUser, market, service) {
+  for (const order of Object.values(stockUser.limitOrders)) {
+    if (order.status !== 'open') continue;
+    const quote = safeCloneQuote(order.stockId, market);
+    if (!quote) continue;
+
+    if (quote.status === 'delisted') {
+      cancelOpenLimitOrder(profile, stockUser, order, market.lastTickAt, '상장폐지');
+      continue;
+    }
+
+    const shouldFill = order.side === 'buy'
+      ? quote.price <= order.limitPrice
+      : quote.price >= order.limitPrice;
+
+    if (!shouldFill) continue;
+    fillLimitOrder(profile, stockUser, order, quote, service, market.lastTickAt);
+  }
+}
+
+function fillLimitOrder(profile, stockUser, order, quote, service, now) {
+  const subtotal = quote.price * order.quantity;
+  const fee = calculateFee(subtotal, service.feeBps);
+
+  order.status = 'filled';
+  order.filledAt = normalizeNonNegativeInteger(now);
+  order.fillPrice = quote.price;
+  order.fee = fee;
+
+  if (order.side === 'buy') {
+    const totalCost = subtotal + fee;
+    const refund = Math.max(0, order.reservedCash - totalCost);
+    if (refund > 0) creditCurrency(profile, CURRENCY_STOCK, refund);
+    addHolding(stockUser, order.stockId, order.quantity, quote.price);
+    order.reservedCash = 0;
+    recordTrade(stockUser, {
+      type: 'limit_buy_fill',
+      stockId: order.stockId,
+      stock: quote,
+      quantity: order.quantity,
+      price: quote.price,
+      fee,
+      total: totalCost,
+      realizedProfit: 0,
+      at: now
+    });
+  } else {
+    const proceeds = subtotal - fee;
+    const realizedProfit = proceeds - order.averageCost * order.quantity;
+    creditCurrency(profile, CURRENCY_STOCK, proceeds);
+    stockUser.realizedProfit += realizedProfit;
+    order.realizedProfit = realizedProfit;
+    order.reservedQuantity = 0;
+    recordTrade(stockUser, {
+      type: 'limit_sell_fill',
+      stockId: order.stockId,
+      stock: quote,
+      quantity: order.quantity,
+      price: quote.price,
+      fee,
+      total: proceeds,
+      realizedProfit,
+      at: now
+    });
+  }
+
+  stockUser.tradeCount += 1;
+  stockUser.lastTradeAt = normalizeNonNegativeInteger(now);
+}
+
+function cancelOpenLimitOrder(profile, stockUser, order, now, reason = '취소') {
+  if (order.side === 'buy' && order.reservedCash > 0) {
+    creditCurrency(profile, CURRENCY_STOCK, order.reservedCash);
+    order.reservedCash = 0;
+  }
+
+  if (order.side === 'sell' && order.reservedQuantity > 0) {
+    addHolding(stockUser, order.stockId, order.reservedQuantity, order.averageCost);
+    order.reservedQuantity = 0;
+  }
+
+  order.status = 'cancelled';
+  order.cancelledAt = normalizeNonNegativeInteger(now);
+  order.cancelReason = reason;
+}
+
+function triggerPriceAlerts(stockUser, market) {
+  for (const alert of Object.values(stockUser.priceAlerts)) {
+    if (alert.status !== 'active') continue;
+    const quote = safeCloneQuote(alert.stockId, market);
+    if (!quote) continue;
+    const triggered = alert.condition === 'above'
+      ? quote.price >= alert.targetPrice
+      : quote.price <= alert.targetPrice;
+    if (!triggered) continue;
+
+    alert.status = 'triggered';
+    alert.triggeredAt = market.lastTickAt;
+    alert.triggeredPrice = quote.price;
+  }
+}
+
+function safeCloneQuote(stockId, market) {
+  try {
+    return cloneQuote(stockId, market.symbols[stockId]);
+  } catch {
+    return null;
+  }
+}
+
+function cloneLimitOrder(order, market, fallbackQuote = null) {
+  const quote = fallbackQuote ?? safeCloneQuote(order.stockId, market);
+  const stock = quote ?? stockSnapshot(order.stockId);
+  return {
+    ...order,
+    stock
+  };
+}
+
+function clonePriceAlert(alert, market, fallbackQuote = null) {
+  const quote = fallbackQuote ?? safeCloneQuote(alert.stockId, market);
+  const stock = quote ?? stockSnapshot(alert.stockId);
+  return {
+    ...alert,
+    stock
+  };
+}
+
+function stockSnapshot(stockId) {
+  const definition = STOCKS_BY_ID[stockId];
+  if (!definition) return { id: stockId, name: stockId, symbol: stockId, sector: '알 수 없음', risk: 'stable', aliases: [] };
+  return {
+    ...definition,
+    aliases: [...definition.aliases],
+    status: 'upcoming'
+  };
+}
+
+function addHolding(stockUser, stockId, quantity, price) {
+  const holding = stockUser.holdings[stockId] ?? createEmptyHolding();
+  const beforeQuantity = holding.quantity;
+  const afterQuantity = beforeQuantity + quantity;
+  const beforeCost = holding.averageCost * beforeQuantity;
+  const afterCost = beforeCost + price * quantity;
+  stockUser.holdings[stockId] = {
+    quantity: afterQuantity,
+    averageCost: Math.round(afterCost / afterQuantity)
+  };
+}
+
+function removeHolding(stockUser, stockId, quantity) {
+  const holding = stockUser.holdings[stockId];
+  if (!holding || holding.quantity < quantity) {
+    throw new Error('보유 주식 수량이 부족합니다.');
+  }
+  const remainingQuantity = holding.quantity - quantity;
+  if (remainingQuantity <= 0) {
+    delete stockUser.holdings[stockId];
+    return;
+  }
+  stockUser.holdings[stockId] = {
+    quantity: remainingQuantity,
+    averageCost: holding.averageCost
   };
 }
 
@@ -775,6 +1952,22 @@ function liquidateLeveragedPositions(profile, stockUser, market) {
     delete stockUser.leveragedPositions[position.id];
     stockUser.realizedLeveragedProfit -= position.margin;
     stockUser.leveragedTradeCount += 1;
+    stockUser.lastTradeAt = market.lastTickAt;
+    recordTrade(stockUser, {
+      type: 'leverage_liquidation',
+      stockId: position.stockId,
+      stock: quote,
+      quantity: 0,
+      price: quote.price,
+      fee: 0,
+      total: 0,
+      realizedProfit: -position.margin,
+      at: market.lastTickAt,
+      positionId: position.id,
+      side: position.side,
+      leverage: position.leverage,
+      margin: position.margin
+    });
     liquidated.push({
       positionId: position.id,
       stock: quote,
@@ -853,6 +2046,38 @@ function normalizeLeverageSide(side) {
   throw new Error('레버리지 방향은 롱 또는 숏이어야 합니다.');
 }
 
+function normalizeStockRisk(risk) {
+  const normalized = String(risk ?? 'meme').trim().toLocaleLowerCase('ko-KR');
+  if (['stable', 'growth', 'cyclical', 'volatile', 'meme'].includes(normalized)) return normalized;
+  return 'meme';
+}
+
+function normalizeLimitOrderSide(side) {
+  const normalized = String(side ?? 'buy').trim().toLocaleLowerCase('ko-KR');
+  if (['buy', 'bid', '매수', '지정가매수'].includes(normalized)) return 'buy';
+  if (['sell', 'ask', '매도', '지정가매도'].includes(normalized)) return 'sell';
+  throw new Error('지정가 주문 방향은 매수 또는 매도여야 합니다.');
+}
+
+function normalizeOrderStatus(status) {
+  const normalized = String(status ?? 'open').trim().toLocaleLowerCase('ko-KR');
+  if (['open', 'filled', 'cancelled'].includes(normalized)) return normalized;
+  return 'open';
+}
+
+function normalizeAlertCondition(condition) {
+  const normalized = String(condition ?? 'above').trim().toLocaleLowerCase('ko-KR');
+  if (['above', 'gte', 'up', '이상', '돌파', '상승'].includes(normalized)) return 'above';
+  if (['below', 'lte', 'down', '이하', '하락'].includes(normalized)) return 'below';
+  throw new Error('알림 조건은 이상 또는 이하로 선택하세요.');
+}
+
+function normalizeAlertStatus(status) {
+  const normalized = String(status ?? 'active').trim().toLocaleLowerCase('ko-KR');
+  if (['active', 'triggered', 'deleted'].includes(normalized)) return normalized;
+  return 'active';
+}
+
 function normalizePositiveStoredInteger(value, fallback) {
   const normalized = Number(value);
   return Number.isSafeInteger(normalized) && normalized > 0 ? normalized : fallback;
@@ -889,6 +2114,22 @@ function createSymbol(id) {
 
 function createLeveragedPositionId(now, sequence) {
   return `${normalizeNonNegativeInteger(now).toString(36)}-${sequence.toString(36)}`;
+}
+
+function createStockOrderId(now, sequence) {
+  return `ord-${normalizeNonNegativeInteger(now).toString(36)}-${sequence.toString(36)}`;
+}
+
+function createStockAlertId(now, sequence) {
+  return `al-${normalizeNonNegativeInteger(now).toString(36)}-${sequence.toString(36)}`;
+}
+
+function createStockTradeId(now, sequence) {
+  return `tr-${normalizeNonNegativeInteger(now).toString(36)}-${sequence.toString(36)}`;
+}
+
+function createMarketNewsId(tickIndex, stockId) {
+  return `news-${normalizeNonNegativeInteger(tickIndex).toString(36)}-${normalizeLookupKey(stockId)}`;
 }
 
 function randomInt(min, max) {

@@ -12,7 +12,7 @@ test('경제 명령 payload는 경험치를 단일 표현으로 설명한다', (
 
   assert.ok(profileCommand);
   assert.ok(leaderboardCommand);
-  assert.match(profileCommand.description, /레벨, 경험치, 보유금/);
+  assert.match(profileCommand.description, /레벨, 경험치, 메인 코인/);
   assert.match(leaderboardCommand.description, /레벨\/경험치 랭킹/);
   assert.doesNotMatch(profileCommand.description, /누적|현재/);
   assert.doesNotMatch(leaderboardCommand.description, /누적|현재/);

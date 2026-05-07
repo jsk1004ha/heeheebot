@@ -33,12 +33,15 @@ const pendingPlayerBlackjackGames = new Map();
 
 export const casinoCommands = [
   new SlashCommandBuilder()
+    .setName('카지노정보')
+    .setDescription('도박 게임별 배수와 환급 규칙을 확인합니다.'),
+  new SlashCommandBuilder()
     .setName('홀짝')
     .setDescription('홀/짝을 맞히면 약 1.9배를 받습니다.')
     .addIntegerOption((option) =>
       option
         .setName('돈')
-        .setDescription('베팅할 돈')
+        .setDescription('베팅할 카지노칩')
         .setMinValue(1)
         .setRequired(true)
     )
@@ -58,7 +61,7 @@ export const casinoCommands = [
     .addIntegerOption((option) =>
       option
         .setName('돈')
-        .setDescription('베팅할 돈')
+        .setDescription('베팅할 카지노칩')
         .setMinValue(1)
         .setRequired(true)
     )
@@ -78,7 +81,7 @@ export const casinoCommands = [
     .addIntegerOption((option) =>
       option
         .setName('돈')
-        .setDescription('베팅할 돈')
+        .setDescription('베팅할 카지노칩')
         .setMinValue(1)
         .setRequired(true)
     ),
@@ -88,7 +91,7 @@ export const casinoCommands = [
     .addIntegerOption((option) =>
       option
         .setName('돈')
-        .setDescription('베팅할 돈')
+        .setDescription('베팅할 카지노칩')
         .setMinValue(1)
         .setRequired(true)
     ),
@@ -98,7 +101,7 @@ export const casinoCommands = [
     .addIntegerOption((option) =>
       option
         .setName('돈')
-        .setDescription('베팅할 돈')
+        .setDescription('베팅할 카지노칩')
         .setMinValue(1)
         .setRequired(true)
     )
@@ -118,7 +121,7 @@ export const casinoCommands = [
     .addIntegerOption((option) =>
       option
         .setName('돈')
-	        .setDescription('베팅할 돈')
+	        .setDescription('베팅할 카지노칩')
 	        .setMinValue(1)
 	        .setRequired(true)
 	    )
@@ -133,7 +136,7 @@ export const casinoCommands = [
     .addIntegerOption((option) =>
       option
         .setName('돈')
-        .setDescription('베팅할 돈')
+        .setDescription('베팅할 카지노칩')
         .setMinValue(1)
         .setRequired(true)
     )
@@ -158,7 +161,7 @@ export const casinoCommands = [
     .addIntegerOption((option) =>
       option
         .setName('돈')
-        .setDescription('베팅할 돈')
+        .setDescription('베팅할 카지노칩')
         .setMinValue(1)
         .setRequired(true)
     )
@@ -179,7 +182,7 @@ export const casinoCommands = [
     .addIntegerOption((option) =>
       option
         .setName('돈')
-        .setDescription('베팅할 돈')
+        .setDescription('베팅할 카지노칩')
         .setMinValue(1)
         .setRequired(true)
     )
@@ -199,7 +202,7 @@ export const casinoCommands = [
     .addIntegerOption((option) =>
       option
         .setName('돈')
-        .setDescription('베팅할 돈')
+        .setDescription('베팅할 카지노칩')
         .setMinValue(1)
         .setRequired(true)
     )
@@ -220,7 +223,7 @@ export const casinoCommands = [
     .addIntegerOption((option) =>
       option
         .setName('돈')
-        .setDescription('베팅할 돈')
+        .setDescription('베팅할 카지노칩')
         .setMinValue(1)
         .setRequired(true)
     )
@@ -268,6 +271,11 @@ export async function handleCasinoCommand(interaction, economy, logger = console
 }
 
 async function routeCasinoCommand(interaction, economy) {
+  if (interaction.commandName === '카지노정보') {
+    await interaction.reply(formatCasinoInfo());
+    return;
+  }
+
   const bet = interaction.options.getInteger('돈', true);
 
   if (interaction.commandName === '홀짝') {
@@ -401,6 +409,26 @@ async function routeCasinoCommand(interaction, economy) {
   }
 }
 
+function formatCasinoInfo() {
+  return [
+    '🎰 **카지노 게임 정보**',
+    '모든 게임은 봇 내부 카지노칩만 사용하며 실제 현금 결제/현금 환전 기능은 없습니다.',
+    '카지노칩은 `/환전`으로 메인 코인에서 충전할 수 있습니다.',
+    '',
+    '- `/홀짝`: 홀/짝 적중 시 1.9배, 99~100은 하우스 승리',
+    '- `/주사위`: 높음(4~6) 또는 낮음(1~3) 적중 시 1.9배',
+    '- `/슬롯`: 페어 3배, 트리플 10배, 7️⃣ 트리플 20배',
+    '- `/럭키세븐`: 주사위 2개 합이 7이면 5.5배',
+    '- `/하이로우`: 두 번째 카드가 높음/낮음 적중 시 1.9배, 같은 숫자는 환불',
+    '- `/블랙잭`: 승리 1.5배, 내추럴 블랙잭 2배, 무승부 환불',
+    '- `/룰렛`: 색상/홀짝/구간 2배, 0은 36배',
+    '- `/바카라`: 플레이어 2배, 뱅커 1.95배, 타이 9배',
+    '- `/크랩스`: 패스/돈패스 라인 승리 2배, 일부 무효는 환불',
+    '- `/시크보`: 작음/큼 2배, 트리플 31배',
+    '- `/키노`: 번호 1~5개 선택, 10개 추첨과 비교. 1개 이상 맞히면 선택 개수별 배수표로 환급 또는 당첨'
+  ].join('\n');
+}
+
 async function playAiBlackjack(interaction, economy, bet) {
   let reserved = false;
   let gameId = null;
@@ -470,12 +498,12 @@ async function createPlayerBlackjackChallenge(interaction, economy, bet, opponen
   const challengerProfile = await economy.getProfile(interaction.guildId, interaction.user.id, interaction.user.username);
   const opponentProfile = await economy.getProfile(interaction.guildId, opponent.id, opponent.username);
 
-  if (challengerProfile.balance < bet) {
-    throw new Error(`내 잔액이 부족합니다. 현재 잔액: ${challengerProfile.balance.toLocaleString()}원`);
+  if (getCasinoChips(challengerProfile) < bet) {
+    throw new Error(`내 카지노칩이 부족합니다. 현재 칩: ${getCasinoChips(challengerProfile).toLocaleString()}칩`);
   }
 
-  if (opponentProfile.balance < bet) {
-    throw new Error(`${opponent.username}님의 잔액이 부족합니다. 현재 잔액: ${opponentProfile.balance.toLocaleString()}원`);
+  if (getCasinoChips(opponentProfile) < bet) {
+    throw new Error(`${opponent.username}님의 카지노칩이 부족합니다. 현재 칩: ${getCasinoChips(opponentProfile).toLocaleString()}칩`);
   }
 
   const challengeId = createChallengeId();
@@ -506,7 +534,7 @@ async function createPlayerBlackjackChallenge(interaction, economy, bet, opponen
   );
 
   await interaction.reply({
-    content: `🃏 ${opponent}, ${interaction.user}님이 블랙잭 대결을 신청했습니다.\n베팅: **${bet.toLocaleString()}원씩**, 승자 독식: **${(bet * 2).toLocaleString()}원**\n60초 안에 수락해주세요.`,
+    content: `🃏 ${opponent}, ${interaction.user}님이 블랙잭 대결을 신청했습니다.\n베팅: **${bet.toLocaleString()}칩씩**, 승자 독식: **${(bet * 2).toLocaleString()}칩**\n60초 안에 수락해주세요.`,
     components: [row]
   });
 }
@@ -945,19 +973,19 @@ function formatPlayerBlackjackResult(challenge, game, settlement) {
       '🃏 **블랙잭 유저 대결 결과**',
       `${challengerMention}: ${formatCards(game.challengerHand)} = ${game.challengerValue}`,
       `${opponentMention}: ${formatCards(game.opponentHand)} = ${game.opponentValue}`,
-      '결과: **무승부** — 돈 이동 없음'
+      '결과: **무승부** — 칩 이동 없음'
     ].join('\n');
   }
 
   const winnerMention = game.winner === 'challenger' ? challengerMention : opponentMention;
-  const winnerBalance = settlement.winner.balance.toLocaleString();
+  const winnerBalance = getCasinoChips(settlement.winner).toLocaleString();
 
   return [
     '🃏 **블랙잭 유저 대결 결과**',
     `${challengerMention}: ${formatCards(game.challengerHand)} = ${game.challengerValue}`,
     `${opponentMention}: ${formatCards(game.opponentHand)} = ${game.opponentValue}`,
     `승자: ${winnerMention}`,
-    `상금: **${settlement.pot.toLocaleString()}원** / 승자 잔액: **${winnerBalance}원**`
+    `상금: **${settlement.pot.toLocaleString()}칩** / 승자 카지노칩: **${winnerBalance}칩**`
   ].join('\n');
 }
 
@@ -974,14 +1002,18 @@ async function settleGame(interaction, economy, bet, payout) {
 function formatSettlement(success, settlement) {
   const profit = settlement.profit;
   const profitText = profit >= 0
-    ? `+${profit.toLocaleString()}원`
-    : `${profit.toLocaleString()}원`;
+    ? `+${profit.toLocaleString()}칩`
+    : `${profit.toLocaleString()}칩`;
 
   return [
     success ? '✅ 성공' : '❌ 실패',
-    `베팅: ${settlement.bet.toLocaleString()}원 / 지급: ${settlement.payout.toLocaleString()}원 / 손익: **${profitText}**`,
-    `현재 잔액: **${settlement.profile.balance.toLocaleString()}원**`
+    `베팅: ${settlement.bet.toLocaleString()}칩 / 지급: ${settlement.payout.toLocaleString()}칩 / 손익: **${profitText}**`,
+    `현재 카지노칩: **${getCasinoChips(settlement.profile).toLocaleString()}칩**`
   ].join('\n');
+}
+
+function getCasinoChips(profile) {
+  return profile.wallets?.casinoChips ?? 0;
 }
 
 function createBlackjackActionRow(gameId) {

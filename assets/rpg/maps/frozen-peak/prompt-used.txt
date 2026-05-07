@@ -1,1 +1,1 @@
-Procedural placeholder for frozen peak RPG battle background: blue ice cliffs, snow, open icy arena, no characters, no UI, no text.
+Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: frozen mountain peak, blue ice cliffs and crystalline snowbanks around the edges, distant cold mountains, soft snow particles, crisp cold moonlit-blue light, open flat icy arena platform in the center for hero and monster sprites, readable foreground/midground/depth, no characters, no creatures, no UI, no text, no labels, no watermark.

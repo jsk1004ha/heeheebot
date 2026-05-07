@@ -1,5 +1,6 @@
 import { Client, Events, GatewayIntentBits } from 'discord.js';
 import { handleCasinoCommand } from './commands/casino.js';
+import { handleCommunityCommand } from './commands/community.js';
 import { handleEconomyCommand } from './commands/economy.js';
 import { handleFishingCommand } from './commands/fishing.js';
 import { handleFortuneCommand } from './commands/fortune.js';
@@ -24,6 +25,7 @@ import {
 } from './commands/wordchain.js';
 import { ModerationService } from './systems/moderation.js';
 import { createSqliteStore } from './storage/sqlite-store.js';
+import { CommunityService } from './systems/community.js';
 import { EconomyService } from './systems/economy.js';
 import { FishingService } from './systems/fishing.js';
 import { FortuneService } from './systems/fortune.js';
@@ -51,6 +53,7 @@ export function createBot({
   const store = createSqliteStore(databasePath, {
     migrateFromJsonPath: legacyJsonPath
   });
+  const community = new CommunityService(store);
   const economy = new EconomyService(store);
   const fishing = new FishingService(store);
   const fortune = new FortuneService();
@@ -86,7 +89,21 @@ export function createBot({
     if (!interaction.isChatInputCommand() && !interaction.isButton()) return;
 
     try {
-      const handled = await handleCasinoCommand(interaction, economy, logger)
+      const handledCasino = await handleCasinoCommand(interaction, economy, logger);
+      if (handledCasino) {
+        if (interaction.isChatInputCommand()
+          && !['카지노정보'].includes(interaction.commandName)) {
+          await community.recordActivity({
+            guildId: interaction.guildId,
+            userId: interaction.user.id,
+            username: interaction.user.username,
+            activity: 'casino'
+          }).catch((error) => logger.error('Failed to record casino activity:', error));
+        }
+        return;
+      }
+
+      const handled = await handleCommunityCommand(interaction, community, logger)
         || await handleModerationCommand(interaction, moderation, logger)
         || await handleWordChainCommand(interaction, economy, logger)
         || await handleFortuneCommand(interaction, fortune, economy)
@@ -135,10 +152,23 @@ export function createBot({
         userId: message.author.id,
         username: message.author.username
       });
+      const eventBonus = result.awarded
+        ? await community.awardChatEventBonus({
+            guildId: message.guild.id,
+            userId: message.author.id,
+            username: message.author.username,
+            baseXp: result.totalXpGained
+          })
+        : null;
 
       if (result.leveledUp) {
         await message.channel.send(
           `🎉 ${message.author}님 레벨업! Lv.${result.profile.level} 달성, 보너스 ${result.levelReward.toLocaleString()}원 지급!`
+        );
+      }
+      if (eventBonus?.leveledUp) {
+        await message.channel.send(
+          `📣 서버 이벤트 보너스로 ${message.author}님 레벨업! Lv.${eventBonus.profile.level} 달성, 보너스 ${eventBonus.levelReward.toLocaleString()}원 지급!`
         );
       }
     } catch (error) {

@@ -16,8 +16,64 @@ test('새 프로필은 레벨 1과 잔액 0으로 시작한다', async () => {
     assert.equal(profile.xp, 0);
     assert.equal(profile.totalXp, 0);
     assert.equal(profile.balance, 0);
+    assert.deepEqual(profile.wallets, {
+      casinoChips: 0,
+      rpgGold: 0,
+      swordCoins: 0,
+      stockCash: 0
+    });
     assert.equal(profile.dailyStreak, 0);
     assert.equal(profile.username, '테스터');
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('환전은 메인 코인과 컨텐츠별 지갑을 분리하고 출금 손실을 적용한다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await fixture.store.update((data) => {
+      data.guilds['guild-1'] = {
+        users: {
+          'user-1': {
+            userId: 'user-1',
+            username: '환전자',
+            level: 1,
+            xp: 0,
+            totalXp: 0,
+            balance: 1_000
+          }
+        }
+      };
+    });
+
+    const deposit = await fixture.economy.exchangeWallet({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '환전자',
+      fromCurrency: 'main',
+      toCurrency: 'casino',
+      amount: 300
+    });
+    const cashOut = await fixture.economy.exchangeWallet({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '환전자',
+      fromCurrency: 'casino',
+      toCurrency: 'rpg',
+      amount: 100
+    });
+
+    assert.equal(deposit.spent, 300);
+    assert.equal(deposit.received, 300);
+    assert.equal(deposit.profile.balance, 700);
+    assert.equal(deposit.profile.wallets.casinoChips, 300);
+    assert.equal(cashOut.received, 90);
+    assert.equal(cashOut.fee, 10);
+    assert.equal(cashOut.profile.balance, 700);
+    assert.equal(cashOut.profile.wallets.casinoChips, 200);
+    assert.equal(cashOut.profile.wallets.rpgGold, 90);
   } finally {
     await fixture.cleanup();
   }

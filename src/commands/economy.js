@@ -1,25 +1,53 @@
 import { SlashCommandBuilder } from 'discord.js';
+import {
+  formatCurrencyAmount,
+  getCurrencyChoices
+} from '../systems/currencies.js';
 
 export const economyCommands = [
   new SlashCommandBuilder()
     .setName('프로필')
-    .setDescription('내 레벨, 경험치, 보유금을 확인합니다.'),
+    .setDescription('내 레벨, 경험치, 메인 코인과 전용 지갑을 확인합니다.'),
   new SlashCommandBuilder()
     .setName('출석')
-    .setDescription('하루 한 번 출석 보상금을 받습니다.'),
+    .setDescription('하루 한 번 출석 메인 코인 보상을 받습니다.'),
   new SlashCommandBuilder()
     .setName('송금')
-    .setDescription('다른 유저에게 돈을 송금합니다.')
+    .setDescription('다른 유저에게 메인 코인을 송금합니다.')
     .addUserOption((option) =>
       option
         .setName('대상')
-        .setDescription('돈을 받을 유저')
+        .setDescription('메인 코인을 받을 유저')
         .setRequired(true)
     )
     .addIntegerOption((option) =>
       option
         .setName('금액')
-        .setDescription('송금할 금액')
+        .setDescription('송금할 메인 코인 금액')
+        .setMinValue(1)
+        .setRequired(true)
+    ),
+  new SlashCommandBuilder()
+    .setName('환전')
+    .setDescription('메인 코인과 컨텐츠별 전용 재화를 환전합니다.')
+    .addStringOption((option) =>
+      option
+        .setName('보낼재화')
+        .setDescription('차감할 재화')
+        .setRequired(true)
+        .addChoices(...getCurrencyChoices())
+    )
+    .addStringOption((option) =>
+      option
+        .setName('받을재화')
+        .setDescription('받을 재화')
+        .setRequired(true)
+        .addChoices(...getCurrencyChoices())
+    )
+    .addIntegerOption((option) =>
+      option
+        .setName('금액')
+        .setDescription('보낼 재화 기준 환전 금액')
         .setMinValue(1)
         .setRequired(true)
     ),
@@ -85,7 +113,7 @@ export async function handleEconomyCommand(interaction, economy) {
       : '';
 
     await interaction.reply(
-      `✅ 출석 완료! +${result.xpGained.toLocaleString()} XP${bonusText}, +${result.reward.toLocaleString()}원 지급${levelText}${streakText}. 현재 잔액: ${result.profile.balance.toLocaleString()}원`
+      `✅ 출석 완료! +${result.xpGained.toLocaleString()} XP${bonusText}, +${result.reward.toLocaleString()}원 지급${levelText}${streakText}. 메인 코인: ${result.profile.balance.toLocaleString()}원`
     );
     return true;
   }
@@ -113,11 +141,33 @@ export async function handleEconomyCommand(interaction, economy) {
       });
 
       await interaction.reply(
-        `💸 ${target}님에게 ${result.amount.toLocaleString()}원을 송금했습니다. 내 잔액: ${result.from.balance.toLocaleString()}원`
+        `💸 ${target}님에게 ${result.amount.toLocaleString()}원을 송금했습니다. 내 메인 코인: ${result.from.balance.toLocaleString()}원`
       );
     } catch (error) {
       await interaction.reply({
         content: `송금 실패: ${error.message}`,
+        ephemeral: true
+      });
+    }
+
+    return true;
+  }
+
+  if (interaction.commandName === '환전') {
+    try {
+      const result = await economy.exchangeWallet({
+        guildId,
+        userId: user.id,
+        username: user.username,
+        fromCurrency: interaction.options.getString('보낼재화', true),
+        toCurrency: interaction.options.getString('받을재화', true),
+        amount: interaction.options.getInteger('금액', true)
+      });
+
+      await interaction.reply(formatExchangeResult(result));
+    } catch (error) {
+      await interaction.reply({
+        content: `환전 실패: ${error.message}`,
         ephemeral: true
       });
     }
@@ -142,12 +192,26 @@ export async function handleEconomyCommand(interaction, economy) {
 }
 
 function formatProfile(profile) {
+  const wallets = profile.wallets ?? {};
   return [
     `📌 **${profile.username}님의 프로필**`,
     `레벨: **${profile.level}**`,
     `경험치: **${profile.totalXp.toLocaleString()} XP**`,
     `연속 출석: **${profile.dailyStreak.toLocaleString()}일**`,
-    `보유금: **${profile.balance.toLocaleString()}원**`
+    `메인 코인: **${profile.balance.toLocaleString()}원**`,
+    `전용 지갑: 카지노칩 **${(wallets.casinoChips ?? 0).toLocaleString()}칩** / RPG 골드 **${(wallets.rpgGold ?? 0).toLocaleString()}골드** / 강화 코인 **${(wallets.swordCoins ?? 0).toLocaleString()}코인** / 현금 **${(wallets.stockCash ?? 0).toLocaleString()}원**`
+  ].join('\n');
+}
+
+function formatExchangeResult(result) {
+  const feeText = result.fee > 0
+    ? ` / 환전 손실: **${result.fee.toLocaleString()}원 상당**`
+    : '';
+
+  return [
+    '🔁 **환전 완료**',
+    `${result.from.label} ${formatCurrencyAmount(result.spent, result.from.id)} → ${result.to.label} ${formatCurrencyAmount(result.received, result.to.id)}${feeText}`,
+    `현재 지갑: 메인 **${result.profile.balance.toLocaleString()}원** / 카지노 **${result.profile.wallets.casinoChips.toLocaleString()}칩** / RPG **${result.profile.wallets.rpgGold.toLocaleString()}골드** / 검강화 **${result.profile.wallets.swordCoins.toLocaleString()}코인** / 주식 현금 **${result.profile.wallets.stockCash.toLocaleString()}원**`
   ].join('\n');
 }
 
@@ -155,7 +219,7 @@ function formatLeaderboard(rows) {
   const body = rows
     .map((profile, index) => {
       const rank = index + 1;
-      return `${rank}. **${profile.username}** — Lv.${profile.level} / 경험치 ${profile.totalXp.toLocaleString()} XP / ${profile.balance.toLocaleString()}원`;
+      return `${rank}. **${profile.username}** — Lv.${profile.level} / 경험치 ${profile.totalXp.toLocaleString()} XP / 메인 ${profile.balance.toLocaleString()}원`;
     })
     .join('\n');
 
