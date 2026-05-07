@@ -67,7 +67,6 @@ import {
   MAX_DAILY_SWORD_BATTLES,
   MAX_DAILY_SWORD_BATTLE_STONES,
   MAX_SWORD_LEVEL,
-  createRandomSwordOpponent,
   getAdvancedSwordEnhanceConfig,
   getSwordEnhanceConfig,
   getSwordSellValue,
@@ -2356,9 +2355,12 @@ export class EconomyService {
         };
       }
 
-      const opponent = createRandomSwordOpponent({
-        profile,
-        randomInt: this.randomInt
+      const opponent = selectRandomSwordOpponentProfile({
+        data,
+        guildId,
+        challengerUserId: userId,
+        randomInt: this.randomInt,
+        economy: this
       });
       const battle = resolveSwordBattleResult({
         challengerProfile: profile,
@@ -3846,6 +3848,36 @@ function getRpgActionContext(profile, economy, now = Date.now()) {
     actionAvailability,
     dailyGold,
     adventureGuide
+  };
+}
+
+function selectRandomSwordOpponentProfile({
+  data,
+  guildId,
+  challengerUserId,
+  randomInt,
+  economy
+}) {
+  const guild = data.guilds?.[guildId];
+  const candidates = Object.entries(guild?.users ?? {})
+    .filter(([candidateUserId]) => candidateUserId !== challengerUserId)
+    .filter(([, candidate]) => candidate && typeof candidate === 'object');
+
+  if (candidates.length <= 0) {
+    throw new Error('랜덤 검배틀을 진행할 기존 유저가 없습니다. 다른 유저가 먼저 봇 활동을 한 뒤 다시 시도하세요.');
+  }
+
+  const [opponentUserId, opponentProfile] = candidates[randomInt(0, candidates.length - 1)];
+  const profile = getOrCreateProfile(
+    data,
+    guildId,
+    opponentUserId,
+    opponentProfile.username ?? '상대',
+    economy
+  );
+  return {
+    ...profile,
+    npc: false
   };
 }
 

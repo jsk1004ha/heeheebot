@@ -302,8 +302,16 @@ export class FishingService {
         }
         opponentLabel = `${opponentProfile.username} 팀`;
       } else {
-        opponentTeam = createWildTeam(normalizedDifficulty, this.randomInt);
-        opponentLabel = `${BATTLE_DIFFICULTIES[normalizedDifficulty].label} 야생 팀`;
+        opponentProfile = selectRandomFishingOpponentProfile({
+          data,
+          guildId,
+          userId,
+          randomInt: this.randomInt
+        });
+        opponentUserId = opponentProfile.userId;
+        opponentUsername = opponentProfile.username;
+        opponentTeam = hydrateTeam(opponentProfile, `${opponentProfile.username} 팀`);
+        opponentLabel = `${opponentProfile.username} 팀`;
       }
 
       const battle = resolveFishBattle({
@@ -562,37 +570,6 @@ function hydrateTeam(profile, label) {
   });
 }
 
-function createWildTeam(difficulty, randomIntFn) {
-  const config = BATTLE_DIFFICULTIES[difficulty];
-  const candidates = Object.entries(FISH_SPECIES)
-    .filter(([, fish]) => config.rarities.includes(fish.rarity));
-  const team = [];
-
-  for (let slot = 1; slot <= config.teamSize; slot += 1) {
-    const [fishId, fish] = candidates[randomIntFn(0, candidates.length - 1)];
-    const size = randomIntFn(fish.minSize, fish.maxSize);
-    const sizeBonus = Math.floor(size / 15);
-    const rarityBonus = RARITIES[fish.rarity].powerBonus;
-
-    team.push({
-      label: `${config.label} 야생 팀`,
-      slot,
-      fishId,
-      name: fish.label,
-      type: fish.type,
-      rarity: fish.rarity,
-      maxHp: fish.hp + sizeBonus * 2 + rarityBonus,
-      hp: fish.hp + sizeBonus * 2 + rarityBonus,
-      attack: fish.attack + sizeBonus + rarityBonus,
-      defense: fish.defense + Math.floor(sizeBonus / 2),
-      speed: fish.speed,
-      size
-    });
-  }
-
-  return team;
-}
-
 function resolveFishBattle({ playerTeam, opponentTeam, opponentLabel, randomInt }) {
   const player = playerTeam.map(cloneBattleFish);
   const opponent = opponentTeam.map(cloneBattleFish);
@@ -804,6 +781,27 @@ function cloneFishingProfile(profile) {
     stats: { ...profile.stats },
     createdAt: profile.createdAt
   };
+}
+
+function selectRandomFishingOpponentProfile({
+  data,
+  guildId,
+  userId,
+  randomInt
+}) {
+  const users = data.guilds?.[guildId]?.fishing?.users ?? {};
+  const candidates = Object.entries(users)
+    .filter(([candidateUserId]) => candidateUserId !== userId)
+    .map(([candidateUserId, candidate]) =>
+      getOrCreateFishingProfile(data, guildId, candidateUserId, candidate?.username ?? '상대')
+    )
+    .filter((candidate) => hydrateTeam(candidate, `${candidate.username} 팀`).length > 0);
+
+  if (candidates.length <= 0) {
+    throw new Error('랜덤 물고기배틀을 진행할 기존 유저 팀이 없습니다. 다른 유저가 물고기팀을 설정한 뒤 다시 시도하세요.');
+  }
+
+  return candidates[randomInt(0, candidates.length - 1)];
 }
 
 function clampInteger(value, min, max) {

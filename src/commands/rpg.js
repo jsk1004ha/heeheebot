@@ -1231,6 +1231,10 @@ async function createRpgPvpChallenge(interaction, target) {
   pendingRpgPvpChallenges.set(challengeId, challenge);
 
   await replyWithRpgCard(interaction, formatRpgPvpChallenge(challenge), {
+    ...createRpgMentionNotification(
+      [challenge.opponent.userId],
+      `⚔️ <@${challenge.opponent.userId}>님, RPG 대결 신청이 도착했습니다.`
+    ),
     components: [createRpgPvpChallengeRow(challengeId)]
   });
 }
@@ -1265,6 +1269,10 @@ async function handleRpgPvpButton(interaction, economy) {
   if (action === 'rpg_pvp_decline') {
     pendingRpgPvpChallenges.delete(challengeId);
     await updateWithRpgCard(interaction, `🛡️ **RPG 대결 거절**\n${challenge.opponent.mention}님이 RPG 대결을 거절했습니다.`, {
+      ...createRpgMentionNotification(
+        [challenge.challenger.userId],
+        `🛡️ <@${challenge.challenger.userId}>님, RPG 대결이 거절됐습니다.`
+      ),
       components: []
     });
     return true;
@@ -1289,6 +1297,10 @@ async function handleRpgPvpButton(interaction, economy) {
 
     if (!result.started) {
       await updateWithRpgCard(interaction, formatRpgPvpBlocked(challenge, result), {
+        ...createRpgMentionNotification(
+          [result.blockedUserId],
+          `⏳ <@${result.blockedUserId}>님, RPG 대결 대기 시간이 남아 있습니다.`
+        ),
         components: []
       });
       return true;
@@ -1296,6 +1308,7 @@ async function handleRpgPvpButton(interaction, economy) {
 
     activeRpgPvpSessions.set(result.session.id, result.session);
     await updateWithRpgCard(interaction, formatRpgPvpTurnBoard(challenge, result), {
+      ...createRpgPvpTurnNotification(result.session),
       components: [createRpgPvpActionRow(result.session)]
     });
   } catch (error) {
@@ -1340,6 +1353,10 @@ async function handleRpgPvpActionButton(interaction, economy) {
     if (result.completed) {
       activeRpgPvpSessions.delete(sessionId);
       await updateWithRpgCard(interaction, formatRpgPvpResult(result), {
+        ...createRpgMentionNotification(
+          [result.winnerUserId],
+          `🏆 <@${result.winnerUserId}>님, RPG PvP에서 승리했습니다.`
+        ),
         components: []
       });
       return true;
@@ -1347,6 +1364,7 @@ async function handleRpgPvpActionButton(interaction, economy) {
 
     activeRpgPvpSessions.set(sessionId, result.session);
     await updateWithRpgCard(interaction, formatRpgPvpTurnBoard(null, result), {
+      ...createRpgPvpTurnNotification(result.session),
       components: [createRpgPvpActionRow(result.session)]
     });
   } catch (error) {
@@ -2925,6 +2943,23 @@ function formatDiscordUserMention(user = {}) {
   const rendered = String(user ?? '').trim();
   if (rendered && rendered !== '[object Object]') return rendered;
   return user.id ? `<@${user.id}>` : user.username ?? '상대';
+}
+
+function createRpgPvpTurnNotification(session) {
+  const activeFighter = session?.fighters?.[session.turnSide] ?? {};
+  if (!activeFighter.userId) return {};
+
+  return createRpgMentionNotification(
+    [activeFighter.userId],
+    `🎮 현재 RPG PvP 차례: <@${activeFighter.userId}>`
+  );
+}
+
+function createRpgMentionNotification(userIds, mentionContent) {
+  return {
+    mentionUserIds: userIds,
+    mentionContent
+  };
 }
 
 function formatRpgPvpBlocked(challenge, result) {

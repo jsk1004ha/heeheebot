@@ -52,7 +52,7 @@ const HELP_CATEGORIES = Object.freeze({
     fields: Object.freeze([
       { name: '강화', value: '`/검강화` `/검상급강화` `/검정보` `/선물받기`' },
       { name: '수집/보상', value: '`/검도감` `/검업적` `/검판매` `/검보호권`' },
-      { name: '대결', value: '`/검배틀 상대:@유저` 또는 상대 없이 랜덤배틀' }
+      { name: '대결', value: '`/검배틀 상대:@유저` 또는 상대 없이 기존 유저 랜덤배틀' }
     ])
   }),
   stock: Object.freeze({

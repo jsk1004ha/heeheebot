@@ -109,7 +109,7 @@ export function createBot({
       return;
     }
 
-    if (!interaction.isChatInputCommand() && !interaction.isButton()) return;
+    if (!isSupportedCommandInteraction(interaction)) return;
 
     try {
       const handledCasino = await handleCasinoCommand(interaction, economy, logger);
@@ -224,6 +224,14 @@ export function createBot({
       await client.login(token);
     }
   };
+}
+
+export function isSupportedCommandInteraction(interaction) {
+  return Boolean(
+    interaction?.isChatInputCommand?.()
+    || interaction?.isButton?.()
+    || interaction?.isStringSelectMenu?.()
+  );
 }
 
 async function sendStockAlertAnnouncements(client, stocks, logger) {

@@ -82,11 +82,11 @@ export const swordCommands = [
     ),
   new SlashCommandBuilder()
     .setName('검배틀')
-    .setDescription('검으로 랜덤 상대 또는 다른 유저와 배틀합니다. 하루 10회 제한입니다.')
+    .setDescription('검으로 기존 유저 랜덤 상대 또는 지정 유저와 배틀합니다. 하루 10회 제한입니다.')
     .addUserOption((option) =>
       option
         .setName('상대')
-        .setDescription('비우면 랜덤 검배틀을 진행합니다.')
+        .setDescription('비우면 기존 유저 중 랜덤으로 검배틀을 진행합니다.')
     ),
   new SlashCommandBuilder()
     .setName('선물받기')

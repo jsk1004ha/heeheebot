@@ -410,8 +410,8 @@ async function routeModerationCommand(interaction, moderation, logger) {
   if (commandName === '언밴') {
     const userId = interaction.options.getString('유저id', true);
     await interaction.guild.members.unban(userId);
-    await interaction.reply(`✅ ${userId} 유저의 밴을 해제했습니다.`);
-    await sendModerationLog(interaction.guild, moderation, `✅ 언밴: ${userId} / 관리자: ${interaction.user}`);
+    await interaction.reply(`✅ ${formatUserIdMention(userId)} 유저의 밴을 해제했습니다.`);
+    await sendModerationLog(interaction.guild, moderation, `✅ 언밴: ${formatUserIdMention(userId)} / 관리자: ${interaction.user}`);
     return;
   }
 
@@ -520,6 +520,10 @@ function assertNotBotTarget(user) {
   if (user.bot) {
     throw new Error('봇은 관리 명령어 대상으로 지정할 수 없습니다.');
   }
+}
+
+function formatUserIdMention(userId) {
+  return `<@${String(userId).trim()}>`;
 }
 
 function isModerationCommand(commandName) {

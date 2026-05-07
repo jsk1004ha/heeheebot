@@ -166,6 +166,30 @@ test('슬로우모드풀기 명령은 대상 유저의 타임아웃을 해제한
   }
 });
 
+test('언밴 명령은 원시 유저 ID도 멘션 형식으로 응답한다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    const replies = [];
+    const unbanCalls = [];
+    const interaction = createModerationInteraction({
+      commandName: '언밴',
+      timeoutCalls: [],
+      replies,
+      stringOptions: { 유저id: '123456789012345678' },
+      guild: createGuild({ timeoutCalls: [], unbanCalls })
+    });
+
+    const handled = await handleModerationCommand(interaction, fixture.moderation);
+
+    assert.equal(handled, true);
+    assert.deepEqual(unbanCalls, ['123456789012345678']);
+    assert.equal(replies[0], '✅ <@123456789012345678> 유저의 밴을 해제했습니다.');
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 test('경고 3회마다 설정된 처벌을 반환한다', async () => {
   const fixture = await createFixture();
 
@@ -263,20 +287,26 @@ function createModerationMessage({
 function createModerationInteraction({
   commandName,
   timeoutCalls,
-  replies
+  replies,
+  stringOptions = {},
+  guild = createGuild({ timeoutCalls })
 }) {
   return {
     isChatInputCommand: () => true,
     commandName,
     inGuild: () => true,
     guildId: 'guild-1',
-    guild: createGuild({ timeoutCalls }),
+    guild,
     user: createUser('mod-1'),
     options: {
       getUser(name, required) {
         assert.equal(name, '유저');
         assert.equal(required, true);
         return createUser();
+      },
+      getString(name, required) {
+        assert.equal(required, true);
+        return stringOptions[name] ?? null;
       }
     },
     async reply(payload) {
@@ -285,7 +315,7 @@ function createModerationInteraction({
   };
 }
 
-function createGuild({ timeoutCalls }) {
+function createGuild({ timeoutCalls, unbanCalls = [] }) {
   return {
     id: 'guild-1',
     members: {
@@ -298,6 +328,9 @@ function createGuild({ timeoutCalls }) {
       },
       async ban() {
         throw new Error('밴은 호출되면 안 됩니다.');
+      },
+      async unban(userId) {
+        unbanCalls.push(userId);
       }
     },
     channels: {

@@ -35,7 +35,7 @@ test('낚시 명령 payload는 요청한 명령들을 등록한다', () => {
   assert.equal(teamCommand.options.length, 2);
   assert.equal(fishOption.choices, undefined);
   assert.equal(fishOption.max_length, 50);
-  assert.equal(payloads.find((command) => command.name === '물고기배틀').options.length, 2);
+  assert.equal(payloads.find((command) => command.name === '물고기배틀').options.length, 1);
   assert.equal(payloads.some((command) => command.name === '낚시에셋'), false);
 });
 
@@ -196,6 +196,21 @@ test('물고기팀설정은 보유 물고기만 팀에 넣고 물고기배틀은
         golden_carp: { size: 90, caughtAt: 1 }
       }
     });
+    await seedFishingProfile(fixture.store, {
+      userId: 'user-2',
+      username: '상대어부',
+      rodLevel: 1,
+      fishingPoints: 100,
+      inventory: {
+        carp: 1
+      },
+      bestFish: {
+        carp: { size: 40, caughtAt: 1 }
+      },
+      team: [
+        { slot: 1, fishId: 'carp' }
+      ]
+    });
 
     await assert.rejects(
       () => fixture.fishing.setTeamSlot(createInput({ slot: 1, fishId: '붕어' })),
@@ -211,6 +226,9 @@ test('물고기팀설정은 보유 물고기만 팀에 넣고 물고기배틀은
     const battle = await fixture.fishing.battleFishTeam(createInput({ difficulty: 'hard', now: 60_000 }));
 
     assert.equal(battle.winner, 'player');
+    assert.equal(battle.opponentUserId, 'user-2');
+    assert.equal(battle.opponentLabel, '상대어부 팀');
+    assert.equal(battle.opponentProfile.userId, 'user-2');
     assert.equal(battle.profile.battle.wins, 1);
     assert.equal(battle.profile.battle.losses, 0);
     assert.ok(battle.log.length > 0);
@@ -390,13 +408,14 @@ function createFishingButtonInteraction({
 
 
 async function seedFishingProfile(store, overrides = {}) {
+  const userId = overrides.userId ?? 'user-1';
   await store.update((data) => {
     data.guilds ??= {};
     data.guilds['guild-1'] ??= {};
     data.guilds['guild-1'].fishing ??= { users: {} };
-    data.guilds['guild-1'].fishing.users['user-1'] = {
-      userId: 'user-1',
-      username: '테스터',
+    data.guilds['guild-1'].fishing.users[userId] = {
+      userId,
+      username: overrides.username ?? '테스터',
       rod: {
         level: overrides.rodLevel ?? 1,
         destroyedCount: 0,
@@ -411,7 +430,7 @@ async function seedFishingProfile(store, overrides = {}) {
         lastClaimedAt: 0,
         totalMinutes: 0
       },
-      team: [],
+      team: overrides.team ?? [],
       battle: {
         wins: 0,
         losses: 0,

@@ -11,7 +11,6 @@ import {
   getFishingRodAssetForLevel
 } from '../systems/fishing-assets.js';
 import {
-  getBattleDifficultyOptions,
   getFishConfig,
   getRarityLabel
 } from '../systems/fishing.js';
@@ -46,17 +45,11 @@ export const fishingCommands = [
     ),
   new SlashCommandBuilder()
     .setName('물고기배틀')
-    .setDescription('설정한 물고기 팀으로 야생 팀 또는 다른 유저와 배틀합니다.')
-    .addStringOption((option) =>
-      option
-        .setName('난이도')
-        .setDescription('야생 팀 배틀 난이도')
-        .addChoices(...getBattleDifficultyOptions())
-    )
+    .setDescription('설정한 물고기 팀으로 랜덤 기존 유저 또는 지정 유저와 배틀합니다.')
     .addUserOption((option) =>
       option
         .setName('상대')
-        .setDescription('비우면 야생 물고기 팀과 배틀합니다.')
+        .setDescription('비우면 물고기 팀을 가진 기존 유저 중 랜덤으로 매칭합니다.')
     )
 ];
 

@@ -926,6 +926,13 @@ test('랜덤 검배틀은 상대 없이 진행되고 승리 보상과 하루 제
       level: 5,
       sword: { level: 50, highestLevel: 50 }
     });
+    await seedProfile(fixture.store, {
+      userId: 'user-2',
+      username: '랜덤상대',
+      balance: 0,
+      level: 1,
+      sword: { level: 0, highestLevel: 0 }
+    });
 
     let last = null;
     for (let index = 0; index < 10; index += 1) {
@@ -937,6 +944,9 @@ test('랜덤 검배틀은 상대 없이 진행되고 승리 보상과 하루 제
       });
       assert.equal(last.battled, true);
       assert.equal(last.won, true);
+      assert.equal(last.opponent.userId, 'user-2');
+      assert.equal(last.opponent.username, '랜덤상대');
+      assert.equal(last.opponent.npc, false);
     }
     const blocked = await fixture.economy.playSwordRandomBattle({
       guildId: 'guild-1',

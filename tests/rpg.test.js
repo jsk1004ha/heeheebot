@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { createSqliteStore } from '../src/storage/sqlite-store.js';
 import { getRpgCommandPayloads, handleRpgCommand } from '../src/commands/rpg.js';
+import { createRpgVisualPayload } from '../src/commands/rpg/visual.js';
 import { EconomyService } from '../src/systems/economy.js';
 import {
   getRpgAreaConfig,
@@ -98,6 +99,18 @@ test('RPG 명령 payload는 전투와 상태 subcommand를 등록한다', () => 
   assert.ok(guildRaidCommand.options[0].choices.some((choice) => choice.name.includes('종말의 용')));
   const shopCommand = command.options.find((option) => option.name === '상점');
   assert.equal(shopCommand.options[0].choices.some((choice) => choice.name === '강화석'), false);
+});
+
+test('RPG 카드 본문은 긴 진행 설명을 짧게 압축한다', () => {
+  const content = [
+    '🧙 **RPG 긴 화면**',
+    ...Array.from({ length: 80 }, (_, index) => `- 아주 긴 설명 ${index + 1}: 버튼으로 이어가면 되는 내용을 반복해서 보여주는 줄입니다.`)
+  ].join('\n');
+
+  const payload = createRpgVisualPayload(content);
+
+  assert.ok(payload.embeds[0].data.description.length <= 1800);
+  assert.match(payload.embeds[0].data.description, /일부 내용 생략|아주 긴 설명/);
 });
 
 test('RPG 사냥터는 초중후반 구간에 넉넉하게 배치된다', () => {
@@ -670,7 +683,9 @@ test('RPG PvP 신청과 턴 진행도 embed 카드로 표시된다', async () =>
       userOptions: { 상대: target }
     });
     await handleRpgCommand(challenge, fixture.economy);
-    assertRpgEmbedCard(challenge.replies[0], /RPG PvP 대결 신청/);
+    assertRpgEmbedCard(challenge.replies[0], /RPG PvP 대결 신청/, { allowContent: true });
+    assert.match(challenge.replies[0].content, /<@user-2>/);
+    assert.deepEqual(challenge.replies[0].allowedMentions?.users, ['user-2']);
 
     const acceptId = getComponentCustomIds(challenge.replies[0])
       .find((customId) => customId.startsWith('rpg_pvp_accept:'));
@@ -678,13 +693,17 @@ test('RPG PvP 신청과 턴 진행도 embed 카드로 표시된다', async () =>
       user: { id: 'user-2', username: '마법사', bot: false }
     });
     await handleRpgCommand(accept, fixture.economy);
-    assertRpgEmbedCard(accept.updates[0], /RPG 턴제 PvP/);
+    assertRpgEmbedCard(accept.updates[0], /RPG 턴제 PvP/, { allowContent: true });
+    assert.match(accept.updates[0].content, /<@user-1>/);
+    assert.deepEqual(accept.updates[0].allowedMentions?.users, ['user-1']);
 
     const powerStrikeId = getComponentCustomIds(accept.updates[0])
       .find((customId) => customId.endsWith(':power_strike'));
     const attack = createRpgButtonInteraction(powerStrikeId);
     await handleRpgCommand(attack, fixture.economy);
-    assertRpgEmbedCard(attack.updates[0], /RPG 턴제 PvP/);
+    assertRpgEmbedCard(attack.updates[0], /RPG 턴제 PvP/, { allowContent: true });
+    assert.match(attack.updates[0].content, /<@user-2>/);
+    assert.deepEqual(attack.updates[0].allowedMentions?.users, ['user-2']);
     assert.match(getReplyText(attack.updates[0]), /최근 행동/);
   } finally {
     await fixture.cleanup();
@@ -2882,9 +2901,11 @@ function getReplyText(payload) {
     .join('\n');
 }
 
-function assertRpgEmbedCard(payload, titlePattern) {
+function assertRpgEmbedCard(payload, titlePattern, { allowContent = false } = {}) {
   assert.notEqual(typeof payload, 'string');
-  assert.equal(payload.content ?? null, null);
+  if (!allowContent) {
+    assert.equal(payload.content ?? null, null);
+  }
   assert.ok(payload.embeds?.length > 0);
   assert.match(payload.embeds[0].data.title, titlePattern);
   assert.ok(payload.embeds[0].data.description?.length > 0);
