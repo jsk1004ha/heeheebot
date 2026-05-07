@@ -9,6 +9,15 @@ const DEFAULT_RULES = Object.freeze({
   forbidOneShot: false
 });
 
+const HANGUL_BASE_CODE = 0xac00;
+const HANGUL_END_CODE = 0xd7a3;
+const HANGUL_VOWEL_COUNT = 21;
+const HANGUL_FINAL_COUNT = 28;
+const INITIAL_NIEUN_INDEX = 2;
+const INITIAL_RIEUL_INDEX = 5;
+const INITIAL_IEUNG_INDEX = 11;
+const DUEUM_IOTIZED_VOWEL_INDICES = new Set([2, 3, 6, 7, 12, 17, 19, 20]);
+
 export class KoreanWordDictionary {
   constructor(words) {
     const normalizedWords = [...new Set(words.map(normalizeKoreanWord).filter(Boolean))].sort();
@@ -63,11 +72,13 @@ export class KoreanWordDictionary {
       };
     }
 
-    if (requiredStart && getFirstSyllable(normalizedWord) !== requiredStart) {
+    const allowedStarts = getAllowedStartSyllables(requiredStart);
+
+    if (requiredStart && !allowedStarts.includes(getFirstSyllable(normalizedWord))) {
       return {
         valid: false,
         code: 'wrong_start',
-        reason: `**${requiredStart}**(으)로 시작해야 합니다.`
+        reason: `**${formatAllowedStartSyllables(requiredStart)}**(으)로 시작해야 합니다.`
       };
     }
 
@@ -112,7 +123,7 @@ export class KoreanWordDictionary {
     randomInt = defaultRandomInt
   } = {}) {
     const candidates = requiredStart
-      ? this.wordsByStart.get(requiredStart) ?? []
+      ? getAllowedStartSyllables(requiredStart).flatMap((start) => this.wordsByStart.get(start) ?? [])
       : this.words;
     const unusedCandidates = candidates.filter((word) => {
       if (usedWords.has(word)) return false;
@@ -130,7 +141,8 @@ export class KoreanWordDictionary {
     if (!this.wordSet.has(normalizedWord)) return false;
 
     const nextStart = getLastSyllable(normalizedWord);
-    const candidates = this.wordsByStart.get(nextStart) ?? [];
+    const candidates = getAllowedStartSyllables(nextStart)
+      .flatMap((start) => this.wordsByStart.get(start) ?? []);
 
     return candidates.some((candidate) => candidate !== normalizedWord && !usedWords.has(candidate));
   }
@@ -142,6 +154,7 @@ export class WordChainGame {
     dictionary,
     rules = {},
     botPlayerId = BOT_WORDCHAIN_PLAYER_ID,
+    botUsername = BOT_WORDCHAIN_PLAYER_NAME,
     randomInt = defaultRandomInt
   }) {
     if (!dictionary) {
@@ -161,6 +174,7 @@ export class WordChainGame {
       ...rules
     };
     this.botPlayerId = botPlayerId;
+    this.botUsername = botUsername;
     this.randomInt = randomInt;
     this.activePlayerIds = new Set(normalizedPlayers.map((player) => player.userId));
     this.usedWords = new Set();
@@ -220,6 +234,7 @@ export class WordChainGame {
       return {
         accepted: false,
         ...validation,
+        exampleWord: this.getExampleWord(),
         currentPlayer: player
       };
     }
@@ -262,6 +277,68 @@ export class WordChainGame {
       played: true,
       ...this.acceptWord(word)
     };
+  }
+
+  provideStarterWord() {
+    if (this.acceptedWords.length > 0 || this.lastWord) {
+      return {
+        provided: false,
+        code: 'already_started',
+        reason: '이미 시작 단어가 제공되었습니다.'
+      };
+    }
+
+    const word = this.dictionary.chooseWord({
+      usedWords: this.usedWords,
+      ...this.rules,
+      forbidOneShot: true,
+      randomInt: this.randomInt
+    }) ?? this.dictionary.chooseWord({
+      usedWords: this.usedWords,
+      ...this.rules,
+      randomInt: this.randomInt
+    });
+
+    if (!word) {
+      return {
+        provided: false,
+        code: 'no_starter_word',
+        reason: '희희봇이 제공할 시작 단어를 찾지 못했습니다.'
+      };
+    }
+
+    const normalizedWord = normalizeKoreanWord(word);
+    const starterPlayer = {
+      userId: this.botPlayerId,
+      username: this.botUsername,
+      bot: true
+    };
+
+    this.usedWords.add(normalizedWord);
+    this.acceptedWords.push({
+      player: starterPlayer,
+      word: normalizedWord,
+      starter: true
+    });
+    this.lastWord = normalizedWord;
+    this.requiredStart = getLastSyllable(normalizedWord);
+
+    return {
+      provided: true,
+      player: starterPlayer,
+      word: normalizedWord,
+      nextRequiredStart: this.requiredStart,
+      nextPlayer: this.currentPlayer
+    };
+  }
+
+  getExampleWord() {
+    return this.dictionary.chooseWord({
+      requiredStart: this.requiredStart,
+      usedWords: this.usedWords,
+      ...this.rules,
+      randomInt: this.randomInt
+    });
   }
 
   acceptWord(word) {
@@ -402,6 +479,57 @@ export function getLastSyllable(word) {
 
 export function getWordLength(word) {
   return [...word].length;
+}
+
+export function getAllowedStartSyllables(requiredStart) {
+  if (!requiredStart) return [];
+
+  const starts = [requiredStart];
+  const dueumStart = applyDueumLaw(requiredStart);
+
+  if (dueumStart && dueumStart !== requiredStart) {
+    starts.push(dueumStart);
+  }
+
+  return starts;
+}
+
+export function formatAllowedStartSyllables(requiredStart) {
+  return getAllowedStartSyllables(requiredStart).join('/');
+}
+
+function applyDueumLaw(syllable) {
+  const code = syllable.codePointAt(0);
+
+  if (!Number.isInteger(code) || code < HANGUL_BASE_CODE || code > HANGUL_END_CODE) {
+    return syllable;
+  }
+
+  const offset = code - HANGUL_BASE_CODE;
+  const initialIndex = Math.floor(offset / (HANGUL_VOWEL_COUNT * HANGUL_FINAL_COUNT));
+  const vowelIndex = Math.floor((offset % (HANGUL_VOWEL_COUNT * HANGUL_FINAL_COUNT)) / HANGUL_FINAL_COUNT);
+  const finalIndex = offset % HANGUL_FINAL_COUNT;
+
+  if (initialIndex === INITIAL_NIEUN_INDEX && DUEUM_IOTIZED_VOWEL_INDICES.has(vowelIndex)) {
+    return composeHangulSyllable(INITIAL_IEUNG_INDEX, vowelIndex, finalIndex);
+  }
+
+  if (initialIndex === INITIAL_RIEUL_INDEX) {
+    const dueumInitialIndex = DUEUM_IOTIZED_VOWEL_INDICES.has(vowelIndex)
+      ? INITIAL_IEUNG_INDEX
+      : INITIAL_NIEUN_INDEX;
+    return composeHangulSyllable(dueumInitialIndex, vowelIndex, finalIndex);
+  }
+
+  return syllable;
+}
+
+function composeHangulSyllable(initialIndex, vowelIndex, finalIndex) {
+  return String.fromCodePoint(
+    HANGUL_BASE_CODE
+      + (initialIndex * HANGUL_VOWEL_COUNT + vowelIndex) * HANGUL_FINAL_COUNT
+      + finalIndex
+  );
 }
 
 function normalizePlayers(players) {

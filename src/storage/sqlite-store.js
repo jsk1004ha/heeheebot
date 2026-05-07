@@ -327,13 +327,44 @@ function compareArrayNodeKeys(left, right) {
 }
 
 function toJsonCompatibleData(data) {
-  const serialized = JSON.stringify(data);
+  return normalizeJsonCompatibleValue(data, '<root>');
+}
 
-  if (serialized === undefined) {
-    throw new Error('SQLite store state must be JSON-compatible data.');
+function normalizeJsonCompatibleValue(value, path) {
+  if (value === null) return null;
+
+  if (Array.isArray(value)) {
+    return Array.from({ length: value.length }, (_, index) => {
+      if (!Object.hasOwn(value, index)) {
+        throw new Error(`SQLite store state contains a sparse array slot at ${path}[${index}].`);
+      }
+
+      return normalizeJsonCompatibleValue(value[index], `${path}[${index}]`);
+    });
   }
 
-  return JSON.parse(serialized);
+  switch (typeof value) {
+    case 'string':
+    case 'boolean':
+      return value;
+
+    case 'number':
+      if (!Number.isFinite(value)) {
+        throw new Error(`SQLite store state contains a non-finite number at ${path}.`);
+      }
+      return value;
+
+    case 'object': {
+      const normalized = {};
+      for (const [key, childValue] of Object.entries(value)) {
+        normalized[key] = normalizeJsonCompatibleValue(childValue, `${path}.${key}`);
+      }
+      return normalized;
+    }
+
+    default:
+      throw new Error(`SQLite store state contains unsupported value type ${typeof value} at ${path}.`);
+  }
 }
 
 function getNodeType(value) {

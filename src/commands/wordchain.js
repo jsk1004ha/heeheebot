@@ -9,7 +9,8 @@ import {
   BOT_WORDCHAIN_PLAYER_NAME,
   KoreanWordDictionary,
   WordChainGame,
-  createWordChainPlayers
+  createWordChainPlayers,
+  formatAllowedStartSyllables
 } from '../systems/wordchain.js';
 
 export const WORDCHAIN_COLLECTION_MS = 60_000;
@@ -53,7 +54,7 @@ export const wordChainCommands = [
     .addSubcommand((subcommand) =>
       subcommand
         .setName('시작')
-        .setDescription('1분 동안 참가자를 모집한 뒤 순서대로 진행합니다.')
+        .setDescription('1분 동안 참가자를 모집하거나 방장이 바로 시작해 끝말잇기를 진행합니다.')
         .addStringOption((option) =>
           option
             .setName('모드')
@@ -122,7 +123,7 @@ export async function handleWordChainMessage(message, economy, logger = console)
   });
 
   if (!result.accepted) {
-    await message.reply(`❌ ${result.reason}\n${formatTurnHint(state)}`);
+    await message.reply(formatRejectedWordReply(state, result));
     return true;
   }
 
@@ -242,6 +243,23 @@ async function handleWordChainButton(interaction, economy, logger, options) {
     return true;
   }
 
+  if (action === 'wordchain_start') {
+    if (interaction.user.id !== state.hostUserId) {
+      await interaction.reply({
+        content: '방장만 모집 시간을 건너뛰고 바로 시작할 수 있습니다.',
+        ephemeral: true
+      });
+      return true;
+    }
+
+    await interaction.update({
+      content: `${formatLobbyMessage(state)}\n\n▶️ 방장이 모집을 종료하고 게임을 바로 시작했습니다.`,
+      components: []
+    });
+    await beginWordChainGame(state, economy, logger);
+    return true;
+  }
+
   if (action === 'wordchain_leave') {
     if (interaction.user.id === state.hostUserId) {
       await interaction.reply({
@@ -291,8 +309,22 @@ async function beginWordChainGame(state, economy, logger) {
     dictionary: state.dictionary,
     rules: state.mode.rules,
     botPlayerId: state.botPlayerId,
+    botUsername: state.botUsername,
     randomInt: state.randomInt
   });
+
+  const starter = state.game.provideStarterWord();
+
+  if (!starter.provided) {
+    state.status = 'ended';
+    clearAllTimers(state);
+    activeGamesByChannel.delete(state.key);
+    activeGamesById.delete(state.id);
+    await state.channel.send(`⏹️ 끝말잇기 시작 취소: ${starter.reason}`);
+    return;
+  }
+
+  state.starterWord = starter;
 
   await state.channel.send(formatStartMessage(state));
   await continueWordChainGame(state, economy, logger);
@@ -328,7 +360,7 @@ async function playBotTurn(state, economy, logger) {
   const result = state.game.playBotTurn();
 
   if (result.played) {
-    await state.channel.send(`🤖 ${state.botUsername}: **${result.word}**\n다음 글자: **${result.nextRequiredStart}**`);
+    await state.channel.send(`🤖 ${state.botUsername}: **${result.word}**\n다음 글자: **${formatNextRequiredStart(result.nextRequiredStart)}**`);
   } else {
     await state.channel.send(`🤖 ${state.botUsername} 탈락! ${result.reason}`);
   }
@@ -406,8 +438,10 @@ function formatLobbyMessage(state) {
     `모드: **${state.mode.label}** — ${state.mode.description}`,
     `희희봇: **${state.includeBot ? '참가' : '미참가'}**`,
     `모집 시간: **${formatSeconds(state.collectionMs)}**`,
+    '방장 시작: 모집 시간이 끝나기 전에도 **방장 시작** 버튼으로 바로 시작 가능',
+    '시작 단어: 게임이 시작되면 희희봇이 먼저 제공합니다.',
     `진행: ${formatProgressMode(state)} 순서대로 진행`,
-    `규칙: 자기 차례에 ${formatSeconds(state.turnTimeoutMs)} 안에 DB에 있는 한국어 단어를 입력하세요. 성공 단어마다 제한시간이 ${formatSeconds(state.turnTimeoutDecreaseMs)}씩 줄고 최소 ${formatSeconds(state.minTurnTimeoutMs)}까지 내려갑니다. 답을 못하면 탈락합니다.`,
+    `규칙: 자기 차례에 ${formatSeconds(state.turnTimeoutMs)} 안에 DB에 있는 한국어 단어를 입력하세요. 두음법칙을 허용하며, 성공 단어마다 제한시간이 ${formatSeconds(state.turnTimeoutDecreaseMs)}씩 줄고 최소 ${formatSeconds(state.minTurnTimeoutMs)}까지 내려갑니다. 답을 못하면 탈락합니다.`,
     '',
     `참가자 (${state.participants.size}명):`,
     participants
@@ -425,13 +459,16 @@ function formatStartMessage(state) {
     `희희봇: **${state.includeBot ? '참가' : '미참가'}**`,
     '단어 DB: AutoKkutu KkutuDbDump 한국어 단어 357,644개',
     '',
+    `희희봇 시작 단어: **${state.starterWord.word}**`,
+    `첫 글자: **${formatNextRequiredStart(state.starterWord.nextRequiredStart)}**`,
+    '',
     '순서:',
     order
   ].join('\n');
 }
 
 function formatAcceptedWord(result) {
-  return `✅ ${formatPlayerMention(result.player)}: **${result.word}**\n다음 글자: **${result.nextRequiredStart}**`;
+  return `✅ ${formatPlayerMention(result.player)}: **${result.word}**\n다음 글자: **${formatNextRequiredStart(result.nextRequiredStart)}**`;
 }
 
 function formatTurnHint(state) {
@@ -447,7 +484,7 @@ function formatTurnHint(state) {
 
   requirements.push(
     state.game.requiredStart
-      ? `**${state.game.requiredStart}**(으)로 시작하는 단어`
+      ? `**${formatAllowedStartSyllables(state.game.requiredStart)}**(으)로 시작하는 단어`
       : '아무 한국어 단어'
   );
 
@@ -455,7 +492,8 @@ function formatTurnHint(state) {
 }
 
 export function getWordChainTurnTimeoutMs(state) {
-  const acceptedWordCount = state.game?.acceptedWords.length ?? 0;
+  const acceptedWords = state.game?.acceptedWords ?? [];
+  const acceptedWordCount = acceptedWords.filter((entry) => !entry.starter).length;
   const decreased = state.turnTimeoutMs - acceptedWordCount * state.turnTimeoutDecreaseMs;
 
   return Math.max(state.minTurnTimeoutMs, decreased);
@@ -523,10 +561,29 @@ function createLobbyActionRow(state) {
       .setLabel('참가')
       .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
+      .setCustomId(`wordchain_start:${state.id}`)
+      .setLabel('방장 시작')
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
       .setCustomId(`wordchain_leave:${state.id}`)
       .setLabel('나가기')
       .setStyle(ButtonStyle.Secondary)
   );
+}
+
+function formatRejectedWordReply(state, result) {
+  const lines = [`❌ ${result.reason}`];
+
+  if (result.exampleWord) {
+    lines.push(`예시 단어: **${result.exampleWord}**`);
+  }
+
+  lines.push(formatTurnHint(state));
+  return lines.join('\n');
+}
+
+function formatNextRequiredStart(requiredStart) {
+  return formatAllowedStartSyllables(requiredStart);
 }
 
 function createHumanParticipant(user) {
