@@ -126,6 +126,12 @@ async function buildTodayContext(interaction, services, { notice = null } = {}) 
         now
       })
     : null;
+  const seasonChallenges = services.seasons?.getChallenges
+    ? await services.seasons.getChallenges({
+        ...base,
+        now
+      })
+    : null;
 
   return {
     now,
@@ -135,7 +141,8 @@ async function buildTodayContext(interaction, services, { notice = null } = {}) 
     communityOverview,
     rpgStatus,
     swordStatus,
-    seasonOverview
+    seasonOverview,
+    seasonChallenges
   };
 }
 
@@ -155,6 +162,7 @@ export function formatTodayChecklist(context) {
     rpgStatus,
     swordStatus,
     seasonOverview,
+    seasonChallenges,
     notice,
     now
   } = context;
@@ -175,6 +183,7 @@ export function formatTodayChecklist(context) {
     swordStatus
   });
   const seasonClaimableRewards = seasonOverview?.rewards?.filter((reward) => reward.claimable) ?? [];
+  const seasonClaimableChallenges = getClaimableSeasonChallenges(seasonChallenges);
 
   return [
     `🗓️ **오늘 할 일** — ${user.username}`,
@@ -206,6 +215,9 @@ export function formatTodayChecklist(context) {
       : '- 시즌 정보를 불러오지 못했습니다.',
     seasonOverview
       ? `${seasonClaimableRewards.length > 0 ? '🎁' : '⬜'} **시즌 보상** — ${formatSeasonRewardSummary(seasonOverview.rewards)} (\`/시즌 보상\`)`
+      : null,
+    seasonChallenges
+      ? `${seasonClaimableChallenges.length > 0 ? '🎁' : '⬜'} **시즌 과제** — ${formatSeasonChallengeSummary(seasonChallenges)} (\`/시즌 과제\`)`
       : null,
     '',
     '🏫 **학교/생활**',
@@ -340,6 +352,23 @@ function formatSeasonRewardSummary(rewards = []) {
 
   const claimed = rewards.filter((reward) => reward.claimed).length;
   return `수령 **${claimed}/${rewards.length}개**`;
+}
+
+function getClaimableSeasonChallenges(challenges) {
+  return [...(challenges?.daily ?? []), ...(challenges?.weekly ?? [])]
+    .filter((challenge) => challenge.claimable);
+}
+
+function formatSeasonChallengeSummary(challenges) {
+  const daily = challenges.daily ?? [];
+  const weekly = challenges.weekly ?? [];
+  const claimable = getClaimableSeasonChallenges(challenges);
+
+  return [
+    `오늘 ${getCompletedCount(daily)}/${daily.length}개`,
+    `주간 ${getCompletedCount(weekly)}/${weekly.length}개`,
+    claimable.length > 0 ? `보상 가능 **${claimable.length.toLocaleString()}개**` : '보상 가능 없음'
+  ].join(' · ');
 }
 
 function getClaimableCommunityMissions(missions = []) {

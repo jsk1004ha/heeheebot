@@ -14,11 +14,11 @@ import {
   SeasonService
 } from '../src/systems/seasons.js';
 
-test('시즌 명령 payload는 정보, 랭킹, 보상 subcommand를 등록한다', () => {
+test('시즌 명령 payload는 정보, 랭킹, 보상, 과제 subcommand를 등록한다', () => {
   const [payload] = getSeasonCommandPayloads();
 
   assert.equal(payload.name, '시즌');
-  assert.deepEqual(payload.options.map((option) => option.name), ['정보', '랭킹', '보상']);
+  assert.deepEqual(payload.options.map((option) => option.name), ['정보', '랭킹', '보상', '과제', '과제보상']);
 });
 
 test('시즌 서비스는 포인트, 일일 상한, 보상 수령, 랭킹을 저장한다', async () => {
@@ -107,6 +107,128 @@ test('시즌 명령은 현재 시즌, 랭킹, 보상 수령을 응답한다', as
     assert.match(ranking.replies[0], /시즌 랭킹/);
     assert.match(reward.replies[0], /시즌 보상 수령/);
     assert.match(reward.replies[0], /시즌 불씨/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('시즌 과제는 일일/주간 활동 진행도와 중복 없는 보상 수령을 저장한다', async () => {
+  const fixture = await createFixture();
+  const now = Date.UTC(2026, 4, 7, 12);
+
+  try {
+    await fixture.seasons.awardPoints({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      source: SEASON_POINT_SOURCES.RPG_BATTLE_WIN,
+      points: 25,
+      now
+    });
+    await fixture.seasons.awardPoints({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      source: SEASON_POINT_SOURCES.SWORD_ENHANCE,
+      points: 15,
+      now
+    });
+
+    const board = await fixture.seasons.getChallenges({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      now
+    });
+    const claim = await fixture.seasons.claimChallengeRewards({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      now
+    });
+    const secondClaim = await fixture.seasons.claimChallengeRewards({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      now
+    });
+    const after = await fixture.seasons.getChallenges({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      now
+    });
+
+    assert.deepEqual(
+      board.daily.filter((challenge) => challenge.claimable).map((challenge) => challenge.id),
+      ['daily_rpg_battle', 'daily_sword_enhance']
+    );
+    assert.equal(board.weekly.find((challenge) => challenge.id === 'weekly_any_activity').progress, 40);
+    assert.deepEqual(claim.claimed.map((challenge) => challenge.id), ['daily_rpg_battle', 'daily_sword_enhance']);
+    assert.equal(claim.totalRewardPoints, 50);
+    assert.equal(claim.award.points, 50);
+    assert.equal(secondClaim.claimed.length, 0);
+    assert.equal(after.daily.find((challenge) => challenge.id === 'daily_rpg_battle').claimed, true);
+    assert.equal(after.profile.totalPoints, 90);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('시즌 과제 명령은 진행도와 수령 결과를 응답한다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await fixture.seasons.awardPoints({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      source: SEASON_POINT_SOURCES.RPG_BATTLE_WIN,
+      points: 25
+    });
+
+    const board = createSeasonInteraction('과제');
+    const claim = createSeasonInteraction('과제보상');
+
+    assert.equal(await handleSeasonCommand(board, fixture.seasons), true);
+    assert.equal(await handleSeasonCommand(claim, fixture.seasons), true);
+
+    assert.match(board.replies[0], /시즌 과제/);
+    assert.match(board.replies[0], /오늘의 첫 전투/);
+    assert.match(board.replies[0], /25 \/ 25점/);
+    assert.match(claim.replies[0], /시즌 과제 보상/);
+    assert.match(claim.replies[0], /오늘의 첫 전투/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('시즌 과제 보너스는 반복 활동 일일 상한에 막히지 않는다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await fixture.seasons.awardPoints({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      source: SEASON_POINT_SOURCES.RPG_BATTLE_WIN,
+      points: 300
+    });
+
+    const claim = await fixture.seasons.claimChallengeRewards({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사'
+    });
+    const overview = await fixture.seasons.getOverview({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사'
+    });
+
+    assert.equal(claim.claimed.find((challenge) => challenge.id === 'daily_rpg_battle')?.rewardPoints, 30);
+    assert.equal(claim.award.points >= 30, true);
+    assert.equal(overview.profile.totalPoints > 300, true);
   } finally {
     await fixture.cleanup();
   }

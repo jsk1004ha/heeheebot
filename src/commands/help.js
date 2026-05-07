@@ -29,6 +29,7 @@ const HELP_CATEGORIES = Object.freeze({
     fields: Object.freeze([
       { name: '기본', value: '`/시즌 정보` — 내 점수, 오늘 획득량, 보상 현황 확인' },
       { name: '경쟁', value: '`/시즌 랭킹` — 서버 시즌 포인트 순위 확인' },
+      { name: '과제', value: '`/시즌 과제` `/시즌 과제보상` — 오늘/주간 시즌 목표와 보너스 포인트 수령' },
       { name: '보상', value: '`/시즌 보상` — 달성한 시즌 배지 보상 수령' }
     ])
   }),

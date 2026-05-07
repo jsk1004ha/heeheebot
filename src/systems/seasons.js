@@ -1,4 +1,5 @@
 const DAY_MS = 24 * 60 * 60 * 1000;
+const WEEK_MS = 7 * DAY_MS;
 const KOREA_TIME_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 export const DEFAULT_SEASON_ID = 'heehee_season_1';
@@ -14,7 +15,8 @@ export const SEASON_POINT_SOURCES = Object.freeze({
   RPG_DAILY_CLAIM: 'rpg_daily_claim',
   SWORD_ENHANCE: 'sword_enhance',
   SWORD_BATTLE_WIN: 'sword_battle_win',
-  SWORD_BATTLE_PLAY: 'sword_battle_play'
+  SWORD_BATTLE_PLAY: 'sword_battle_play',
+  SEASON_CHALLENGE_CLAIM: 'season_challenge_claim'
 });
 
 export const SEASON_SOURCE_LABELS = Object.freeze({
@@ -22,8 +24,69 @@ export const SEASON_SOURCE_LABELS = Object.freeze({
   [SEASON_POINT_SOURCES.RPG_DAILY_CLAIM]: 'RPG 일일 의뢰',
   [SEASON_POINT_SOURCES.SWORD_ENHANCE]: '검 강화',
   [SEASON_POINT_SOURCES.SWORD_BATTLE_WIN]: '검배틀 승리',
-  [SEASON_POINT_SOURCES.SWORD_BATTLE_PLAY]: '검배틀 참가'
+  [SEASON_POINT_SOURCES.SWORD_BATTLE_PLAY]: '검배틀 참가',
+  [SEASON_POINT_SOURCES.SEASON_CHALLENGE_CLAIM]: '시즌 과제 보상'
 });
+
+export const SEASON_CHALLENGES = Object.freeze([
+  seasonChallenge({
+    id: 'daily_rpg_battle',
+    period: 'daily',
+    label: '오늘의 첫 전투',
+    description: 'RPG 전투 승리로 시즌 포인트 25점 획득',
+    requiredPoints: 25,
+    rewardPoints: 30,
+    sources: [SEASON_POINT_SOURCES.RPG_BATTLE_WIN]
+  }),
+  seasonChallenge({
+    id: 'daily_sword_enhance',
+    period: 'daily',
+    label: '대장장이 출근도장',
+    description: '검 강화로 시즌 포인트 15점 획득',
+    requiredPoints: 15,
+    rewardPoints: 20,
+    sources: [SEASON_POINT_SOURCES.SWORD_ENHANCE]
+  }),
+  seasonChallenge({
+    id: 'daily_sword_battle',
+    period: 'daily',
+    label: '검투장 입장',
+    description: '검배틀 참가 또는 승리로 시즌 포인트 8점 획득',
+    requiredPoints: 8,
+    rewardPoints: 20,
+    sources: [SEASON_POINT_SOURCES.SWORD_BATTLE_PLAY, SEASON_POINT_SOURCES.SWORD_BATTLE_WIN]
+  }),
+  seasonChallenge({
+    id: 'weekly_any_activity',
+    period: 'weekly',
+    label: '주간 시즌 러너',
+    description: '이번 주 시즌 활동 포인트 300점 획득',
+    requiredPoints: 300,
+    rewardPoints: 100
+  }),
+  seasonChallenge({
+    id: 'weekly_rpg_battle',
+    period: 'weekly',
+    label: '주간 던전 정복자',
+    description: '이번 주 RPG 전투 승리 포인트 125점 획득',
+    requiredPoints: 125,
+    rewardPoints: 80,
+    sources: [SEASON_POINT_SOURCES.RPG_BATTLE_WIN]
+  }),
+  seasonChallenge({
+    id: 'weekly_sword_master',
+    period: 'weekly',
+    label: '주간 검의 주인',
+    description: '이번 주 검 강화/검배틀 포인트 100점 획득',
+    requiredPoints: 100,
+    rewardPoints: 80,
+    sources: [
+      SEASON_POINT_SOURCES.SWORD_ENHANCE,
+      SEASON_POINT_SOURCES.SWORD_BATTLE_PLAY,
+      SEASON_POINT_SOURCES.SWORD_BATTLE_WIN
+    ]
+  })
+]);
 
 export const SEASON_REWARDS = Object.freeze([
   Object.freeze({
@@ -89,52 +152,88 @@ export class SeasonService {
     return this.store.update((data) => {
       const seasons = getOrCreateGuildSeasonState(data, guildId);
       const profile = getOrCreateSeasonProfile(seasons, userId, username);
-      const dayKey = getSeasonDayKey(now);
-      const daily = getOrCreateDailyBucket(profile, dayKey);
-      const remaining = Math.max(0, this.options.dailyPointCap - daily.total);
-      const granted = Math.min(normalizedPoints, remaining);
-
-      if (granted <= 0) {
-        return {
-          awarded: false,
-          capped: true,
-          points: 0,
-          requestedPoints: normalizedPoints,
-          totalPoints: profile.totalPoints,
-          season: { ...DEFAULT_SEASON },
-          source: normalizedSource,
-          sourceLabel: SEASON_SOURCE_LABELS[normalizedSource],
-          dailyRemaining: 0,
-          profile: cloneSeasonProfile(profile)
-        };
-      }
-
-      profile.username = username;
-      profile.totalPoints += granted;
-      profile.updatedAt = now;
-      daily.total += granted;
-      daily.sources[normalizedSource] = (daily.sources[normalizedSource] ?? 0) + granted;
-      seasons.ledger.unshift({
-        at: now,
+      return grantSeasonPoints({
+        seasons,
+        profile,
         userId,
         username,
         source: normalizedSource,
-        points: granted
+        points: normalizedPoints,
+        now,
+        dailyPointCap: this.options.dailyPointCap,
+        maxLedgerEntries: this.options.maxLedgerEntries
       });
-      seasons.ledger = seasons.ledger.slice(0, this.options.maxLedgerEntries);
+    });
+  }
+
+  async getChallenges({ guildId, userId, username = 'Unknown', now = Date.now() }) {
+    return this.store.update((data) => {
+      const seasons = getOrCreateGuildSeasonState(data, guildId);
+      const profile = getOrCreateSeasonProfile(seasons, userId, username);
+      return buildChallengeBoard(profile, now);
+    });
+  }
+
+  async claimChallengeRewards({
+    guildId,
+    userId,
+    username = 'Unknown',
+    period = 'all',
+    now = Date.now()
+  }) {
+    const normalizedPeriod = normalizeChallengeClaimPeriod(period);
+
+    return this.store.update((data) => {
+      const seasons = getOrCreateGuildSeasonState(data, guildId);
+      const profile = getOrCreateSeasonProfile(seasons, userId, username);
+      const board = buildChallengeBoard(profile, now);
+      const candidates = normalizedPeriod === 'all'
+        ? [...board.daily, ...board.weekly]
+        : board[normalizedPeriod];
+      const claimable = candidates.filter((challenge) => challenge.claimable);
+      const totalRewardPoints = claimable.reduce((sum, challenge) => sum + challenge.rewardPoints, 0);
+
+      if (claimable.length <= 0) {
+        return {
+          season: { ...DEFAULT_SEASON },
+          claimed: [],
+          totalRewardPoints: 0,
+          award: null,
+          profile: cloneSeasonProfile(profile),
+          challenges: buildChallengeBoard(profile, now)
+        };
+      }
+
+      profile.claimedChallengeKeys ??= {};
+      for (const challenge of claimable) {
+        profile.claimedChallengeKeys[challenge.claimKey] = now;
+      }
+
+      const award = grantSeasonPoints({
+        seasons,
+        profile,
+        userId,
+        username,
+        source: SEASON_POINT_SOURCES.SEASON_CHALLENGE_CLAIM,
+        points: totalRewardPoints,
+        now,
+        dailyPointCap: this.options.dailyPointCap,
+        maxLedgerEntries: this.options.maxLedgerEntries,
+        applyDailyCap: false
+      });
 
       return {
-        awarded: true,
-        capped: granted < normalizedPoints,
-        points: granted,
-        requestedPoints: normalizedPoints,
-        totalPoints: profile.totalPoints,
         season: { ...DEFAULT_SEASON },
-        source: normalizedSource,
-        sourceLabel: SEASON_SOURCE_LABELS[normalizedSource],
-        dailyRemaining: Math.max(0, this.options.dailyPointCap - daily.total),
+        claimed: claimable.map((challenge) => ({
+          ...challenge,
+          claimed: true,
+          claimable: false,
+          claimedAt: now
+        })),
+        totalRewardPoints,
+        award,
         profile: cloneSeasonProfile(profile),
-        newlyClaimableRewards: buildRewardStatuses(profile).filter((reward) => reward.claimable)
+        challenges: buildChallengeBoard(profile, now)
       };
     });
   }
@@ -185,7 +284,9 @@ function getOrCreateSeasonProfile(seasons, userId, username) {
     username,
     totalPoints: 0,
     claimedRewardIds: {},
+    claimedChallengeKeys: {},
     daily: {},
+    weekly: {},
     updatedAt: 0
   };
 
@@ -193,7 +294,9 @@ function getOrCreateSeasonProfile(seasons, userId, username) {
   profile.username = username || profile.username || 'Unknown';
   profile.totalPoints = Math.max(0, Math.floor(Number(profile.totalPoints) || 0));
   profile.claimedRewardIds ??= {};
+  profile.claimedChallengeKeys ??= {};
   profile.daily ??= {};
+  profile.weekly ??= {};
   return profile;
 }
 
@@ -205,6 +308,17 @@ function getOrCreateDailyBucket(profile, dayKey) {
   profile.daily[dayKey].total = Math.max(0, Math.floor(Number(profile.daily[dayKey].total) || 0));
   profile.daily[dayKey].sources ??= {};
   return profile.daily[dayKey];
+}
+
+function getOrCreateWeeklyBucket(profile, weekKey) {
+  profile.weekly ??= {};
+  profile.weekly[weekKey] ??= {
+    total: 0,
+    sources: {}
+  };
+  profile.weekly[weekKey].total = Math.max(0, Math.floor(Number(profile.weekly[weekKey].total) || 0));
+  profile.weekly[weekKey].sources ??= {};
+  return profile.weekly[weekKey];
 }
 
 function buildRewardStatuses(profile) {
@@ -261,9 +375,129 @@ function cloneSeasonProfile(profile) {
     username: profile.username,
     totalPoints: Math.max(0, Math.floor(Number(profile.totalPoints) || 0)),
     claimedRewardIds: { ...(profile.claimedRewardIds ?? {}) },
+    claimedChallengeKeys: { ...(profile.claimedChallengeKeys ?? {}) },
     daily: structuredClone(profile.daily ?? {}),
+    weekly: structuredClone(profile.weekly ?? {}),
     updatedAt: profile.updatedAt ?? 0
   };
+}
+
+function grantSeasonPoints({
+  seasons,
+  profile,
+  userId,
+  username,
+  source,
+  points,
+  now,
+  dailyPointCap,
+  maxLedgerEntries,
+  applyDailyCap = true
+}) {
+  const dayKey = getSeasonDayKey(now);
+  const weekKey = getSeasonWeekKey(now);
+  const daily = getOrCreateDailyBucket(profile, dayKey);
+  const weekly = getOrCreateWeeklyBucket(profile, weekKey);
+  const remaining = Math.max(0, dailyPointCap - daily.total);
+  const granted = applyDailyCap ? Math.min(points, remaining) : points;
+
+  if (granted <= 0) {
+    return {
+      awarded: false,
+      capped: true,
+      points: 0,
+      requestedPoints: points,
+      totalPoints: profile.totalPoints,
+      season: { ...DEFAULT_SEASON },
+      source,
+      sourceLabel: SEASON_SOURCE_LABELS[source],
+      dailyRemaining: 0,
+      profile: cloneSeasonProfile(profile)
+    };
+  }
+
+  profile.username = username;
+  profile.totalPoints += granted;
+  profile.updatedAt = now;
+  daily.total += granted;
+  daily.sources[source] = (daily.sources[source] ?? 0) + granted;
+  weekly.total += granted;
+  weekly.sources[source] = (weekly.sources[source] ?? 0) + granted;
+  seasons.ledger.unshift({
+    at: now,
+    userId,
+    username,
+    source,
+    points: granted
+  });
+  seasons.ledger = seasons.ledger.slice(0, maxLedgerEntries);
+
+  return {
+    awarded: true,
+    capped: granted < points,
+    points: granted,
+    requestedPoints: points,
+    totalPoints: profile.totalPoints,
+    season: { ...DEFAULT_SEASON },
+    source,
+    sourceLabel: SEASON_SOURCE_LABELS[source],
+    dailyRemaining: Math.max(0, dailyPointCap - daily.total),
+    profile: cloneSeasonProfile(profile),
+    newlyClaimableRewards: buildRewardStatuses(profile).filter((reward) => reward.claimable)
+  };
+}
+
+function buildChallengeBoard(profile, now) {
+  const dailyKey = getSeasonDayKey(now);
+  const weeklyKey = getSeasonWeekKey(now);
+  const dailyBucket = profile.daily?.[dailyKey] ?? { total: 0, sources: {} };
+  const weeklyBucket = profile.weekly?.[weeklyKey] ?? { total: 0, sources: {} };
+  const statuses = SEASON_CHALLENGES.map((challenge) => {
+    const periodKey = challenge.period === 'daily' ? dailyKey : weeklyKey;
+    const bucket = challenge.period === 'daily' ? dailyBucket : weeklyBucket;
+    return buildChallengeStatus(challenge, bucket, profile, periodKey);
+  });
+
+  return {
+    season: { ...DEFAULT_SEASON },
+    profile: cloneSeasonProfile(profile),
+    dailyKey,
+    weeklyKey,
+    daily: statuses.filter((challenge) => challenge.period === 'daily'),
+    weekly: statuses.filter((challenge) => challenge.period === 'weekly')
+  };
+}
+
+function buildChallengeStatus(challenge, bucket, profile, periodKey) {
+  const progress = getChallengeProgress(challenge, bucket);
+  const claimKey = `${challenge.period}:${periodKey}:${challenge.id}`;
+  const claimedAt = profile.claimedChallengeKeys?.[claimKey] ?? 0;
+  const completed = progress >= challenge.requiredPoints;
+
+  return {
+    ...challenge,
+    progress,
+    completed,
+    claimed: claimedAt > 0,
+    claimedAt,
+    claimKey,
+    claimable: completed && claimedAt <= 0
+  };
+}
+
+function getChallengeProgress(challenge, bucket) {
+  const sources = bucket.sources ?? {};
+  if (challenge.sources.length > 0) {
+    return challenge.sources.reduce((sum, source) => sum + normalizeStoredPoints(sources[source]), 0);
+  }
+
+  return Object.entries(sources)
+    .filter(([source]) => source !== SEASON_POINT_SOURCES.SEASON_CHALLENGE_CLAIM)
+    .reduce((sum, [, points]) => sum + normalizeStoredPoints(points), 0);
+}
+
+function normalizeStoredPoints(value) {
+  return Math.max(0, Math.floor(Number(value) || 0));
 }
 
 function normalizePositiveInteger(value) {
@@ -284,4 +518,36 @@ function normalizeSeasonSource(source) {
 
 function getSeasonDayKey(now) {
   return String(Math.floor((Number(now) + KOREA_TIME_OFFSET_MS) / DAY_MS));
+}
+
+function getSeasonWeekKey(now) {
+  return String(Math.floor((Number(now) + KOREA_TIME_OFFSET_MS) / WEEK_MS));
+}
+
+function normalizeChallengeClaimPeriod(period) {
+  const normalized = String(period ?? 'all').trim();
+  if (['all', 'daily', 'weekly'].includes(normalized)) {
+    return normalized;
+  }
+  throw new Error('알 수 없는 시즌 과제 보상 범위입니다.');
+}
+
+function seasonChallenge({
+  id,
+  period,
+  label,
+  description,
+  requiredPoints,
+  rewardPoints,
+  sources = []
+}) {
+  return Object.freeze({
+    id,
+    period,
+    label,
+    description,
+    requiredPoints,
+    rewardPoints,
+    sources: Object.freeze([...sources])
+  });
 }

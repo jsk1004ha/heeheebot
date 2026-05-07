@@ -19,6 +19,16 @@ export const seasonCommands = [
         .setName('보상')
         .setDescription('달성한 시즌 보상을 한 번에 수령합니다.')
     )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('과제')
+        .setDescription('오늘/이번 주 시즌 과제 진행도를 확인합니다.')
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('과제보상')
+        .setDescription('완료한 시즌 과제 보너스 포인트를 수령합니다.')
+    )
 ];
 
 export function getSeasonCommandPayloads() {
@@ -61,6 +71,16 @@ export async function handleSeasonCommand(interaction, seasons, logger = console
 
     if (subcommand === '보상') {
       await interaction.reply(formatSeasonRewardClaim(await seasons.claimRewards(context)));
+      return true;
+    }
+
+    if (subcommand === '과제') {
+      await interaction.reply(formatSeasonChallenges(await seasons.getChallenges(context)));
+      return true;
+    }
+
+    if (subcommand === '과제보상') {
+      await interaction.reply(formatSeasonChallengeClaim(await seasons.claimChallengeRewards(context)));
       return true;
     }
 
@@ -116,7 +136,7 @@ function formatSeasonOverview(overview) {
     '🏅 **상위 랭킹 미리보기**',
     leaderboard,
     '',
-    '`/시즌 보상`으로 달성한 보상을 받을 수 있습니다.'
+    '`/시즌 과제`로 오늘/이번 주 목표를 보고, `/시즌 보상`으로 달성한 보상을 받을 수 있습니다.'
   ].join('\n');
 }
 
@@ -143,5 +163,57 @@ function formatSeasonRewardClaim(result) {
     `수령 보상: ${result.claimed.map((reward) => `**${reward.label}**`).join(', ')}`,
     `현재 점수: **${result.profile.totalPoints.toLocaleString()}점**`,
     '보상은 시즌 기록에 영구 저장됩니다.'
+  ].join('\n');
+}
+
+function formatSeasonChallenges(board) {
+  const dailyRows = board.daily.map(formatSeasonChallengeRow).join('\n');
+  const weeklyRows = board.weekly.map(formatSeasonChallengeRow).join('\n');
+  const claimableCount = [...board.daily, ...board.weekly].filter((challenge) => challenge.claimable).length;
+
+  return [
+    `🏆 **시즌 과제** — ${board.season.name}`,
+    `내 점수: **${board.profile.totalPoints.toLocaleString()}점** · 수령 가능 과제 **${claimableCount}개**`,
+    '',
+    '🌅 **오늘 과제**',
+    dailyRows,
+    '',
+    '📆 **이번 주 과제**',
+    weeklyRows,
+    '',
+    claimableCount > 0
+      ? '`/시즌 과제보상`으로 완료한 과제 보너스를 받을 수 있습니다.'
+      : '과제를 완료하면 `/시즌 과제보상`으로 보너스 시즌 포인트를 받을 수 있습니다.'
+  ].join('\n');
+}
+
+function formatSeasonChallengeClaim(result) {
+  if (result.claimed.length <= 0) {
+    return [
+      '🏆 **시즌 과제 보상**',
+      '지금 수령 가능한 시즌 과제가 없습니다.',
+      'RPG 전투, 검강화, 검배틀로 오늘/이번 주 과제 진행도를 채워보세요.'
+    ].join('\n');
+  }
+
+  const claimedRows = result.claimed
+    .map((challenge) => `- **${challenge.label}** +${challenge.rewardPoints.toLocaleString()}점`)
+    .join('\n');
+  const awardLine = formatSeasonAwardLine(result.award);
+
+  return [
+    '🏆 **시즌 과제 보상**',
+    claimedRows,
+    `총 보너스: **+${result.totalRewardPoints.toLocaleString()}점**`,
+    awardLine,
+    `현재 점수: **${result.profile.totalPoints.toLocaleString()}점**`
+  ].filter(Boolean).join('\n');
+}
+
+function formatSeasonChallengeRow(challenge) {
+  const marker = challenge.claimed ? '✅' : challenge.claimable ? '🎁' : challenge.completed ? '⬜' : '🔒';
+  return [
+    `- ${marker} **${challenge.label}** — ${challenge.progress.toLocaleString()} / ${challenge.requiredPoints.toLocaleString()}점 · 보상 +${challenge.rewardPoints.toLocaleString()}점`,
+    `  ${challenge.description}`
   ].join('\n');
 }
