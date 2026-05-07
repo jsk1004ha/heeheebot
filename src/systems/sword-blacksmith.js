@@ -4,7 +4,13 @@ import { fileURLToPath } from 'node:url';
 
 const CURRENT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(CURRENT_DIR, '..', '..');
-const BLACKSMITH_ASSET_PATH = join(REPO_ROOT, 'assets', 'sword', 'blacksmith', 'blacksmith.png');
+const BLACKSMITH_ASSET_ROOT = join(REPO_ROOT, 'assets', 'sword', 'blacksmith');
+
+const BLACKSMITH_ASSET_FILES = Object.freeze({
+  success: 'blacksmith_success.png',
+  maintain: 'blacksmith_maintain.png',
+  destroy: 'blacksmith_destroy.png'
+});
 
 const BLACKSMITH_MESSAGES = Object.freeze({
   success: Object.freeze([
@@ -39,12 +45,16 @@ const BLACKSMITH_MESSAGES = Object.freeze({
   ])
 });
 
-export function getBlacksmithAssetAttachment() {
-  if (!existsSync(BLACKSMITH_ASSET_PATH)) return null;
+export function getBlacksmithAssetAttachment(outcome = 'maintain') {
+  const normalizedOutcome = normalizeBlacksmithOutcome(outcome);
+  const fileName = BLACKSMITH_ASSET_FILES[normalizedOutcome];
+  const filePath = join(BLACKSMITH_ASSET_ROOT, fileName);
+
+  if (!existsSync(filePath)) return null;
 
   return {
-    attachment: BLACKSMITH_ASSET_PATH,
-    name: 'blacksmith.png'
+    attachment: filePath,
+    name: fileName
   };
 }
 
@@ -53,11 +63,45 @@ export function formatBlacksmithEnhancementLine(result) {
 }
 
 export function getBlacksmithEnhancementMessage(result) {
+  const specialMessage = getSpecialBlacksmithMessage(result);
+  if (specialMessage) return specialMessage;
+
   const outcome = result?.outcome;
   const messages = BLACKSMITH_MESSAGES[outcome] ?? BLACKSMITH_MESSAGES.maintain;
   const seed = getMessageSeed(result);
 
   return messages[seed % messages.length];
+}
+
+function getSpecialBlacksmithMessage(result = {}) {
+  const beforeLevel = Math.max(0, Number(result.beforeLevel) || 0);
+  const afterLevel = Math.max(0, Number(result.afterLevel) || 0);
+
+  if (result.outcome === 'success' && afterLevel >= 100) {
+    return '서버 전체에 알려라. +100 전설이 모루에서 태어났다!';
+  }
+
+  if (result.outcome === 'success' && afterLevel >= 80) {
+    return '검의 신화가 가까워졌다. 이 정도 고강화가 붙으면 내 망치도 떨린다.';
+  }
+
+  if (result.outcome === 'success' && afterLevel >= 50) {
+    return '+50 고지를 넘겼다. 이제 검에서 주인보다 기운이 세게 난다.';
+  }
+
+  if (result.outcome === 'destroy' && beforeLevel >= 80) {
+    return '장례식 준비해라... 고강화 검이 숯이 됐다. 조문은 내가 먼저 하마.';
+  }
+
+  if (result.outcome === 'destroy' && beforeLevel >= 50) {
+    return '큰 검이 크게 울었다. 아프지만 이 정도 전설은 다시 세울 가치가 있다.';
+  }
+
+  return null;
+}
+
+function normalizeBlacksmithOutcome(outcome) {
+  return Object.hasOwn(BLACKSMITH_ASSET_FILES, outcome) ? outcome : 'maintain';
 }
 
 function getMessageSeed(result = {}) {

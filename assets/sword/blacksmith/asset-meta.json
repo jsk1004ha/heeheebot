@@ -1,10 +1,15 @@
 {
-  "id": "sword_blacksmith",
-  "role": "sword enhancement NPC thumbnail",
-  "source": "/home/jio/.codex/generated_images/019dfd96-21ac-7661-a40e-ce58d64ca566/ig_00f95e77ca4aa3f10169fbdc16c7a48191a1adcce37b933db7.png",
-  "raw": "assets/sword/blacksmith/blacksmith-raw.png",
-  "alphaSource": "assets/sword/blacksmith/blacksmith-alpha.png",
-  "output": "assets/sword/blacksmith/blacksmith.png",
+  "role": "sword enhancement NPC thumbnails",
+  "outputs": {
+    "success": "assets/sword/blacksmith/blacksmith_success.png",
+    "maintain": "assets/sword/blacksmith/blacksmith_maintain.png",
+    "destroy": "assets/sword/blacksmith/blacksmith_destroy.png"
+  },
+  "sources": {
+    "success": "/home/jio/.codex/generated_images/019dfd96-21ac-7661-a40e-ce58d64ca566/ig_00f95e77ca4aa3f10169fbe15387188191ac9fe3be9bf5894d.png",
+    "maintain": "/home/jio/.codex/generated_images/019dfd96-21ac-7661-a40e-ce58d64ca566/ig_00f95e77ca4aa3f10169fbe19fa7148191839d1062223d1f8b.png",
+    "destroy": "/home/jio/.codex/generated_images/019dfd96-21ac-7661-a40e-ce58d64ca566/ig_00f95e77ca4aa3f10169fbe1e740188191a08638c2a953569a.png"
+  },
   "size": "512x512",
   "backgroundRemoval": "chroma-key #ff00ff via remove_chroma_key.py"
 }

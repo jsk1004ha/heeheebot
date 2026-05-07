@@ -54,6 +54,8 @@ import {
   MAX_DAILY_SWORD_BATTLE_STONES,
   MAX_SWORD_LEVEL,
   createRandomSwordOpponent,
+  getAdvancedSwordEnhanceConfig,
+  getSwordEnhanceConfig,
   getSwordSellValue,
   resolveSwordBattle as resolveSwordBattleResult,
   resolveSwordEnhancement
@@ -1330,11 +1332,43 @@ export class EconomyService {
 
       return {
         profile: cloneProfile(profile),
+        saleValue: getSwordSellValue(profile.sword.level),
+        normalEnhance: getSwordEnhanceConfig(profile.sword.level),
+        advancedEnhance: getAdvancedSwordEnhanceConfig(profile.sword.level),
         giftAvailable: profile.sword.lastGiftDay !== today,
         giftRemainingMs: profile.sword.lastGiftDay === today ? getNextDayStartMs(now) - now : 0,
         battleRemaining: Math.max(0, MAX_DAILY_SWORD_BATTLES - profile.sword.battlesToday),
         battleStoneRemaining: Math.max(0, MAX_DAILY_SWORD_BATTLE_STONES - profile.sword.battleStonesToday)
       };
+    });
+  }
+
+  async getSwordLeaderboard(guildId, category = 'highestLevel', limit = 10) {
+    const normalizedCategory = normalizeSwordLeaderboardCategory(category);
+    const safeLimit = Math.min(20, Math.max(1, Number(limit) || 10));
+
+    return this.store.update((data) => {
+      const guild = data.guilds?.[guildId];
+      if (!guild) return [];
+
+      return Object.entries(guild.users ?? {})
+        .map(([userId, profile]) => {
+          const normalizedProfile = cloneProfile(getOrCreateProfile(data, guildId, userId, profile?.username, this));
+          return {
+            ...normalizedProfile,
+            metric: normalizedProfile.sword[normalizedCategory] ?? 0
+          };
+        })
+        .filter((profile) => profile.metric > 0)
+        .sort((a, b) => {
+          if (b.metric !== a.metric) return b.metric - a.metric;
+          if (b.sword.highestLevel !== a.sword.highestLevel) {
+            return b.sword.highestLevel - a.sword.highestLevel;
+          }
+          if (b.level !== a.level) return b.level - a.level;
+          return b.balance - a.balance;
+        })
+        .slice(0, safeLimit);
     });
   }
 
@@ -1836,6 +1870,15 @@ function normalizeNonNegativeInteger(value, label) {
   }
 
   return normalized;
+}
+
+function normalizeSwordLeaderboardCategory(category) {
+  const normalized = String(category || 'highestLevel');
+  if (['highestLevel', 'saleEarnings', 'destructions'].includes(normalized)) {
+    return normalized;
+  }
+
+  return 'highestLevel';
 }
 
 function normalizeWordChainParticipants(participants) {

@@ -1,7 +1,11 @@
-# Sword Blacksmith Asset
+# Sword Blacksmith Assets
 
-`blacksmith.png` is the Discord embed thumbnail for `/검강화` and `/검상급강화` result messages.
+These transparent PNGs are Discord embed thumbnails for sword enhancement results.
 
-- `blacksmith-raw.png`: original generated chroma-key image
-- `blacksmith-alpha.png`: background-removed intermediate
-- `blacksmith.png`: final 512×512 transparent PNG used by the bot
+- `blacksmith_success.png`: `/검강화` or `/검상급강화` success result
+- `blacksmith_maintain.png`: maintained / not upgraded result
+- `blacksmith_destroy.png`: destroyed sword result
+- `blacksmith_*_raw.png`: original generated chroma-key sources
+- `blacksmith_*_alpha.png`: background-removed intermediates
+
+The bot attaches these images internally as Discord files; user-facing responses do not expose asset IDs.

@@ -1,4 +1,7 @@
 import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   EmbedBuilder,
   SlashCommandBuilder
 } from 'discord.js';
@@ -21,8 +24,31 @@ export const swordCommands = [
     .setName('검상급강화')
     .setDescription('제련석을 사용해 파괴 없이 검을 강화합니다. +90 이하에서만 가능합니다.'),
   new SlashCommandBuilder()
+    .setName('검정보')
+    .setDescription('현재 검, 다음 강화 확률/비용, 판매가와 전적을 확인합니다.'),
+  new SlashCommandBuilder()
     .setName('검판매')
     .setDescription('현재 강화된 검을 판매하고 돈을 받습니다. 판매 후 검은 +0으로 돌아갑니다.'),
+  new SlashCommandBuilder()
+    .setName('검랭킹')
+    .setDescription('서버의 검 최고강화, 판매금, 파괴횟수 랭킹을 확인합니다.')
+    .addStringOption((option) =>
+      option
+        .setName('종류')
+        .setDescription('확인할 검 랭킹 종류')
+        .addChoices(
+          { name: '최고강화', value: 'highestLevel' },
+          { name: '판매금', value: 'saleEarnings' },
+          { name: '파괴횟수', value: 'destructions' }
+        )
+    )
+    .addIntegerOption((option) =>
+      option
+        .setName('개수')
+        .setDescription('표시할 인원 수')
+        .setMinValue(1)
+        .setMaxValue(20)
+    ),
   new SlashCommandBuilder()
     .setName('검배틀')
     .setDescription('검으로 랜덤 상대 또는 다른 유저와 배틀합니다. 하루 10회 제한입니다.')
@@ -42,7 +68,7 @@ export function getSwordCommandPayloads() {
 
 export async function handleSwordCommand(interaction, economy, logger = console) {
   if (interaction.isButton()) {
-    return false;
+    return handleSwordButton(interaction, economy, logger);
   }
 
   if (!interaction.isChatInputCommand() || !isSwordCommand(interaction.commandName)) {
@@ -81,7 +107,10 @@ async function routeSwordCommand(interaction, economy) {
       formatSwordEnhancement(user, result),
       getSwordEnhancementImageLevel(result),
       getSwordEnhancementImageTitle(result),
-      { includeBlacksmith: true }
+      {
+        includeBlacksmith: true,
+        blacksmithOutcome: result.outcome
+      }
     ));
     return;
   }
@@ -96,7 +125,24 @@ async function routeSwordCommand(interaction, economy) {
       formatSwordEnhancement(user, result),
       getSwordEnhancementImageLevel(result),
       getSwordEnhancementImageTitle(result),
-      { includeBlacksmith: true }
+      {
+        includeBlacksmith: true,
+        blacksmithOutcome: result.outcome
+      }
+    ));
+    return;
+  }
+
+  if (interaction.commandName === '검정보') {
+    const result = await economy.getSwordStatus({
+      guildId,
+      userId: user.id,
+      username: user.username
+    });
+    await interaction.reply(createSwordReplyPayload(
+      formatSwordInfo(user, result),
+      result.profile.sword.level,
+      `내 검 정보 — ${getSwordAssetLabel(result.profile.sword.level)}`
     ));
     return;
   }
@@ -125,16 +171,40 @@ async function routeSwordCommand(interaction, economy) {
   }
 
   if (interaction.commandName === '검판매') {
-    const result = await economy.sellSword({
+    const result = await economy.getSwordStatus({
       guildId,
       userId: user.id,
       username: user.username
     });
+
+    if (result.saleValue <= 0) {
+      await interaction.reply({
+        content: '판매할 검이 없습니다. +1 이상 강화된 검만 판매할 수 있습니다.',
+        ephemeral: true
+      });
+      return;
+    }
+
     await interaction.reply(createSwordReplyPayload(
-      formatSwordSale(user, result),
-      result.beforeLevel,
-      `판매한 검 — ${getSwordAssetLabel(result.beforeLevel)}`
+      formatSwordSalePreview(user, result),
+      result.profile.sword.level,
+      `판매 예정 검 — ${getSwordAssetLabel(result.profile.sword.level)}`,
+      { components: [createSwordSellConfirmRow(user.id)] }
     ));
+    return;
+  }
+
+  if (interaction.commandName === '검랭킹') {
+    const category = interaction.options.getString('종류') ?? 'highestLevel';
+    const limit = interaction.options.getInteger('개수') ?? 10;
+    const rows = await economy.getSwordLeaderboard(guildId, category, limit);
+
+    if (rows.length === 0) {
+      await interaction.reply('아직 검 랭킹 데이터가 없습니다.');
+      return;
+    }
+
+    await interaction.reply(formatSwordLeaderboard(rows, category));
     return;
   }
 
@@ -179,6 +249,58 @@ async function routeSwordCommand(interaction, economy) {
   }
 }
 
+async function handleSwordButton(interaction, economy, logger = console) {
+  if (!interaction.customId?.startsWith('sword_sell_')) return false;
+
+  const [action, userId] = interaction.customId.split(':');
+
+  if (interaction.user.id !== userId) {
+    await interaction.reply({
+      content: '이 검 판매 확인 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
+      ephemeral: true
+    });
+    return true;
+  }
+
+  if (action === 'sword_sell_cancel') {
+    await interaction.update({
+      content: '🛡️ 검 판매를 취소했습니다. 검은 그대로 유지됩니다.',
+      components: []
+    });
+    return true;
+  }
+
+  if (action !== 'sword_sell_confirm') {
+    await interaction.reply({
+      content: '알 수 없는 검 판매 버튼입니다.',
+      ephemeral: true
+    });
+    return true;
+  }
+
+  try {
+    const result = await economy.sellSword({
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username
+    });
+    await interaction.update(createSwordReplyPayload(
+      formatSwordSale(interaction.user, result),
+      result.beforeLevel,
+      `판매한 검 — ${getSwordAssetLabel(result.beforeLevel)}`,
+      { components: [] }
+    ));
+  } catch (error) {
+    logger.error(error);
+    await interaction.update({
+      content: `검판매 실패: ${error.message}`,
+      components: []
+    });
+  }
+
+  return true;
+}
+
 function formatSwordEnhancement(user, result) {
   const outcomeText = {
     success: '✅ 강화 성공',
@@ -214,6 +336,56 @@ function formatSwordGift(user, result) {
   ].join('\n');
 }
 
+function formatSwordInfo(user, result) {
+  const { profile } = result;
+  const normalText = formatEnhancePreview(result.normalEnhance, '다음 일반 강화');
+  const advancedText = formatEnhancePreview(result.advancedEnhance, '다음 상급 강화');
+  const giftText = result.giftAvailable
+    ? '수령 가능'
+    : `대기 중 (${formatDuration(result.giftRemainingMs)})`;
+
+  return [
+    `📌 **검정보** — ${user}`,
+    `현재 검: **${formatSwordLevel(profile.sword.level)}**`,
+    `최고 강화: **+${profile.sword.highestLevel}** / 잔액: **${profile.balance.toLocaleString()}원**`,
+    `제련석: **${profile.sword.refineStones.toLocaleString()}개** / 선물: **${giftText}**`,
+    normalText,
+    advancedText,
+    `판매 예상가: **${result.saleValue.toLocaleString()}원**`,
+    `전적: **${profile.sword.battleWins}승 ${profile.sword.battleLosses}패** / 파괴: **${profile.sword.destructions.toLocaleString()}회**`,
+    `오늘 검배틀: **${result.battleRemaining}회 남음** / 제련석 보상: **${result.battleStoneRemaining}개 남음**`
+  ].join('\n');
+}
+
+function formatEnhancePreview(config, label) {
+  if (!config || config.blocked) {
+    return `${label}: **불가** (${config?.reason ?? '조건을 만족하지 않습니다.'})`;
+  }
+
+  const stoneText = config.stoneCost > 0
+    ? ` / 제련석 ${config.stoneCost.toLocaleString()}개`
+    : '';
+
+  return [
+    `${label}: **+${config.level} → +${config.targetLevel}**`,
+    `비용 ${config.moneyCost.toLocaleString()}원${stoneText}`,
+    `성공 ${config.successRate}% / 유지 ${config.maintainRate}% / 파괴 ${config.destroyRate}%`
+  ].join(' — ');
+}
+
+function formatSwordSalePreview(user, result) {
+  const level = result.profile.sword.level;
+
+  return [
+    `💰 **검판매 확인** — ${user}`,
+    `판매할 검: **${formatSwordLevel(level)}**`,
+    `판매 예상가: **${result.saleValue.toLocaleString()}원**`,
+    `판매 후 현재 검은 **+0 기본 검**으로 돌아갑니다.`,
+    `최고 강화 기록, 제련석, 배틀 전적은 유지됩니다.`,
+    `정말 판매하려면 아래 **판매 확정** 버튼을 누르세요.`
+  ].join('\n');
+}
+
 function formatSwordSale(user, result) {
   return [
     `💰 **검판매** — ${user}`,
@@ -223,6 +395,38 @@ function formatSwordSale(user, result) {
     `잔액: **${result.profile.balance.toLocaleString()}원**`,
     `최고 강화 기록: **+${result.profile.sword.highestLevel}**`
   ].join('\n');
+}
+
+function formatSwordLeaderboard(rows, category) {
+  const meta = getSwordLeaderboardMeta(category);
+  const body = rows
+    .map((profile, index) => {
+      const rank = index + 1;
+      return `${rank}. **${profile.username}** — ${meta.format(profile.metric)} / 최고 +${profile.sword.highestLevel}`;
+    })
+    .join('\n');
+
+  return `🏆 **검 ${meta.label} 랭킹**\n${body}`;
+}
+
+function getSwordLeaderboardMeta(category) {
+  return {
+    highestLevel: {
+      label: '최고강화',
+      format: (value) => `+${value}`
+    },
+    saleEarnings: {
+      label: '판매금',
+      format: (value) => `${value.toLocaleString()}원`
+    },
+    destructions: {
+      label: '파괴횟수',
+      format: (value) => `${value.toLocaleString()}회`
+    }
+  }[category] ?? {
+    label: '최고강화',
+    format: (value) => `+${value}`
+  };
 }
 
 function formatRandomSwordBattle(user, result) {
@@ -266,19 +470,6 @@ function formatPvpSwordBattle(challenge, result) {
   ].join('\n');
 }
 
-function createSwordBattleChallengeRow(challengeId) {
-  return new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`sword_battle_accept:${challengeId}`)
-      .setLabel('검배틀 수락')
-      .setStyle(ButtonStyle.Success),
-    new ButtonBuilder()
-      .setCustomId(`sword_battle_decline:${challengeId}`)
-      .setLabel('거절')
-      .setStyle(ButtonStyle.Secondary)
-  );
-}
-
 function assertValidSwordBattleTarget(user, target) {
   if (target.bot) {
     throw new Error('봇과는 검배틀을 할 수 없습니다.');
@@ -318,7 +509,7 @@ export function createSwordReplyPayload(content, swordLevel, title = null, optio
     .setFooter({ text: '검 강화 이미지' });
 
   if (options.includeBlacksmith) {
-    const blacksmithAttachment = getBlacksmithAssetAttachment();
+    const blacksmithAttachment = getBlacksmithAssetAttachment(options.blacksmithOutcome);
     if (blacksmithAttachment) {
       embed.setThumbnail(`attachment://${blacksmithAttachment.name}`);
       files.push(blacksmithAttachment);
@@ -328,8 +519,22 @@ export function createSwordReplyPayload(content, swordLevel, title = null, optio
   return {
     content,
     embeds: [embed],
-    files
+    files,
+    ...(options.components ? { components: options.components } : {})
   };
+}
+
+function createSwordSellConfirmRow(userId) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`sword_sell_confirm:${userId}`)
+      .setLabel('판매 확정')
+      .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId(`sword_sell_cancel:${userId}`)
+      .setLabel('취소')
+      .setStyle(ButtonStyle.Secondary)
+  );
 }
 
 function getSwordEnhancementImageLevel(result) {
