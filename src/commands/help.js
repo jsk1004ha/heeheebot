@@ -18,7 +18,7 @@ const HELP_CATEGORIES = Object.freeze({
     fields: Object.freeze([
       { name: '성장/프로필', value: '`/프로필` `/출석` `/랭킹` `/재화정보`' },
       { name: '전투 성장', value: '`/rpg 메뉴` `/rpg 전투` `/검강화` `/검배틀` `/검도감`' },
-      { name: '경제/놀이', value: '`/주식 시세` `/주식 보유` `/낚시` `/카지노정보`' }
+      { name: '경제/놀이', value: '`/주식 시세` `/주식 보유` `/낚시` `/카지노정보` `/희진다마고치`' }
     ])
   }),
   rpg: Object.freeze({
@@ -73,6 +73,7 @@ const HELP_CATEGORIES = Object.freeze({
     fields: Object.freeze([
       { name: '낚시', value: '`/낚시` `/낚시가방` `/낚시판매` `/낚시랭킹`' },
       { name: '카지노', value: '`/카지노정보` `/슬롯` `/블랙잭` 등 카지노 명령' },
+      { name: '희진 다마고치', value: '`/희진다마고치` `/희진방` `/희진앨범` `/희진일기` `/희진방문` `/희진퀘스트`' },
       { name: '기타', value: '프로필 성장과 재화는 대부분 통합 골드/XP 시스템에 연결됩니다.' }
     ])
   })

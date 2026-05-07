@@ -18,6 +18,7 @@ const MAX_STAT = 100;
 const MIN_STAT = 0;
 const TAMAGOTCHI_SCHEMA_VERSION = 1;
 const EVENT_LOG_LIMIT = 10;
+const JOURNAL_LIMIT = 30;
 
 const DEFAULT_OPTIONS = Object.freeze({
   neglectDeathMs: 48 * HOUR_MS,
@@ -41,6 +42,17 @@ const DEFAULT_STATS = Object.freeze({
   energy: 70,
   health: 88,
   affection: 5
+});
+
+const ROOM_SLOT_LABELS = Object.freeze({
+  basic: '기본',
+  background: '배경',
+  bed: '침대',
+  toy: '장난감',
+  snack: '간식',
+  light: '조명',
+  poster: '포스터',
+  trophy: '기념품'
 });
 
 export const TAMAGOTCHI_ACTIONS = Object.freeze({
@@ -151,6 +163,69 @@ const TAMAGOTCHI_RANDOM_EVENTS = Object.freeze([
   })
 ]);
 
+export const TAMAGOTCHI_ROOM_ITEMS = Object.freeze([
+  roomItem('basic_mat', 'basic', '기본 매트', '▫️', 0, '처음부터 놓여 있는 작은 매트입니다.'),
+  roomItem('pink_wallpaper', 'background', '분홍 벽지', '🌸', 1, '방을 포근한 분홍빛으로 바꿉니다.'),
+  roomItem('cozy_bed', 'bed', '포근한 침대', '🛏️', 2, '희진이 편하게 쉴 수 있는 침대입니다.'),
+  roomItem('toy_box', 'toy', '장난감 상자', '🧸', 2, '놀아주기 좋은 장난감을 모아둡니다.'),
+  roomItem('snack_tray', 'snack', '간식 트레이', '🍪', 2, '몰래 간식 사건과 잘 어울리는 간식 접시입니다.'),
+  roomItem('moon_lamp', 'light', '달빛 무드등', '🌙', 2, '밤에도 은은하게 빛나는 조명입니다.'),
+  roomItem('monkey_poster', 'poster', '원숭이 포스터', '🐒', 3, '원숭이친구 희진을 위한 장난스러운 포스터입니다.'),
+  roomItem('trophy_shelf', 'trophy', '성년기 트로피 선반', '🏆', 0, '성년기 퀘스트 보상으로 받는 기념 선반입니다.')
+]);
+
+export const TAMAGOTCHI_FRIEND_ACTIONS = Object.freeze({
+  pet: friendAction('pet', '쓰다듬기', '🤲', { happiness: 4, affection: 4 }),
+  snack: friendAction('snack', '간식 놓기', '🍪', { fullness: 5, affection: 3 }),
+  cheer: friendAction('cheer', '응원하기', '📣', { happiness: 3, health: 2, affection: 3 })
+});
+
+export const TAMAGOTCHI_ADULT_QUESTS = Object.freeze({
+  balanced: adultQuest('balanced', '균형 유지 루틴', '성년기 균형형 희진을 위해 꾸준한 케어 12회를 달성하세요.', [
+    questRequirement('totalCareActions', '총 케어', 12)
+  ]),
+  beloved: adultQuest('beloved', '사랑둥이 팬서비스', '애정 70과 총 케어 10회를 달성하세요.', [
+    questRequirement('affection', '애정', 70),
+    questRequirement('totalCareActions', '총 케어', 10)
+  ]),
+  gourmet: adultQuest('gourmet', '먹방 준비 완료', '밥주기 8회로 먹방 희진의 성년기 루틴을 완성하세요.', [
+    questRequirement('feeds', '밥주기', 8)
+  ]),
+  entertainer: adultQuest('entertainer', '예능감 충전', '놀아주기 8회로 예능 희진의 장기를 키우세요.', [
+    questRequirement('plays', '놀아주기', 8)
+  ]),
+  heeheebotter: adultQuest('heeheebotter', '희희봇 숙련자', '희희봇하기 4회로 봇친화 루틴을 완성하세요.', [
+    questRequirement('leisure_heeheebot', '희희봇하기', 4)
+  ]),
+  rhythm: adultQuest('rhythm', '리듬 연습', '디맥하기 4회로 리듬 희진의 무대를 준비하세요.', [
+    questRequirement('leisure_djmax', '디맥하기', 4)
+  ]),
+  tidy: adultQuest('tidy', '반짝 방 만들기', '씻기기 6회로 깔끔한 성년기 방을 완성하세요.', [
+    questRequirement('cleans', '씻기기', 6)
+  ]),
+  dreamer: adultQuest('dreamer', '포근한 낮잠 루틴', '재우기 6회로 꿈꾸는 희진의 리듬을 잡으세요.', [
+    questRequirement('naps', '재우기', 6)
+  ]),
+  healthy: adultQuest('healthy', '튼튼 루틴', '산책 3회와 약주기 2회로 건강 루틴을 완성하세요.', [
+    questRequirement('leisure_walk', '산책', 3),
+    questRequirement('medicines', '약주기', 2)
+  ]),
+  monkey: adultQuest('monkey', '원숭이 친구 모임', '원숭이 여가 4회로 원숭이친구 희진의 약속을 채우세요.', [
+    questRequirement('leisure_monkey', '원숭이', 4)
+  ]),
+  mischievous: adultQuest('mischievous', '장난은 적당히', '원숭이 괴롭히기 4회와 건강 50을 맞추세요.', [
+    questRequirement('leisure_tease_monkey', '원숭이 괴롭히기', 4),
+    questRequirement('health', '건강', 50)
+  ]),
+  fragile: adultQuest('fragile', '회복 기록', '약주기 3회로 병약 희진의 회복 루틴을 남기세요.', [
+    questRequirement('medicines', '약주기', 3)
+  ]),
+  neglected: adultQuest('neglected', '다시 가까워지기', '오늘의 돌봄 완료 1회와 애정 35를 달성하세요.', [
+    questRequirement('dailyCompletions', '오늘의 돌봄 완료', 1),
+    questRequirement('affection', '애정', 35)
+  ])
+});
+
 export class TamagotchiService {
   constructor(store, options = {}) {
     this.store = store;
@@ -205,6 +280,12 @@ export class TamagotchiService {
       }
 
       performCareAction(pet, normalizedAction, now);
+      addJournalEntry(pet, {
+        type: 'care',
+        title: TAMAGOTCHI_ACTIONS[normalizedAction],
+        message: getActionMessage(normalizedAction, pet),
+        at: now
+      });
       recordActionCooldown(pet, normalizedAction, now);
       const dailyReward = normalizedAction === 'revive'
         ? null
@@ -263,6 +344,12 @@ export class TamagotchiService {
       }
 
       performLeisureAction(pet, normalizedLeisureId, now);
+      addJournalEntry(pet, {
+        type: 'leisure',
+        title: TAMAGOTCHI_LEISURES[normalizedLeisureId].label,
+        message: getLeisureMessage(normalizedLeisureId),
+        at: now
+      });
       recordLeisureCooldown(pet, normalizedLeisureId, now);
       const dailyReward = recordDailyProgress(pet, {
         action: 'leisure',
@@ -344,6 +431,242 @@ export class TamagotchiService {
         action: 'decoration',
         performed: true,
         eventMessage: `🧸 다음 꾸미기: **${getTamagotchiDecorationById(pet.cosmetic.decorationId)?.label ?? pet.cosmetic.decorationId}**`
+      }, this.options);
+    });
+  }
+
+  async getRoom({ guildId, userId, username, now = Date.now() }) {
+    return this.store.update((data) => {
+      const pet = getOrCreatePet(data, { guildId, userId, username, now });
+      applyDecay(pet, now, this.options);
+      return createStatusResult(pet, now, { view: 'room' }, this.options);
+    });
+  }
+
+  async unlockRoomItem({ guildId, userId, username, itemId, now = Date.now() }) {
+    return this.store.update((data) => {
+      const pet = getOrCreatePet(data, { guildId, userId, username, now });
+      applyDecay(pet, now, this.options);
+      const item = getRoomItemById(itemId);
+      if (!item) {
+        throw new Error('알 수 없는 희진 방 아이템입니다.');
+      }
+      return unlockRoomItemForPet(pet, item, now, this.options);
+    });
+  }
+
+  async unlockNextRoomItem({ guildId, userId, username, now = Date.now() }) {
+    return this.store.update((data) => {
+      const pet = getOrCreatePet(data, { guildId, userId, username, now });
+      applyDecay(pet, now, this.options);
+      const item = getNextUnlockableRoomItem(pet);
+      if (!item) {
+        return createStatusResult(pet, now, {
+          view: 'room',
+          performed: false,
+          eventMessage: '🏠 해금할 수 있는 희진 방 아이템을 모두 모았어요.'
+        }, this.options);
+      }
+      return unlockRoomItemForPet(pet, item, now, this.options);
+    });
+  }
+
+  async equipRoomItem({ guildId, userId, username, itemId, now = Date.now() }) {
+    return this.store.update((data) => {
+      const pet = getOrCreatePet(data, { guildId, userId, username, now });
+      applyDecay(pet, now, this.options);
+      const item = getRoomItemById(itemId);
+      if (!item) {
+        throw new Error('알 수 없는 희진 방 아이템입니다.');
+      }
+      if (!pet.room.unlockedItemIds.includes(item.id)) {
+        return createStatusResult(pet, now, {
+          view: 'room',
+          performed: false,
+          eventMessage: `🔒 **${item.label}**은(는) 아직 해금하지 않았어요.`
+        }, this.options);
+      }
+      equipRoomItemForPet(pet, item);
+      pet.lastUpdatedAt = now;
+      addEventLog(pet, {
+        type: 'room',
+        id: `equip_${item.id}`,
+        title: item.label,
+        message: `희진 방 ${getRoomSlotLabel(item.slot)} 슬롯에 ${item.label}을(를) 놓았어요.`,
+        at: now
+      });
+      addJournalEntry(pet, {
+        type: 'room',
+        title: item.label,
+        message: `방에 ${item.label}을(를) 다시 배치했어요.`,
+        at: now
+      });
+      return createStatusResult(pet, now, {
+        view: 'room',
+        performed: true,
+        eventMessage: `🏠 **${item.label}**을(를) 희진 방에 장착했어요.`
+      }, this.options);
+    });
+  }
+
+  async getAlbum({ guildId, userId, username, now = Date.now() }) {
+    return this.store.update((data) => {
+      const pet = getOrCreatePet(data, { guildId, userId, username, now });
+      applyDecay(pet, now, this.options);
+      return createStatusResult(pet, now, { view: 'album' }, this.options);
+    });
+  }
+
+  async getJournal({ guildId, userId, username, now = Date.now() }) {
+    return this.store.update((data) => {
+      const pet = getOrCreatePet(data, { guildId, userId, username, now });
+      applyDecay(pet, now, this.options);
+      return createStatusResult(pet, now, { view: 'journal' }, this.options);
+    });
+  }
+
+  async getAdultQuest({ guildId, userId, username, now = Date.now() }) {
+    return this.store.update((data) => {
+      const pet = getOrCreatePet(data, { guildId, userId, username, now });
+      applyDecay(pet, now, this.options);
+      return createStatusResult(pet, now, { view: 'quest' }, this.options);
+    });
+  }
+
+  async claimAdultQuest({ guildId, userId, username, now = Date.now() }) {
+    return this.store.update((data) => {
+      const pet = getOrCreatePet(data, { guildId, userId, username, now });
+      applyDecay(pet, now, this.options);
+      const status = createStatusResult(pet, now, { view: 'quest' }, this.options);
+      const quest = status.adultQuest;
+
+      if (!quest.stageReady) {
+        return {
+          ...status,
+          performed: false,
+          eventMessage: '🌱 성년기 퀘스트는 희진이 성년기가 된 뒤 열려요.'
+        };
+      }
+      if (quest.rewardClaimed) {
+        return {
+          ...status,
+          performed: false,
+          eventMessage: '🏆 이 성년기 퀘스트 보상은 이미 받았어요.'
+        };
+      }
+      if (!quest.complete) {
+        return {
+          ...status,
+          performed: false,
+          eventMessage: '📜 아직 성년기 퀘스트 목표를 다 채우지 못했어요.'
+        };
+      }
+
+      pet.adultQuests.claimedQuestIds.push(quest.id);
+      pet.adultQuests.claimedQuestIds = [...new Set(pet.adultQuests.claimedQuestIds)];
+      pet.codex.memoryShards += quest.reward.memoryShards;
+      unlockRoomItemWithoutCost(pet, getRoomItemById(quest.reward.roomItemId));
+      addEventLog(pet, {
+        type: 'quest',
+        id: quest.id,
+        title: '성년기 퀘스트 완료',
+        message: `${quest.label} 보상으로 추억 조각 ${quest.reward.memoryShards}개와 ${quest.reward.roomItemLabel}을(를) 받았어요.`,
+        at: now
+      });
+      addJournalEntry(pet, {
+        type: 'quest',
+        title: '성년기 퀘스트 완료',
+        message: `${quest.label}을(를) 끝내고 ${quest.reward.roomItemLabel}을(를) 방에 놓았어요.`,
+        at: now
+      });
+
+      return createStatusResult(pet, now, {
+        view: 'quest',
+        performed: true,
+        eventMessage: `🏆 성년기 퀘스트 **${quest.label}** 완료! 추억 조각 **${quest.reward.memoryShards}개**와 **${quest.reward.roomItemLabel}**을(를) 받았어요.`
+      }, this.options);
+    });
+  }
+
+  async visitFriend({
+    guildId,
+    userId,
+    username,
+    targetUserId,
+    targetUsername,
+    action = 'pet',
+    now = Date.now()
+  }) {
+    return this.store.update((data) => {
+      const normalizedAction = normalizeFriendAction(action);
+      if (!normalizedAction) {
+        throw new Error('알 수 없는 희진 방문 행동입니다.');
+      }
+      if (!targetUserId || targetUserId === userId) {
+        throw new Error('다른 유저의 희진에게만 방문할 수 있어요.');
+      }
+
+      const visitorPet = getOrCreatePet(data, { guildId, userId, username, now });
+      const targetPet = getOrCreatePet(data, {
+        guildId,
+        userId: targetUserId,
+        username: targetUsername,
+        now
+      });
+      applyDecay(visitorPet, now, this.options);
+      applyDecay(targetPet, now, this.options);
+
+      const dayIndex = getDayIndex(now);
+      if (visitorPet.social.visits[targetUserId] === dayIndex) {
+        return createStatusResult(targetPet, now, {
+          view: 'room',
+          performed: false,
+          eventMessage: '👣 이 희진 방은 오늘은 이미 방문했어요. 내일 다시 놀러가 주세요.'
+        }, this.options);
+      }
+
+      const visitAction = TAMAGOTCHI_FRIEND_ACTIONS[normalizedAction];
+      for (const [stat, delta] of Object.entries(visitAction.effects)) {
+        targetPet.stats[stat] = clamp(targetPet.stats[stat] + delta, MIN_STAT, MAX_STAT);
+      }
+      visitorPet.codex.memoryShards += 1;
+      visitorPet.social.visits[targetUserId] = dayIndex;
+      targetPet.social.visitors[userId] = {
+        username,
+        action: normalizedAction,
+        dayIndex,
+        at: now
+      };
+      targetPet.lastUpdatedAt = now;
+      addEventLog(targetPet, {
+        type: 'social',
+        id: `visit_${userId}_${dayIndex}`,
+        title: '친구 방문',
+        message: `${username}님이 ${visitAction.label}을(를) 해줬어요.`,
+        at: now
+      });
+      addJournalEntry(targetPet, {
+        type: 'social',
+        title: '친구 방문',
+        message: `${username}님이 방에 와서 ${visitAction.label}을(를) 해줬어요.`,
+        at: now
+      });
+      addJournalEntry(visitorPet, {
+        type: 'social',
+        title: '친구 방문',
+        message: `${targetUsername ?? targetUserId}님의 희진에게 ${visitAction.label}을(를) 해주고 추억 조각 1개를 얻었어요.`,
+        at: now
+      });
+
+      return createStatusResult(targetPet, now, {
+        view: 'room',
+        performed: true,
+        friendVisit: {
+          action: visitAction,
+          visitorUserId: userId,
+          visitorUsername: username
+        },
+        eventMessage: `${visitAction.emoji} **${username}**님이 ${targetUsername ?? '친구'}님의 희진 방에 방문해 **${visitAction.label}**을(를) 해줬어요. 방문자는 추억 조각 **1개**를 얻었어요.`
       }, this.options);
     });
   }
@@ -439,8 +762,22 @@ function createDefaultPet({ userId, username, now }) {
       discoveredBranches: [],
       discoveredEvents: []
     },
+    room: {
+      unlockedItemIds: ['basic_mat'],
+      equipped: {
+        basic: 'basic_mat'
+      }
+    },
+    adultQuests: {
+      claimedQuestIds: []
+    },
+    social: {
+      visits: {},
+      visitors: {}
+    },
     memories: {
-      eventLog: []
+      eventLog: [],
+      journal: []
     },
     counters: {
       feeds: 0,
@@ -494,9 +831,16 @@ function normalizePet(pet, { userId, username, now }) {
   pet.codex.dailyCompletions = Math.max(0, Math.floor(numberOrDefault(pet.codex.dailyCompletions, 0)));
   pet.codex.discoveredBranches = normalizeIdList(pet.codex.discoveredBranches, Object.keys(TAMAGOTCHI_GROWTH_BRANCHES));
   pet.codex.discoveredEvents = normalizeIdList(pet.codex.discoveredEvents, TAMAGOTCHI_RANDOM_EVENTS.map((event) => event.id));
+  pet.room = normalizeRoomState(pet.room);
+  pet.adultQuests ??= {};
+  pet.adultQuests.claimedQuestIds = normalizeIdList(pet.adultQuests.claimedQuestIds, Object.keys(TAMAGOTCHI_ADULT_QUESTS));
+  pet.social = normalizeSocialState(pet.social);
   pet.memories ??= {};
   pet.memories.eventLog = Array.isArray(pet.memories.eventLog)
     ? pet.memories.eventLog.slice(-EVENT_LOG_LIMIT)
+    : [];
+  pet.memories.journal = Array.isArray(pet.memories.journal)
+    ? pet.memories.journal.slice(-JOURNAL_LIMIT).map(normalizeJournalEntry)
     : [];
   pet.counters ??= {};
   for (const key of ['feeds', 'plays', 'cleans', 'naps', 'medicines', 'revivals', 'totalCareActions']) {
@@ -698,8 +1042,13 @@ function createStatusResult(pet, now, event = {}, options = DEFAULT_OPTIONS) {
     recommendations: getTamagotchiRecommendations(pet, now, options),
     daily: getDailyMissionSummary(pet.daily),
     codex: getCodexSummary(pet),
+    room: getRoomSummary(pet),
+    album: getAlbumSummary(pet),
+    journal: getJournalSummary(pet),
+    adultQuest: getAdultQuestSummary(pet, now),
     cooldowns: getCooldownSummary(pet, now, options),
     recentEvents: pet.memories.eventLog.slice(-3).reverse(),
+    view: 'status',
     ...event
   };
 }
@@ -728,8 +1077,22 @@ function clonePet(pet) {
       discoveredBranches: [...pet.codex.discoveredBranches],
       discoveredEvents: [...pet.codex.discoveredEvents]
     },
+    room: {
+      unlockedItemIds: [...pet.room.unlockedItemIds],
+      equipped: { ...pet.room.equipped }
+    },
+    adultQuests: {
+      claimedQuestIds: [...pet.adultQuests.claimedQuestIds]
+    },
+    social: {
+      visits: { ...pet.social.visits },
+      visitors: Object.fromEntries(
+        Object.entries(pet.social.visitors).map(([key, value]) => [key, { ...value }])
+      )
+    },
     memories: {
-      eventLog: pet.memories.eventLog.map((entry) => ({ ...entry }))
+      eventLog: pet.memories.eventLog.map((entry) => ({ ...entry })),
+      journal: pet.memories.journal.map((entry) => ({ ...entry }))
     },
     counters: {
       ...pet.counters,
@@ -875,6 +1238,12 @@ function recordDailyProgress(pet, event, now, options) {
     message: `오늘의 돌봄을 전부 끝내 추억 조각 ${memoryShards}개를 얻었어요.`,
     at: now
   });
+  addJournalEntry(pet, {
+    type: 'daily',
+    title: '오늘의 돌봄 완료',
+    message: `오늘의 돌봄을 전부 끝내 추억 조각 ${memoryShards}개를 얻었어요.`,
+    at: now
+  });
 
   return {
     missions: newlyCompleted,
@@ -934,6 +1303,12 @@ function maybeTriggerRandomEvent(pet, { guildId, userId, now, action, options })
     message: event.message,
     at: now
   });
+  addJournalEntry(pet, {
+    type: 'random',
+    title: event.title,
+    message: event.message,
+    at: now
+  });
 
   return {
     id: event.id,
@@ -961,11 +1336,267 @@ function getCodexSummary(pet) {
     dailyCompletions: pet.codex.dailyCompletions,
     discoveredBranches: [...pet.codex.discoveredBranches],
     discoveredEvents: [...pet.codex.discoveredEvents],
+    unlockedRoomItems: [...pet.room.unlockedItemIds],
     branchCount: pet.codex.discoveredBranches.length,
     totalBranches: Object.keys(TAMAGOTCHI_GROWTH_BRANCHES).length,
     eventCount: pet.codex.discoveredEvents.length,
-    totalEvents: TAMAGOTCHI_RANDOM_EVENTS.length
+    totalEvents: TAMAGOTCHI_RANDOM_EVENTS.length,
+    roomItemCount: pet.room.unlockedItemIds.length,
+    totalRoomItems: TAMAGOTCHI_ROOM_ITEMS.length
   };
+}
+
+function getRoomSummary(pet) {
+  const unlockedItems = pet.room.unlockedItemIds
+    .map(getRoomItemById)
+    .filter(Boolean);
+  const equipped = Object.fromEntries(
+    Object.entries(pet.room.equipped)
+      .map(([slot, itemId]) => [slot, getRoomItemById(itemId)])
+      .filter(([, item]) => Boolean(item))
+  );
+  const nextUnlock = getNextUnlockableRoomItem(pet);
+
+  return {
+    unlockedItemIds: [...pet.room.unlockedItemIds],
+    unlockedItems,
+    unlockedCount: unlockedItems.length,
+    totalItems: TAMAGOTCHI_ROOM_ITEMS.length,
+    equipped,
+    slots: Object.keys(ROOM_SLOT_LABELS).map((slot) => ({
+      id: slot,
+      label: getRoomSlotLabel(slot),
+      item: equipped[slot] ?? null
+    })),
+    nextUnlock,
+    comfortScore: calculateRoomComfortScore(unlockedItems, equipped)
+  };
+}
+
+function getAlbumSummary(pet) {
+  return {
+    branches: Object.values(TAMAGOTCHI_GROWTH_BRANCHES).map((branch) => {
+      const discovered = pet.codex.discoveredBranches.includes(branch.id);
+      return {
+        id: discovered ? branch.id : null,
+        title: discovered ? branch.label : '???',
+        description: discovered ? branch.description : '아직 발견하지 못한 성장 분기입니다.',
+        discovered
+      };
+    }),
+    events: TAMAGOTCHI_RANDOM_EVENTS.map((event) => {
+      const discovered = pet.codex.discoveredEvents.includes(event.id);
+      return {
+        id: discovered ? event.id : null,
+        title: discovered ? event.title : '???',
+        message: discovered ? event.message : '아직 발견하지 못한 랜덤 사건입니다.',
+        discovered
+      };
+    }),
+    roomItems: TAMAGOTCHI_ROOM_ITEMS.map((item) => {
+      const discovered = pet.room.unlockedItemIds.includes(item.id);
+      return {
+        id: discovered ? item.id : null,
+        title: discovered ? item.label : '???',
+        description: discovered ? item.description : '아직 해금하지 못한 방 아이템입니다.',
+        discovered
+      };
+    })
+  };
+}
+
+function getJournalSummary(pet, limit = 7) {
+  const entries = pet.memories.journal
+    .slice(-limit)
+    .reverse()
+    .map((entry) => ({ ...entry }));
+  return {
+    entries,
+    totalEntries: pet.memories.journal.length
+  };
+}
+
+function getAdultQuestSummary(pet, now) {
+  updateGrowthBranch(pet, now);
+  const growthStage = getTamagotchiGrowthStage(pet, now);
+  const branchId = getActiveGrowthBranchId(pet, growthStage.id) ?? 'balanced';
+  const quest = TAMAGOTCHI_ADULT_QUESTS[branchId] ?? TAMAGOTCHI_ADULT_QUESTS.balanced;
+  const requirements = quest.requirements.map((requirement) => {
+    const current = getQuestProgressValue(pet, requirement.metric);
+    return {
+      ...requirement,
+      current,
+      complete: current >= requirement.required
+    };
+  });
+  const complete = requirements.every((requirement) => requirement.complete);
+  const rewardItem = getRoomItemById('trophy_shelf');
+
+  return {
+    id: quest.id,
+    branchId,
+    label: quest.label,
+    description: quest.description,
+    stageReady: growthStage.id === 'adult',
+    complete,
+    rewardClaimed: pet.adultQuests.claimedQuestIds.includes(quest.id),
+    requirements,
+    reward: {
+      memoryShards: 3,
+      roomItemId: rewardItem.id,
+      roomItemLabel: rewardItem.label
+    }
+  };
+}
+
+function unlockRoomItemForPet(pet, item, now, options) {
+  if (pet.room.unlockedItemIds.includes(item.id)) {
+    equipRoomItemForPet(pet, item);
+    return createStatusResult(pet, now, {
+      view: 'room',
+      performed: false,
+      eventMessage: `🏠 **${item.label}**은(는) 이미 해금되어 있어 방에 다시 배치했어요.`
+    }, options);
+  }
+  if (pet.codex.memoryShards < item.cost) {
+    return createStatusResult(pet, now, {
+      view: 'room',
+      performed: false,
+      eventMessage: `🧩 **${item.label}** 해금에는 추억 조각 **${item.cost}개**가 필요해요. 현재 **${pet.codex.memoryShards}개**입니다.`
+    }, options);
+  }
+
+  pet.codex.memoryShards -= item.cost;
+  unlockRoomItemWithoutCost(pet, item);
+  pet.lastUpdatedAt = now;
+  addEventLog(pet, {
+    type: 'room',
+    id: item.id,
+    title: item.label,
+    message: `추억 조각 ${item.cost}개로 ${item.label}을(를) 해금했어요.`,
+    at: now
+  });
+  addJournalEntry(pet, {
+    type: 'room',
+    title: item.label,
+    message: `추억 조각 ${item.cost}개로 ${item.label}을(를) 해금하고 방에 놓았어요.`,
+    at: now
+  });
+
+  return createStatusResult(pet, now, {
+    view: 'room',
+    performed: true,
+    eventMessage: `🏠 희진 방 아이템 **${item.label}** 해금! 추억 조각 **${item.cost}개**를 사용했어요.`
+  }, options);
+}
+
+function unlockRoomItemWithoutCost(pet, item) {
+  if (!item) return;
+  if (!pet.room.unlockedItemIds.includes(item.id)) {
+    pet.room.unlockedItemIds.push(item.id);
+  }
+  equipRoomItemForPet(pet, item);
+}
+
+function equipRoomItemForPet(pet, item) {
+  pet.room.equipped[item.slot] = item.id;
+}
+
+function getNextUnlockableRoomItem(pet) {
+  return TAMAGOTCHI_ROOM_ITEMS
+    .filter((item) => item.cost > 0 && !pet.room.unlockedItemIds.includes(item.id))
+    .sort((a, b) => a.cost - b.cost || a.id.localeCompare(b.id))
+    .find((item) => item.cost <= pet.codex.memoryShards)
+    ?? TAMAGOTCHI_ROOM_ITEMS.find((item) => item.cost > 0 && !pet.room.unlockedItemIds.includes(item.id))
+    ?? null;
+}
+
+function getRoomItemById(itemId) {
+  const normalized = String(itemId ?? '').trim();
+  return TAMAGOTCHI_ROOM_ITEMS.find((item) => item.id === normalized) ?? null;
+}
+
+function calculateRoomComfortScore(unlockedItems, equipped) {
+  const equippedCount = Object.keys(equipped).length;
+  return Math.min(100, unlockedItems.length * 8 + equippedCount * 6);
+}
+
+function getQuestProgressValue(pet, metric) {
+  if (metric === 'affection') return Math.floor(pet.stats.affection);
+  if (metric === 'health') return Math.floor(pet.stats.health);
+  if (metric === 'dailyCompletions') return pet.codex.dailyCompletions;
+  if (metric.startsWith('leisure_')) {
+    return pet.counters.leisure[metric.slice('leisure_'.length)] ?? 0;
+  }
+  return pet.counters[metric] ?? 0;
+}
+
+function addJournalEntry(pet, entry) {
+  pet.memories.journal.push(normalizeJournalEntry(entry));
+  pet.memories.journal = pet.memories.journal.slice(-JOURNAL_LIMIT);
+}
+
+function normalizeJournalEntry(entry) {
+  return {
+    type: String(entry?.type ?? 'note'),
+    title: String(entry?.title ?? '희진 일기'),
+    message: String(entry?.message ?? ''),
+    at: numberOrDefault(entry?.at, 0)
+  };
+}
+
+function normalizeRoomState(room) {
+  const raw = room && typeof room === 'object' ? room : {};
+  const unlocked = normalizeIdList(raw.unlockedItemIds, TAMAGOTCHI_ROOM_ITEMS.map((item) => item.id));
+  if (!unlocked.includes('basic_mat')) unlocked.unshift('basic_mat');
+  const equipped = {};
+  const rawEquipped = raw.equipped && typeof raw.equipped === 'object' ? raw.equipped : {};
+  for (const itemId of unlocked) {
+    const item = getRoomItemById(itemId);
+    if (item && rawEquipped[item.slot] === item.id) {
+      equipped[item.slot] = item.id;
+    }
+  }
+  if (!equipped.basic) equipped.basic = 'basic_mat';
+  return {
+    unlockedItemIds: unlocked,
+    equipped
+  };
+}
+
+function normalizeSocialState(social) {
+  const raw = social && typeof social === 'object' ? social : {};
+  return {
+    visits: normalizeDayIndexMap(raw.visits),
+    visitors: normalizeVisitorMap(raw.visitors)
+  };
+}
+
+function normalizeDayIndexMap(rawMap) {
+  const map = rawMap && typeof rawMap === 'object' ? rawMap : {};
+  return Object.fromEntries(
+    Object.entries(map)
+      .map(([key, value]) => [key, Math.max(0, Math.floor(numberOrDefault(value, 0)))])
+  );
+}
+
+function normalizeVisitorMap(rawMap) {
+  const map = rawMap && typeof rawMap === 'object' ? rawMap : {};
+  return Object.fromEntries(
+    Object.entries(map).map(([userId, value]) => [userId, {
+      username: String(value?.username ?? userId),
+      action: normalizeFriendAction(value?.action) ?? 'pet',
+      dayIndex: Math.max(0, Math.floor(numberOrDefault(value?.dayIndex, 0))),
+      at: numberOrDefault(value?.at, 0)
+    }])
+  );
+}
+
+function normalizeFriendAction(action) {
+  const normalized = String(action ?? '').trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(TAMAGOTCHI_FRIEND_ACTIONS, normalized)
+    ? normalized
+    : null;
 }
 
 function getNextGrowthInfo(pet, now) {
@@ -1080,13 +1711,19 @@ function assignGrowthBranch(pet, property, stageId, profile, now) {
     at: now
   });
   if (newlyDiscovered) {
-    addEventLog(pet, {
-      type: 'growth',
-      id: branchId,
-      title: TAMAGOTCHI_GROWTH_BRANCHES[branchId]?.label ?? branchId,
-      message: `${stageId === 'adult' ? '성년기' : '청소년기'} 성장 분기 도감에 기록됐어요.`,
-      at: now
-    });
+      addEventLog(pet, {
+        type: 'growth',
+        id: branchId,
+        title: TAMAGOTCHI_GROWTH_BRANCHES[branchId]?.label ?? branchId,
+        message: `${stageId === 'adult' ? '성년기' : '청소년기'} 성장 분기 도감에 기록됐어요.`,
+        at: now
+      });
+      addJournalEntry(pet, {
+        type: 'growth',
+        title: TAMAGOTCHI_GROWTH_BRANCHES[branchId]?.label ?? branchId,
+        message: `${stageId === 'adult' ? '성년기' : '청소년기'} 성장 분기가 열렸어요.`,
+        at: now
+      });
   }
 }
 
@@ -1231,6 +1868,43 @@ function randomEvent(id, title, message, effects) {
     message,
     effects: Object.freeze(effects)
   });
+}
+
+function roomItem(id, slot, label, emoji, cost, description) {
+  return Object.freeze({
+    id,
+    slot,
+    label,
+    emoji,
+    cost,
+    description
+  });
+}
+
+function friendAction(id, label, emoji, effects) {
+  return Object.freeze({
+    id,
+    label,
+    emoji,
+    effects: Object.freeze(effects)
+  });
+}
+
+function adultQuest(id, label, description, requirements) {
+  return Object.freeze({
+    id,
+    label,
+    description,
+    requirements: Object.freeze(requirements)
+  });
+}
+
+function questRequirement(metric, label, required) {
+  return Object.freeze({ metric, label, required });
+}
+
+function getRoomSlotLabel(slot) {
+  return ROOM_SLOT_LABELS[slot] ?? slot;
 }
 
 function getActionMessage(action, pet) {

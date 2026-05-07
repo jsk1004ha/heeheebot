@@ -13,6 +13,10 @@ const STOCK_PAGINATION_TTL_MS = 10 * 60 * 1000;
 const STOCK_PAGE_BUTTON_PREFIX = 'stock_page';
 const stockPaginationSessions = new Map();
 const FULL_MARKET_PAGE_SIZE = 10;
+const STOCK_NAME_COLLATOR = new Intl.Collator('ko-KR', {
+  numeric: true,
+  sensitivity: 'base'
+});
 
 export const stockCommands = [
   new SlashCommandBuilder()
@@ -840,7 +844,9 @@ function formatFullMarket(market, { page = 0, pageSize = FULL_MARKET_PAGE_SIZE }
   const totalPages = getFullMarketPageCount(market.stocks.length, pageSize);
   const currentPage = clampFullMarketPage(page, totalPages);
   const start = currentPage * pageSize;
-  const visibleStocks = market.stocks.slice(start, start + pageSize);
+  const visibleStocks = [...market.stocks]
+    .sort(compareStocksByKoreanName)
+    .slice(start, start + pageSize);
   const body = visibleStocks.length > 0
     ? visibleStocks.map(formatMarketLine).join('\n')
     : '표시할 종목이 없습니다.';
@@ -849,6 +855,12 @@ function formatFullMarket(market, { page = 0, pageSize = FULL_MARKET_PAGE_SIZE }
     : '';
 
   return `📊 **디코밈 가상주식 전체 시세 ${market.stocks.length}종목**${pageText}\n${body}`;
+}
+
+function compareStocksByKoreanName(a, b) {
+  return STOCK_NAME_COLLATOR.compare(a.name, b.name)
+    || STOCK_NAME_COLLATOR.compare(a.symbol, b.symbol)
+    || STOCK_NAME_COLLATOR.compare(a.id, b.id);
 }
 
 function getFullMarketPageCount(totalCount, pageSize = FULL_MARKET_PAGE_SIZE) {
@@ -1009,10 +1021,10 @@ function formatStockNews(news) {
 }
 
 function formatStockNewsLine(entry) {
-  return `- **${entry.stock.name}** ${stripStockNewsPrefix(entry.message)}`;
+  return `- **${entry.stock.name}** ${stripStockNewsPrefix(entry.message, entry.stock.name)}`;
 }
 
-function stripStockNewsPrefix(message) {
+function stripStockNewsPrefix(message, stockName = '') {
   let text = String(message ?? '').trim();
   if (!text) return '내용 없음';
 
@@ -1020,9 +1032,23 @@ function stripStockNewsPrefix(message) {
   do {
     previous = text;
     text = text.replace(/^(시장 공시|신규상장 공시|시장 뉴스)\s*[:：]\s*/u, '').trim();
+    text = stripLeadingStockName(text, stockName);
   } while (text !== previous);
 
   return text || '내용 없음';
+}
+
+function stripLeadingStockName(message, stockName) {
+  const safeStockName = String(stockName ?? '').trim();
+  if (!safeStockName) return message;
+
+  return message
+    .replace(new RegExp(`^${escapeRegExp(safeStockName)}(?:\\s+|\\s*[:：\\-—]\\s*)`, 'u'), '')
+    .trim();
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function formatStockChart(chart) {

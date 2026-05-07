@@ -8,7 +8,9 @@ import {
 import {
   formatStatBar,
   TAMAGOTCHI_ACTIONS,
-  TAMAGOTCHI_LEISURES
+  TAMAGOTCHI_FRIEND_ACTIONS,
+  TAMAGOTCHI_LEISURES,
+  TAMAGOTCHI_ROOM_ITEMS
 } from '../systems/tamagotchi.js';
 import {
   getTamagotchiDecorationAttachment,
@@ -24,6 +26,14 @@ const DEAD_COLOR = 0x4b3038;
 const LEISURE_CHOICES = Object.values(TAMAGOTCHI_LEISURES).map((leisure) => ({
   name: leisure.label,
   value: leisure.id
+}));
+const ROOM_ITEM_CHOICES = TAMAGOTCHI_ROOM_ITEMS.map((item) => ({
+  name: `${item.emoji} ${item.label} · ${item.cost}조각`,
+  value: item.id
+}));
+const FRIEND_ACTION_CHOICES = Object.values(TAMAGOTCHI_FRIEND_ACTIONS).map((action) => ({
+  name: `${action.emoji} ${action.label}`,
+  value: action.id
 }));
 
 export const tamagotchiCommands = [
@@ -75,6 +85,60 @@ export const tamagotchiCommands = [
         .setDescription('시켜줄 여가')
         .setRequired(true)
         .addChoices(...LEISURE_CHOICES)
+    )
+  ,
+  new SlashCommandBuilder()
+    .setName('희진방')
+    .setDescription('희진 방 인테리어를 보고 추억 조각으로 아이템을 해금/장착합니다.')
+    .addStringOption((option) =>
+      option
+        .setName('행동')
+        .setDescription('방에서 할 행동')
+        .addChoices(
+          { name: '방 보기', value: 'view' },
+          { name: '추천 아이템 해금', value: 'unlock_next' },
+          { name: '아이템 해금', value: 'unlock' },
+          { name: '아이템 장착', value: 'equip' }
+        )
+    )
+    .addStringOption((option) =>
+      option
+        .setName('아이템')
+        .setDescription('해금하거나 장착할 방 아이템')
+        .addChoices(...ROOM_ITEM_CHOICES)
+    ),
+  new SlashCommandBuilder()
+    .setName('희진앨범')
+    .setDescription('희진 성장 분기, 랜덤 사건, 방 아이템 발견 앨범을 봅니다.'),
+  new SlashCommandBuilder()
+    .setName('희진일기')
+    .setDescription('희진의 최근 케어/사건/방문 기록을 일기 카드로 봅니다.'),
+  new SlashCommandBuilder()
+    .setName('희진방문')
+    .setDescription('다른 유저의 희진 방에 방문해 하루 한 번 상호작용합니다.')
+    .addUserOption((option) =>
+      option
+        .setName('유저')
+        .setDescription('방문할 희진의 주인')
+        .setRequired(true)
+    )
+    .addStringOption((option) =>
+      option
+        .setName('행동')
+        .setDescription('방문해서 할 행동')
+        .addChoices(...FRIEND_ACTION_CHOICES)
+    ),
+  new SlashCommandBuilder()
+    .setName('희진퀘스트')
+    .setDescription('성년기 이후 분기별 희진 퀘스트를 확인하고 보상을 받습니다.')
+    .addStringOption((option) =>
+      option
+        .setName('행동')
+        .setDescription('퀘스트 행동')
+        .addChoices(
+          { name: '퀘스트 보기', value: 'view' },
+          { name: '보상 받기', value: 'claim' }
+        )
     )
 ];
 
@@ -129,9 +193,10 @@ export function createTamagotchiReplyPayload(user, result) {
   );
   const decorationAttachment = getTamagotchiDecorationAttachment(result.pet.cosmetic.decorationId);
   const files = [skinAttachment, decorationAttachment].filter(Boolean);
+  const screen = getTamagotchiScreen(user, result);
   const embed = new EmbedBuilder()
-    .setTitle(`🐣 희진 다마고치 — ${result.pet.name} (${result.growthStage?.label ?? '성장 중'})`)
-    .setDescription(formatTamagotchiStatus(user, result))
+    .setTitle(screen.title)
+    .setDescription(screen.description)
     .setColor(resolveStatusColor(result.pet))
     .setFooter({ text: '버튼은 주인만 누를 수 있어요 · 방치/질병을 오래 두면 사망합니다' });
 
@@ -178,6 +243,52 @@ async function routeTamagotchiCommand(interaction, tamagotchi) {
     await interaction.reply(createTamagotchiReplyPayload(interaction.user, result));
     return;
   }
+
+  if (interaction.commandName === '희진방') {
+    const roomAction = interaction.options.getString('행동') ?? 'view';
+    const itemId = interaction.options.getString('아이템');
+    const result = roomAction === 'unlock_next'
+      ? await tamagotchi.unlockNextRoomItem(context)
+      : roomAction === 'unlock'
+        ? await tamagotchi.unlockRoomItem({ ...context, itemId })
+        : roomAction === 'equip'
+          ? await tamagotchi.equipRoomItem({ ...context, itemId })
+          : await tamagotchi.getRoom(context);
+    await interaction.reply(createTamagotchiReplyPayload(interaction.user, result));
+    return;
+  }
+
+  if (interaction.commandName === '희진앨범') {
+    const result = await tamagotchi.getAlbum(context);
+    await interaction.reply(createTamagotchiReplyPayload(interaction.user, result));
+    return;
+  }
+
+  if (interaction.commandName === '희진일기') {
+    const result = await tamagotchi.getJournal(context);
+    await interaction.reply(createTamagotchiReplyPayload(interaction.user, result));
+    return;
+  }
+
+  if (interaction.commandName === '희진방문') {
+    const target = interaction.options.getUser('유저', true);
+    const result = await tamagotchi.visitFriend({
+      ...context,
+      targetUserId: target.id,
+      targetUsername: target.username,
+      action: interaction.options.getString('행동') ?? 'pet'
+    });
+    await interaction.reply(createTamagotchiReplyPayload(target, result));
+    return;
+  }
+
+  if (interaction.commandName === '희진퀘스트') {
+    const questAction = interaction.options.getString('행동') ?? 'view';
+    const result = questAction === 'claim'
+      ? await tamagotchi.claimAdultQuest(context)
+      : await tamagotchi.getAdultQuest(context);
+    await interaction.reply(createTamagotchiReplyPayload(interaction.user, result));
+  }
 }
 
 async function handleTamagotchiButton(interaction, tamagotchi, logger) {
@@ -213,6 +324,12 @@ async function resolveButtonAction(action, tamagotchi, context) {
   if (action === 'refresh') return tamagotchi.getStatus(context);
   if (action === 'skin') return tamagotchi.cycleSkin(context);
   if (action === 'decor') return tamagotchi.cycleDecoration(context);
+  if (action === 'room') return tamagotchi.getRoom(context);
+  if (action === 'room_unlock') return tamagotchi.unlockNextRoomItem(context);
+  if (action === 'album') return tamagotchi.getAlbum(context);
+  if (action === 'journal') return tamagotchi.getJournal(context);
+  if (action === 'quest') return tamagotchi.getAdultQuest(context);
+  if (action === 'quest_claim') return tamagotchi.claimAdultQuest(context);
   if (action.startsWith('leisure_')) {
     return tamagotchi.leisure({ ...context, leisureId: action.slice('leisure_'.length) });
   }
@@ -245,8 +362,39 @@ function createTamagotchiActionRows(userId, result) {
       button('leisure_music', userId, '음악듣기', '🎧', ButtonStyle.Secondary, isLeisureDisabled(result, 'music', dead)),
       button('leisure_monkey', userId, '원숭이', '🐒', ButtonStyle.Secondary, isLeisureDisabled(result, 'monkey', dead)),
       button('leisure_tease_monkey', userId, '원숭이괴롭히기', '🙈', ButtonStyle.Secondary, isLeisureDisabled(result, 'tease_monkey', dead))
-    )
+    ),
+    createTamagotchiNavigationRow(userId, result)
   ];
+}
+
+function createTamagotchiNavigationRow(userId, result) {
+  if (result.view === 'room') {
+    return new ActionRowBuilder().addComponents(
+      button('room_unlock', userId, '다음해금', '🧩', ButtonStyle.Success, !result.room?.nextUnlock),
+      button('room', userId, '희진방', '🏠', ButtonStyle.Primary, false),
+      button('album', userId, '앨범', '📚', ButtonStyle.Secondary, false),
+      button('journal', userId, '일기', '📖', ButtonStyle.Secondary, false),
+      button('refresh', userId, '상태', '🔄', ButtonStyle.Secondary, false)
+    );
+  }
+
+  if (result.view === 'quest') {
+    return new ActionRowBuilder().addComponents(
+      button('quest_claim', userId, '퀘보상', '🏆', ButtonStyle.Success, !result.adultQuest?.complete || result.adultQuest?.rewardClaimed),
+      button('room', userId, '희진방', '🏠', ButtonStyle.Secondary, false),
+      button('album', userId, '앨범', '📚', ButtonStyle.Secondary, false),
+      button('journal', userId, '일기', '📖', ButtonStyle.Secondary, false),
+      button('refresh', userId, '상태', '🔄', ButtonStyle.Secondary, false)
+    );
+  }
+
+  return new ActionRowBuilder().addComponents(
+    button('room', userId, '희진방', '🏠', ButtonStyle.Primary, false),
+    button('album', userId, '앨범', '📚', ButtonStyle.Secondary, false),
+    button('journal', userId, '일기', '📖', ButtonStyle.Secondary, false),
+    button('quest', userId, '성년퀘', '🏆', ButtonStyle.Secondary, false),
+    button('refresh', userId, '새로고침', '🔄', ButtonStyle.Secondary, false)
+  );
 }
 
 function isActionDisabled(result, action, dead) {
@@ -266,6 +414,37 @@ function button(action, userId, label, emoji, style, disabled = false) {
     .setEmoji(emoji)
     .setStyle(style)
     .setDisabled(disabled);
+}
+
+function getTamagotchiScreen(user, result) {
+  if (result.view === 'room') {
+    return {
+      title: `🏠 희진 방 — ${user?.username ?? result.pet.username}님의 ${result.pet.name}`,
+      description: formatTamagotchiRoom(result)
+    };
+  }
+  if (result.view === 'album') {
+    return {
+      title: `📚 추억 앨범 — ${result.pet.name}`,
+      description: formatTamagotchiAlbum(result)
+    };
+  }
+  if (result.view === 'journal') {
+    return {
+      title: `📖 희진 일기 — ${result.pet.name}`,
+      description: formatTamagotchiJournal(result)
+    };
+  }
+  if (result.view === 'quest') {
+    return {
+      title: `🏆 성년기 퀘스트 — ${result.pet.name}`,
+      description: formatTamagotchiQuest(result)
+    };
+  }
+  return {
+    title: `🐣 희진 다마고치 — ${result.pet.name} (${result.growthStage?.label ?? '성장 중'})`,
+    description: formatTamagotchiStatus(user, result)
+  };
 }
 
 function formatTamagotchiStatus(user, result) {
@@ -307,6 +486,91 @@ function formatTamagotchiStatus(user, result) {
   ].join('\n');
 }
 
+function formatTamagotchiRoom(result) {
+  const nextUnlock = result.room.nextUnlock
+    ? `${result.room.nextUnlock.emoji} **${result.room.nextUnlock.label}** · 추억 조각 ${result.room.nextUnlock.cost}개`
+    : '모든 방 아이템 해금 완료';
+  const slots = result.room.slots
+    .map((slot) => `${slot.item ? slot.item.emoji : '▫️'} ${slot.label}: **${slot.item?.label ?? '비어 있음'}**`)
+    .join('\n');
+
+  return [
+    `희진 방은 **추억 조각**으로 꾸미는 장기 목표예요. 골드는 쓰지 않습니다.`,
+    `해금: **${result.room.unlockedCount}/${result.room.totalItems}** · 안락도 **${result.room.comfortScore}점** · 남은 조각 **${result.codex.memoryShards.toLocaleString()}개**`,
+    `다음 추천 해금: ${nextUnlock}`,
+    '',
+    slots,
+    '',
+    `최근 추억: ${formatRecentEvents(result.recentEvents)}`
+  ].join('\n');
+}
+
+function formatTamagotchiAlbum(result) {
+  const branchLines = result.album.branches
+    .slice(0, 6)
+    .map((item) => `${item.discovered ? '✅' : '⬜'} **${item.title}**`)
+    .join('\n');
+  const eventLines = result.album.events
+    .map((item) => `${item.discovered ? '✅' : '⬜'} **${item.title}**`)
+    .join('\n');
+  const roomLines = result.album.roomItems
+    .slice(0, 8)
+    .map((item) => `${item.discovered ? '✅' : '⬜'} **${item.title}**`)
+    .join('\n');
+
+  return [
+    `성장도감 **${result.codex.branchCount}/${result.codex.totalBranches}** · 사건도감 **${result.codex.eventCount}/${result.codex.totalEvents}** · 방 아이템 **${result.codex.roomItemCount}/${result.codex.totalRoomItems}**`,
+    '',
+    '🌱 **성장 앨범**',
+    branchLines,
+    '',
+    '🎲 **사건 앨범**',
+    eventLines,
+    '',
+    '🏠 **방 앨범**',
+    roomLines
+  ].join('\n');
+}
+
+function formatTamagotchiJournal(result) {
+  const entries = result.journal.entries.length > 0
+    ? result.journal.entries
+        .map((entry) => `- **${entry.title}**: ${entry.message}`)
+        .join('\n')
+    : '아직 기록된 일기가 없습니다. 밥주기/여가/방문/방꾸미기를 해보세요.';
+
+  return [
+    `최근 기록 **${result.journal.entries.length}/${result.journal.totalEntries}**`,
+    '',
+    entries
+  ].join('\n');
+}
+
+function formatTamagotchiQuest(result) {
+  const quest = result.adultQuest;
+  const requirements = quest.requirements
+    .map((requirement) => `${requirement.complete ? '✅' : '⬜'} ${requirement.label}: **${Math.min(requirement.current, requirement.required)}/${requirement.required}**`)
+    .join('\n');
+  const state = !quest.stageReady
+    ? '성년기 이후 열림'
+    : quest.rewardClaimed
+      ? '보상 수령 완료'
+      : quest.complete
+        ? '보상 수령 가능'
+        : '진행 중';
+
+  return [
+    `상태: **${state}** · 분기: **${result.growthBranch?.label ?? '분기 전'}**`,
+    `퀘스트: **${quest.label}**`,
+    quest.description,
+    '',
+    requirements,
+    '',
+    `보상: 추억 조각 **${quest.reward.memoryShards}개** + **${quest.reward.roomItemLabel}**`,
+    quest.complete && !quest.rewardClaimed ? '`/희진퀘스트 행동:보상 받기` 또는 **퀘보상** 버튼으로 받을 수 있어요.' : ''
+  ].filter(Boolean).join('\n');
+}
+
 function formatRecommendations(recommendations = []) {
   if (recommendations.length === 0) return '상태 안정 · 원하는 여가를 골라 주세요';
   return recommendations
@@ -336,7 +600,13 @@ function parseTamagotchiCustomId(customId) {
     ...Object.keys(TAMAGOTCHI_LEISURES).map((id) => `leisure_${id}`),
     'refresh',
     'skin',
-    'decor'
+    'decor',
+    'room',
+    'room_unlock',
+    'album',
+    'journal',
+    'quest',
+    'quest_claim'
   ]);
   if (!allowedActions.has(action)) return null;
   return { action, userId };
