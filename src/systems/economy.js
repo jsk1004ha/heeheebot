@@ -2804,6 +2804,12 @@ function cloneProfileCommunity(community) {
   if (!community || typeof community !== 'object') return null;
 
   return {
+    stats: community.stats && typeof community.stats === 'object'
+      ? { ...community.stats }
+      : null,
+    ownedTitles: Array.isArray(community.ownedTitles)
+      ? [...community.ownedTitles]
+      : [],
     equippedTitle: community.equippedTitle ?? null,
     cosmetics: {
       badges: Array.isArray(community.cosmetics?.badges)

@@ -609,7 +609,7 @@ async function getTradableStockAutocompleteChoices(interaction, stocks, query) {
       .filter((stock) => stock.status !== 'delisted')
       .filter((stock) => matchesStockQuery(stock, query))
       .map((stock) => ({
-        name: `${stock.name} · ${stock.symbol} · ${stock.sector} · ${formatRisk(stock.risk)}${stock.dynamic ? ' · 자동상장' : ''}`,
+        name: `${stock.name} · ${stock.symbol} · ${stock.sector}${stock.dynamic ? ' · 자동상장' : ''}`,
         value: stock.id
       }));
   } catch {
@@ -621,7 +621,7 @@ function getCatalogAutocompleteChoices(query) {
   return getStockCatalog()
     .filter((stock) => matchesStockQuery(stock, query))
     .map((stock) => ({
-      name: `${stock.name} · ${stock.symbol} · ${stock.sector} · ${formatRisk(stock.risk)}`,
+      name: `${stock.name} · ${stock.symbol} · ${stock.sector}`,
       value: stock.id
     }));
 }
@@ -687,7 +687,7 @@ function formatListings(listings) {
 function formatQuote(quote) {
   const statusText = formatStockStatus(quote);
   return [
-    `📌 **${quote.name}** (${quote.sector} / ${formatRisk(quote.risk)})`,
+    `📌 **${quote.name}** (${quote.sector})`,
     `상태: **${statusText}**`,
     `현재가: **${quote.price.toLocaleString()}골드** / 변동: ${formatTrendMarker(quote.changePercent)} **${formatSignedPercent(quote.changePercent)}**`,
     `이전가: ${quote.previousPrice.toLocaleString()}골드`,
@@ -1009,16 +1009,6 @@ function formatStockStatus(stock) {
   if (stock.eventType === 'surge') return '급등 이벤트';
   if (stock.eventType === 'crash') return '급락 이벤트';
   return '정상 거래';
-}
-
-function formatRisk(risk) {
-  return {
-    stable: '안정주',
-    growth: '성장주',
-    cyclical: '경기민감주',
-    volatile: '급등락주',
-    meme: '밈주식'
-  }[risk] ?? risk;
 }
 
 async function safeReply(interaction, content, ephemeral = false) {

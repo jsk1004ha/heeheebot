@@ -123,7 +123,7 @@ export function createBot({
         || await handleFishingCommand(interaction, fishing)
         || await handleSwordCommand(interaction, economy, logger)
         || await handleRpgCommand(interaction, economy)
-        || await handleEconomyCommand(interaction, economy);
+        || await handleEconomyCommand(interaction, economy, { stocks });
 
       if (!handled) {
         await interaction.reply({
