@@ -29,14 +29,15 @@ export class TimetableService {
   async getTimetable({
     grade,
     classNumber,
+    weekOffset = 0,
     previousStamp = DEFAULT_PREVIOUS_STAMP,
-    revision = DEFAULT_REVISION
+    revision = null
   } = {}) {
     const request = normalizeTimetableRequest({ grade, classNumber });
     const response = await this.fetchFn(buildComciganTimetableUrl({
       schoolId: this.school.id,
       previousStamp,
-      revision
+      revision: revision ?? DEFAULT_REVISION + normalizeWeekOffset(weekOffset)
     }));
 
     if (!response.ok) {
@@ -182,6 +183,16 @@ function normalizeTimetableRequest({ grade, classNumber }) {
     grade: normalizedGrade,
     classNumber: normalizedClassNumber
   };
+}
+
+function normalizeWeekOffset(weekOffset) {
+  const normalizedWeekOffset = Number(weekOffset);
+
+  if (!Number.isInteger(normalizedWeekOffset) || normalizedWeekOffset < 0) {
+    throw new Error('시간표 주차는 0 이상의 정수여야 합니다.');
+  }
+
+  return normalizedWeekOffset;
 }
 
 function getAvailableClassCount(data, grade) {
