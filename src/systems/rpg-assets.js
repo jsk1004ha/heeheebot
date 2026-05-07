@@ -226,6 +226,34 @@ const RPG_ASSETS = Object.freeze([
     outputDir: 'assets/rpg/maps/ancient-ruins',
     prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: ancient stone ruins at sunset, broken pillars around the edges, open center arena for battle sprites, no characters, no UI, no text.'
   }),
+  mapAsset({
+    id: 'map_shadow_marsh',
+    label: '그림자 늪 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/shadow-marsh',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: eerie shadow marsh, dark water, twisted roots, purple fog, open center island for hero and monster sprites, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_volcanic_rift',
+    label: '화산 협곡 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/volcanic-rift',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: volcanic rift canyon, lava glow, black basalt rocks, open ash platform center, dramatic warm lighting, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_frozen_peak',
+    label: '빙결 봉우리 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/frozen-peak',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: frozen mountain peak, blue ice cliffs, snow particles, open flat icy arena center, crisp cold light, no characters, no UI, no text.'
+  }),
+  mapAsset({
+    id: 'map_sky_citadel',
+    label: '하늘 성채 전투 배경',
+    category: 'map',
+    outputDir: 'assets/rpg/maps/sky-citadel',
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: floating sky citadel platform above clouds, golden stone floor, distant towers, open center arena, no characters, no UI, no text.'
+  }),
   spriteAsset({
     id: 'item_potion_icon',
     label: '회복 포션 아이콘',
@@ -346,7 +374,7 @@ export function getRpgAssetAttachment(id, preferred = 'auto') {
 
   return {
     attachment: filePath,
-    name: `${sanitizeAttachmentName(id)}${extname(filePath) || '.png'}`
+    name: `${getPublicAttachmentName(id)}${extname(filePath) || '.png'}`
   };
 }
 
@@ -415,6 +443,9 @@ function getAssetPathCandidates(asset, preferred) {
   return [asset.animation, asset.transparentSheet, asset.raw];
 }
 
-function sanitizeAttachmentName(id) {
-  return String(id || 'rpg-asset').replace(/[^a-zA-Z0-9_-]/g, '_');
+function getPublicAttachmentName(id) {
+  const index = RPG_ASSETS.findIndex((asset) => asset.id === id);
+  return index >= 0
+    ? `rpg-image-${String(index + 1).padStart(2, '0')}`
+    : 'rpg-image';
 }

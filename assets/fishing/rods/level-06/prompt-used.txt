@@ -1,0 +1,1 @@
+Use $generate2dsprite to create a clean HD transparent 2D game fishing rod item icon, single asset, centered diagonal rod, full item inside safe area, premium mobile RPG item-icon polish, no UI frame, no text, no watermark, solid #FF00FF background for chroma key cleanup. Asset level +6: polished wood rod with bronze fittings.

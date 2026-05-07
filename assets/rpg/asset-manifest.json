@@ -318,6 +318,42 @@
       "status": "raw-map-copied"
     },
     {
+      "id": "map_shadow_marsh",
+      "category": "map",
+      "kind": "map",
+      "source": "procedural-placeholder",
+      "raw": "assets/rpg/maps/shadow-marsh/raw/background.png",
+      "prompt": "assets/rpg/maps/shadow-marsh/prompt-used.txt",
+      "status": "procedural-placeholder"
+    },
+    {
+      "id": "map_volcanic_rift",
+      "category": "map",
+      "kind": "map",
+      "source": "procedural-placeholder",
+      "raw": "assets/rpg/maps/volcanic-rift/raw/background.png",
+      "prompt": "assets/rpg/maps/volcanic-rift/prompt-used.txt",
+      "status": "procedural-placeholder"
+    },
+    {
+      "id": "map_frozen_peak",
+      "category": "map",
+      "kind": "map",
+      "source": "procedural-placeholder",
+      "raw": "assets/rpg/maps/frozen-peak/raw/background.png",
+      "prompt": "assets/rpg/maps/frozen-peak/prompt-used.txt",
+      "status": "procedural-placeholder"
+    },
+    {
+      "id": "map_sky_citadel",
+      "category": "map",
+      "kind": "map",
+      "source": "procedural-placeholder",
+      "raw": "assets/rpg/maps/sky-citadel/raw/background.png",
+      "prompt": "assets/rpg/maps/sky-citadel/prompt-used.txt",
+      "status": "procedural-placeholder"
+    },
+    {
       "id": "item_potion_icon",
       "category": "item",
       "kind": "sprite",

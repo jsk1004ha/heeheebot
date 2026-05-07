@@ -223,6 +223,19 @@ const RPG_AREAS = Object.freeze({
       hard: Object.freeze(['트롤', '암흑 기사', '미니 드래곤'])
     })
   }),
+  marsh: Object.freeze({
+    label: '그림자 늪',
+    unlockLevel: 3,
+    description: '독안개와 매복 몬스터가 많은 습지 지역',
+    backgroundAssetId: 'map_shadow_marsh',
+    coinMultiplier: 1.25,
+    xpMultiplier: 1.18,
+    monsters: Object.freeze({
+      easy: Object.freeze(['고블린', '숲 늑대', '동굴 박쥐']),
+      normal: Object.freeze(['해골 병사', '오크 전사', '트롤']),
+      hard: Object.freeze(['암흑 기사', '트롤', '미니 드래곤'])
+    })
+  }),
   ruins: Object.freeze({
     label: '고대 유적',
     unlockLevel: 4,
@@ -234,6 +247,45 @@ const RPG_AREAS = Object.freeze({
       easy: Object.freeze(['해골 병사', '고블린', '동굴 박쥐']),
       normal: Object.freeze(['오크 전사', '암흑 기사', '트롤']),
       hard: RPG_DIFFICULTIES.hard.monsters
+    })
+  }),
+  volcano: Object.freeze({
+    label: '화산 협곡',
+    unlockLevel: 6,
+    description: '용암 지형과 정예 몬스터가 버티는 고난도 지역',
+    backgroundAssetId: 'map_volcanic_rift',
+    coinMultiplier: 1.6,
+    xpMultiplier: 1.45,
+    monsters: Object.freeze({
+      easy: Object.freeze(['오크 전사', '트롤', '해골 병사']),
+      normal: Object.freeze(['트롤', '암흑 기사', '미니 드래곤']),
+      hard: Object.freeze(['암흑 기사', '미니 드래곤', '고대 드래곤'])
+    })
+  }),
+  frost: Object.freeze({
+    label: '빙결 봉우리',
+    unlockLevel: 8,
+    description: '혹한과 빙벽이 전투를 방해하는 설산 지역',
+    backgroundAssetId: 'map_frozen_peak',
+    coinMultiplier: 1.85,
+    xpMultiplier: 1.7,
+    monsters: Object.freeze({
+      easy: Object.freeze(['해골 병사', '트롤', '동굴 박쥐']),
+      normal: Object.freeze(['암흑 기사', '트롤', '미니 드래곤']),
+      hard: Object.freeze(['미니 드래곤', '고대 드래곤', '암흑 기사'])
+    })
+  }),
+  sky: Object.freeze({
+    label: '하늘 성채',
+    unlockLevel: 10,
+    description: '구름 위 성채에서 최상위 몬스터와 맞서는 엔드게임 지역',
+    backgroundAssetId: 'map_sky_citadel',
+    coinMultiplier: 2.15,
+    xpMultiplier: 2,
+    monsters: Object.freeze({
+      easy: Object.freeze(['트롤', '암흑 기사', '미니 드래곤']),
+      normal: Object.freeze(['암흑 기사', '미니 드래곤', '고대 드래곤']),
+      hard: Object.freeze(['고대 드래곤', '미니 드래곤', '암흑 기사'])
     })
   })
 });
@@ -954,9 +1006,13 @@ export function normalizeRpgArea(area = 'forest') {
 
   if (['숲', '초록 숲', 'forest', 'f'].includes(normalized)) return 'forest';
   if (['동굴', '수정 동굴', 'cave', 'c'].includes(normalized)) return 'cave';
+  if (['늪', '그림자 늪', '그림자늪', 'marsh', 'swamp', 'm'].includes(normalized)) return 'marsh';
   if (['유적', '고대 유적', 'ruins', 'r'].includes(normalized)) return 'ruins';
+  if (['화산', '화산 협곡', '화산협곡', 'volcano', 'rift', 'v'].includes(normalized)) return 'volcano';
+  if (['빙결', '빙결 봉우리', '빙결봉우리', '설산', 'frost', 'peak', 'ice'].includes(normalized)) return 'frost';
+  if (['하늘', '하늘 성채', '하늘성채', 'sky', 'citadel', 's'].includes(normalized)) return 'sky';
 
-  throw new Error('지역은 초록 숲, 수정 동굴, 고대 유적 중 하나여야 합니다.');
+  throw new Error('지역은 초록 숲, 수정 동굴, 그림자 늪, 고대 유적, 화산 협곡, 빙결 봉우리, 하늘 성채 중 하나여야 합니다.');
 }
 
 export function normalizeRpgSkillId(skillId = 'basic') {
@@ -1181,6 +1237,41 @@ export function resolveRpgBattle({
   };
 }
 
+export function resolveRpgPvpTurn({
+  attacker = {},
+  defender = {},
+  skillId = 'basic',
+  randomInt = defaultRandomInt
+} = {}) {
+  const attackerFighter = createRpgPvpTurnFighter(attacker);
+  const defenderFighter = createRpgPvpTurnFighter(defender);
+  const normalizedSkillId = normalizeRpgSkillId(skillId);
+  const skill = RPG_SKILLS[normalizedSkillId];
+  const roll = randomInt(1, 20);
+  const attackBonus = Math.max(0, Number(skill.attackBonus) || 0);
+  const defenderGuardBonus = Math.max(0, Number(defender.guardBonus) || 0);
+  const defenderDefensePower = defenderFighter.stats.defense + defenderGuardBonus;
+  const attackPower = attackerFighter.stats.attack + attackBonus + roll;
+  const mitigatedPower = Math.max(1, attackPower - Math.floor(defenderDefensePower / 2));
+  const damage = Math.max(1, Math.floor(mitigatedPower / 3));
+
+  return {
+    skillId: normalizedSkillId,
+    skillLabel: skill.label,
+    skillMpCost: skill.mpCost,
+    roll,
+    attackBonus,
+    guardBonus: Math.max(0, Number(skill.defenseBonus) || 0),
+    defenderGuardBonus,
+    attackPower,
+    defenderDefensePower,
+    mitigatedPower,
+    damage,
+    attacker: attackerFighter,
+    defender: defenderFighter
+  };
+}
+
 export function resolveRpgBossBattle({
   playerLevel,
   bossId,
@@ -1244,6 +1335,45 @@ export function resolveRpgBossBattle({
       background: boss.backgroundAssetId
     }
   };
+}
+
+function createRpgPvpTurnFighter(fighter) {
+  const safeFighter = fighter && typeof fighter === 'object' ? fighter : {};
+  const normalizedClass = normalizeRpgClass(safeFighter.characterClass ?? 'novice');
+  const normalizedGender = normalizeRpgGender(safeFighter.characterGender ?? 'male');
+  const classConfig = RPG_CLASSES[normalizedClass];
+  const genderConfig = RPG_GENDERS[normalizedGender];
+  const safeLevel = Math.max(1, Number(safeFighter.level) || 1);
+
+  return {
+    level: safeLevel,
+    characterClass: normalizedClass,
+    characterClassLabel: classConfig.label,
+    characterGender: normalizedGender,
+    characterGenderLabel: genderConfig.label,
+    stats: normalizeRpgPvpStats(safeFighter.stats, safeLevel, normalizedClass),
+    guardBonus: Math.max(0, Number(safeFighter.guardBonus) || 0),
+    assets: {
+      hero: getRpgClassAssetId(normalizedClass, normalizedGender)
+    }
+  };
+}
+
+function normalizeRpgPvpStats(stats, level, characterClass) {
+  const fallback = getRpgDerivedStats({ level, characterClass });
+  const safeStats = stats && typeof stats === 'object' ? stats : {};
+
+  return {
+    attack: normalizeRpgPvpStat(safeStats.attack, fallback.attack),
+    defense: normalizeRpgPvpStat(safeStats.defense, fallback.defense)
+  };
+}
+
+function normalizeRpgPvpStat(value, fallback) {
+  const normalized = Number(value);
+  return Number.isFinite(normalized)
+    ? Math.max(0, normalized)
+    : fallback;
 }
 
 export function resolveRpgExploration({
@@ -1378,11 +1508,13 @@ export function rollRpgGearDrop({
   const rarity = Object.entries(RPG_GEAR_RARITIES)
     .reverse()
     .find(([, config]) => rarityRoll >= config.dropFloor)?.[0] ?? 'common';
-  const basePool = area === 'ruins'
-    ? ['dragon_blade', 'guardian_plate', 'mystic_ring']
-    : area === 'cave'
-      ? ['archmage_staff', 'leather_armor', 'mystic_ring']
-      : ['iron_sword', 'leather_armor', 'mystic_ring'];
+  const basePool = ['volcano', 'frost', 'sky'].includes(area)
+    ? ['dragon_blade', 'archmage_staff', 'guardian_plate', 'mystic_ring']
+    : ['marsh', 'ruins'].includes(area)
+      ? ['dragon_blade', 'guardian_plate', 'mystic_ring']
+      : area === 'cave'
+        ? ['archmage_staff', 'leather_armor', 'mystic_ring']
+        : ['iron_sword', 'leather_armor', 'mystic_ring'];
   const baseItemId = basePool[randomInt(0, basePool.length - 1)];
 
   return createRpgGearBlueprint({ baseItemId, rarity, randomInt });

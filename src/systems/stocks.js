@@ -1,4 +1,4 @@
-const DEFAULT_TICK_MS = 30 * 60 * 1000;
+const DEFAULT_TICK_MS = 3 * 60 * 1000;
 const DEFAULT_FEE_BPS = 100;
 const DEFAULT_LEVERAGE_FEE_BPS = 200;
 const MAX_CATCH_UP_TICKS = 24;
@@ -31,7 +31,7 @@ const STOCK_DEFINITIONS = Object.freeze([
   stock('mingeon_capital', '민건캐피탈', '금융', 'stable', 450, 850, 11),
   stock('dohye_games', '도혜게임즈', '게임', 'meme', 620, 1600, 22),
   stock('dohye_entertainment', '도혜엔터', '엔터', 'meme', 550, 1450, 20),
-  stock('dohye_commerce', '도혜커머스', '커머스', 'growth', 680, 1100, 14),
+  stock('dohye_commerce', '도혜커머스', '커머스', 'growth', 680, 1100, 14, [], 'DHCO'),
   stock('seojeong_securities', '서정증권', '증권', 'stable', 640, 750, 10),
   stock('seojeong_trading', '서정물산', '물산', 'stable', 390, 800, 11),
   stock('seojeong_cloud', '서정클라우드', '클라우드', 'growth', 930, 1200, 15),
@@ -416,11 +416,11 @@ export function getStockConfig(stockId) {
   return STOCKS_BY_ID[normalizeStockId(stockId)];
 }
 
-function stock(id, name, sector, risk, basePrice, volatilityBps, eventChance, aliases = []) {
+function stock(id, name, sector, risk, basePrice, volatilityBps, eventChance, aliases = [], symbol = null) {
   return Object.freeze({
     id,
     name,
-    symbol: createSymbol(id),
+    symbol: symbol ?? createSymbol(id),
     sector,
     risk,
     basePrice,

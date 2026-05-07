@@ -1,0 +1,11 @@
+{
+  "kind": "rod",
+  "skill": "$generate2dsprite",
+  "id": "rod_04",
+  "label": "튼튼한 갈대 낚싯대",
+  "level": 4,
+  "sheet": "single",
+  "source": "/home/jio/.codex/generated_images/019dfd96-21ac-7661-a40e-ce58d64ca566/ig_005ac32657019e3b0169fbd8d3b23c8191a4f6d303bc2acb15.png",
+  "raw": "assets/fishing/rods/rod-pack-raw.png",
+  "imagePath": "assets/fishing/rods/level-04/icon.png"
+}

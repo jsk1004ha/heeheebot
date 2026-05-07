@@ -221,6 +221,21 @@ export function getSwordDestructionCompensation(level) {
   return normalizedLevel >= 20 ? Math.max(1, Math.floor(normalizedLevel / 20)) : 0;
 }
 
+export function getSwordSellValue(level) {
+  const normalizedLevel = normalizeSwordLevel(level);
+  if (normalizedLevel <= 0) return 0;
+
+  let investedMoney = 0;
+  for (let currentLevel = 0; currentLevel < normalizedLevel; currentLevel += 1) {
+    const config = getSwordEnhanceConfig(currentLevel);
+    if (!config.blocked) {
+      investedMoney += config.moneyCost;
+    }
+  }
+
+  return Math.max(1, Math.floor(investedMoney * 0.6));
+}
+
 function band(min, max, successRate, maintainRate, destroyRate, moneyCost) {
   return Object.freeze({
     min,

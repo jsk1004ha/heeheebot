@@ -60,7 +60,7 @@ test('기존/마이그레이션 프로필의 누락된 레벨 필드를 안전�
     assert.equal(profile.rpg.characterClass, 'novice');
     assert.equal(profile.rpg.characterGender, 'male');
     assert.equal(profile.rpg.currentArea, 'forest');
-    assert.deepEqual(profile.rpg.unlockedAreas, ['forest', 'cave']);
+    assert.deepEqual(profile.rpg.unlockedAreas, ['forest', 'cave', 'marsh']);
     assert.deepEqual(profile.rpg.discoveredMonsters, {});
     assert.equal(profile.rpg.battles, 0);
     assert.equal(profile.rpg.wins, 0);

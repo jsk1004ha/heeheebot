@@ -1,0 +1,7 @@
+Use case: stylized-concept
+Asset type: Discord RPG bot NPC thumbnail asset, 512x512 game icon
+Primary request: Create a charming fantasy blacksmith NPC portrait for a Korean Discord bot sword-enhancement system.
+Subject: A friendly but mischievous master blacksmith, sturdy build, warm expression, leather apron, rolled sleeves, short dark hair, soot smudges, holding a glowing hammer near a small forge spark. The character should feel like they can congratulate, comfort, and tease players after sword enhancement.
+Style: polished 2D game illustration, clean anime-inspired fantasy RPG asset, crisp silhouette, high readability at small thumbnail size, vibrant warm forge lighting, cute humorous personality.
+Composition: centered bust/half-body portrait with generous padding, no cropped face, no text, no logo, no watermark.
+Background: perfectly flat solid #ff00ff chroma-key background for background removal; uniform color only, no shadows, gradients, texture, floor plane, reflections, or lighting variation. Do not use #ff00ff anywhere in the subject.

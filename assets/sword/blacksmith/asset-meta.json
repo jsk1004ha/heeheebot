@@ -1,0 +1,10 @@
+{
+  "id": "sword_blacksmith",
+  "role": "sword enhancement NPC thumbnail",
+  "source": "/home/jio/.codex/generated_images/019dfd96-21ac-7661-a40e-ce58d64ca566/ig_00f95e77ca4aa3f10169fbdc16c7a48191a1adcce37b933db7.png",
+  "raw": "assets/sword/blacksmith/blacksmith-raw.png",
+  "alphaSource": "assets/sword/blacksmith/blacksmith-alpha.png",
+  "output": "assets/sword/blacksmith/blacksmith.png",
+  "size": "512x512",
+  "backgroundRemoval": "chroma-key #ff00ff via remove_chroma_key.py"
+}

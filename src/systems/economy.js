@@ -41,6 +41,7 @@ import {
   resolveRpgExploration,
   resolveRpgBattle,
   resolveRpgBossBattle,
+  resolveRpgPvpTurn,
   resolveRpgRaidBattle,
   rollRpgGearDrop,
   rollRpgDrop,
@@ -53,6 +54,7 @@ import {
   MAX_DAILY_SWORD_BATTLE_STONES,
   MAX_SWORD_LEVEL,
   createRandomSwordOpponent,
+  getSwordSellValue,
   resolveSwordBattle as resolveSwordBattleResult,
   resolveSwordEnhancement
 } from './sword.js';
@@ -333,6 +335,8 @@ export class EconomyService {
         classConfig,
         genderConfig,
         heroAssetId,
+        derivedStats,
+        currentArea: getRpgAreaConfig(profile.rpg.currentArea),
         profile: cloneProfile(profile)
       };
     });
@@ -506,12 +510,38 @@ export class EconomyService {
     });
   }
 
+  async enterRpgArea({ guildId, userId, username, area }) {
+    const normalizedArea = normalizeRpgArea(area);
+    const areaConfig = getRpgAreaConfig(normalizedArea);
+
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, this);
+      profile.rpg.unlockedAreas = getUnlockedRpgAreaIds(profile.level);
+      assertRpgAreaUnlocked(profile, normalizedArea);
+      profile.rpg.currentArea = normalizedArea;
+
+      return {
+        area: normalizedArea,
+        areaConfig,
+        profile: cloneProfile(profile),
+        classConfig: getRpgClassConfig(profile.rpg.characterClass),
+        genderConfig: getRpgGenderConfig(profile.rpg.characterGender),
+        heroAssetId: getRpgClassAssetId(profile.rpg.characterClass, profile.rpg.characterGender),
+        derivedStats: getProfileRpgDerivedStats(profile),
+        unlockedAreas: profile.rpg.unlockedAreas.map((areaId) => ({
+          id: areaId,
+          ...getRpgAreaConfig(areaId)
+        }))
+      };
+    });
+  }
+
   async playRpgBattle({
     guildId,
     userId,
     username,
     difficulty = 'normal',
-    area = 'forest',
+    area = null,
     skill = 'basic',
     now = Date.now()
   }) {
@@ -711,6 +741,202 @@ export class EconomyService {
     });
   }
 
+  async startRpgPvpDuel({
+    guildId,
+    challenger,
+    opponent,
+    now = Date.now()
+  }) {
+    if (!challenger?.userId || !opponent?.userId) {
+      throw new Error('RPG 대결 참여자 정보가 필요합니다.');
+    }
+
+    if (challenger.userId === opponent.userId) {
+      throw new Error('자기 자신과는 RPG 대결을 할 수 없습니다.');
+    }
+
+    return this.store.update((data) => {
+      const challengerProfile = getOrCreateProfile(data, guildId, challenger.userId, challenger.username, this);
+      const opponentProfile = getOrCreateProfile(data, guildId, opponent.userId, opponent.username, this);
+      const challengerCooldownMs = getRpgCooldownRemaining(
+        challengerProfile,
+        now,
+        this.options.rpgBattleCooldownMs
+      );
+
+      if (challengerCooldownMs > 0) {
+        return createBlockedRpgPvpResult({
+          blockedSide: 'challenger',
+          blockedProfile: challengerProfile,
+          remainingMs: challengerCooldownMs,
+          challengerProfile,
+          opponentProfile
+        });
+      }
+
+      const opponentCooldownMs = getRpgCooldownRemaining(
+        opponentProfile,
+        now,
+        this.options.rpgBattleCooldownMs
+      );
+
+      if (opponentCooldownMs > 0) {
+        return createBlockedRpgPvpResult({
+          blockedSide: 'opponent',
+          blockedProfile: opponentProfile,
+          remainingMs: opponentCooldownMs,
+          challengerProfile,
+          opponentProfile
+        });
+      }
+
+      if (challengerProfile.rpg.hp <= 1) {
+        throw new Error(`${challengerProfile.username}님은 HP가 부족합니다. \`/rpg 휴식\` 또는 회복 포션을 사용하세요.`);
+      }
+
+      if (opponentProfile.rpg.hp <= 1) {
+        throw new Error(`${opponentProfile.username}님은 HP가 부족합니다. \`/rpg 휴식\` 또는 회복 포션을 사용하세요.`);
+      }
+
+      challengerProfile.rpg.lastBattleAt = now;
+      opponentProfile.rpg.lastBattleAt = now;
+
+      return {
+        started: true,
+        type: 'pvp_turn',
+        session: createRpgPvpDuelSession({
+          guildId,
+          challenger,
+          opponent,
+          challengerProfile,
+          opponentProfile,
+          now
+        }),
+        challenger: cloneProfile(challengerProfile),
+        opponent: cloneProfile(opponentProfile)
+      };
+    });
+  }
+
+  async playRpgPvpTurn({
+    guildId,
+    session,
+    actorUserId,
+    skillId = 'basic',
+    now = Date.now()
+  }) {
+    const nextSession = cloneRpgPvpSession(session);
+
+    if (nextSession.guildId !== guildId) {
+      throw new Error('다른 서버의 RPG 대결입니다.');
+    }
+
+    if (nextSession.completed) {
+      throw new Error('이미 종료된 RPG 대결입니다.');
+    }
+
+    const attackerSide = nextSession.turnSide;
+    const defenderSide = attackerSide === 'challenger' ? 'opponent' : 'challenger';
+    const attacker = nextSession.fighters[attackerSide];
+    const defender = nextSession.fighters[defenderSide];
+
+    if (attacker.userId !== actorUserId) {
+      throw new Error(`${attacker.username}님의 차례입니다.`);
+    }
+
+    const skillConfig = prepareRpgPvpSessionSkill(attacker, skillId);
+    const turn = resolveRpgPvpTurn({
+      attacker,
+      defender,
+      skillId: skillConfig.id,
+      randomInt: this.randomInt
+    });
+
+    attacker.mp = Math.max(0, attacker.mp - skillConfig.mpCost);
+    defender.hp = Math.max(0, defender.hp - turn.damage);
+    defender.guardBonus = 0;
+    attacker.guardBonus = turn.guardBonus;
+    nextSession.lastTurn = {
+      ...turn,
+      attackerSide,
+      defenderSide
+    };
+    nextSession.updatedAt = now;
+
+    if (defender.hp > 0) {
+      nextSession.turn += 1;
+      nextSession.turnSide = defenderSide;
+
+      return {
+        completed: false,
+        type: 'pvp_turn',
+        session: nextSession,
+        turn: nextSession.lastTurn
+      };
+    }
+
+    nextSession.completed = true;
+    nextSession.winnerSide = attackerSide;
+    nextSession.loserSide = defenderSide;
+    const rewards = getRpgPvpDuelRewards(attacker.level);
+
+    return this.store.update((data) => {
+      const challengerProfile = getOrCreateProfile(
+        data,
+        guildId,
+        nextSession.fighters.challenger.userId,
+        nextSession.fighters.challenger.username,
+        this
+      );
+      const opponentProfile = getOrCreateProfile(
+        data,
+        guildId,
+        nextSession.fighters.opponent.userId,
+        nextSession.fighters.opponent.username,
+        this
+      );
+      const winnerProfile = attackerSide === 'challenger'
+        ? challengerProfile
+        : opponentProfile;
+      const loserProfile = attackerSide === 'challenger'
+        ? opponentProfile
+        : challengerProfile;
+      let levelResult = {
+        leveledUp: false,
+        levelsGained: 0,
+        levelReward: 0
+      };
+
+      applyRpgPvpFighterState(challengerProfile, nextSession.fighters.challenger);
+      applyRpgPvpFighterState(opponentProfile, nextSession.fighters.opponent);
+      challengerProfile.rpg.battles += 1;
+      opponentProfile.rpg.battles += 1;
+      challengerProfile.rpg.pvpBattles += 1;
+      opponentProfile.rpg.pvpBattles += 1;
+      winnerProfile.rpg.wins += 1;
+      winnerProfile.rpg.pvpWins += 1;
+      loserProfile.rpg.losses += 1;
+      loserProfile.rpg.pvpLosses += 1;
+      winnerProfile.balance += rewards.coins;
+      levelResult = addXp(winnerProfile, rewards.xp, this);
+
+      return {
+        completed: true,
+        type: 'pvp_turn',
+        session: nextSession,
+        turn: nextSession.lastTurn,
+        winnerUserId: winnerProfile.userId,
+        loserUserId: loserProfile.userId,
+        rewards,
+        xpGained: rewards.xp,
+        coinReward: rewards.coins,
+        ...levelResult,
+        challenger: cloneProfile(challengerProfile),
+        opponent: cloneProfile(opponentProfile)
+      };
+    });
+  }
+
   async restRpg({ guildId, userId, username }) {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
@@ -774,7 +1000,7 @@ export class EconomyService {
     });
   }
 
-  async exploreRpg({ guildId, userId, username, area = 'forest', now = Date.now() }) {
+  async exploreRpg({ guildId, userId, username, area = null, now = Date.now() }) {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
       const normalizedArea = normalizeRpgArea(area || profile.rpg.currentArea);
@@ -833,7 +1059,7 @@ export class EconomyService {
     });
   }
 
-  async runRpgDungeon({ guildId, userId, username, area = 'forest', depth = 3, now = Date.now() }) {
+  async runRpgDungeon({ guildId, userId, username, area = null, depth = 3, now = Date.now() }) {
     const safeDepth = Math.min(5, normalizePositiveInteger(depth, '던전 깊이'));
 
     return this.store.update((data) => {
@@ -894,10 +1120,7 @@ export class EconomyService {
   async equipRpgGear({ guildId, userId, username, gearId }) {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
-      const gear = profile.rpg.gearInventory[gearId];
-      if (!gear) {
-        throw new Error('보유한 전리품 장비 ID가 아닙니다.');
-      }
+      const gear = resolveOwnedRpgGear(profile, gearId);
 
       profile.rpg.equippedGear[gear.slot] = gear.id;
       const derivedStats = getProfileRpgDerivedStats(profile);
@@ -1184,6 +1407,30 @@ export class EconomyService {
 
       return {
         ...enhancement,
+        profile: cloneProfile(profile)
+      };
+    });
+  }
+
+  async sellSword({ guildId, userId, username, now = Date.now() }) {
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, this);
+      const beforeLevel = profile.sword.level;
+      const saleValue = getSwordSellValue(beforeLevel);
+
+      if (saleValue <= 0) {
+        throw new Error('판매할 검이 없습니다. +1 이상 강화된 검만 판매할 수 있습니다.');
+      }
+
+      profile.balance += saleValue;
+      profile.sword.level = 0;
+      profile.sword.soldCount += 1;
+      profile.sword.saleEarnings += saleValue;
+      profile.sword.lastSoldAt = now;
+
+      return {
+        beforeLevel,
+        saleValue,
         profile: cloneProfile(profile)
       };
     });
@@ -1782,7 +2029,10 @@ function createDefaultSwordStats() {
     battleStonesToday: 0,
     lastGiftDay: null,
     lastEnhancedAt: 0,
-    lastBattleAt: 0
+    lastBattleAt: 0,
+    soldCount: 0,
+    saleEarnings: 0,
+    lastSoldAt: 0
   };
 }
 
@@ -1810,7 +2060,10 @@ function normalizeSwordStats(stats = {}) {
     battleStonesToday: normalizeStoredNonNegativeInteger(safeStats.battleStonesToday),
     lastGiftDay: normalizeStoredNullableInteger(safeStats.lastGiftDay),
     lastEnhancedAt: normalizeStoredNonNegativeInteger(safeStats.lastEnhancedAt),
-    lastBattleAt: normalizeStoredNonNegativeInteger(safeStats.lastBattleAt)
+    lastBattleAt: normalizeStoredNonNegativeInteger(safeStats.lastBattleAt),
+    soldCount: normalizeStoredNonNegativeInteger(safeStats.soldCount),
+    saleEarnings: normalizeStoredNonNegativeInteger(safeStats.saleEarnings),
+    lastSoldAt: normalizeStoredNonNegativeInteger(safeStats.lastSoldAt)
   };
 }
 
@@ -1912,6 +2165,9 @@ function createDefaultRpgStats() {
     battles: 0,
     wins: 0,
     losses: 0,
+    pvpBattles: 0,
+    pvpWins: 0,
+    pvpLosses: 0,
     lastBattleAt: 0
   };
 }
@@ -1979,6 +2235,9 @@ function normalizeRpgStats(stats = {}, level = 1) {
     battles: normalizeStoredNonNegativeInteger(safeStats.battles),
     wins: normalizeStoredNonNegativeInteger(safeStats.wins),
     losses: normalizeStoredNonNegativeInteger(safeStats.losses),
+    pvpBattles: normalizeStoredNonNegativeInteger(safeStats.pvpBattles),
+    pvpWins: normalizeStoredNonNegativeInteger(safeStats.pvpWins),
+    pvpLosses: normalizeStoredNonNegativeInteger(safeStats.pvpLosses),
     lastBattleAt: normalizeStoredNonNegativeInteger(safeStats.lastBattleAt)
   };
 }
@@ -2210,6 +2469,166 @@ function getRpgCooldownRemaining(profile, now, cooldownMs) {
   return elapsed >= cooldownMs ? 0 : cooldownMs - elapsed;
 }
 
+function createRpgPvpDuelSession({
+  guildId,
+  challenger,
+  opponent,
+  challengerProfile,
+  opponentProfile,
+  now
+}) {
+  return {
+    id: createRpgPvpSessionId(now),
+    guildId,
+    type: 'pvp_turn',
+    createdAt: now,
+    updatedAt: now,
+    turn: 1,
+    turnSide: 'challenger',
+    completed: false,
+    winnerSide: null,
+    loserSide: null,
+    lastTurn: null,
+    assets: {
+      background: 'map_ancient_ruins'
+    },
+    fighters: {
+      challenger: createRpgPvpSessionFighter(challengerProfile, challenger),
+      opponent: createRpgPvpSessionFighter(opponentProfile, opponent)
+    }
+  };
+}
+
+function createRpgPvpSessionId(now = Date.now()) {
+  return `${now.toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function createRpgPvpSessionFighter(profile, participant = {}) {
+  const derivedStats = getProfileRpgDerivedStats(profile);
+  const classConfig = getRpgClassConfig(profile.rpg.characterClass);
+  const genderConfig = getRpgGenderConfig(profile.rpg.characterGender);
+
+  return {
+    userId: profile.userId,
+    username: profile.username,
+    mention: participant.mention ?? `<@${profile.userId}>`,
+    level: profile.level,
+    characterClass: profile.rpg.characterClass,
+    characterClassLabel: classConfig.label,
+    characterGender: profile.rpg.characterGender,
+    characterGenderLabel: genderConfig.label,
+    stats: derivedStats,
+    hp: profile.rpg.hp,
+    maxHp: derivedStats.maxHp,
+    mp: profile.rpg.mp,
+    maxMp: derivedStats.maxMp,
+    guardBonus: 0,
+    availableSkillIds: getAvailableRpgSkillIds(profile.rpg.characterClass),
+    assets: {
+      hero: getRpgClassAssetId(profile.rpg.characterClass, profile.rpg.characterGender)
+    }
+  };
+}
+
+function cloneRpgPvpSession(session = {}) {
+  if (!session || typeof session !== 'object') {
+    throw new Error('RPG 대결 세션이 없습니다.');
+  }
+
+  const fighters = session.fighters && typeof session.fighters === 'object'
+    ? session.fighters
+    : {};
+
+  return {
+    ...session,
+    assets: { ...(session.assets ?? {}) },
+    lastTurn: session.lastTurn ? cloneRpgPvpTurn(session.lastTurn) : null,
+    fighters: {
+      challenger: cloneRpgPvpFighter(fighters.challenger),
+      opponent: cloneRpgPvpFighter(fighters.opponent)
+    }
+  };
+}
+
+function cloneRpgPvpFighter(fighter = {}) {
+  return {
+    ...fighter,
+    stats: { ...(fighter.stats ?? {}) },
+    availableSkillIds: [...(fighter.availableSkillIds ?? ['basic'])],
+    assets: { ...(fighter.assets ?? {}) }
+  };
+}
+
+function cloneRpgPvpTurn(turn) {
+  return {
+    ...turn,
+    attacker: turn.attacker ? {
+      ...turn.attacker,
+      stats: { ...(turn.attacker.stats ?? {}) },
+      assets: { ...(turn.attacker.assets ?? {}) }
+    } : null,
+    defender: turn.defender ? {
+      ...turn.defender,
+      stats: { ...(turn.defender.stats ?? {}) },
+      assets: { ...(turn.defender.assets ?? {}) }
+    } : null
+  };
+}
+
+function prepareRpgPvpSessionSkill(fighter, skillId) {
+  const normalizedSkillId = normalizeRpgSkillId(skillId);
+  const skill = getRpgSkillConfig(normalizedSkillId);
+
+  if (!fighter.availableSkillIds.includes(normalizedSkillId)) {
+    throw new Error(`${fighter.characterClassLabel} 직업은 ${skill.label} 스킬을 사용할 수 없습니다.`);
+  }
+
+  if (fighter.mp < skill.mpCost) {
+    throw new Error(`MP가 부족합니다. 필요 MP: ${skill.mpCost}, 현재 MP: ${fighter.mp}`);
+  }
+
+  return {
+    id: normalizedSkillId,
+    ...skill
+  };
+}
+
+function getRpgPvpDuelRewards(winnerLevel) {
+  const safeLevel = Math.max(1, Number(winnerLevel) || 1);
+
+  return {
+    xp: 60 + safeLevel * 20,
+    coins: 120 + safeLevel * 30
+  };
+}
+
+function applyRpgPvpFighterState(profile, fighter) {
+  const derivedStats = getProfileRpgDerivedStats(profile);
+  profile.rpg.hp = Math.max(1, Math.min(derivedStats.maxHp, normalizeStoredNonNegativeInteger(fighter.hp)));
+  profile.rpg.mp = Math.max(0, Math.min(derivedStats.maxMp, normalizeStoredNonNegativeInteger(fighter.mp)));
+}
+
+function createBlockedRpgPvpResult({
+  blockedSide,
+  blockedProfile,
+  remainingMs,
+  challengerProfile,
+  opponentProfile
+}) {
+  return {
+    started: false,
+    battled: false,
+    type: 'pvp',
+    blockedSide,
+    blockedUserId: blockedProfile.userId,
+    blockedUsername: blockedProfile.username,
+    remainingMs,
+    cooldownRemainingMs: remainingMs,
+    challenger: cloneProfile(challengerProfile),
+    opponent: cloneProfile(opponentProfile)
+  };
+}
+
 function assertRpgAreaUnlocked(profile, area) {
   const normalizedArea = normalizeRpgArea(area);
   const unlockedAreas = getUnlockedRpgAreaIds(profile.level);
@@ -2251,6 +2670,66 @@ function addRpgGear(profile, blueprint, now = Date.now()) {
   };
   profile.rpg.gearInventory[id] = gear;
   return gear;
+}
+
+function resolveOwnedRpgGear(profile, selector) {
+  const rawSelector = String(selector || '').trim();
+
+  if (!rawSelector) {
+    throw new Error('장착할 전리품 번호나 이름을 입력하세요. `/rpg 전리품`에서 버튼 목록을 볼 수 있습니다.');
+  }
+
+  if (profile.rpg.gearInventory[rawSelector]) {
+    return profile.rpg.gearInventory[rawSelector];
+  }
+
+  const sortedGears = getSortedRpgGearList(profile);
+  const indexMatch = rawSelector.match(/^#?(\d+)$/);
+  if (indexMatch) {
+    const index = Number(indexMatch[1]) - 1;
+    if (sortedGears[index]) {
+      return sortedGears[index];
+    }
+  }
+
+  const normalizedSelector = rawSelector.toLocaleLowerCase('ko-KR');
+  const matchedGear = sortedGears.find((gear) =>
+    [
+      gear.label,
+      gear.rarityLabel,
+      gear.rarity,
+      formatEquipmentSlotForSearch(gear.slot),
+      Object.entries(gear.stats ?? {})
+        .map(([stat, value]) => `${stat} ${value}`)
+        .join(' ')
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLocaleLowerCase('ko-KR')
+      .includes(normalizedSelector)
+  );
+
+  if (matchedGear) {
+    return matchedGear;
+  }
+
+  throw new Error('보유한 전리품 장비를 찾을 수 없습니다. `/rpg 전리품`에서 번호 버튼을 확인하세요.');
+}
+
+function getSortedRpgGearList(profile) {
+  return Object.values(profile.rpg.gearInventory)
+    .sort((a, b) =>
+      (b.power ?? 0) - (a.power ?? 0)
+      || String(a.label ?? '').localeCompare(String(b.label ?? ''), 'ko-KR')
+    );
+}
+
+function formatEquipmentSlotForSearch(slot) {
+  return {
+    weapon: '무기',
+    armor: '방어구',
+    accessory: '장신구'
+  }[slot] ?? slot;
 }
 
 function getProfileRpgDerivedStats(profile, overrides = {}) {

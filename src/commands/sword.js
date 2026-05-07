@@ -1,7 +1,4 @@
 import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
   EmbedBuilder,
   SlashCommandBuilder
 } from 'discord.js';
@@ -10,10 +7,11 @@ import {
   getSwordAssetLabel,
   getSwordAssetName
 } from '../systems/sword-assets.js';
+import {
+  formatBlacksmithEnhancementLine,
+  getBlacksmithAssetAttachment
+} from '../systems/sword-blacksmith.js';
 import { formatDuration } from './economy.js';
-
-const CHALLENGE_TTL_MS = 60_000;
-const pendingSwordBattleChallenges = new Map();
 
 export const swordCommands = [
   new SlashCommandBuilder()
@@ -22,6 +20,9 @@ export const swordCommands = [
   new SlashCommandBuilder()
     .setName('검상급강화')
     .setDescription('제련석을 사용해 파괴 없이 검을 강화합니다. +90 이하에서만 가능합니다.'),
+  new SlashCommandBuilder()
+    .setName('검판매')
+    .setDescription('현재 강화된 검을 판매하고 돈을 받습니다. 판매 후 검은 +0으로 돌아갑니다.'),
   new SlashCommandBuilder()
     .setName('검배틀')
     .setDescription('검으로 랜덤 상대 또는 다른 유저와 배틀합니다. 하루 10회 제한입니다.')
@@ -41,7 +42,7 @@ export function getSwordCommandPayloads() {
 
 export async function handleSwordCommand(interaction, economy, logger = console) {
   if (interaction.isButton()) {
-    return handleSwordBattleButton(interaction, economy, logger);
+    return false;
   }
 
   if (!interaction.isChatInputCommand() || !isSwordCommand(interaction.commandName)) {
@@ -79,7 +80,8 @@ async function routeSwordCommand(interaction, economy) {
     await interaction.reply(createSwordReplyPayload(
       formatSwordEnhancement(user, result),
       getSwordEnhancementImageLevel(result),
-      getSwordEnhancementImageTitle(result)
+      getSwordEnhancementImageTitle(result),
+      { includeBlacksmith: true }
     ));
     return;
   }
@@ -93,7 +95,8 @@ async function routeSwordCommand(interaction, economy) {
     await interaction.reply(createSwordReplyPayload(
       formatSwordEnhancement(user, result),
       getSwordEnhancementImageLevel(result),
-      getSwordEnhancementImageTitle(result)
+      getSwordEnhancementImageTitle(result),
+      { includeBlacksmith: true }
     ));
     return;
   }
@@ -117,6 +120,20 @@ async function routeSwordCommand(interaction, economy) {
       formatSwordGift(user, result),
       result.profile.sword.level,
       `현재 검 — ${getSwordAssetLabel(result.profile.sword.level)}`
+    ));
+    return;
+  }
+
+  if (interaction.commandName === '검판매') {
+    const result = await economy.sellSword({
+      guildId,
+      userId: user.id,
+      username: user.username
+    });
+    await interaction.reply(createSwordReplyPayload(
+      formatSwordSale(user, result),
+      result.beforeLevel,
+      `판매한 검 — ${getSwordAssetLabel(result.beforeLevel)}`
     ));
     return;
   }
@@ -148,106 +165,18 @@ async function routeSwordCommand(interaction, economy) {
     }
 
     assertValidSwordBattleTarget(user, target);
-    await createSwordBattleChallenge(interaction, target);
-  }
-}
-
-async function createSwordBattleChallenge(interaction, target) {
-  const challengeId = createChallengeId();
-  const challenge = {
-    id: challengeId,
-    guildId: interaction.guildId,
-    channelId: interaction.channelId,
-    challenger: {
-      userId: interaction.user.id,
-      username: interaction.user.username,
-      mention: `${interaction.user}`
-    },
-    opponent: {
-      userId: target.id,
-      username: target.username,
-      mention: `${target}`
-    },
-    createdAt: Date.now()
-  };
-
-  pendingSwordBattleChallenges.set(challengeId, challenge);
-
-  await interaction.reply({
-    content: [
-      `⚔️ ${target}, ${interaction.user}님이 검배틀을 신청했습니다!`,
-      `60초 안에 수락하면 하루 검배틀 횟수 1회를 사용하고 즉시 전투합니다.`,
-      `패배해도 돈은 잃지 않습니다.`
-    ].join('\n'),
-    components: [createSwordBattleChallengeRow(challengeId)]
-  });
-}
-
-async function handleSwordBattleButton(interaction, economy, logger) {
-  if (!interaction.customId.startsWith('sword_battle_')) return false;
-
-  const [action, challengeId] = interaction.customId.split(':');
-  const challenge = pendingSwordBattleChallenges.get(challengeId);
-
-  if (!challenge || Date.now() - challenge.createdAt > CHALLENGE_TTL_MS) {
-    pendingSwordBattleChallenges.delete(challengeId);
-    await interaction.reply({
-      content: '이미 만료되었거나 처리된 검배틀입니다.',
-      ephemeral: true
-    });
-    return true;
-  }
-
-  if (interaction.user.id !== challenge.opponent.userId) {
-    await interaction.reply({
-      content: '검배틀을 신청받은 유저만 누를 수 있습니다.',
-      ephemeral: true
-    });
-    return true;
-  }
-
-  if (action === 'sword_battle_decline') {
-    pendingSwordBattleChallenges.delete(challengeId);
-    await interaction.update({
-      content: `🛡️ ${challenge.opponent.mention}님이 검배틀을 거절했습니다.`,
-      components: []
-    });
-    return true;
-  }
-
-  if (action !== 'sword_battle_accept') {
-    await interaction.reply({
-      content: '알 수 없는 검배틀 버튼입니다.',
-      ephemeral: true
-    });
-    return true;
-  }
-
-  try {
+    const challenge = createSwordBattleContext(interaction, target);
     const result = await economy.playSwordPvpBattle({
       guildId: challenge.guildId,
       challenger: challenge.challenger,
       opponent: challenge.opponent
     });
-    pendingSwordBattleChallenges.delete(challengeId);
-    await interaction.update({
-      ...createSwordReplyPayload(
-        formatPvpSwordBattle(challenge, result),
-        getPvpWinnerSwordLevel(result),
-        `승자 검 — ${getSwordAssetLabel(getPvpWinnerSwordLevel(result))}`
-      ),
-      components: []
-    });
-  } catch (error) {
-    logger.error(error);
-    pendingSwordBattleChallenges.delete(challengeId);
-    await interaction.update({
-      content: `검배틀 실패: ${error.message}`,
-      components: []
-    });
+    await interaction.reply(createSwordReplyPayload(
+      formatPvpSwordBattle(challenge, result),
+      getPvpWinnerSwordLevel(result),
+      `승자 검 — ${getSwordAssetLabel(getPvpWinnerSwordLevel(result))}`
+    ));
   }
-
-  return true;
 }
 
 function formatSwordEnhancement(user, result) {
@@ -270,6 +199,7 @@ function formatSwordEnhancement(user, result) {
     `확률: 성공 ${result.successRate}% / 유지 ${result.maintainRate}% / 파괴 ${result.destroyRate}% (주사위 ${result.roll})`,
     `사용: ${result.moneyCost.toLocaleString()}원${stoneCostText}`,
     `잔액: **${result.profile.balance.toLocaleString()}원** / 제련석: **${result.profile.sword.refineStones.toLocaleString()}개**`,
+    formatBlacksmithEnhancementLine(result),
     `최고 강화: **+${result.profile.sword.highestLevel}**${rewardText}`
   ].join('\n');
 }
@@ -281,6 +211,17 @@ function formatSwordGift(user, result) {
     `현재 제련석: **${result.profile.sword.refineStones.toLocaleString()}개**`,
     `현재 검: **${formatSwordLevel(result.profile.sword.level)}**`,
     `상급강화는 \`/검상급강화\`로 시도할 수 있습니다.`
+  ].join('\n');
+}
+
+function formatSwordSale(user, result) {
+  return [
+    `💰 **검판매** — ${user}`,
+    `판매한 검: **${formatSwordLevel(result.beforeLevel)}**`,
+    `판매 금액: **${result.saleValue.toLocaleString()}원**`,
+    `현재 검: **${formatSwordLevel(result.profile.sword.level)}**`,
+    `잔액: **${result.profile.balance.toLocaleString()}원**`,
+    `최고 강화 기록: **+${result.profile.sword.highestLevel}**`
   ].join('\n');
 }
 
@@ -348,20 +289,46 @@ function assertValidSwordBattleTarget(user, target) {
   }
 }
 
-export function createSwordReplyPayload(content, swordLevel, title = null) {
+function createSwordBattleContext(interaction, target) {
+  return {
+    guildId: interaction.guildId,
+    channelId: interaction.channelId,
+    challenger: {
+      userId: interaction.user.id,
+      username: interaction.user.username,
+      mention: `${interaction.user}`
+    },
+    opponent: {
+      userId: target.id,
+      username: target.username,
+      mention: `${target}`
+    }
+  };
+}
+
+export function createSwordReplyPayload(content, swordLevel, title = null, options = {}) {
   const attachment = getSwordAssetAttachment(swordLevel);
   if (!attachment) return { content };
 
+  const files = [attachment];
   const embed = new EmbedBuilder()
     .setTitle(title ?? getSwordAssetLabel(swordLevel))
     .setImage(`attachment://${attachment.name}`)
     .setColor(getSwordEmbedColor(swordLevel))
     .setFooter({ text: '검 강화 이미지' });
 
+  if (options.includeBlacksmith) {
+    const blacksmithAttachment = getBlacksmithAssetAttachment();
+    if (blacksmithAttachment) {
+      embed.setThumbnail(`attachment://${blacksmithAttachment.name}`);
+      files.push(blacksmithAttachment);
+    }
+  }
+
   return {
     content,
     embeds: [embed],
-    files: [attachment]
+    files
   };
 }
 
@@ -415,8 +382,4 @@ async function safeReply(interaction, content, ephemeral = false) {
 
 function isSwordCommand(commandName) {
   return swordCommands.some((command) => command.name === commandName);
-}
-
-function createChallengeId() {
-  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 }

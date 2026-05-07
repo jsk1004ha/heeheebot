@@ -20,7 +20,9 @@ import {
   formatFishingAssetLine,
   getFishingAssetBatch,
   getFishingAssetCount,
-  getFishingAssetRarityCounts
+  getFishingAssetRarityCounts,
+  getFishingRodAssetForLevel,
+  getFishingRodAssets
 } from '../src/systems/fishing-assets.js';
 
 test('낚시 명령 payload는 요청한 명령들을 등록한다', () => {
@@ -53,6 +55,23 @@ test('낚시 에셋 manifest는 agent-sprite-forge 프롬프트와 출력 경로
   assert.ok(existsSync(getFishConfig('붕어').imagePath));
   assert.match(firstBatch[0].prompt, /#FF00FF/);
   assert.match(formatFishingAssetLine(firstBatch[0]), /fish_/);
+});
+
+test('낚싯대 이미지 에셋은 강화 단계별로 연결되어 있다', () => {
+  const rodAssets = getFishingRodAssets();
+
+  assert.equal(rodAssets.length, 20);
+  assert.ok(rodAssets.every((asset) => asset.skill === '$generate2dsprite'));
+  assert.ok(rodAssets.every((asset) => existsSync(asset.imagePath)));
+
+  for (let level = 1; level <= 20; level += 1) {
+    const asset = getFishingRodAssetForLevel(level);
+    assert.equal(asset.id, `rod_${String(level).padStart(2, '0')}`);
+    assert.equal(asset.level, level);
+    assert.match(asset.imagePath, new RegExp(`level-${String(level).padStart(2, '0')}/icon\\.png$`));
+  }
+
+  assert.equal(new Set(rodAssets.map((asset) => asset.imagePath)).size, 20);
 });
 
 test('물고기 카탈로그는 100종 이상과 히든 물고기를 포함하고 선택지는 디스코드 제한 안에 둔다', () => {
@@ -211,6 +230,28 @@ test('낚시 명령 핸들러는 /낚시 응답을 반환한다', async () => {
     assert.equal(handled, true);
     assert.match(interaction.replies[0], /낚시 성공/);
     assert.match(interaction.replies[0], /붕어/);
+    assert.doesNotMatch(interaction.replies[0], /이미지 에셋|fish_/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('낚시강화 응답은 낚싯대 이미지를 첨부하고 에셋 id를 노출하지 않는다', async () => {
+  const fixture = await createFixture({ randomInt: sequenceRandom(1) });
+
+  try {
+    await seedFishingProfile(fixture.store, {
+      rodLevel: 4,
+      fishingPoints: 100_000
+    });
+
+    const interaction = createInteraction('낚시강화');
+    const handled = await handleFishingCommand(interaction, fixture.fishing);
+
+    assert.equal(handled, true);
+    assert.match(interaction.replies[0], /낚싯대 강화/);
+    assert.doesNotMatch(interaction.replies[0], /rod_|이미지 에셋/);
+    assert.deepEqual(interaction.lastReply.files, [getFishingRodAssetForLevel(5).imagePath]);
   } finally {
     await fixture.cleanup();
   }
@@ -233,7 +274,8 @@ function createInteraction(commandName, options = {}) {
       id: 'user-1',
       username: '테스터'
     },
-    replies: [],
+	    replies: [],
+	    lastReply: null,
     isChatInputCommand() {
       return true;
     },
@@ -251,10 +293,11 @@ function createInteraction(commandName, options = {}) {
         return options[name] ?? null;
       }
     },
-    async reply(message) {
-      this.replies.push(typeof message === 'string' ? message : message.content);
-    }
-  };
+	    async reply(message) {
+	      this.lastReply = message;
+	      this.replies.push(typeof message === 'string' ? message : message.content);
+	    }
+	  };
 }
 
 async function seedFishingProfile(store, overrides = {}) {

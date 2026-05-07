@@ -3,14 +3,15 @@ import { SlashCommandBuilder } from 'discord.js';
 export const fortuneCommands = [
   new SlashCommandBuilder()
     .setName('운세')
-    .setDescription('오늘 또는 어제의 운세를 확인합니다. 같은 유저의 같은 날짜 운세는 항상 같습니다.')
+    .setDescription('오늘, 어제, 내일의 운세를 확인합니다. 같은 유저의 같은 날짜 운세는 항상 같습니다.')
     .addStringOption((option) =>
       option
         .setName('날짜')
         .setDescription('확인할 운세')
         .addChoices(
           { name: '오늘운세', value: 'today' },
-          { name: '어제운세', value: 'yesterday' }
+          { name: '어제운세', value: 'yesterday' },
+          { name: '내일운세', value: 'tomorrow' }
         )
     )
     .addUserOption((option) =>

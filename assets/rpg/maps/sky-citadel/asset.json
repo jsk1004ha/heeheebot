@@ -1,0 +1,9 @@
+{
+  "id": "map_sky_citadel",
+  "label": "하늘 성채 전투 배경",
+  "category": "map",
+  "kind": "map",
+  "raw": "assets/rpg/maps/sky-citadel/raw/background.png",
+  "prompt": "assets/rpg/maps/sky-citadel/prompt-used.txt",
+  "status": "procedural-placeholder"
+}

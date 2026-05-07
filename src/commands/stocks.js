@@ -327,8 +327,10 @@ function formatPortfolio(user, portfolio) {
     `💼 **${user.username}님의 가상주식 보유 현황**`,
     `현금: **${portfolio.cash.toLocaleString()}원**`,
     `주식 평가액: **${portfolio.stockValue.toLocaleString()}원**`,
+    `레버리지 평가금: **${portfolio.leveragedEquity.toLocaleString()}원**`,
     `총자산: **${portfolio.totalAssets.toLocaleString()}원**`,
-    `평가손익: **${formatSignedMoney(portfolio.unrealizedProfit)}** / 실현손익: **${formatSignedMoney(portfolio.realizedProfit)}**`,
+    `평가손익: **${formatSignedMoney(portfolio.unrealizedProfit)}** / 레버리지 손익: **${formatSignedMoney(portfolio.leveragedUnrealizedProfit)}**`,
+    `실현손익: **${formatSignedMoney(portfolio.realizedProfit)}** / 레버리지 실현손익: **${formatSignedMoney(portfolio.realizedLeveragedProfit)}**`,
     positions
   ].join('\n');
 }
@@ -337,7 +339,7 @@ function formatLeaderboard(rows) {
   if (rows.length === 0) return '아직 가상주식 랭킹 데이터가 없습니다.';
 
   const body = rows
-    .map((row, index) => `${index + 1}. **${row.username}** — 총자산 ${row.totalAssets.toLocaleString()}원 / 현금 ${row.cash.toLocaleString()}원 / 주식 ${row.stockValue.toLocaleString()}원`)
+    .map((row, index) => `${index + 1}. **${row.username}** — 총자산 ${row.totalAssets.toLocaleString()}원 / 현금 ${row.cash.toLocaleString()}원 / 주식 ${row.stockValue.toLocaleString()}원 / 레버리지 ${row.leveragedEquity.toLocaleString()}원`)
     .join('\n');
   return `🏆 **가상주식 총자산 랭킹**\n${body}`;
 }
@@ -398,7 +400,7 @@ function formatLeveragePortfolio(user, portfolio) {
 }
 
 function formatMarketLine(stock) {
-  return `- **${stock.name}** ${stock.price.toLocaleString()}원 (${formatSignedPercent(stock.changePercent)})`;
+  return `- **${stock.name}** \`${stock.symbol}\` ${stock.price.toLocaleString()}원 (${formatSignedPercent(stock.changePercent)})`;
 }
 
 function formatSignedPercent(percent) {

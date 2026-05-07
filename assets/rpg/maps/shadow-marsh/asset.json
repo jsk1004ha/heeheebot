@@ -1,0 +1,9 @@
+{
+  "id": "map_shadow_marsh",
+  "label": "그림자 늪 전투 배경",
+  "category": "map",
+  "kind": "map",
+  "raw": "assets/rpg/maps/shadow-marsh/raw/background.png",
+  "prompt": "assets/rpg/maps/shadow-marsh/prompt-used.txt",
+  "status": "procedural-placeholder"
+}

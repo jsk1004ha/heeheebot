@@ -1,0 +1,11 @@
+{
+  "kind": "rod",
+  "skill": "$generate2dsprite",
+  "id": "rod_08",
+  "label": "황동 가이드 낚싯대",
+  "level": 8,
+  "sheet": "single",
+  "source": "/home/jio/.codex/generated_images/019dfd96-21ac-7661-a40e-ce58d64ca566/ig_005ac32657019e3b0169fbd8d3b23c8191a4f6d303bc2acb15.png",
+  "raw": "assets/fishing/rods/rod-pack-raw.png",
+  "imagePath": "assets/fishing/rods/level-08/icon.png"
+}

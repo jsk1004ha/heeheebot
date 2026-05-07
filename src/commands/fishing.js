@@ -4,7 +4,8 @@ import {
   formatFishingAssetLine,
   getFishingAssetBatch,
   getFishingAssetCount,
-  getFishingAssetRarityCounts
+  getFishingAssetRarityCounts,
+  getFishingRodAssetForLevel
 } from '../systems/fishing-assets.js';
 import {
   getBattleDifficultyOptions,
@@ -135,7 +136,7 @@ async function routeFishingCommand(interaction, fishing) {
       userId: user.id,
       username: user.username
     });
-    await interaction.reply(formatEnhancementResult(user, result));
+    await replyWithRodImage(interaction, formatEnhancementResult(user, result), result.afterLevel);
     return;
   }
 
@@ -195,8 +196,7 @@ function formatCatchResult(user, result) {
     `획득: **${result.fish.label}** (${getRarityLabel(result.rarity)} / ${result.fish.type})`,
     `크기: **${result.size.toLocaleString()}cm** / 낚시 포인트: **+${result.pointsGained.toLocaleString()}점**`,
     `보유 ${result.fish.label}: **${count.toLocaleString()}마리**`,
-    `낚싯대: **+${result.profile.rod.level}강** / 총 포인트: **${result.profile.stats.fishingPoints.toLocaleString()}점**`,
-    `이미지 에셋: \`${result.fish.assetId}\``
+    `낚싯대: **+${result.profile.rod.level}강** / 총 포인트: **${result.profile.stats.fishingPoints.toLocaleString()}점**`
   ].join('\n');
 }
 
@@ -327,6 +327,19 @@ async function replyWithFishImage(interaction, content, fish) {
     await interaction.reply({
       content,
       files: [imagePath]
+    });
+    return;
+  }
+
+  await interaction.reply(content);
+}
+
+async function replyWithRodImage(interaction, content, rodLevel) {
+  const rodAsset = getFishingRodAssetForLevel(rodLevel);
+  if (rodAsset?.imagePath && existsSync(rodAsset.imagePath)) {
+    await interaction.reply({
+      content,
+      files: [rodAsset.imagePath]
     });
     return;
   }

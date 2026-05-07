@@ -1,0 +1,9 @@
+{
+  "id": "map_volcanic_rift",
+  "label": "화산 협곡 전투 배경",
+  "category": "map",
+  "kind": "map",
+  "raw": "assets/rpg/maps/volcanic-rift/raw/background.png",
+  "prompt": "assets/rpg/maps/volcanic-rift/prompt-used.txt",
+  "status": "procedural-placeholder"
+}

@@ -9,7 +9,8 @@ import { EconomyService } from '../src/systems/economy.js';
 import {
   normalizeRpgDifficulty,
   normalizeRpgGender,
-  resolveRpgBattle
+  resolveRpgBattle,
+  resolveRpgPvpTurn
 } from '../src/systems/rpg.js';
 
 test('RPG 명령 payload는 전투와 상태 subcommand를 등록한다', () => {
@@ -19,6 +20,7 @@ test('RPG 명령 payload는 전투와 상태 subcommand를 등록한다', () => 
   assert.deepEqual(command.options.map((option) => option.name), [
     '시작',
     '전투',
+    '대결',
     '탐험',
     '던전',
     '보스',
@@ -36,13 +38,16 @@ test('RPG 명령 payload는 전투와 상태 subcommand를 등록한다', () => 
     '스토리',
     '도감',
     '레이드',
-    '지역',
-    '에셋'
+    '지역'
   ]);
   assert.deepEqual(
     command.options[1].options[0].choices.map((choice) => choice.name),
     ['쉬움', '보통', '어려움']
   );
+  const pvpCommand = command.options.find((option) => option.name === '대결');
+  assert.deepEqual(pvpCommand.options.map((option) => option.name), ['상대']);
+  assert.equal(pvpCommand.options[0].required, true);
+  assert.equal(command.options[0].options[0].required, false);
   assert.deepEqual(
     command.options[0].options[0].choices.map((choice) => choice.name),
     ['전사', '마법사', '궁수', '팔라딘 (가챠)', '도적 (가챠)', '사제 (가챠)']
@@ -51,6 +56,15 @@ test('RPG 명령 payload는 전투와 상태 subcommand를 등록한다', () => 
     command.options[0].options[1].choices.map((choice) => choice.name),
     ['남캐', '여캐']
   );
+  const equipmentCommand = command.options.find((option) => option.name === '장비');
+  assert.equal(equipmentCommand.options[0].required, false);
+  const gearCommand = command.options.find((option) => option.name === '전리품');
+  assert.equal(gearCommand.options[0].name, '장비');
+  const advanceCommand = command.options.find((option) => option.name === '전직');
+  assert.equal(advanceCommand.options[0].required, false);
+  const areaCommand = command.options.find((option) => option.name === '지역');
+  assert.deepEqual(areaCommand.options.map((option) => option.name), ['지역']);
+  assert.ok(areaCommand.options[0].choices.some((choice) => choice.name.includes('하늘 성채')));
 });
 
 test('RPG 탐험, 던전, 전리품, 스킬트리, 전직, 스토리, 도감, 레이드는 진행도를 확장한다', async () => {
@@ -105,7 +119,7 @@ test('RPG 탐험, 던전, 전리품, 스킬트리, 전직, 스토리, 도감, �
       guildId: 'guild-1',
       userId: 'user-1',
       username: '용사',
-      gearId: dungeon.gearDrop.id
+      gearId: '1'
     });
     const battle = await fixture.economy.playRpgBattle({
       guildId: 'guild-1',
@@ -192,6 +206,42 @@ test('RPG 전투 판정은 난이도와 결정적 난수를 따른다', () => {
   assert.equal(femaleMage.assets.hero, 'hero_female_mage_idle');
 });
 
+test('RPG PvP 턴 판정은 선택한 스킬로 피해와 MP 소모를 계산한다', () => {
+  const turn = resolveRpgPvpTurn({
+    attacker: {
+      level: 1,
+      characterClass: 'warrior',
+      characterGender: 'female',
+      guardBonus: 0,
+      stats: {
+        attack: 4,
+        defense: 0
+      }
+    },
+    defender: {
+      level: 1,
+      characterClass: 'mage',
+      characterGender: 'male',
+      guardBonus: 0,
+      stats: {
+        attack: 3,
+        defense: 0
+      }
+    },
+    skillId: 'power_strike',
+    randomInt: () => 20
+  });
+
+  assert.equal(turn.skillId, 'power_strike');
+  assert.equal(turn.skillLabel, '파워 스트라이크');
+  assert.equal(turn.skillMpCost, 8);
+  assert.equal(turn.roll, 20);
+  assert.equal(turn.attackPower, 28);
+  assert.equal(turn.damage, 9);
+  assert.equal(turn.attacker.assets.hero, 'hero_female_warrior_idle');
+  assert.equal(turn.defender.assets.hero, 'hero_mage_idle');
+});
+
 test('RPG 직업과 지역은 전투력, 보상, 해금 조건에 반영된다', async () => {
   const fixture = await createFixture({
     randomInt: (min) => min,
@@ -228,6 +278,13 @@ test('RPG 직업과 지역은 전투력, 보상, 해금 조건에 반영된다',
       area: 'cave',
       now: 3_000
     });
+    const defaultAreaBattle = await fixture.economy.playRpgBattle({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      difficulty: 'easy',
+      now: 4_000
+    });
 
     assert.equal(selected.profile.rpg.characterClass, 'warrior');
     assert.equal(selected.profile.rpg.characterGender, 'female');
@@ -243,6 +300,84 @@ test('RPG 직업과 지역은 전투력, 보상, 해금 조건에 반영된다',
     assert.equal(cave.coinReward, 92);
     assert.equal(cave.profile.rpg.currentArea, 'cave');
     assert.equal(cave.profile.rpg.discoveredMonsters['슬라임'], 1);
+    assert.equal(defaultAreaBattle.battle.areaLabel, '수정 동굴');
+    assert.equal(defaultAreaBattle.profile.rpg.currentArea, 'cave');
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('RPG PvP는 수락 후 버튼 턴을 진행하고 종료 시 전적과 보상을 정산한다', async () => {
+  const fixture = await createFixture({
+    randomInt: () => 20,
+    rpgBattleCooldownMs: 60_000
+  });
+
+  try {
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      characterClass: 'warrior',
+      characterGender: 'female',
+      now: 1_000
+    });
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-2',
+      username: '마법사',
+      characterClass: 'mage',
+      characterGender: 'male',
+      now: 1_000
+    });
+    await fixture.store.update((data) => {
+      data.guilds['guild-1'].users['user-2'].rpg.hp = 8;
+    });
+
+    const started = await fixture.economy.startRpgPvpDuel({
+      guildId: 'guild-1',
+      challenger: {
+        userId: 'user-1',
+        username: '용사'
+      },
+      opponent: {
+        userId: 'user-2',
+        username: '마법사'
+      },
+      now: 10_000
+    });
+    const finished = await fixture.economy.playRpgPvpTurn({
+      guildId: 'guild-1',
+      session: started.session,
+      actorUserId: 'user-1',
+      skillId: 'power_strike',
+      now: 11_000
+    });
+
+    assert.equal(started.started, true);
+    assert.equal(started.session.turnSide, 'challenger');
+    assert.deepEqual(started.session.fighters.challenger.availableSkillIds, ['basic', 'power_strike']);
+    assert.equal(started.challenger.rpg.lastBattleAt, 10_000);
+    assert.equal(started.opponent.rpg.lastBattleAt, 10_000);
+
+    assert.equal(finished.completed, true);
+    assert.equal(finished.winnerUserId, 'user-1');
+    assert.equal(finished.loserUserId, 'user-2');
+    assert.equal(finished.turn.damage, 9);
+    assert.equal(finished.rewards.xp, 80);
+    assert.equal(finished.rewards.coins, 150);
+    assert.equal(finished.challenger.totalXp, 80);
+    assert.equal(finished.challenger.balance, 150);
+    assert.equal(finished.challenger.rpg.mp, 27);
+    assert.equal(finished.challenger.rpg.battles, 1);
+    assert.equal(finished.challenger.rpg.wins, 1);
+    assert.equal(finished.challenger.rpg.pvpBattles, 1);
+    assert.equal(finished.challenger.rpg.pvpWins, 1);
+    assert.equal(finished.opponent.rpg.battles, 1);
+    assert.equal(finished.opponent.rpg.losses, 1);
+    assert.equal(finished.opponent.rpg.pvpBattles, 1);
+    assert.equal(finished.opponent.rpg.pvpLosses, 1);
+    assert.equal(finished.opponent.rpg.hp, 1);
   } finally {
     await fixture.cleanup();
   }
