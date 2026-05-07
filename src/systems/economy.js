@@ -80,6 +80,7 @@ import {
   exchangeCurrency,
   getCurrencyBalance,
   getCurrencyBalances,
+  migrateLegacyWalletsToGold,
   normalizeWallets
 } from './currencies.js';
 
@@ -150,9 +151,9 @@ const SWORD_ACHIEVEMENTS = Object.freeze([
   swordAchievement(
     'sword_sales_10000',
     '검 장사꾼',
-    '검 판매 누적 10,000코인',
+    '검 판매 누적 10,000골드',
     (sword) => sword.saleEarnings >= 10_000,
-    (sword) => `${Math.min(sword.saleEarnings, 10_000).toLocaleString()} / 10,000코인`,
+    (sword) => `${Math.min(sword.saleEarnings, 10_000).toLocaleString()} / 10,000골드`,
     { swordCoins: 10_000 }
   )
 ]);
@@ -452,7 +453,7 @@ export class EconomyService {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
 
-      debitCurrency(profile, CURRENCY_RPG, totalPrice, 'RPG 골드가 부족합니다.');
+      debitCurrency(profile, CURRENCY_RPG, totalPrice, '골드가 부족합니다.');
       addInventoryItem(profile.rpg.inventory, normalizedItemId, normalizedQuantity);
 
       return {
@@ -1370,7 +1371,7 @@ export class EconomyService {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
 
-      debitCurrency(profile, CURRENCY_RPG, totalCost, 'RPG 골드가 부족합니다.');
+      debitCurrency(profile, CURRENCY_RPG, totalCost, '골드가 부족합니다.');
       const pulls = [];
 
       for (let index = 0; index < normalizedCount; index += 1) {
@@ -1559,7 +1560,7 @@ export class EconomyService {
         profile,
         CURRENCY_RPG,
         cost,
-        `RPG 골드가 부족합니다. 장비 강화 비용: ${cost.toLocaleString()}골드`
+        `골드가 부족합니다. 장비 강화 비용: ${cost.toLocaleString()}골드`
       );
 
       if (success) {
@@ -1962,7 +1963,7 @@ export class EconomyService {
         profile,
         CURRENCY_SWORD,
         totalCost,
-        `강화 코인이 부족합니다. 필요 금액: ${totalCost.toLocaleString()}코인`
+        `골드가 부족합니다. 필요 금액: ${totalCost.toLocaleString()}코인`
       );
       profile.sword.protectionScrolls += normalizedQuantity;
 
@@ -2024,7 +2025,7 @@ export class EconomyService {
         profile,
         CURRENCY_SWORD,
         enhancement.moneyCost,
-        `강화 코인이 부족합니다. 필요 금액: ${enhancement.moneyCost.toLocaleString()}코인`
+        `골드가 부족합니다. 필요 금액: ${enhancement.moneyCost.toLocaleString()}코인`
       );
       if (enhancement.outcome === 'destroy' && profile.sword.protectionScrolls > 0) {
         profile.sword.protectionScrolls -= 1;
@@ -2057,7 +2058,7 @@ export class EconomyService {
       });
 
       if (getCurrencyBalance(profile, CURRENCY_SWORD) < enhancement.moneyCost) {
-        throw new Error(`강화 코인이 부족합니다. 필요 금액: ${enhancement.moneyCost.toLocaleString()}코인`);
+        throw new Error(`골드가 부족합니다. 필요 금액: ${enhancement.moneyCost.toLocaleString()}골드`);
       }
 
       if (profile.sword.refineStones < enhancement.stoneCost) {
@@ -2276,7 +2277,7 @@ export class EconomyService {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
 
-      debitCurrency(profile, CURRENCY_CASINO, normalizedBet, '카지노칩이 부족합니다.');
+      debitCurrency(profile, CURRENCY_CASINO, normalizedBet, '골드가 부족합니다.');
       creditCurrency(profile, CURRENCY_CASINO, normalizedPayout);
 
       return {
@@ -2294,7 +2295,7 @@ export class EconomyService {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
 
-      debitCurrency(profile, CURRENCY_CASINO, normalizedBet, '카지노칩이 부족합니다.');
+      debitCurrency(profile, CURRENCY_CASINO, normalizedBet, '골드가 부족합니다.');
 
       return {
         bet: normalizedBet,
@@ -2342,11 +2343,11 @@ export class EconomyService {
       const opponentProfile = getOrCreateProfile(data, guildId, opponent.userId, opponent.username, this);
 
       if (getCurrencyBalance(challengerProfile, CURRENCY_CASINO) < normalizedBet) {
-        throw new Error(`${challengerProfile.username}님의 카지노칩이 부족합니다.`);
+        throw new Error(`${challengerProfile.username}님의 골드가 부족합니다.`);
       }
 
       if (getCurrencyBalance(opponentProfile, CURRENCY_CASINO) < normalizedBet) {
-        throw new Error(`${opponentProfile.username}님의 카지노칩이 부족합니다.`);
+        throw new Error(`${opponentProfile.username}님의 골드가 부족합니다.`);
       }
 
       debitCurrency(challengerProfile, CURRENCY_CASINO, normalizedBet);
@@ -2413,11 +2414,11 @@ export class EconomyService {
       const opponentProfile = getOrCreateProfile(data, guildId, opponent.userId, opponent.username, this);
 
       if (getCurrencyBalance(challengerProfile, CURRENCY_CASINO) < normalizedBet) {
-        throw new Error(`${challengerProfile.username}님의 카지노칩이 부족합니다.`);
+        throw new Error(`${challengerProfile.username}님의 골드가 부족합니다.`);
       }
 
       if (getCurrencyBalance(opponentProfile, CURRENCY_CASINO) < normalizedBet) {
-        throw new Error(`${opponentProfile.username}님의 카지노칩이 부족합니다.`);
+        throw new Error(`${opponentProfile.username}님의 골드가 부족합니다.`);
       }
 
       if (!winnerUserId) {
@@ -2557,6 +2558,7 @@ function getOrCreateProfile(data, guildId, userId, username, economy) {
   profile.xp = normalizeStoredNonNegativeInteger(profile.xp);
   profile.totalXp = normalizeStoredNonNegativeInteger(profile.totalXp);
   profile.balance = normalizeStoredNonNegativeInteger(profile.balance);
+  migrateLegacyWalletsToGold(profile);
   profile.wallets = normalizeWallets(profile.wallets);
   profile.lastMessageRewardAt = normalizeStoredNonNegativeInteger(profile.lastMessageRewardAt);
   profile.lastDailyAt = normalizeStoredNonNegativeInteger(profile.lastDailyAt);
@@ -2585,6 +2587,7 @@ function cloneProfile(profile) {
     balance: profile.balance,
     wallets: cloneWallets(profile.wallets),
     currencyBalances: getCurrencyBalances(profile),
+    currencyMigration: structuredClone(profile.currencyMigration ?? null),
     lastMessageRewardAt: profile.lastMessageRewardAt,
     lastDailyAt: profile.lastDailyAt,
     lastDailyDay: profile.lastDailyDay,
@@ -2823,7 +2826,7 @@ function applySwordAchievementRewards(profile, rewards) {
 
 function formatSwordAchievementRewardText(rewards) {
   const parts = [];
-  if (rewards.swordCoins > 0) parts.push(`${rewards.swordCoins.toLocaleString()}코인`);
+  if (rewards.swordCoins > 0) parts.push(`${rewards.swordCoins.toLocaleString()}골드`);
   if (rewards.refineStones > 0) parts.push(`제련석 ${rewards.refineStones.toLocaleString()}개`);
   if (rewards.protectionScrolls > 0) parts.push(`보호권 ${rewards.protectionScrolls.toLocaleString()}개`);
   return parts.join(', ') || '보상 없음';

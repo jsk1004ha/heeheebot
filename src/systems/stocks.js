@@ -1,9 +1,11 @@
 import {
   CURRENCY_STOCK,
   cloneWallets,
+  convertLegacyCurrencyAmountToGold,
   creditCurrency,
   debitCurrency,
   getCurrencyBalance,
+  migrateLegacyWalletsToGold,
   normalizeWallets
 } from './currencies.js';
 
@@ -18,6 +20,7 @@ const RECENT_TRADE_LIMIT = 20;
 const RECENT_NEWS_LIMIT = 20;
 const PRICE_HISTORY_LIMIT = 48;
 const AUTO_IPO_CHECK_TICKS = 5;
+const UNIFIED_GOLD_STOCK_MIGRATION_VERSION = 1;
 const DEFAULT_AUTO_IPO_CHANCE_BPS = 1_500;
 const DEFAULT_MAX_DYNAMIC_STOCKS = 50;
 
@@ -192,7 +195,7 @@ export class StockService {
       const totalCost = subtotal + fee;
 
       if (getCurrencyBalance(profile, CURRENCY_STOCK) < totalCost) {
-        throw new Error(`현금이 부족합니다. 필요 금액: ${totalCost.toLocaleString()}원`);
+        throw new Error(`골드가 부족합니다. 필요 금액: ${totalCost.toLocaleString()}골드`);
       }
 
       const holding = stockUser.holdings[normalizedStockId] ?? createEmptyHolding();
@@ -346,7 +349,7 @@ export class StockService {
         const fee = calculateFee(subtotal, this.feeBps);
         const reservedCash = subtotal + fee;
         if (getCurrencyBalance(profile, CURRENCY_STOCK) < reservedCash) {
-          throw new Error(`현금이 부족합니다. 필요 예약금: ${reservedCash.toLocaleString()}원`);
+          throw new Error(`골드가 부족합니다. 필요 예약금: ${reservedCash.toLocaleString()}골드`);
         }
         debitCurrency(profile, CURRENCY_STOCK, reservedCash);
         order.reservedCash = reservedCash;
@@ -544,7 +547,7 @@ export class StockService {
       const totalCost = normalizedMargin + fee;
 
       if (getCurrencyBalance(profile, CURRENCY_STOCK) < totalCost) {
-        throw new Error(`현금이 부족합니다. 필요 금액: ${totalCost.toLocaleString()}원`);
+        throw new Error(`골드가 부족합니다. 필요 금액: ${totalCost.toLocaleString()}골드`);
       }
 
       debitCurrency(profile, CURRENCY_STOCK, totalCost);
@@ -1173,6 +1176,7 @@ function getOrCreateMoneyProfile(guild, userId, username, now) {
   profile.userId = userId;
   profile.username = username || profile.username || 'Unknown';
   profile.balance = normalizeNonNegativeInteger(profile.balance);
+  migrateLegacyWalletsToGold(profile, { now });
   profile.wallets = normalizeWallets(profile.wallets);
   profile.level = normalizePositiveStoredInteger(profile.level, 1);
   profile.xp = normalizeNonNegativeInteger(profile.xp);
@@ -1223,7 +1227,70 @@ function getOrCreateStockUser(guild, userId, username) {
     stockUser.tradeHistory.reduce((max, entry) => Math.max(max, normalizeNonNegativeInteger(entry.sequence)), 0)
   );
   stockUser.lastTradeAt = normalizeNonNegativeInteger(stockUser.lastTradeAt);
+  migrateLegacyStockLiabilitiesToGold(guild.users?.[userId], stockUser);
   return stockUser;
+}
+
+function migrateLegacyStockLiabilitiesToGold(profile, stockUser, now = Date.now()) {
+  stockUser.currencyMigration = normalizeStockCurrencyMigration(stockUser.currencyMigration);
+  if (stockUser.currencyMigration.unifiedGoldVersion >= UNIFIED_GOLD_STOCK_MIGRATION_VERSION) {
+    return stockUser.currencyMigration;
+  }
+  if (!profile) return stockUser.currencyMigration;
+
+  let convertedReservedCash = 0;
+  let cancelledBuyOrders = 0;
+
+  for (const order of Object.values(stockUser.limitOrders)) {
+    if (order.status !== 'open' || order.side !== 'buy' || order.reservedCash <= 0) continue;
+
+    const convertedGold = convertLegacyCurrencyAmountToGold(CURRENCY_STOCK, order.reservedCash);
+    if (profile && convertedGold > 0) {
+      creditCurrency(profile, CURRENCY_STOCK, convertedGold);
+    }
+    convertedReservedCash += convertedGold;
+    cancelledBuyOrders += 1;
+    order.reservedCash = 0;
+    order.status = 'cancelled';
+    order.cancelledAt = normalizeNonNegativeInteger(now);
+    order.cancelReason = '통합 골드 정산';
+  }
+
+  let convertedLeveragedMargin = 0;
+  let convertedLeveragedPositions = 0;
+
+  for (const [positionId, position] of Object.entries(stockUser.leveragedPositions)) {
+    const convertedMargin = convertLegacyCurrencyAmountToGold(CURRENCY_STOCK, position.margin);
+    convertedLeveragedPositions += 1;
+    convertedLeveragedMargin += convertedMargin;
+
+    if (convertedMargin <= 0) {
+      delete stockUser.leveragedPositions[positionId];
+    } else {
+      position.margin = convertedMargin;
+    }
+  }
+
+  stockUser.currencyMigration = {
+    ...stockUser.currencyMigration,
+    unifiedGoldVersion: UNIFIED_GOLD_STOCK_MIGRATION_VERSION,
+    unifiedGoldAt: stockUser.currencyMigration.unifiedGoldAt ?? now,
+    convertedReservedCash,
+    cancelledBuyOrders,
+    convertedLeveragedMargin,
+    convertedLeveragedPositions
+  };
+
+  return stockUser.currencyMigration;
+}
+
+function normalizeStockCurrencyMigration(value = {}) {
+  const migration = value && typeof value === 'object' ? value : {};
+  return {
+    ...migration,
+    unifiedGoldVersion: normalizeNonNegativeInteger(migration.unifiedGoldVersion),
+    unifiedGoldAt: migration.unifiedGoldAt ?? null
+  };
 }
 
 function normalizeHoldings(holdings = {}, guild = null) {
@@ -1692,7 +1759,8 @@ function cloneStockUser(stockUser) {
     nextAlertSeq: stockUser.nextAlertSeq,
     nextPositionSeq: stockUser.nextPositionSeq,
     nextTradeSeq: stockUser.nextTradeSeq,
-    lastTradeAt: stockUser.lastTradeAt
+    lastTradeAt: stockUser.lastTradeAt,
+    currencyMigration: structuredClone(stockUser.currencyMigration ?? null)
   };
 }
 

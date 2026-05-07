@@ -508,13 +508,13 @@ function formatFinishMessage(state, rewards) {
   const winnerText = winner
     ? state.game.isBotPlayer(winner)
       ? formatBotWinnerText(winner, rewards)
-      : `🏆 ${formatPlayerMention(winner)}님 승리! +${rewards.prizeMoney.toLocaleString()}원`
+      : `🏆 ${formatPlayerMention(winner)}님 승리! +${rewards.prizeMoney.toLocaleString()}골드`
     : '승자 없이 종료되었습니다.';
   const rewardLines = rewards.participants.length > 0
     ? rewards.participants
         .map((result) => {
-          const prize = result.moneyGained > 0 ? ` / 상금 +${result.moneyGained.toLocaleString()}원` : '';
-          const levelReward = result.levelReward > 0 ? ` / 레벨업 보너스 +${result.levelReward.toLocaleString()}원` : '';
+          const prize = result.moneyGained > 0 ? ` / 상금 +${result.moneyGained.toLocaleString()}골드` : '';
+          const levelReward = result.levelReward > 0 ? ` / 레벨업 보너스 +${result.levelReward.toLocaleString()}골드` : '';
           const level = result.leveledUp ? ` / Lv.${result.profile.level} 달성` : '';
           return `- <@${result.userId}>: +${result.xpGained.toLocaleString()} XP${prize}${levelReward}${level}`;
         })
@@ -535,7 +535,7 @@ function formatBotWinnerText(winner, rewards) {
     return `🤖 **${winner.username}** 승리!`;
   }
 
-  return `🤖 **${winner.username}** 승리! 상금은 준우승자 <@${rewards.prizeRecipient.userId}>님에게 +${rewards.prizeMoney.toLocaleString()}원`;
+  return `🤖 **${winner.username}** 승리! 상금은 준우승자 <@${rewards.prizeRecipient.userId}>님에게 +${rewards.prizeMoney.toLocaleString()}골드`;
 }
 
 function formatProgressMode(state) {

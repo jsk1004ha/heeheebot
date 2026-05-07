@@ -32,7 +32,7 @@ export const stockCommands = [
     .addSubcommand((subcommand) =>
       subcommand
         .setName('매수')
-        .setDescription('현금으로 가상주식을 매수합니다.')
+        .setDescription('골드으로 가상주식을 매수합니다.')
         .addStringOption((option) =>
           option
             .setName('종목')
@@ -248,7 +248,7 @@ export const stockCommands = [
     .addSubcommand((subcommand) =>
       subcommand
         .setName('랭킹')
-        .setDescription('현금+주식 평가액 기준 가상주식 랭킹을 봅니다.')
+        .setDescription('골드+주식 평가액 기준 가상주식 랭킹을 봅니다.')
         .addIntegerOption((option) =>
           option
             .setName('개수')
@@ -290,7 +290,7 @@ export const stockCommands = [
         .addIntegerOption((option) =>
           option
             .setName('증거금')
-            .setDescription('포지션에 넣을 현금')
+            .setDescription('포지션에 넣을 골드')
             .setMinValue(1)
             .setRequired(true)
         )
@@ -665,7 +665,7 @@ function formatFullMarket(market) {
 function formatListings(listings) {
   const recent = listings.recent.length > 0
     ? listings.recent
-      .map((stock) => `- 🆕 **${stock.name}** \`${stock.symbol}\` ${stock.price.toLocaleString()}원 / tick #${stock.listedAtTick ?? stock.listedFromTick ?? 0}`)
+      .map((stock) => `- 🆕 **${stock.name}** \`${stock.symbol}\` ${stock.price.toLocaleString()}골드 / tick #${stock.listedAtTick ?? stock.listedFromTick ?? 0}`)
       .join('\n')
     : '최근 신규상장 종목이 없습니다.';
   const upcoming = listings.upcoming.length > 0
@@ -689,8 +689,8 @@ function formatQuote(quote) {
   return [
     `📌 **${quote.name}** (${quote.sector} / ${formatRisk(quote.risk)})`,
     `상태: **${statusText}**`,
-    `현재가: **${quote.price.toLocaleString()}원** / 변동: ${formatTrendMarker(quote.changePercent)} **${formatSignedPercent(quote.changePercent)}**`,
-    `이전가: ${quote.previousPrice.toLocaleString()}원`,
+    `현재가: **${quote.price.toLocaleString()}골드** / 변동: ${formatTrendMarker(quote.changePercent)} **${formatSignedPercent(quote.changePercent)}**`,
+    `이전가: ${quote.previousPrice.toLocaleString()}골드`,
     `뉴스: ${quote.news}`
   ].join('\n');
 }
@@ -699,8 +699,8 @@ function formatBuyResult(user, result) {
   return [
     `🛒 **가상주식 매수 완료** — ${user}`,
     `종목: **${result.stock.name}** × ${result.quantity.toLocaleString()}주`,
-    `단가: ${result.price.toLocaleString()}원 / 매수금액: ${result.subtotal.toLocaleString()}원 / 수수료: ${result.fee.toLocaleString()}원`,
-    `현금: **${result.profile.balance.toLocaleString()}원** / 보유: ${result.holding.quantity.toLocaleString()}주 / 평단: ${result.holding.averageCost.toLocaleString()}원`
+    `단가: ${result.price.toLocaleString()}골드 / 매수금액: ${result.subtotal.toLocaleString()}골드 / 수수료: ${result.fee.toLocaleString()}골드`,
+    `골드: **${result.profile.balance.toLocaleString()}골드** / 보유: ${result.holding.quantity.toLocaleString()}주 / 평단: ${result.holding.averageCost.toLocaleString()}골드`
   ].join('\n');
 }
 
@@ -708,21 +708,21 @@ function formatSellResult(user, result) {
   return [
     `💸 **가상주식 매도 완료** — ${user}`,
     `종목: **${result.stock.name}** × ${result.quantity.toLocaleString()}주`,
-    `단가: ${result.price.toLocaleString()}원 / 매도금액: ${result.subtotal.toLocaleString()}원 / 수수료: ${result.fee.toLocaleString()}원`,
-    `실현손익: **${formatSignedMoney(result.realizedProfit)}** / 현금: **${result.profile.balance.toLocaleString()}원** / 남은 보유: ${result.holding.quantity.toLocaleString()}주`
+    `단가: ${result.price.toLocaleString()}골드 / 매도금액: ${result.subtotal.toLocaleString()}골드 / 수수료: ${result.fee.toLocaleString()}골드`,
+    `실현손익: **${formatSignedMoney(result.realizedProfit)}** / 골드: **${result.profile.balance.toLocaleString()}골드** / 남은 보유: ${result.holding.quantity.toLocaleString()}주`
   ].join('\n');
 }
 
 function formatLimitOrderPlaced(user, result) {
   const sideLabel = formatOrderSide(result.side);
   const reserveText = result.side === 'buy'
-    ? `예약금: **${result.reservedCash.toLocaleString()}원**`
+    ? `예약금: **${result.reservedCash.toLocaleString()}골드**`
     : `예약 수량: **${result.reservedQuantity.toLocaleString()}주**`;
 
   return [
     `🧾 **지정가 ${sideLabel} 주문 등록** — ${user}`,
     `주문: \`${result.id}\` / 종목: **${result.stock.name}** × ${result.quantity.toLocaleString()}주`,
-    `조건: ${result.side === 'buy' ? '현재가가' : '현재가가'} **${result.limitPrice.toLocaleString()}원** ${result.side === 'buy' ? '이하' : '이상'}이면 체결`,
+    `조건: ${result.side === 'buy' ? '현재가가' : '현재가가'} **${result.limitPrice.toLocaleString()}골드** ${result.side === 'buy' ? '이하' : '이상'}이면 체결`,
     reserveText,
     '`/주식 주문`에서 미체결 주문을 확인하고 `/주식 주문취소`로 취소할 수 있습니다.'
   ].join('\n');
@@ -750,7 +750,7 @@ function formatLimitOrderCancelled(user, order) {
   return [
     `🧾 **지정가 주문 취소** — ${user}`,
     `주문: \`${order.id}\` / 종목: **${order.stock.name}** / ${formatOrderSide(order.side)} ${order.quantity.toLocaleString()}주`,
-    '예약 현금/주식은 지갑과 보유량으로 되돌렸습니다.'
+    '예약 골드/주식은 지갑과 보유량으로 되돌렸습니다.'
   ].join('\n');
 }
 
@@ -758,7 +758,7 @@ function formatAlertCreated(user, alert) {
   return [
     `🔔 **가격 알림 등록** — ${user}`,
     `알림: \`${alert.id}\` / 종목: **${alert.stock.name}**`,
-    `조건: 현재가가 **${alert.targetPrice.toLocaleString()}원** ${formatAlertCondition(alert.condition)}이면 트리거`,
+    `조건: 현재가가 **${alert.targetPrice.toLocaleString()}골드** ${formatAlertCondition(alert.condition)}이면 트리거`,
     '`/주식 알림`으로 활성/트리거 알림을 확인할 수 있습니다.'
   ].join('\n');
 }
@@ -814,7 +814,7 @@ function formatStockNews(news) {
 function formatStockChart(chart) {
   const body = chart.history.length > 0
     ? chart.history
-      .map((point) => `- tick #${point.tickIndex}: ${point.price.toLocaleString()}원`)
+      .map((point) => `- tick #${point.tickIndex}: ${point.price.toLocaleString()}골드`)
       .join('\n')
     : '표시할 가격 기록이 없습니다.';
 
@@ -828,16 +828,16 @@ function formatPortfolio(user, portfolio) {
   const positions = portfolio.positions.length > 0
     ? portfolio.positions
       .slice(0, 10)
-      .map((position) => `- ${position.stock.name} ${position.quantity.toLocaleString()}주 / 평가 ${position.marketValue.toLocaleString()}원 / 손익 ${formatSignedMoney(position.unrealizedProfit)}`)
+      .map((position) => `- ${position.stock.name} ${position.quantity.toLocaleString()}주 / 평가 ${position.marketValue.toLocaleString()}골드 / 손익 ${formatSignedMoney(position.unrealizedProfit)}`)
       .join('\n')
     : '보유 주식이 없습니다.';
 
   return [
     `💼 **${user.username}님의 가상주식 보유 현황**`,
-    `현금: **${portfolio.cash.toLocaleString()}원**`,
-    `주식 평가액: **${portfolio.stockValue.toLocaleString()}원**`,
-    `레버리지 평가금: **${portfolio.leveragedEquity.toLocaleString()}원**`,
-    `총자산: **${portfolio.totalAssets.toLocaleString()}원**`,
+    `골드: **${portfolio.cash.toLocaleString()}골드**`,
+    `주식 평가액: **${portfolio.stockValue.toLocaleString()}골드**`,
+    `레버리지 평가금: **${portfolio.leveragedEquity.toLocaleString()}골드**`,
+    `총자산: **${portfolio.totalAssets.toLocaleString()}골드**`,
     `평가손익: **${formatSignedMoney(portfolio.unrealizedProfit)}** / 레버리지 손익: **${formatSignedMoney(portfolio.leveragedUnrealizedProfit)}**`,
     `실현손익: **${formatSignedMoney(portfolio.realizedProfit)}** / 레버리지 실현손익: **${formatSignedMoney(portfolio.realizedLeveragedProfit)}**`,
     positions
@@ -848,7 +848,7 @@ function formatLeaderboard(rows) {
   if (rows.length === 0) return '아직 가상주식 랭킹 데이터가 없습니다.';
 
   const body = rows
-    .map((row, index) => `${index + 1}. **${row.username}** — 총자산 ${row.totalAssets.toLocaleString()}원 / 현금 ${row.cash.toLocaleString()}원 / 주식 ${row.stockValue.toLocaleString()}원 / 레버리지 ${row.leveragedEquity.toLocaleString()}원`)
+    .map((row, index) => `${index + 1}. **${row.username}** — 총자산 ${row.totalAssets.toLocaleString()}골드 / 골드 ${row.cash.toLocaleString()}골드 / 주식 ${row.stockValue.toLocaleString()}골드 / 레버리지 ${row.leveragedEquity.toLocaleString()}골드`)
     .join('\n');
   return `🏆 **가상주식 총자산 랭킹**\n${body}`;
 }
@@ -859,8 +859,8 @@ function formatOpenLeverageResult(user, result) {
   return [
     `⚡ **레버리지 ${sideLabel} 진입 완료** — ${user}`,
     `포지션: \`${position.id}\` / 종목: **${position.stock.name}** / 배율: **${position.leverage}배**`,
-    `진입가: ${position.entryPrice.toLocaleString()}원 / 증거금: ${position.margin.toLocaleString()}원 / 수수료: ${result.fee.toLocaleString()}원`,
-    `현금: **${result.profile.balance.toLocaleString()}원**`,
+    `진입가: ${position.entryPrice.toLocaleString()}골드 / 증거금: ${position.margin.toLocaleString()}골드 / 수수료: ${result.fee.toLocaleString()}골드`,
+    `골드: **${result.profile.balance.toLocaleString()}골드**`,
     '손실이 증거금 100%에 도달하면 자동 청산됩니다.'
   ].join('\n');
 }
@@ -871,17 +871,17 @@ function formatCloseLeverageResult(user, result) {
     return [
       `💥 **레버리지 포지션 자동 청산** — ${user}`,
       `포지션: \`${position.id}\` / 종목: **${position.stock.name}** / ${formatLeverageSide(position.side)} ${position.leverage}배`,
-      `손익: **${formatSignedMoney(result.realizedProfit)}** / 지급액: 0원`,
-      `현금: **${result.profile.balance.toLocaleString()}원**`
+      `손익: **${formatSignedMoney(result.realizedProfit)}** / 지급액: 0골드`,
+      `골드: **${result.profile.balance.toLocaleString()}골드**`
     ].join('\n');
   }
 
   return [
     `✅ **레버리지 포지션 청산 완료** — ${user}`,
     `포지션: \`${position.id}\` / 종목: **${position.stock.name}** / ${formatLeverageSide(position.side)} ${position.leverage}배`,
-    `진입가: ${position.entryPrice.toLocaleString()}원 → 청산가: ${position.currentPrice.toLocaleString()}원`,
-    `손익: **${formatSignedMoney(result.realizedProfit)}** / 지급액: **${result.payout.toLocaleString()}원**`,
-    `현금: **${result.profile.balance.toLocaleString()}원**`
+    `진입가: ${position.entryPrice.toLocaleString()}골드 → 청산가: ${position.currentPrice.toLocaleString()}골드`,
+    `손익: **${formatSignedMoney(result.realizedProfit)}** / 지급액: **${result.payout.toLocaleString()}골드**`,
+    `골드: **${result.profile.balance.toLocaleString()}골드**`
   ].join('\n');
 }
 
@@ -894,15 +894,15 @@ function formatLeveragePortfolio(user, portfolio) {
       .slice(0, 10)
       .map((position) => [
         `- \`${position.id}\` **${position.stock.name}** ${formatLeverageSide(position.side)} ${position.leverage}배`,
-        `  진입 ${position.entryPrice.toLocaleString()}원 → 현재 ${position.currentPrice.toLocaleString()}원 / 증거금 ${position.margin.toLocaleString()}원 / 평가 ${position.equity.toLocaleString()}원 / 손익 ${formatSignedMoney(position.unrealizedProfit)}`
+        `  진입 ${position.entryPrice.toLocaleString()}골드 → 현재 ${position.currentPrice.toLocaleString()}골드 / 증거금 ${position.margin.toLocaleString()}골드 / 평가 ${position.equity.toLocaleString()}골드 / 손익 ${formatSignedMoney(position.unrealizedProfit)}`
       ].join('\n'))
       .join('\n')
     : '열려 있는 레버리지 포지션이 없습니다.';
 
   return [
     `⚡ **${user.username}님의 레버리지 보유 현황**`,
-    `현금: **${portfolio.cash.toLocaleString()}원**`,
-    `증거금 합계: **${portfolio.marginTotal.toLocaleString()}원** / 평가금: **${portfolio.equityTotal.toLocaleString()}원**`,
+    `골드: **${portfolio.cash.toLocaleString()}골드**`,
+    `증거금 합계: **${portfolio.marginTotal.toLocaleString()}골드** / 평가금: **${portfolio.equityTotal.toLocaleString()}골드**`,
     `미실현손익: **${formatSignedMoney(portfolio.unrealizedProfit)}** / 누적실현손익: **${formatSignedMoney(portfolio.realizedLeveragedProfit)}**`,
     positions + liquidatedText
   ].join('\n');
@@ -918,32 +918,32 @@ function formatMarketLine(stock) {
         : stock.eventType === 'crash'
           ? ' ⚠️급락'
           : '';
-  return `- ${formatTrendMarker(stock.changePercent)} **${stock.name}** \`${stock.symbol}\` ${stock.price.toLocaleString()}원 (${formatSignedPercent(stock.changePercent)})${status}`;
+  return `- ${formatTrendMarker(stock.changePercent)} **${stock.name}** \`${stock.symbol}\` ${stock.price.toLocaleString()}골드 (${formatSignedPercent(stock.changePercent)})${status}`;
 }
 
 function formatOrderLine(order) {
   let status = '미체결';
   if (order.status === 'filled') {
-    status = `체결 ${(order.fillPrice ?? 0).toLocaleString()}원`;
+    status = `체결 ${(order.fillPrice ?? 0).toLocaleString()}골드`;
   } else if (order.status === 'cancelled') {
     status = `취소${order.cancelReason ? `(${order.cancelReason})` : ''}`;
   } else if (order.status !== 'open') {
     status = order.status;
   }
-  return `- \`${order.id}\` **${order.stock.name}** ${formatOrderSide(order.side)} ${order.quantity.toLocaleString()}주 @ ${order.limitPrice.toLocaleString()}원 — ${status}`;
+  return `- \`${order.id}\` **${order.stock.name}** ${formatOrderSide(order.side)} ${order.quantity.toLocaleString()}주 @ ${order.limitPrice.toLocaleString()}골드 — ${status}`;
 }
 
 function formatAlertLine(alert) {
   const status = alert.status === 'triggered'
-    ? `트리거 ${alert.triggeredPrice.toLocaleString()}원`
+    ? `트리거 ${alert.triggeredPrice.toLocaleString()}골드`
     : '대기 중';
-  return `- \`${alert.id}\` **${alert.stock.name}** ${alert.targetPrice.toLocaleString()}원 ${formatAlertCondition(alert.condition)} — ${status}`;
+  return `- \`${alert.id}\` **${alert.stock.name}** ${alert.targetPrice.toLocaleString()}골드 ${formatAlertCondition(alert.condition)} — ${status}`;
 }
 
 function formatTradeHistoryLine(entry) {
   const quantity = entry.quantity ? ` ${entry.quantity.toLocaleString()}주` : '';
-  const price = entry.price ? ` @ ${entry.price.toLocaleString()}원` : '';
-  const total = entry.total ? ` / 총액 ${entry.total.toLocaleString()}원` : '';
+  const price = entry.price ? ` @ ${entry.price.toLocaleString()}골드` : '';
+  const total = entry.total ? ` / 총액 ${entry.total.toLocaleString()}골드` : '';
   const profit = entry.realizedProfit ? ` / 손익 ${formatSignedMoney(entry.realizedProfit)}` : '';
   return `- ${formatTradeType(entry.type)} **${entry.stock.name}**${quantity}${price}${total}${profit}`;
 }
@@ -961,7 +961,7 @@ function formatTrendMarker(percent) {
 
 function formatSignedMoney(amount) {
   const sign = amount > 0 ? '+' : '';
-  return `${sign}${amount.toLocaleString()}원`;
+  return `${sign}${amount.toLocaleString()}골드`;
 }
 
 function formatLeverageSide(side) {

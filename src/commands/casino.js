@@ -41,7 +41,7 @@ export const casinoCommands = [
     .addIntegerOption((option) =>
       option
         .setName('돈')
-        .setDescription('베팅할 카지노칩')
+        .setDescription('베팅할 골드')
         .setMinValue(1)
         .setRequired(true)
     )
@@ -61,7 +61,7 @@ export const casinoCommands = [
     .addIntegerOption((option) =>
       option
         .setName('돈')
-        .setDescription('베팅할 카지노칩')
+        .setDescription('베팅할 골드')
         .setMinValue(1)
         .setRequired(true)
     )
@@ -81,7 +81,7 @@ export const casinoCommands = [
     .addIntegerOption((option) =>
       option
         .setName('돈')
-        .setDescription('베팅할 카지노칩')
+        .setDescription('베팅할 골드')
         .setMinValue(1)
         .setRequired(true)
     ),
@@ -91,7 +91,7 @@ export const casinoCommands = [
     .addIntegerOption((option) =>
       option
         .setName('돈')
-        .setDescription('베팅할 카지노칩')
+        .setDescription('베팅할 골드')
         .setMinValue(1)
         .setRequired(true)
     ),
@@ -101,7 +101,7 @@ export const casinoCommands = [
     .addIntegerOption((option) =>
       option
         .setName('돈')
-        .setDescription('베팅할 카지노칩')
+        .setDescription('베팅할 골드')
         .setMinValue(1)
         .setRequired(true)
     )
@@ -121,7 +121,7 @@ export const casinoCommands = [
     .addIntegerOption((option) =>
       option
         .setName('돈')
-	        .setDescription('베팅할 카지노칩')
+	        .setDescription('베팅할 골드')
 	        .setMinValue(1)
 	        .setRequired(true)
 	    )
@@ -136,7 +136,7 @@ export const casinoCommands = [
     .addIntegerOption((option) =>
       option
         .setName('돈')
-        .setDescription('베팅할 카지노칩')
+        .setDescription('베팅할 골드')
         .setMinValue(1)
         .setRequired(true)
     )
@@ -161,7 +161,7 @@ export const casinoCommands = [
     .addIntegerOption((option) =>
       option
         .setName('돈')
-        .setDescription('베팅할 카지노칩')
+        .setDescription('베팅할 골드')
         .setMinValue(1)
         .setRequired(true)
     )
@@ -182,7 +182,7 @@ export const casinoCommands = [
     .addIntegerOption((option) =>
       option
         .setName('돈')
-        .setDescription('베팅할 카지노칩')
+        .setDescription('베팅할 골드')
         .setMinValue(1)
         .setRequired(true)
     )
@@ -202,7 +202,7 @@ export const casinoCommands = [
     .addIntegerOption((option) =>
       option
         .setName('돈')
-        .setDescription('베팅할 카지노칩')
+        .setDescription('베팅할 골드')
         .setMinValue(1)
         .setRequired(true)
     )
@@ -223,7 +223,7 @@ export const casinoCommands = [
     .addIntegerOption((option) =>
       option
         .setName('돈')
-        .setDescription('베팅할 카지노칩')
+        .setDescription('베팅할 골드')
         .setMinValue(1)
         .setRequired(true)
     )
@@ -412,8 +412,8 @@ async function routeCasinoCommand(interaction, economy) {
 function formatCasinoInfo() {
   return [
     '🎰 **카지노 게임 정보**',
-    '모든 게임은 봇 내부 카지노칩만 사용하며 실제 현금 결제/현금 환전 기능은 없습니다.',
-    '카지노칩은 `/환전`으로 메인 코인에서 충전할 수 있습니다.',
+    '모든 게임은 봇 내부 골드만 사용하며 실제 현금 결제/현금 환전 기능은 없습니다.',
+    '골드는 모든 컨텐츠가 공유하는 단일 잔액입니다.',
     '',
     '- `/홀짝`: 홀/짝 적중 시 1.9배, 99~100은 하우스 승리',
     '- `/주사위`: 높음(4~6) 또는 낮음(1~3) 적중 시 1.9배',
@@ -499,11 +499,11 @@ async function createPlayerBlackjackChallenge(interaction, economy, bet, opponen
   const opponentProfile = await economy.getProfile(interaction.guildId, opponent.id, opponent.username);
 
   if (getCasinoChips(challengerProfile) < bet) {
-    throw new Error(`내 카지노칩이 부족합니다. 현재 칩: ${getCasinoChips(challengerProfile).toLocaleString()}칩`);
+    throw new Error(`내 골드이 부족합니다. 현재 골드: ${getCasinoChips(challengerProfile).toLocaleString()}골드`);
   }
 
   if (getCasinoChips(opponentProfile) < bet) {
-    throw new Error(`${opponent.username}님의 카지노칩이 부족합니다. 현재 칩: ${getCasinoChips(opponentProfile).toLocaleString()}칩`);
+    throw new Error(`${opponent.username}님의 골드이 부족합니다. 현재 골드: ${getCasinoChips(opponentProfile).toLocaleString()}골드`);
   }
 
   const challengeId = createChallengeId();
@@ -534,7 +534,7 @@ async function createPlayerBlackjackChallenge(interaction, economy, bet, opponen
   );
 
   await interaction.reply({
-    content: `🃏 ${opponent}, ${interaction.user}님이 블랙잭 대결을 신청했습니다.\n베팅: **${bet.toLocaleString()}칩씩**, 승자 독식: **${(bet * 2).toLocaleString()}칩**\n60초 안에 수락해주세요.`,
+    content: `🃏 ${opponent}, ${interaction.user}님이 블랙잭 대결을 신청했습니다.\n베팅: **${bet.toLocaleString()}골드씩**, 승자 독식: **${(bet * 2).toLocaleString()}골드**\n60초 안에 수락해주세요.`,
     components: [row]
   });
 }
@@ -973,7 +973,7 @@ function formatPlayerBlackjackResult(challenge, game, settlement) {
       '🃏 **블랙잭 유저 대결 결과**',
       `${challengerMention}: ${formatCards(game.challengerHand)} = ${game.challengerValue}`,
       `${opponentMention}: ${formatCards(game.opponentHand)} = ${game.opponentValue}`,
-      '결과: **무승부** — 칩 이동 없음'
+      '결과: **무승부** — 골드 이동 없음'
     ].join('\n');
   }
 
@@ -985,7 +985,7 @@ function formatPlayerBlackjackResult(challenge, game, settlement) {
     `${challengerMention}: ${formatCards(game.challengerHand)} = ${game.challengerValue}`,
     `${opponentMention}: ${formatCards(game.opponentHand)} = ${game.opponentValue}`,
     `승자: ${winnerMention}`,
-    `상금: **${settlement.pot.toLocaleString()}칩** / 승자 카지노칩: **${winnerBalance}칩**`
+    `상금: **${settlement.pot.toLocaleString()}골드** / 승자 골드: **${winnerBalance}골드**`
   ].join('\n');
 }
 
@@ -1002,18 +1002,18 @@ async function settleGame(interaction, economy, bet, payout) {
 function formatSettlement(success, settlement) {
   const profit = settlement.profit;
   const profitText = profit >= 0
-    ? `+${profit.toLocaleString()}칩`
-    : `${profit.toLocaleString()}칩`;
+    ? `+${profit.toLocaleString()}골드`
+    : `${profit.toLocaleString()}골드`;
 
   return [
     success ? '✅ 성공' : '❌ 실패',
-    `베팅: ${settlement.bet.toLocaleString()}칩 / 지급: ${settlement.payout.toLocaleString()}칩 / 손익: **${profitText}**`,
-    `현재 카지노칩: **${getCasinoChips(settlement.profile).toLocaleString()}칩**`
+    `베팅: ${settlement.bet.toLocaleString()}골드 / 지급: ${settlement.payout.toLocaleString()}골드 / 손익: **${profitText}**`,
+    `현재 골드: **${getCasinoChips(settlement.profile).toLocaleString()}골드**`
   ].join('\n');
 }
 
 function getCasinoChips(profile) {
-  return profile.wallets?.casinoChips ?? 0;
+  return profile.balance ?? profile.currencyBalances?.main ?? profile.currencyBalances?.casino ?? 0;
 }
 
 function createBlackjackActionRow(gameId) {

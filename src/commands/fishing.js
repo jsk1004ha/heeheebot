@@ -1,10 +1,7 @@
 import { existsSync } from 'node:fs';
-import { SlashCommandBuilder } from 'discord.js';
+import { join } from 'node:path';
+import { EmbedBuilder, SlashCommandBuilder } from 'discord.js';
 import {
-  formatFishingAssetLine,
-  getFishingAssetBatch,
-  getFishingAssetCount,
-  getFishingAssetRarityCounts,
   getFishingRodAssetForLevel
 } from '../systems/fishing-assets.js';
 import {
@@ -54,36 +51,6 @@ export const fishingCommands = [
       option
         .setName('상대')
         .setDescription('비우면 야생 물고기 팀과 배틀합니다.')
-    ),
-  new SlashCommandBuilder()
-    .setName('낚시에셋')
-    .setDescription('agent-sprite-forge로 생성할 물고기 이미지 에셋 배치를 확인합니다.')
-    .addStringOption((option) =>
-      option
-        .setName('등급')
-        .setDescription('확인할 물고기 등급')
-        .addChoices(
-          { name: '전체', value: 'all' },
-          { name: '일반', value: 'common' },
-          { name: '고급', value: 'uncommon' },
-          { name: '희귀', value: 'rare' },
-          { name: '영웅', value: 'epic' },
-          { name: '전설', value: 'legendary' },
-          { name: '히든', value: 'hidden' }
-        )
-    )
-    .addIntegerOption((option) =>
-      option
-        .setName('개수')
-        .setDescription('표시할 에셋 개수')
-        .setMinValue(1)
-        .setMaxValue(20)
-    )
-    .addIntegerOption((option) =>
-      option
-        .setName('시작')
-        .setDescription('건너뛸 에셋 수')
-        .setMinValue(0)
     )
 ];
 
@@ -180,12 +147,6 @@ async function routeFishingCommand(interaction, fishing) {
     return;
   }
 
-  if (interaction.commandName === '낚시에셋') {
-    const rarity = interaction.options.getString('등급') ?? 'all';
-    const limit = interaction.options.getInteger('개수') ?? 8;
-    const offset = interaction.options.getInteger('시작') ?? 0;
-    await interaction.reply(formatAssetBatch(rarity, limit, offset));
-  }
 }
 
 function formatCatchResult(user, result) {
@@ -273,26 +234,6 @@ function formatBattleResult(user, opponent, result) {
   ].join('\n');
 }
 
-function formatAssetBatch(rarity, limit, offset) {
-  const assets = getFishingAssetBatch({ rarity, limit, offset });
-  const counts = getFishingAssetRarityCounts();
-  const countText = Object.entries(counts)
-    .map(([key, count]) => `${getRarityLabel(key)} ${count}`)
-    .join(' / ');
-  const body = assets.map(formatFishingAssetLine).join('\n');
-  const firstPrompt = assets[0]
-    ? `\n\n첫 번째 생성 프롬프트:\n\`\`\`\n${assets[0].prompt}\n\`\`\``
-    : '';
-
-  return [
-    `🎨 **낚시 물고기 이미지 에셋 배치** (${assets.length}/${getFishingAssetCount()}개 표시, 시작 ${offset})`,
-    `등급별 수: ${countText}`,
-    'agent-sprite-forge 기준으로 각 항목의 `$generate2dsprite` 프롬프트를 실행하면 됩니다.',
-    body || '표시할 에셋이 없습니다.',
-    firstPrompt
-  ].join('\n');
-}
-
 function summarizeCatches(catches) {
   const counts = new Map();
   for (const catchResult of catches) {
@@ -322,12 +263,14 @@ function isFishingCommand(commandName) {
 }
 
 async function replyWithFishImage(interaction, content, fish) {
-  const imagePath = fish?.imagePath;
-  if (imagePath && existsSync(imagePath)) {
-    await interaction.reply({
+  const attachment = getFishingImageAttachment(fish?.imagePath, fish?.assetId ?? 'fish');
+  if (attachment) {
+    await interaction.reply(createFishingImageEmbedPayload({
       content,
-      files: [imagePath]
-    });
+      attachment,
+      title: fish?.label ?? '낚시 이미지',
+      footer: '낚시 물고기 이미지'
+    }));
     return;
   }
 
@@ -336,13 +279,42 @@ async function replyWithFishImage(interaction, content, fish) {
 
 async function replyWithRodImage(interaction, content, rodLevel) {
   const rodAsset = getFishingRodAssetForLevel(rodLevel);
-  if (rodAsset?.imagePath && existsSync(rodAsset.imagePath)) {
-    await interaction.reply({
+  const attachment = getFishingImageAttachment(rodAsset?.imagePath, rodAsset?.id ?? `rod_${rodLevel}`);
+  if (attachment) {
+    await interaction.reply(createFishingImageEmbedPayload({
       content,
-      files: [rodAsset.imagePath]
-    });
+      attachment,
+      title: rodAsset?.label ?? `+${rodLevel} 낚싯대`,
+      footer: '낚싯대 이미지'
+    }));
     return;
   }
 
   await interaction.reply(content);
+}
+
+function createFishingImageEmbedPayload({ content, attachment, title, footer }) {
+  return {
+    content,
+    embeds: [
+      new EmbedBuilder()
+        .setTitle(title)
+        .setImage(`attachment://${attachment.name}`)
+        .setColor(0x38bdf8)
+        .setFooter({ text: footer })
+    ],
+    files: [attachment]
+  };
+}
+
+function getFishingImageAttachment(imagePath, fallbackName) {
+  if (!imagePath) return null;
+
+  const filePath = join(process.cwd(), imagePath);
+  if (!existsSync(filePath)) return null;
+
+  return {
+    attachment: filePath,
+    name: `${fallbackName}.png`
+  };
 }

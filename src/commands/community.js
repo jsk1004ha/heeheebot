@@ -253,17 +253,17 @@ async function routeCommunityCommand(interaction, community) {
 
 function formatAchievements(result) {
   const claimText = result.claimed.length > 0
-    ? `\n\n🎁 이번에 수령: ${result.claimed.map((item) => `**${item.title}**`).join(', ')} / +${result.totalCoins.toLocaleString()}원, +${result.totalXp.toLocaleString()} XP`
+    ? `\n\n🎁 이번에 수령: ${result.claimed.map((item) => `**${item.title}**`).join(', ')} / +${result.totalCoins.toLocaleString()}골드, +${result.totalXp.toLocaleString()} XP`
     : '\n\n받을 수 있는 새 업적 보상은 없습니다.';
   const body = result.achievements
     .map((achievement) => {
       const mark = achievement.claimed ? '✅' : achievement.completed ? '🎁' : '⬜';
       const titleReward = achievement.reward.title ? `, 칭호 ${achievement.reward.title.label}` : '';
-      return `${mark} **${achievement.title}** — ${achievement.description} (${achievement.progress}) / 보상 ${achievement.reward.coins.toLocaleString()}원, ${achievement.reward.xp.toLocaleString()} XP${titleReward}`;
+      return `${mark} **${achievement.title}** — ${achievement.description} (${achievement.progress}) / 보상 ${achievement.reward.coins.toLocaleString()}골드, ${achievement.reward.xp.toLocaleString()} XP${titleReward}`;
     })
     .join('\n');
 
-  return `🏆 **업적**\n${body}${claimText}\n현재 메인 코인: ${result.profile.balance.toLocaleString()}원`;
+  return `🏆 **업적**\n${body}${claimText}\n현재 골드: ${result.profile.balance.toLocaleString()}골드`;
 }
 
 function formatTitles(titles) {
@@ -291,14 +291,14 @@ function formatMissions(result) {
   const body = missionList
     .map((mission) => {
       const mark = mission.claimed ? '✅' : mission.completed ? '🎁' : '⬜';
-      return `${mark} **${mission.title}** — ${mission.description} (${mission.progress}) / 보상 ${mission.reward.coins.toLocaleString()}원, ${mission.reward.xp.toLocaleString()} XP`;
+      return `${mark} **${mission.title}** — ${mission.description} (${mission.progress}) / 보상 ${mission.reward.coins.toLocaleString()}골드, ${mission.reward.xp.toLocaleString()} XP`;
     })
     .join('\n');
   const claimedText = result.claimed.length > 0
-    ? `\n\n🎁 수령: ${result.claimed.length}개 / +${result.totalCoins.toLocaleString()}원, +${result.totalXp.toLocaleString()} XP${result.eventBonus ? ' (이벤트 보너스 적용)' : ''}`
+    ? `\n\n🎁 수령: ${result.claimed.length}개 / +${result.totalCoins.toLocaleString()}골드, +${result.totalXp.toLocaleString()} XP${result.eventBonus ? ' (이벤트 보너스 적용)' : ''}`
     : '\n\n새로 수령할 완료 미션이 없습니다.';
 
-  return `📋 **${title}**\n${body}${claimedText}\n현재 메인 코인: ${result.profile.balance.toLocaleString()}원`;
+  return `📋 **${title}**\n${body}${claimedText}\n현재 골드: ${result.profile.balance.toLocaleString()}골드`;
 }
 
 function formatLotteryStatus(lottery) {
@@ -306,34 +306,34 @@ function formatLotteryStatus(lottery) {
     ? lottery.participants.map((ticket) => `- ${ticket.username}: ${ticket.count.toLocaleString()}장`).join('\n')
     : '아직 구매된 복권이 없습니다.';
   const lastWinner = lottery.lastWinner
-    ? `\n최근 당첨: ${lottery.lastWinner.username} / ${lottery.lastWinner.payout.toLocaleString()}원`
+    ? `\n최근 당첨: ${lottery.lastWinner.username} / ${lottery.lastWinner.payout.toLocaleString()}골드`
     : '';
 
-  return `🎟️ **서버 복권**\n장당 가격: ${getLotteryTicketCost().toLocaleString()}원\n현재 잭팟: **${lottery.jackpot.toLocaleString()}원**\n판매된 복권: ${lottery.totalTickets.toLocaleString()}장\n${participants}${lastWinner}`;
+  return `🎟️ **서버 복권**\n장당 가격: ${getLotteryTicketCost().toLocaleString()}골드\n현재 잭팟: **${lottery.jackpot.toLocaleString()}골드**\n판매된 복권: ${lottery.totalTickets.toLocaleString()}장\n${participants}${lastWinner}`;
 }
 
 function formatLotteryBuy(result) {
   return [
     '🎟️ **복권 구매 완료**',
-    `${result.quantity.toLocaleString()}장 구매 / 지출 ${result.totalCost.toLocaleString()}원`,
-    `잭팟 누적 +${result.jackpotAdded.toLocaleString()}원${result.eventBonus ? ' (이벤트 보너스)' : ''}`,
-    `현재 잭팟: ${result.lottery.jackpot.toLocaleString()}원 / 내 메인 코인: ${result.profile.balance.toLocaleString()}원`
+    `${result.quantity.toLocaleString()}장 구매 / 지출 ${result.totalCost.toLocaleString()}골드`,
+    `잭팟 누적 +${result.jackpotAdded.toLocaleString()}골드${result.eventBonus ? ' (이벤트 보너스)' : ''}`,
+    `현재 잭팟: ${result.lottery.jackpot.toLocaleString()}골드 / 내 골드: ${result.profile.balance.toLocaleString()}골드`
   ].join('\n');
 }
 
 function formatLotteryDraw(result) {
-  return `🎊 **복권 추첨 완료**\n당첨자: **${result.winner.username}**\n당첨금: **${result.payout.toLocaleString()}원**\n다음 기본 잭팟: ${result.lottery.jackpot.toLocaleString()}원`;
+  return `🎊 **복권 추첨 완료**\n당첨자: **${result.winner.username}**\n당첨금: **${result.payout.toLocaleString()}골드**\n다음 기본 잭팟: ${result.lottery.jackpot.toLocaleString()}골드`;
 }
 
 function formatShop(items, balance) {
   const body = items
-    .map((item) => `${item.owned ? '✅' : '🛒'} **${item.label}** (${item.id}) — ${item.price.toLocaleString()}원 / ${item.description}`)
+    .map((item) => `${item.owned ? '✅' : '🛒'} **${item.label}** (${item.id}) — ${item.price.toLocaleString()}골드 / ${item.description}`)
     .join('\n');
-  return `🛍️ **상점**\n내 메인 코인: ${balance.toLocaleString()}원\n${body}`;
+  return `🛍️ **상점**\n내 골드: ${balance.toLocaleString()}골드\n${body}`;
 }
 
 function formatShopBuy(result) {
-  return `🛍️ **구매 완료**\n${result.item.label} 구매 완료. 남은 메인 코인: ${result.profile.balance.toLocaleString()}원`;
+  return `🛍️ **구매 완료**\n${result.item.label} 구매 완료. 남은 골드: ${result.profile.balance.toLocaleString()}골드`;
 }
 
 function formatEventStatus(event) {

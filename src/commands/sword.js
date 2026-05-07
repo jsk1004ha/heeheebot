@@ -19,7 +19,7 @@ import { formatDuration } from './economy.js';
 export const swordCommands = [
   new SlashCommandBuilder()
     .setName('검강화')
-    .setDescription('강화 코인을 사용해 내 검을 강화합니다. 최대 +100강까지 가능합니다.'),
+    .setDescription('골드를 사용해 내 검을 강화합니다. 최대 +100강까지 가능합니다.'),
   new SlashCommandBuilder()
     .setName('검상급강화')
     .setDescription('제련석을 사용해 파괴 없이 검을 강화합니다. +90 이하에서만 가능합니다.'),
@@ -28,7 +28,7 @@ export const swordCommands = [
     .setDescription('현재 검, 다음 강화 확률/비용, 판매가와 전적을 확인합니다.'),
   new SlashCommandBuilder()
     .setName('검보호권')
-    .setDescription('강화 코인으로 파괴 방지 보호권을 구매합니다.')
+    .setDescription('골드으로 파괴 방지 보호권을 구매합니다.')
     .addIntegerOption((option) =>
       option
         .setName('수량')
@@ -53,7 +53,7 @@ export const swordCommands = [
     ),
   new SlashCommandBuilder()
     .setName('검판매')
-    .setDescription('현재 강화된 검을 판매하고 강화 코인을 받습니다. 판매 후 검은 +0으로 돌아갑니다.'),
+    .setDescription('현재 강화된 검을 판매하고 골드를 받습니다. 판매 후 검은 +0으로 돌아갑니다.'),
   new SlashCommandBuilder()
     .setName('검랭킹')
     .setDescription('서버의 검 최고강화, 판매금, 파괴횟수 랭킹을 확인합니다.')
@@ -382,8 +382,8 @@ function formatSwordEnhancement(user, result) {
     `시도: **+${result.beforeLevel} → +${result.beforeLevel + 1}**`,
     `결과: **${outcomeText}** / 현재 검: **${formatSwordLevel(result.profile.sword.level)}**`,
     `확률: 성공 ${result.successRate}% / 유지 ${result.maintainRate}% / 파괴 ${result.destroyRate}% (주사위 ${result.roll})`,
-    `사용: ${result.moneyCost.toLocaleString()}강화코인${stoneCostText}`,
-    `강화 코인: **${getSwordCoins(result.profile).toLocaleString()}코인** / 제련석: **${result.profile.sword.refineStones.toLocaleString()}개** / 보호권: **${(result.profile.sword.protectionScrolls ?? 0).toLocaleString()}개**`,
+    `사용: ${result.moneyCost.toLocaleString()}골드${stoneCostText}`,
+    `골드: **${getSwordCoins(result.profile).toLocaleString()}골드** / 제련석: **${result.profile.sword.refineStones.toLocaleString()}개** / 보호권: **${(result.profile.sword.protectionScrolls ?? 0).toLocaleString()}개**`,
     formatBlacksmithEnhancementLine(result),
     `최고 강화: **+${result.profile.sword.highestLevel}**${rewardText}`
   ].join('\n');
@@ -410,11 +410,11 @@ function formatSwordInfo(user, result) {
   return [
     `📌 **검정보** — ${user}`,
     `현재 검: **${formatSwordLevel(profile.sword.level)}**`,
-    `최고 강화: **+${profile.sword.highestLevel}** / 강화 코인: **${getSwordCoins(profile).toLocaleString()}코인**`,
+    `최고 강화: **+${profile.sword.highestLevel}** / 골드: **${getSwordCoins(profile).toLocaleString()}골드**`,
     `제련석: **${profile.sword.refineStones.toLocaleString()}개** / 보호권: **${(profile.sword.protectionScrolls ?? 0).toLocaleString()}개** / 선물: **${giftText}**`,
     normalText,
     advancedText,
-    `판매 예상가: **${result.saleValue.toLocaleString()}강화코인**`,
+    `판매 예상가: **${result.saleValue.toLocaleString()}골드**`,
     `전적: **${profile.sword.battleWins}승 ${profile.sword.battleLosses}패** / 파괴: **${profile.sword.destructions.toLocaleString()}회**`,
     `오늘 검배틀: **${result.battleRemaining}회 남음** / 제련석 보상: **${result.battleStoneRemaining}개 남음**`
   ].join('\n');
@@ -424,8 +424,8 @@ function formatSwordProtectionPurchase(user, result) {
   return [
     `🛡️ **검 보호권 구매** — ${user}`,
     `획득: **보호권 +${result.quantity.toLocaleString()}개**`,
-    `비용: ${result.unitCost.toLocaleString()}강화코인 × ${result.quantity.toLocaleString()} = **${result.totalCost.toLocaleString()}강화코인**`,
-    `강화 코인: **${getSwordCoins(result.profile).toLocaleString()}코인** / 보유 보호권: **${result.profile.sword.protectionScrolls.toLocaleString()}개**`,
+    `비용: ${result.unitCost.toLocaleString()}골드 × ${result.quantity.toLocaleString()} = **${result.totalCost.toLocaleString()}골드**`,
+    `골드: **${getSwordCoins(result.profile).toLocaleString()}골드** / 보유 보호권: **${result.profile.sword.protectionScrolls.toLocaleString()}개**`,
     '일반 강화에서 검이 파괴될 때 보호권 1개를 소모해 현재 강화 수치를 지킵니다.'
   ].join('\n');
 }
@@ -453,7 +453,7 @@ function formatSwordAchievementClaim(user, result) {
     `🏅 **업적 보상 수령** — ${user}`,
     `업적: **${result.achievement.title}**`,
     `보상: **${result.achievement.rewardText}**`,
-    `강화 코인: **${getSwordCoins(result.profile).toLocaleString()}코인** / 제련석: **${result.profile.sword.refineStones.toLocaleString()}개** / 보호권: **${result.profile.sword.protectionScrolls.toLocaleString()}개**`
+    `골드: **${getSwordCoins(result.profile).toLocaleString()}골드** / 제련석: **${result.profile.sword.refineStones.toLocaleString()}개** / 보호권: **${result.profile.sword.protectionScrolls.toLocaleString()}개**`
   ].join('\n');
 }
 
@@ -468,7 +468,7 @@ function formatEnhancePreview(config, label) {
 
   return [
     `${label}: **+${config.level} → +${config.targetLevel}**`,
-    `비용 ${config.moneyCost.toLocaleString()}강화코인${stoneText}`,
+    `비용 ${config.moneyCost.toLocaleString()}골드${stoneText}`,
     `성공 ${config.successRate}% / 유지 ${config.maintainRate}% / 파괴 ${config.destroyRate}%`
   ].join(' — ');
 }
@@ -479,7 +479,7 @@ function formatSwordSalePreview(user, result) {
   return [
     `💰 **검판매 확인** — ${user}`,
     `판매할 검: **${formatSwordLevel(level)}**`,
-    `판매 예상가: **${result.saleValue.toLocaleString()}강화코인**`,
+    `판매 예상가: **${result.saleValue.toLocaleString()}골드**`,
     `판매 후 현재 검은 **+0 기본 검**으로 돌아갑니다.`,
     `최고 강화 기록, 제련석, 배틀 전적은 유지됩니다.`,
     `정말 판매하려면 아래 **판매 확정** 버튼을 누르세요.`
@@ -490,9 +490,9 @@ function formatSwordSale(user, result) {
   return [
     `💰 **검판매** — ${user}`,
     `판매한 검: **${formatSwordLevel(result.beforeLevel)}**`,
-    `판매 금액: **${result.saleValue.toLocaleString()}강화코인**`,
+    `판매 금액: **${result.saleValue.toLocaleString()}골드**`,
     `현재 검: **${formatSwordLevel(result.profile.sword.level)}**`,
-    `강화 코인: **${getSwordCoins(result.profile).toLocaleString()}코인**`,
+    `골드: **${getSwordCoins(result.profile).toLocaleString()}골드**`,
     `최고 강화 기록: **+${result.profile.sword.highestLevel}**`
   ].join('\n');
 }
@@ -517,7 +517,7 @@ function getSwordLeaderboardMeta(category) {
     },
     saleEarnings: {
       label: '판매금',
-      format: (value) => `${value.toLocaleString()}강화코인`
+      format: (value) => `${value.toLocaleString()}골드`
     },
     destructions: {
       label: '파괴횟수',
@@ -531,10 +531,10 @@ function getSwordLeaderboardMeta(category) {
 
 function formatRandomSwordBattle(user, result) {
   const rewardText = result.won
-    ? `보상: +${result.rewards.xp.toLocaleString()} XP, +${result.rewards.money.toLocaleString()}강화코인, 제련석 +${result.rewards.refineStones.toLocaleString()}개`
-    : '보상: 없음 / 패배해도 강화 코인은 잃지 않습니다.';
+    ? `보상: +${result.rewards.xp.toLocaleString()} XP, +${result.rewards.money.toLocaleString()}골드, 제련석 +${result.rewards.refineStones.toLocaleString()}개`
+    : '보상: 없음 / 패배해도 골드는 잃지 않습니다.';
   const levelText = result.leveledUp
-    ? `\n🎉 레벨업! Lv.${result.profile.level} / 레벨 보너스(메인) +${result.levelReward.toLocaleString()}원`
+    ? `\n🎉 레벨업! Lv.${result.profile.level} / 레벨 보너스 +${result.levelReward.toLocaleString()}골드`
     : '';
 
   return [
@@ -545,7 +545,7 @@ function formatRandomSwordBattle(user, result) {
     `결과: **${result.won ? '승리' : '패배'}**`,
     rewardText,
     `오늘 남은 검배틀: **${result.remainingBattles}회**`,
-    `전적: **${result.profile.sword.battleWins}승 ${result.profile.sword.battleLosses}패** / 강화 코인: **${getSwordCoins(result.profile).toLocaleString()}코인**${levelText}`
+    `전적: **${result.profile.sword.battleWins}승 ${result.profile.sword.battleLosses}패** / 골드: **${getSwordCoins(result.profile).toLocaleString()}골드**${levelText}`
   ].join('\n');
 }
 
@@ -556,7 +556,7 @@ function formatPvpSwordBattle(challenge, result) {
   const challengerWon = result.winnerUserId === challenge.challenger.userId;
   const winnerProfile = challengerWon ? result.challenger : result.opponent;
   const levelText = result.leveledUp
-    ? `\n🎉 승자 레벨업! Lv.${winnerProfile.level} / 레벨 보너스(메인) +${result.levelReward.toLocaleString()}원`
+    ? `\n🎉 승자 레벨업! Lv.${winnerProfile.level} / 레벨 보너스 +${result.levelReward.toLocaleString()}골드`
     : '';
 
   return [
@@ -564,8 +564,8 @@ function formatPvpSwordBattle(challenge, result) {
     `${challenge.challenger.mention}: 전투력 ${result.battle.challenger.power} (${formatSwordLevel(result.battle.challenger.swordLevel)}, 주사위 ${result.battle.challenger.roll})`,
     `${challenge.opponent.mention}: 전투력 ${result.battle.opponent.power} (${formatSwordLevel(result.battle.opponent.swordLevel)}, 주사위 ${result.battle.opponent.roll})`,
     `승자: **${winnerMention}**`,
-    `승리 보상: +${result.rewards.xp.toLocaleString()} XP, +${result.rewards.money.toLocaleString()}강화코인, 제련석 +${result.rewards.refineStones.toLocaleString()}개`,
-    `패자는 강화 코인을 잃지 않습니다.`,
+    `승리 보상: +${result.rewards.xp.toLocaleString()} XP, +${result.rewards.money.toLocaleString()}골드, 제련석 +${result.rewards.refineStones.toLocaleString()}개`,
+    `패자는 골드를 잃지 않습니다.`,
     `남은 검배틀: 신청자 ${result.remainingBattles.challenger}회 / 상대 ${result.remainingBattles.opponent}회${levelText}`
   ].join('\n');
 }
@@ -676,7 +676,7 @@ function formatSwordLevel(level) {
 }
 
 function getSwordCoins(profile) {
-  return profile.wallets?.swordCoins ?? profile.currencyBalances?.sword ?? profile.balance ?? 0;
+  return profile.balance ?? profile.currencyBalances?.main ?? profile.currencyBalances?.sword ?? 0;
 }
 
 async function safeReply(interaction, content, ephemeral = false) {

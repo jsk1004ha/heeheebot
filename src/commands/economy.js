@@ -1,54 +1,53 @@
 import { SlashCommandBuilder } from 'discord.js';
 import {
   formatCurrencyAmount,
-  getCurrencyChoices,
-  getCurrencyConfig
+  getCurrencyChoices
 } from '../systems/currencies.js';
 
 export const economyCommands = [
   new SlashCommandBuilder()
     .setName('프로필')
-    .setDescription('내 레벨, 경험치, 메인 코인과 전용 지갑을 확인합니다.'),
+    .setDescription('내 레벨, 경험치, 골드 잔액을 확인합니다.'),
   new SlashCommandBuilder()
     .setName('출석')
-    .setDescription('하루 한 번 출석 메인 코인 보상을 받습니다.'),
+    .setDescription('하루 한 번 출석 골드 보상을 받습니다.'),
   new SlashCommandBuilder()
     .setName('송금')
-    .setDescription('다른 유저에게 메인 코인을 송금합니다.')
+    .setDescription('다른 유저에게 골드를 송금합니다.')
     .addUserOption((option) =>
       option
         .setName('대상')
-        .setDescription('메인 코인을 받을 유저')
+        .setDescription('골드를 받을 유저')
         .setRequired(true)
     )
     .addIntegerOption((option) =>
       option
         .setName('금액')
-        .setDescription('송금할 메인 코인 금액')
+        .setDescription('송금할 골드 금액')
         .setMinValue(1)
         .setRequired(true)
     ),
   new SlashCommandBuilder()
     .setName('환전')
-    .setDescription('메인 코인과 컨텐츠별 전용 재화를 환전합니다.')
+    .setDescription('이전 전용 재화는 골드로 통합되어 환전 없이 같은 잔액을 사용합니다.')
     .addStringOption((option) =>
       option
         .setName('보낼재화')
-        .setDescription('차감할 재화')
+        .setDescription('이전 재화명 또는 골드')
         .setRequired(true)
         .addChoices(...getCurrencyChoices())
     )
     .addStringOption((option) =>
       option
         .setName('받을재화')
-        .setDescription('받을 재화')
+        .setDescription('이전 재화명 또는 골드')
         .setRequired(true)
         .addChoices(...getCurrencyChoices())
     )
     .addIntegerOption((option) =>
       option
         .setName('금액')
-        .setDescription('보낼 재화 기준 환전 금액')
+        .setDescription('확인할 골드 금액')
         .setMinValue(1)
         .setRequired(true)
     ),
@@ -64,7 +63,7 @@ export const economyCommands = [
     ),
   new SlashCommandBuilder()
     .setName('재화정보')
-    .setDescription('재화별 사용처와 환전율을 확인합니다.')
+    .setDescription('통합 골드 사용처와 기존 지갑 정산 기준을 확인합니다.')
 ];
 
 export function getEconomyCommandPayloads() {
@@ -113,11 +112,11 @@ export async function handleEconomyCommand(interaction, economy) {
       ? ` / 연속 보너스 +${result.streakBonusXp.toLocaleString()} XP`
       : '';
     const levelText = result.leveledUp
-      ? ` / 레벨업 Lv.${result.profile.level} 보너스 +${result.levelReward.toLocaleString()}원`
+      ? ` / 레벨업 Lv.${result.profile.level} 보너스 +${formatCurrencyAmount(result.levelReward, 'main')}`
       : '';
 
     await interaction.reply(
-      `✅ 출석 완료! +${result.xpGained.toLocaleString()} XP${bonusText}, +${result.reward.toLocaleString()}원 지급${levelText}${streakText}. 메인 코인: ${result.profile.balance.toLocaleString()}원`
+      `✅ 출석 완료! +${result.xpGained.toLocaleString()} XP${bonusText}, +${formatCurrencyAmount(result.reward, 'main')} 지급${levelText}${streakText}. 골드: ${formatCurrencyAmount(result.profile.balance, 'main')}`
     );
     return true;
   }
@@ -145,7 +144,7 @@ export async function handleEconomyCommand(interaction, economy) {
       });
 
       await interaction.reply(
-        `💸 ${target}님에게 ${result.amount.toLocaleString()}원을 송금했습니다. 내 메인 코인: ${result.from.balance.toLocaleString()}원`
+        `💸 ${target}님에게 ${formatCurrencyAmount(result.amount, 'main')}를 송금했습니다. 내 골드: ${formatCurrencyAmount(result.from.balance, 'main')}`
       );
     } catch (error) {
       await interaction.reply({
@@ -171,7 +170,7 @@ export async function handleEconomyCommand(interaction, economy) {
       await interaction.reply(formatExchangeResult(result));
     } catch (error) {
       await interaction.reply({
-        content: `환전 실패: ${error.message}`,
+        content: `환전 확인 실패: ${error.message}`,
         ephemeral: true
       });
     }
@@ -201,69 +200,54 @@ export async function handleEconomyCommand(interaction, economy) {
 }
 
 function formatProfile(profile) {
-  const wallets = profile.wallets ?? {};
+  const migrationText = profile.currencyMigration?.convertedGold > 0
+    ? `기존 전용 지갑 정산: **+${formatCurrencyAmount(profile.currencyMigration.convertedGold, 'main')}**`
+    : '기존 전용 지갑: **정산 완료**';
+
   return [
     `📌 **${profile.username}님의 프로필**`,
     `레벨: **${profile.level}**`,
     `경험치: **${profile.totalXp.toLocaleString()} XP**`,
     `연속 출석: **${profile.dailyStreak.toLocaleString()}일**`,
-    `메인 코인: **${profile.balance.toLocaleString()}원**`,
-    `전용 지갑: 카지노칩 **${(wallets.casinoChips ?? 0).toLocaleString()}칩** / RPG 골드 **${(wallets.rpgGold ?? 0).toLocaleString()}골드** / 강화 코인 **${(wallets.swordCoins ?? 0).toLocaleString()}코인** / 현금 **${(wallets.stockCash ?? 0).toLocaleString()}원**`
+    `골드: **${formatCurrencyAmount(profile.balance, 'main')}**`,
+    migrationText
   ].join('\n');
 }
 
 function formatExchangeResult(result) {
-  const feeText = result.fee > 0
-    ? ` / 환전 보정: **-${formatCurrencyAmount(result.fee, result.from.id)} 상당**`
-    : '';
-
   return [
-    '🔁 **환전 완료**',
-    `${result.from.label} ${formatCurrencyAmount(result.spent, result.from.id)} → ${result.to.label} ${formatCurrencyAmount(result.received, result.to.id)}${feeText}`,
-    `현재 지갑: 메인 **${result.profile.balance.toLocaleString()}원** / 카지노 **${result.profile.wallets.casinoChips.toLocaleString()}칩** / RPG **${result.profile.wallets.rpgGold.toLocaleString()}골드** / 검강화 **${result.profile.wallets.swordCoins.toLocaleString()}코인** / 주식 현금 **${result.profile.wallets.stockCash.toLocaleString()}원**`
+    '🔁 **환전 불필요**',
+    result.message ?? '모든 재화가 골드 하나로 통합되어 있습니다.',
+    `확인 금액: **${formatCurrencyAmount(result.spent, 'main')}**`,
+    `현재 골드: **${formatCurrencyAmount(result.profile.balance, 'main')}**`
   ].join('\n');
 }
 
 function formatCurrencyInfo() {
-  const casino = getCurrencyConfig('casino');
-  const rpg = getCurrencyConfig('rpg');
-  const sword = getCurrencyConfig('sword');
-  const stock = getCurrencyConfig('stock');
-
   return [
-    '💱 **재화정보 / 환전율**',
-    '모든 재화는 봇 내부 게임머니입니다. 실제 현금 결제, 실제 현금 환전, 실제 투자와 연결되지 않습니다.',
+    '💱 **재화정보 / 통합 골드**',
+    '모든 재화는 봇 내부 게임머니이며 실제 현금 결제, 실제 현금 환전, 실제 투자와 연결되지 않습니다.',
     '',
-    '📌 **사용처**',
-    '- **메인 코인**: 출석, 송금, 전용 재화 충전의 기준 재화',
-    '- **카지노칩**: 홀짝, 룰렛, 블랙잭, 바카라 등 카지노 게임',
-    '- **RPG 골드**: RPG 상점, 장비, 포션, 가챠',
-    '- **강화 코인**: 검 강화, 보호권, 검배틀 보상',
-    '- **주식 현금**: 가상주식 현물/지정가/레버리지',
+    '📌 **현재 기준**',
+    '- 단일 화폐: **골드**',
+    '- 카지노, RPG, 검강화, 가상주식, 커뮤니티 상점/복권/송금이 모두 같은 골드 잔액을 사용합니다.',
+    '- `/환전`은 호환용 안내 명령이며 더 이상 잔액을 이동하지 않습니다.',
     '',
-    '🔁 **충전율**',
-    `- 메인 → 카지노칩/강화 코인/주식 현금: 1:1`,
-    `- 메인 → RPG 골드: 1:2 (${formatRate(casino.mainToCurrencyBps)} 기준보다 넉넉하게 충전)`,
+    '🧮 **기존 지갑 정산 기준**',
+    '- 카지노칩: 기존 잔액의 90%를 골드로 반영',
+    '- RPG 골드: 기존 잔액의 30%를 골드로 반영',
+    '- 강화 코인: 기존 잔액의 50%를 골드로 반영',
+    '- 주식 현금: 기존 잔액의 95%를 골드로 반영',
     '',
-    '📉 **출금/이동 보정**',
-    `- 카지노칩 → 외부: ${formatRate(casino.cashOutBps)}`,
-    `- RPG 골드 → 외부: ${formatRate(rpg.cashOutBps)}`,
-    `- 강화 코인 → 외부: ${formatRate(sword.cashOutBps)}`,
-    `- 주식 현금 → 외부: ${formatRate(stock.cashOutBps)}`,
-    '',
-    '예: RPG는 게임 내 획득량이 많아서 충전은 1:2지만 밖으로 뺄 때는 30%만 반영됩니다.'
+    '이전 전용 재화는 각 컨텐츠의 획득 속도와 외부 이동 보정률을 기준으로 골드에 합산되어 인플레이션을 줄입니다.'
   ].join('\n');
-}
-
-function formatRate(bps) {
-  return `${(bps / 100).toLocaleString()}%`;
 }
 
 function formatLeaderboard(rows) {
   const body = rows
     .map((profile, index) => {
       const rank = index + 1;
-      return `${rank}. **${profile.username}** — Lv.${profile.level} / 경험치 ${profile.totalXp.toLocaleString()} XP / 메인 ${profile.balance.toLocaleString()}원`;
+      return `${rank}. **${profile.username}** — Lv.${profile.level} / 경험치 ${profile.totalXp.toLocaleString()} XP / 골드 ${formatCurrencyAmount(profile.balance, 'main')}`;
     })
     .join('\n');
 

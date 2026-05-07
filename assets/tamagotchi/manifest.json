@@ -1,0 +1,1242 @@
+{
+  "generatedAt": "2026-05-07T03:30:13.279Z",
+  "sourceImage": "assets/tamagotchi/source/heejin.png",
+  "style": "cute pixel-art Tamagotchi sprites derived from the source photo palette",
+  "palette": {
+    "sourceDark": "#4d463d",
+    "sourceMid": "#f7f5e8",
+    "sourceLight": "#ffffff",
+    "sourceAccent": "#d2ba93",
+    "outline": "#4b3038",
+    "blush": "#ff9ebc",
+    "shadow": "#00000033"
+  },
+  "stages": [
+    {
+      "id": "egg",
+      "label": "알",
+      "minAgeDays": 0,
+      "prompt": "warm speckled egg waiting to hatch"
+    },
+    {
+      "id": "infant",
+      "label": "유아기",
+      "minAgeDays": 1,
+      "prompt": "tiny baby Heejin pet with soft round body"
+    },
+    {
+      "id": "child",
+      "label": "유년기",
+      "minAgeDays": 3,
+      "prompt": "playful child Heejin pet"
+    },
+    {
+      "id": "teen",
+      "label": "청소년기",
+      "minAgeDays": 7,
+      "prompt": "sparkly teen Heejin pet"
+    },
+    {
+      "id": "adult",
+      "label": "성년기",
+      "minAgeDays": 14,
+      "prompt": "fully grown Heejin Tamagotchi pet"
+    }
+  ],
+  "reference": {
+    "imagePath": "assets/tamagotchi/preview/heejin-reference-pixel.png"
+  },
+  "previews": {
+    "growthStages": "assets/tamagotchi/preview/heejin-growth-stages.png",
+    "skins": "assets/tamagotchi/preview/heejin-skins-contact-sheet.png",
+    "decorations": "assets/tamagotchi/preview/heejin-tools-contact-sheet.png"
+  },
+  "skins": [
+    {
+      "id": "classic",
+      "label": "기본 희진",
+      "prompt": "source-palette cozy pink pet",
+      "accent": "#ff8fb8",
+      "style": "classic",
+      "imagePath": "assets/tamagotchi/skins/classic.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/classic/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/classic/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/classic/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/classic/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/classic/adult.png"
+        }
+      ]
+    },
+    {
+      "id": "ribbon",
+      "label": "왕리본 희진",
+      "prompt": "giant ribbon and rosy cheeks",
+      "accent": "#ff5fa2",
+      "style": "ribbon",
+      "imagePath": "assets/tamagotchi/skins/ribbon.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/ribbon/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/ribbon/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/ribbon/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/ribbon/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/ribbon/adult.png"
+        }
+      ]
+    },
+    {
+      "id": "bunny",
+      "label": "토끼 희진",
+      "prompt": "soft bunny ears",
+      "accent": "#ffd6e8",
+      "style": "bunny",
+      "imagePath": "assets/tamagotchi/skins/bunny.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/bunny/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/bunny/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/bunny/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/bunny/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/bunny/adult.png"
+        }
+      ]
+    },
+    {
+      "id": "cat",
+      "label": "고양이 희진",
+      "prompt": "cat ears and whiskers",
+      "accent": "#f7b267",
+      "style": "cat",
+      "imagePath": "assets/tamagotchi/skins/cat.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/cat/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/cat/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/cat/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/cat/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/cat/adult.png"
+        }
+      ]
+    },
+    {
+      "id": "pajama",
+      "label": "잠옷 희진",
+      "prompt": "sleepy pajama cap",
+      "accent": "#a6c8ff",
+      "style": "pajama",
+      "imagePath": "assets/tamagotchi/skins/pajama.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/pajama/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/pajama/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/pajama/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/pajama/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/pajama/adult.png"
+        }
+      ]
+    },
+    {
+      "id": "sailor",
+      "label": "세일러 희진",
+      "prompt": "navy sailor collar",
+      "accent": "#6aa9ff",
+      "style": "sailor",
+      "imagePath": "assets/tamagotchi/skins/sailor.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/sailor/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/sailor/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/sailor/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/sailor/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/sailor/adult.png"
+        }
+      ]
+    },
+    {
+      "id": "strawberry",
+      "label": "딸기 희진",
+      "prompt": "strawberry hood",
+      "accent": "#ff5d6c",
+      "style": "strawberry",
+      "imagePath": "assets/tamagotchi/skins/strawberry.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/strawberry/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/strawberry/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/strawberry/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/strawberry/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/strawberry/adult.png"
+        }
+      ]
+    },
+    {
+      "id": "heart",
+      "label": "하트 희진",
+      "prompt": "heart aura",
+      "accent": "#ff6fae",
+      "style": "heart",
+      "imagePath": "assets/tamagotchi/skins/heart.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/heart/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/heart/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/heart/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/heart/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/heart/adult.png"
+        }
+      ]
+    },
+    {
+      "id": "star",
+      "label": "별빛 희진",
+      "prompt": "star hairpin",
+      "accent": "#ffd166",
+      "style": "star",
+      "imagePath": "assets/tamagotchi/skins/star.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/star/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/star/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/star/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/star/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/star/adult.png"
+        }
+      ]
+    },
+    {
+      "id": "winter",
+      "label": "겨울 희진",
+      "prompt": "winter scarf",
+      "accent": "#9be7ff",
+      "style": "winter",
+      "imagePath": "assets/tamagotchi/skins/winter.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/winter/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/winter/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/winter/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/winter/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/winter/adult.png"
+        }
+      ]
+    },
+    {
+      "id": "spring",
+      "label": "봄꽃 희진",
+      "prompt": "flower crown",
+      "accent": "#b7ef8a",
+      "style": "spring",
+      "imagePath": "assets/tamagotchi/skins/spring.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/spring/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/spring/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/spring/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/spring/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/spring/adult.png"
+        }
+      ]
+    },
+    {
+      "id": "summer",
+      "label": "여름 희진",
+      "prompt": "sunny beach hat",
+      "accent": "#ffe066",
+      "style": "summer",
+      "imagePath": "assets/tamagotchi/skins/summer.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/summer/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/summer/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/summer/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/summer/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/summer/adult.png"
+        }
+      ]
+    },
+    {
+      "id": "autumn",
+      "label": "가을 희진",
+      "prompt": "autumn leaf hood",
+      "accent": "#d98236",
+      "style": "autumn",
+      "imagePath": "assets/tamagotchi/skins/autumn.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/autumn/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/autumn/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/autumn/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/autumn/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/autumn/adult.png"
+        }
+      ]
+    },
+    {
+      "id": "angel",
+      "label": "천사 희진",
+      "prompt": "halo and tiny wings",
+      "accent": "#fff1a8",
+      "style": "angel",
+      "imagePath": "assets/tamagotchi/skins/angel.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/angel/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/angel/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/angel/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/angel/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/angel/adult.png"
+        }
+      ]
+    },
+    {
+      "id": "devil",
+      "label": "악마 희진",
+      "prompt": "tiny cute horns",
+      "accent": "#d4515d",
+      "style": "devil",
+      "imagePath": "assets/tamagotchi/skins/devil.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/devil/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/devil/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/devil/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/devil/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/devil/adult.png"
+        }
+      ]
+    },
+    {
+      "id": "royal",
+      "label": "공주 희진",
+      "prompt": "small crown",
+      "accent": "#c9a0ff",
+      "style": "royal",
+      "imagePath": "assets/tamagotchi/skins/royal.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/royal/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/royal/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/royal/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/royal/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/royal/adult.png"
+        }
+      ]
+    },
+    {
+      "id": "cosmic",
+      "label": "우주 희진",
+      "prompt": "space helmet stars",
+      "accent": "#8f7cff",
+      "style": "cosmic",
+      "imagePath": "assets/tamagotchi/skins/cosmic.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/cosmic/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/cosmic/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/cosmic/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/cosmic/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/cosmic/adult.png"
+        }
+      ]
+    },
+    {
+      "id": "gamer",
+      "label": "게이머 희진",
+      "prompt": "pixel headset",
+      "accent": "#70e0d4",
+      "style": "gamer",
+      "imagePath": "assets/tamagotchi/skins/gamer.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/gamer/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/gamer/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/gamer/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/gamer/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/gamer/adult.png"
+        }
+      ]
+    },
+    {
+      "id": "chef",
+      "label": "셰프 희진",
+      "prompt": "chef hat and apron",
+      "accent": "#f8f8f8",
+      "style": "chef",
+      "imagePath": "assets/tamagotchi/skins/chef.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/chef/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/chef/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/chef/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/chef/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/chef/adult.png"
+        }
+      ]
+    },
+    {
+      "id": "raincoat",
+      "label": "우비 희진",
+      "prompt": "yellow rain hood",
+      "accent": "#ffd23f",
+      "style": "raincoat",
+      "imagePath": "assets/tamagotchi/skins/raincoat.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/raincoat/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/raincoat/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/raincoat/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/raincoat/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/raincoat/adult.png"
+        }
+      ]
+    },
+    {
+      "id": "school",
+      "label": "스쿨 희진",
+      "prompt": "school ribbon tie",
+      "accent": "#7aa2ff",
+      "style": "school",
+      "imagePath": "assets/tamagotchi/skins/school.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/school/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/school/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/school/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/school/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/school/adult.png"
+        }
+      ]
+    },
+    {
+      "id": "cloud",
+      "label": "구름 희진",
+      "prompt": "cloud hoodie",
+      "accent": "#d9f3ff",
+      "style": "cloud",
+      "imagePath": "assets/tamagotchi/skins/cloud.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/cloud/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/cloud/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/cloud/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/cloud/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/cloud/adult.png"
+        }
+      ]
+    },
+    {
+      "id": "cherry",
+      "label": "체리 희진",
+      "prompt": "cherry hair pin",
+      "accent": "#ff3b58",
+      "style": "cherry",
+      "imagePath": "assets/tamagotchi/skins/cherry.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/cherry/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/cherry/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/cherry/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/cherry/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/cherry/adult.png"
+        }
+      ]
+    },
+    {
+      "id": "mint",
+      "label": "민트 희진",
+      "prompt": "mint pastel outfit",
+      "accent": "#7ef0c1",
+      "style": "mint",
+      "imagePath": "assets/tamagotchi/skins/mint.png",
+      "stages": [
+        {
+          "id": "egg",
+          "label": "알",
+          "minAgeDays": 0,
+          "imagePath": "assets/tamagotchi/skins/mint/egg.png"
+        },
+        {
+          "id": "infant",
+          "label": "유아기",
+          "minAgeDays": 1,
+          "imagePath": "assets/tamagotchi/skins/mint/infant.png"
+        },
+        {
+          "id": "child",
+          "label": "유년기",
+          "minAgeDays": 3,
+          "imagePath": "assets/tamagotchi/skins/mint/child.png"
+        },
+        {
+          "id": "teen",
+          "label": "청소년기",
+          "minAgeDays": 7,
+          "imagePath": "assets/tamagotchi/skins/mint/teen.png"
+        },
+        {
+          "id": "adult",
+          "label": "성년기",
+          "minAgeDays": 14,
+          "imagePath": "assets/tamagotchi/skins/mint/adult.png"
+        }
+      ]
+    }
+  ],
+  "decorations": [
+    {
+      "id": "rice_bowl",
+      "label": "따끈한 밥그릇",
+      "category": "food",
+      "prompt": "warm rice bowl for feeding",
+      "imagePath": "assets/tamagotchi/decorations/rice_bowl.png"
+    },
+    {
+      "id": "strawberry_milk",
+      "label": "딸기우유",
+      "category": "food",
+      "prompt": "cute strawberry milk carton",
+      "imagePath": "assets/tamagotchi/decorations/strawberry_milk.png"
+    },
+    {
+      "id": "cake_slice",
+      "label": "케이크 조각",
+      "category": "food",
+      "prompt": "pink cake slice",
+      "imagePath": "assets/tamagotchi/decorations/cake_slice.png"
+    },
+    {
+      "id": "cookie_box",
+      "label": "쿠키 상자",
+      "category": "food",
+      "prompt": "small cookie snack box",
+      "imagePath": "assets/tamagotchi/decorations/cookie_box.png"
+    },
+    {
+      "id": "toy_ball",
+      "label": "통통 공",
+      "category": "toy",
+      "prompt": "bouncy toy ball",
+      "imagePath": "assets/tamagotchi/decorations/toy_ball.png"
+    },
+    {
+      "id": "gamepad",
+      "label": "미니 게임패드",
+      "category": "toy",
+      "prompt": "tiny retro gamepad",
+      "imagePath": "assets/tamagotchi/decorations/gamepad.png"
+    },
+    {
+      "id": "rabbit_plush",
+      "label": "토끼 인형",
+      "category": "toy",
+      "prompt": "rabbit plush friend",
+      "imagePath": "assets/tamagotchi/decorations/rabbit_plush.png"
+    },
+    {
+      "id": "cat_plush",
+      "label": "고양이 인형",
+      "category": "toy",
+      "prompt": "cat plush friend",
+      "imagePath": "assets/tamagotchi/decorations/cat_plush.png"
+    },
+    {
+      "id": "bubble_bath",
+      "label": "버블 목욕통",
+      "category": "care",
+      "prompt": "bubble bath tub",
+      "imagePath": "assets/tamagotchi/decorations/bubble_bath.png"
+    },
+    {
+      "id": "comb",
+      "label": "분홍 빗",
+      "category": "care",
+      "prompt": "pink comb",
+      "imagePath": "assets/tamagotchi/decorations/comb.png"
+    },
+    {
+      "id": "cleaning_spray",
+      "label": "반짝 청소 스프레이",
+      "category": "care",
+      "prompt": "sparkle cleaning spray",
+      "imagePath": "assets/tamagotchi/decorations/cleaning_spray.png"
+    },
+    {
+      "id": "medicine_bottle",
+      "label": "하트 약병",
+      "category": "care",
+      "prompt": "medicine bottle with heart label",
+      "imagePath": "assets/tamagotchi/decorations/medicine_bottle.png"
+    },
+    {
+      "id": "thermometer",
+      "label": "체온계",
+      "category": "care",
+      "prompt": "tiny thermometer",
+      "imagePath": "assets/tamagotchi/decorations/thermometer.png"
+    },
+    {
+      "id": "cozy_bed",
+      "label": "폭신 침대",
+      "category": "room",
+      "prompt": "cozy pixel bed",
+      "imagePath": "assets/tamagotchi/decorations/cozy_bed.png"
+    },
+    {
+      "id": "star_blanket",
+      "label": "별 담요",
+      "category": "room",
+      "prompt": "star pattern blanket",
+      "imagePath": "assets/tamagotchi/decorations/star_blanket.png"
+    },
+    {
+      "id": "heart_cushion",
+      "label": "하트 쿠션",
+      "category": "room",
+      "prompt": "heart cushion",
+      "imagePath": "assets/tamagotchi/decorations/heart_cushion.png"
+    },
+    {
+      "id": "flower_pot",
+      "label": "꽃 화분",
+      "category": "room",
+      "prompt": "small flower pot",
+      "imagePath": "assets/tamagotchi/decorations/flower_pot.png"
+    },
+    {
+      "id": "desk_lamp",
+      "label": "무드 램프",
+      "category": "room",
+      "prompt": "warm desk lamp",
+      "imagePath": "assets/tamagotchi/decorations/desk_lamp.png"
+    },
+    {
+      "id": "mirror",
+      "label": "반짝 거울",
+      "category": "room",
+      "prompt": "cute hand mirror",
+      "imagePath": "assets/tamagotchi/decorations/mirror.png"
+    },
+    {
+      "id": "photo_frame",
+      "label": "희진 액자",
+      "category": "room",
+      "prompt": "mini framed portrait",
+      "imagePath": "assets/tamagotchi/decorations/photo_frame.png"
+    },
+    {
+      "id": "music_note",
+      "label": "음표 스피커",
+      "category": "room",
+      "prompt": "music note speaker",
+      "imagePath": "assets/tamagotchi/decorations/music_note.png"
+    },
+    {
+      "id": "camera",
+      "label": "즉석 카메라",
+      "category": "tool",
+      "prompt": "instant camera",
+      "imagePath": "assets/tamagotchi/decorations/camera.png"
+    },
+    {
+      "id": "magic_wand",
+      "label": "마법봉",
+      "category": "tool",
+      "prompt": "sparkly magic wand",
+      "imagePath": "assets/tamagotchi/decorations/magic_wand.png"
+    },
+    {
+      "id": "umbrella",
+      "label": "노란 우산",
+      "category": "tool",
+      "prompt": "yellow umbrella",
+      "imagePath": "assets/tamagotchi/decorations/umbrella.png"
+    },
+    {
+      "id": "crown",
+      "label": "미니 왕관",
+      "category": "tool",
+      "prompt": "tiny crown",
+      "imagePath": "assets/tamagotchi/decorations/crown.png"
+    },
+    {
+      "id": "school_bag",
+      "label": "작은 책가방",
+      "category": "tool",
+      "prompt": "small school bag",
+      "imagePath": "assets/tamagotchi/decorations/school_bag.png"
+    },
+    {
+      "id": "book",
+      "label": "분홍 일기장",
+      "category": "tool",
+      "prompt": "pink diary book",
+      "imagePath": "assets/tamagotchi/decorations/book.png"
+    },
+    {
+      "id": "fishing_rod",
+      "label": "미니 낚싯대",
+      "category": "tool",
+      "prompt": "tiny fishing rod",
+      "imagePath": "assets/tamagotchi/decorations/fishing_rod.png"
+    },
+    {
+      "id": "keyboard",
+      "label": "하트 키보드",
+      "category": "tool",
+      "prompt": "heart keyboard",
+      "imagePath": "assets/tamagotchi/decorations/keyboard.png"
+    },
+    {
+      "id": "star_mobile",
+      "label": "별 모빌",
+      "category": "room",
+      "prompt": "hanging star mobile",
+      "imagePath": "assets/tamagotchi/decorations/star_mobile.png"
+    },
+    {
+      "id": "cloud_rug",
+      "label": "구름 러그",
+      "category": "room",
+      "prompt": "soft cloud rug",
+      "imagePath": "assets/tamagotchi/decorations/cloud_rug.png"
+    },
+    {
+      "id": "snack_tray",
+      "label": "간식 트레이",
+      "category": "food",
+      "prompt": "assorted snack tray",
+      "imagePath": "assets/tamagotchi/decorations/snack_tray.png"
+    }
+  ]
+}

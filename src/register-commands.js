@@ -10,6 +10,7 @@ import { getModerationCommandPayloads } from './commands/moderation.js';
 import { getRpgCommandPayloads } from './commands/rpg.js';
 import { getStockCommandPayloads } from './commands/stocks.js';
 import { getSwordCommandPayloads } from './commands/sword.js';
+import { getTamagotchiCommandPayloads } from './commands/tamagotchi.js';
 import { getTimetableCommandPayloads } from './commands/timetable.js';
 import { getWordChainCommandPayloads } from './commands/wordchain.js';
 import { loadConfig, requireBotConfig } from './config.js';
@@ -27,6 +28,7 @@ const commands = [
   ...getMealCommandPayloads(),
   ...getTimetableCommandPayloads(),
   ...getStockCommandPayloads(),
+  ...getTamagotchiCommandPayloads(),
   ...getFishingCommandPayloads(),
   ...getSwordCommandPayloads(),
   ...getRpgCommandPayloads(),

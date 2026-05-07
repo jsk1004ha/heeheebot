@@ -72,7 +72,7 @@ export function formatFortuneResult({ fortune, target, viewer, xpResult }) {
 
   if (xpResult?.claimed) {
     const levelUpText = xpResult.leveledUp
-      ? ` / 🎉 Lv.${xpResult.profile.level} 레벨업! 보너스 ${xpResult.levelReward.toLocaleString()}원`
+      ? ` / 🎉 Lv.${xpResult.profile.level} 레벨업! 보너스 ${xpResult.levelReward.toLocaleString()}골드`
       : '';
 
     lines.push(

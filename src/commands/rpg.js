@@ -207,7 +207,7 @@ export const rpgCommands = [
     .addSubcommand((subcommand) =>
       subcommand
         .setName('장비강화')
-        .setDescription('전리품 장비를 RPG 골드로 강화합니다.')
+        .setDescription('전리품 장비를 골드로 강화합니다.')
         .addStringOption((option) =>
           option
             .setName('장비')
@@ -1845,7 +1845,7 @@ function formatBattleResult(user, result) {
     ? `${battle.monsterPower} → ${battle.mitigatedMonsterPower} (방어 적용)`
     : `${battle.monsterPower}`;
   const levelText = result.leveledUp
-    ? `\n🎉 레벨업! Lv.${profile.level} / 레벨 보너스(메인) +${result.levelReward.toLocaleString()}원`
+    ? `\n🎉 레벨업! Lv.${profile.level} / 레벨 보너스 +${result.levelReward.toLocaleString()}골드`
     : '';
   const dropText = result.drop
     ? `\n🎁 드랍: **${result.drop.label}** × ${result.drop.quantity}`
@@ -1865,7 +1865,7 @@ function formatBattleResult(user, result) {
     rewardText,
     `피해: -${battle.damageTaken.toLocaleString()} HP / 현재 HP: **${profile.rpg.hp.toLocaleString()}** / MP: **${profile.rpg.mp.toLocaleString()}**`,
     `전적: ${profile.rpg.wins}승 ${profile.rpg.losses}패 / 총 ${profile.rpg.battles}전`,
-    `현재 RPG 골드: **${getRpgGold(profile).toLocaleString()}골드**${dropText}${gearText}${levelText}`
+    `현재 골드: **${getRpgGold(profile).toLocaleString()}골드**${dropText}${gearText}${levelText}`
   ].join('\n');
 }
 
@@ -1915,7 +1915,7 @@ function formatRpgBossFinish(user, result) {
     ? `\n🧰 보스 전리품: **${formatGearLabel(result.gearDrop)}**`
     : '';
   const levelText = result.leveledUp
-    ? `\n🎉 레벨업! Lv.${profile.level} / 레벨 보너스(메인) +${result.levelReward.toLocaleString()}원`
+    ? `\n🎉 레벨업! Lv.${profile.level} / 레벨 보너스 +${result.levelReward.toLocaleString()}골드`
     : '';
 
   return [
@@ -1936,7 +1936,7 @@ function formatRpgPvpChallenge(challenge) {
     `⚔️ **RPG PvP 대결 신청**`,
     `${challenge.opponent.mention}, ${challenge.challenger.mention}님이 RPG 대결을 신청했습니다!`,
     '60초 안에 수락하면 포켓몬 배틀처럼 번갈아 스킬 버튼을 눌러 직접 싸웁니다.',
-    '패배해도 RPG 골드는 잃지 않고, 승자만 보상을 받습니다.'
+    '패배해도 골드는 잃지 않고, 승자만 보상을 받습니다.'
   ].join('\n');
 }
 
@@ -1975,7 +1975,7 @@ function formatRpgPvpResult(result) {
     ? result.challenger
     : result.opponent;
   const levelText = result.leveledUp
-    ? `\n🎉 승자 레벨업! Lv.${winnerProfile.level} / 레벨 보너스(메인) +${result.levelReward.toLocaleString()}원`
+    ? `\n🎉 승자 레벨업! Lv.${winnerProfile.level} / 레벨 보너스 +${result.levelReward.toLocaleString()}골드`
     : '';
 
   const rows = [
@@ -2086,7 +2086,7 @@ function formatRpgStatus(user, status) {
     `가챠: **${profile.rpg.gacha.totalPulls.toLocaleString()}회** / 천장 카운트: **${profile.rpg.gacha.pity.toLocaleString()}**`,
     cooldownText,
     `오늘 의뢰: ${formatDailyMissionSummary(status.dailyMissions)}`,
-    `RPG 골드: **${getRpgGold(profile).toLocaleString()}골드**`
+    `골드: **${getRpgGold(profile).toLocaleString()}골드**`
   ].join('\n');
 }
 
@@ -2109,7 +2109,7 @@ function formatRpgDailyMissions(status) {
 function formatRpgDailyClaim(result) {
   const itemRewards = formatRewardItems(result.rewards.items);
   const levelText = result.leveledUp
-    ? `\n🎉 레벨업! Lv.${result.profile.level} / 레벨 보너스(메인) +${result.levelReward.toLocaleString()}원`
+    ? `\n🎉 레벨업! Lv.${result.profile.level} / 레벨 보너스 +${result.levelReward.toLocaleString()}골드`
     : '';
 
   return [
@@ -2117,7 +2117,7 @@ function formatRpgDailyClaim(result) {
     `의뢰: **${result.mission.label}**`,
     `보상: +${result.rewards.xp.toLocaleString()} XP, +${result.rewards.coins.toLocaleString()}골드${itemRewards ? `, ${itemRewards}` : ''}`,
     `오늘 완료한 의뢰: **${Object.keys(result.profile.rpg.daily.claimedMissions).length.toLocaleString()}개**`,
-    `현재 경험치: **${result.profile.totalXp.toLocaleString()} XP** / RPG 골드: **${getRpgGold(result.profile).toLocaleString()}골드**${levelText}`
+    `현재 경험치: **${result.profile.totalXp.toLocaleString()} XP** / 골드: **${getRpgGold(result.profile).toLocaleString()}골드**${levelText}`
   ].join('\n');
 }
 
@@ -2128,8 +2128,8 @@ function formatRpgShop(status = null) {
     return `- **${item.label}** \`${option.value}\` — ${item.price.toLocaleString()}골드 / ${typeLabel} / ${item.description}`;
   });
   const goldText = status
-    ? `보유 RPG 골드: **${getRpgGold(status.profile).toLocaleString()}골드**`
-    : '보유 RPG 골드는 `/rpg 인벤토리`에서 확인할 수 있습니다.';
+    ? `보유 골드: **${getRpgGold(status.profile).toLocaleString()}골드**`
+    : '보유 골드는 `/rpg 인벤토리`에서 확인할 수 있습니다.';
 
   return [
     '🏪 **RPG 상점**',
@@ -2145,7 +2145,7 @@ function formatRpgPurchase(result) {
     `🛒 **구매 완료**`,
     `아이템: **${result.item.label}** × ${result.quantity.toLocaleString()}`,
     `사용 금액: **${result.totalPrice.toLocaleString()}골드**`,
-    `현재 RPG 골드: **${getRpgGold(result.profile).toLocaleString()}골드**`
+    `현재 골드: **${getRpgGold(result.profile).toLocaleString()}골드**`
   ].join('\n');
 }
 
@@ -2256,7 +2256,7 @@ function formatRpgGearEnhanceGuide(status) {
 
   return [
     '🛠️ **RPG 장비 강화**',
-    `보유 RPG 골드: **${getRpgGold(status.profile).toLocaleString()}골드**`,
+    `보유 골드: **${getRpgGold(status.profile).toLocaleString()}골드**`,
     rows.length > 0 ? rows.join('\n') : '- 강화할 전리품 장비가 없습니다. `/rpg 던전` 또는 `/rpg 레이드`로 획득하세요.',
     '',
     rows.length > 0
@@ -2276,7 +2276,7 @@ function formatRpgGearEnhance(result) {
     `비용: **${result.cost.toLocaleString()}골드** / 판정: ${result.roll} ≤ ${result.successRate}`,
     `옵션: ${beforeStats} → **${afterStats}**`,
     `공격력: **${result.derivedStats.attack}** / 방어력: **${result.derivedStats.defense}** / 최대 HP: **${result.derivedStats.maxHp}** / 최대 MP: **${result.derivedStats.maxMp}**`,
-    `남은 RPG 골드: **${getRpgGold(result.profile).toLocaleString()}골드**`
+    `남은 골드: **${getRpgGold(result.profile).toLocaleString()}골드**`
   ].join('\n');
 }
 
@@ -2342,7 +2342,7 @@ function formatRpgGacha(result) {
 
   return [
     `✨ **${result.banner.label} 결과** × ${result.count}`,
-    `사용 금액: **${result.totalCost.toLocaleString()}골드** / 남은 RPG 골드: **${getRpgGold(result.profile).toLocaleString()}골드**`,
+    `사용 금액: **${result.totalCost.toLocaleString()}골드** / 남은 골드: **${getRpgGold(result.profile).toLocaleString()}골드**`,
     ...rows,
     `총 가챠: **${result.profile.rpg.gacha.totalPulls.toLocaleString()}회** / 천장 카운트: **${result.profile.rpg.gacha.pity.toLocaleString()}**`
   ].join('\n');
@@ -2470,7 +2470,7 @@ function formatRpgStoryProgress(result) {
     `챕터: **${result.chapter.label}**`,
     result.chapter.description,
     `보상: +${result.rewards.xp.toLocaleString()} XP, +${result.rewards.coins.toLocaleString()}골드${itemRewards ? `, ${itemRewards}` : ''}`,
-    `현재 경험치: **${result.profile.totalXp.toLocaleString()} XP** / RPG 골드: **${getRpgGold(result.profile).toLocaleString()}골드**${levelText}`
+    `현재 경험치: **${result.profile.totalXp.toLocaleString()} XP** / 골드: **${getRpgGold(result.profile).toLocaleString()}골드**${levelText}`
   ].join('\n');
 }
 
@@ -2498,7 +2498,7 @@ function formatRpgCodexClaim(result) {
     `📚 **도감 보상 수령**`,
     `몬스터: **${result.codex.monster}**`,
     `보상: +${result.rewards.xp.toLocaleString()} XP, +${result.rewards.coins.toLocaleString()}골드`,
-    `현재 경험치: **${result.profile.totalXp.toLocaleString()} XP** / RPG 골드: **${getRpgGold(result.profile).toLocaleString()}골드**${levelText}`
+    `현재 경험치: **${result.profile.totalXp.toLocaleString()} XP** / 골드: **${getRpgGold(result.profile).toLocaleString()}골드**${levelText}`
   ].join('\n');
 }
 
@@ -2561,14 +2561,14 @@ function formatRpgQuestClaim(result) {
     .map(([itemId, count]) => `${getRpgItemConfig(itemId).label} × ${count}`)
     .join(', ');
   const levelText = result.leveledUp
-    ? `\n🎉 레벨업! Lv.${result.profile.level} / 레벨 보너스(메인) +${result.levelReward.toLocaleString()}원`
+    ? `\n🎉 레벨업! Lv.${result.profile.level} / 레벨 보너스 +${result.levelReward.toLocaleString()}골드`
     : '';
 
   return [
     `✅ **퀘스트 보상 수령**`,
     `퀘스트: **${result.quest.label}**`,
     `보상: +${result.rewards.xp.toLocaleString()} XP, +${result.rewards.coins.toLocaleString()}골드${itemRewards ? `, ${itemRewards}` : ''}`,
-    `현재 경험치: **${result.profile.totalXp.toLocaleString()} XP** / RPG 골드: **${getRpgGold(result.profile).toLocaleString()}골드**${levelText}`
+    `현재 경험치: **${result.profile.totalXp.toLocaleString()} XP** / 골드: **${getRpgGold(result.profile).toLocaleString()}골드**${levelText}`
   ].join('\n');
 }
 
@@ -3093,7 +3093,7 @@ function formatRewardItems(items = {}) {
 }
 
 function getRpgGold(profile) {
-  return profile.wallets?.rpgGold ?? 0;
+  return profile.balance ?? profile.currencyBalances?.main ?? profile.currencyBalances?.rpg ?? 0;
 }
 
 function getRpgGearEnhanceCost(gear) {

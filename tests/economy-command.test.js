@@ -14,9 +14,9 @@ test('경제 명령 payload는 경험치를 단일 표현으로 설명한다', (
   assert.ok(profileCommand);
   assert.ok(leaderboardCommand);
   assert.ok(currencyInfoCommand);
-  assert.match(profileCommand.description, /레벨, 경험치, 메인 코인/);
+  assert.match(profileCommand.description, /레벨, 경험치, 골드/);
   assert.match(leaderboardCommand.description, /레벨\/경험치 랭킹/);
-  assert.match(currencyInfoCommand.description, /환전율|사용처/);
+  assert.match(currencyInfoCommand.description, /통합 골드|정산 기준|사용처/);
   assert.doesNotMatch(profileCommand.description, /누적|현재/);
   assert.doesNotMatch(leaderboardCommand.description, /누적|현재/);
 });
@@ -64,13 +64,13 @@ test('재화정보 명령은 환전율과 재화별 사용처를 안내한다', 
   const handled = await handleEconomyCommand(interaction, {});
 
   assert.equal(handled, true);
-  assert.match(interaction.replies[0], /메인 코인/);
-  assert.match(interaction.replies[0], /카지노칩/);
-  assert.match(interaction.replies[0], /RPG 골드/);
-  assert.match(interaction.replies[0], /강화 코인/);
-  assert.match(interaction.replies[0], /주식 현금/);
-  assert.match(interaction.replies[0], /메인 → RPG 골드: 1:2/);
-  assert.match(interaction.replies[0], /RPG 골드 → 외부: 30%/);
+  assert.match(interaction.replies[0], /골드/);
+  assert.match(interaction.replies[0], /카지노/);
+  assert.match(interaction.replies[0], /RPG/);
+  assert.match(interaction.replies[0], /강화/);
+  assert.match(interaction.replies[0], /주식/);
+  assert.match(interaction.replies[0], /RPG 골드: 기존 잔액의 30%/);
+  assert.match(interaction.replies[0], /강화 코인: 기존 잔액의 50%/);
   assert.match(interaction.replies[0], /실제 현금/);
 });
 

@@ -4,6 +4,8 @@ export const CURRENCY_RPG = 'rpg';
 export const CURRENCY_SWORD = 'sword';
 export const CURRENCY_STOCK = 'stock';
 
+export const UNIFIED_GOLD_MIGRATION_VERSION = 1;
+
 export const WALLET_CURRENCY_IDS = Object.freeze([
   CURRENCY_CASINO,
   CURRENCY_RPG,
@@ -11,52 +13,29 @@ export const WALLET_CURRENCY_IDS = Object.freeze([
   CURRENCY_STOCK
 ]);
 
+const UNIFIED_GOLD_CONFIG = Object.freeze({
+  id: CURRENCY_MAIN,
+  key: 'balance',
+  label: '골드',
+  shortLabel: '골드',
+  unit: '골드',
+  mainToCurrencyBps: 10_000,
+  cashOutBps: 10_000
+});
+
+const LEGACY_WALLET_CONFIGS = Object.freeze({
+  [CURRENCY_CASINO]: Object.freeze({ key: 'casinoChips', label: '카지노칩', unit: '칩', goldValueBps: 9_000 }),
+  [CURRENCY_RPG]: Object.freeze({ key: 'rpgGold', label: 'RPG 골드', unit: '골드', goldValueBps: 3_000 }),
+  [CURRENCY_SWORD]: Object.freeze({ key: 'swordCoins', label: '강화 코인', unit: '코인', goldValueBps: 5_000 }),
+  [CURRENCY_STOCK]: Object.freeze({ key: 'stockCash', label: '주식 현금', unit: '원', goldValueBps: 9_500 })
+});
+
 export const CURRENCY_CONFIGS = Object.freeze({
-  [CURRENCY_MAIN]: Object.freeze({
-    id: CURRENCY_MAIN,
-    key: 'balance',
-    label: '메인 코인',
-    shortLabel: '메인',
-    unit: '원',
-    mainToCurrencyBps: 10_000,
-    cashOutBps: 10_000
-  }),
-  [CURRENCY_CASINO]: Object.freeze({
-    id: CURRENCY_CASINO,
-    key: 'casinoChips',
-    label: '카지노칩',
-    shortLabel: '카지노',
-    unit: '칩',
-    mainToCurrencyBps: 10_000,
-    cashOutBps: 9_000
-  }),
-  [CURRENCY_RPG]: Object.freeze({
-    id: CURRENCY_RPG,
-    key: 'rpgGold',
-    label: 'RPG 골드',
-    shortLabel: 'RPG',
-    unit: '골드',
-    mainToCurrencyBps: 20_000,
-    cashOutBps: 3_000
-  }),
-  [CURRENCY_SWORD]: Object.freeze({
-    id: CURRENCY_SWORD,
-    key: 'swordCoins',
-    label: '강화 코인',
-    shortLabel: '검강화',
-    unit: '코인',
-    mainToCurrencyBps: 10_000,
-    cashOutBps: 5_000
-  }),
-  [CURRENCY_STOCK]: Object.freeze({
-    id: CURRENCY_STOCK,
-    key: 'stockCash',
-    label: '현금',
-    shortLabel: '주식',
-    unit: '원',
-    mainToCurrencyBps: 10_000,
-    cashOutBps: 9_500
-  })
+  [CURRENCY_MAIN]: UNIFIED_GOLD_CONFIG,
+  [CURRENCY_CASINO]: createUnifiedLegacyConfig(CURRENCY_CASINO),
+  [CURRENCY_RPG]: createUnifiedLegacyConfig(CURRENCY_RPG),
+  [CURRENCY_SWORD]: createUnifiedLegacyConfig(CURRENCY_SWORD),
+  [CURRENCY_STOCK]: createUnifiedLegacyConfig(CURRENCY_STOCK)
 });
 
 const CURRENCY_ALIASES = Object.freeze(new Map([
@@ -65,70 +44,68 @@ const CURRENCY_ALIASES = Object.freeze(new Map([
   ['coin', CURRENCY_MAIN],
   ['coins', CURRENCY_MAIN],
   ['money', CURRENCY_MAIN],
+  ['gold', CURRENCY_MAIN],
   ['메인', CURRENCY_MAIN],
   ['메인코인', CURRENCY_MAIN],
   ['공용', CURRENCY_MAIN],
   ['원', CURRENCY_MAIN],
+  ['골드', CURRENCY_MAIN],
 
-  ['casino', CURRENCY_CASINO],
-  ['chip', CURRENCY_CASINO],
-  ['chips', CURRENCY_CASINO],
-  ['casinochips', CURRENCY_CASINO],
-  ['카지노', CURRENCY_CASINO],
-  ['카지노칩', CURRENCY_CASINO],
-  ['칩', CURRENCY_CASINO],
+  ['casino', CURRENCY_MAIN],
+  ['chip', CURRENCY_MAIN],
+  ['chips', CURRENCY_MAIN],
+  ['casinochips', CURRENCY_MAIN],
+  ['카지노', CURRENCY_MAIN],
+  ['카지노칩', CURRENCY_MAIN],
+  ['칩', CURRENCY_MAIN],
 
-  ['rpg', CURRENCY_RPG],
-  ['gold', CURRENCY_RPG],
-  ['rpggold', CURRENCY_RPG],
-  ['알피지', CURRENCY_RPG],
-  ['골드', CURRENCY_RPG],
-  ['rpg골드', CURRENCY_RPG],
+  ['rpg', CURRENCY_MAIN],
+  ['rpggold', CURRENCY_MAIN],
+  ['알피지', CURRENCY_MAIN],
+  ['rpg골드', CURRENCY_MAIN],
 
-  ['sword', CURRENCY_SWORD],
-  ['swordcoin', CURRENCY_SWORD],
-  ['swordcoins', CURRENCY_SWORD],
-  ['검', CURRENCY_SWORD],
-  ['검강화', CURRENCY_SWORD],
-  ['강화', CURRENCY_SWORD],
-  ['강화코인', CURRENCY_SWORD],
+  ['sword', CURRENCY_MAIN],
+  ['swordcoin', CURRENCY_MAIN],
+  ['swordcoins', CURRENCY_MAIN],
+  ['검', CURRENCY_MAIN],
+  ['검강화', CURRENCY_MAIN],
+  ['강화', CURRENCY_MAIN],
+  ['강화코인', CURRENCY_MAIN],
 
-  ['stock', CURRENCY_STOCK],
-  ['stocks', CURRENCY_STOCK],
-  ['investment', CURRENCY_STOCK],
-  ['cash', CURRENCY_STOCK],
-  ['stockcash', CURRENCY_STOCK],
-  ['주식', CURRENCY_STOCK],
-  ['투자', CURRENCY_STOCK],
-  ['예수금', CURRENCY_STOCK],
-  ['투자예수금', CURRENCY_STOCK],
-  ['현금', CURRENCY_STOCK],
-  ['주식현금', CURRENCY_STOCK]
+  ['stock', CURRENCY_MAIN],
+  ['stocks', CURRENCY_MAIN],
+  ['investment', CURRENCY_MAIN],
+  ['cash', CURRENCY_MAIN],
+  ['stockcash', CURRENCY_MAIN],
+  ['주식', CURRENCY_MAIN],
+  ['투자', CURRENCY_MAIN],
+  ['예수금', CURRENCY_MAIN],
+  ['투자예수금', CURRENCY_MAIN],
+  ['현금', CURRENCY_MAIN],
+  ['주식현금', CURRENCY_MAIN]
 ]));
 
 export function getCurrencyChoices() {
-  return Object.values(CURRENCY_CONFIGS).map((currency) => ({
-    name: `${currency.shortLabel} · ${currency.label}`,
-    value: currency.id
-  }));
+  return [{ name: '골드 · 단일 통합 화폐', value: CURRENCY_MAIN }];
 }
 
 export function normalizeCurrencyId(currencyId) {
   const key = normalizeCurrencyKey(currencyId);
   const matched = CURRENCY_ALIASES.get(key) ?? CURRENCY_CONFIGS[key]?.id;
   if (!matched) {
-    throw new Error('알 수 없는 재화입니다. 메인, 카지노, RPG, 검강화, 주식 중 하나를 선택하세요.');
+    throw new Error('알 수 없는 재화입니다. 현재 모든 재화는 골드 하나로 통합되어 있습니다.');
   }
-  return matched;
+  return CURRENCY_MAIN;
 }
 
 export function getCurrencyConfig(currencyId) {
-  return CURRENCY_CONFIGS[normalizeCurrencyId(currencyId)];
+  normalizeCurrencyId(currencyId);
+  return UNIFIED_GOLD_CONFIG;
 }
 
 export function createDefaultWallets() {
   return Object.fromEntries(WALLET_CURRENCY_IDS.map((currencyId) => [
-    CURRENCY_CONFIGS[currencyId].key,
+    LEGACY_WALLET_CONFIGS[currencyId].key,
     0
   ]));
 }
@@ -136,7 +113,7 @@ export function createDefaultWallets() {
 export function normalizeWallets(wallets = {}) {
   const safeWallets = wallets && typeof wallets === 'object' ? wallets : {};
   return Object.fromEntries(WALLET_CURRENCY_IDS.map((currencyId) => {
-    const key = CURRENCY_CONFIGS[currencyId].key;
+    const key = LEGACY_WALLET_CONFIGS[currencyId].key;
     return [key, normalizeNonNegativeInteger(safeWallets[key])];
   }));
 }
@@ -150,97 +127,133 @@ export function ensureProfileWallets(profile) {
   return profile.wallets;
 }
 
-export function getCurrencyBalance(profile, currencyId) {
-  const normalizedCurrencyId = normalizeCurrencyId(currencyId);
-  if (normalizedCurrencyId === CURRENCY_MAIN) {
-    return normalizeNonNegativeInteger(profile.balance);
+export function migrateLegacyWalletsToGold(profile, { now = Date.now() } = {}) {
+  profile.currencyMigration = normalizeCurrencyMigration(profile.currencyMigration);
+  if (profile.currencyMigration.unifiedGoldVersion >= UNIFIED_GOLD_MIGRATION_VERSION) {
+    profile.wallets = normalizeWallets(profile.wallets);
+    return { migrated: false, convertedGold: 0, convertedWallets: createDefaultWallets() };
   }
 
-  const wallets = ensureProfileWallets(profile);
-  return wallets[CURRENCY_CONFIGS[normalizedCurrencyId].key];
+  const convertedWallets = normalizeWallets(profile.wallets);
+  let convertedGold = 0;
+  const conversionBreakdown = {};
+
+  for (const currencyId of WALLET_CURRENCY_IDS) {
+    const legacy = LEGACY_WALLET_CONFIGS[currencyId];
+    const amount = convertedWallets[legacy.key];
+    const gold = Math.floor(amount * legacy.goldValueBps / 10_000);
+    convertedGold += gold;
+    conversionBreakdown[legacy.key] = {
+      amount,
+      gold,
+      goldValueBps: legacy.goldValueBps
+    };
+  }
+
+  profile.balance = normalizeNonNegativeInteger(profile.balance) + convertedGold;
+  profile.wallets = createDefaultWallets();
+  profile.currencyMigration = {
+    ...profile.currencyMigration,
+    unifiedGoldVersion: UNIFIED_GOLD_MIGRATION_VERSION,
+    unifiedGoldAt: profile.currencyMigration.unifiedGoldAt ?? now,
+    convertedGold,
+    convertedWallets,
+    conversionBreakdown
+  };
+
+  return { migrated: true, convertedGold, convertedWallets };
+}
+
+export function convertLegacyCurrencyAmountToGold(currencyId, amount) {
+  const normalizedAmount = normalizeNonNegativeInteger(amount);
+  if (currencyId === CURRENCY_MAIN) return normalizedAmount;
+
+  const legacy = LEGACY_WALLET_CONFIGS[currencyId];
+  if (!legacy) {
+    throw new Error('알 수 없는 기존 재화입니다.');
+  }
+
+  return Math.floor(normalizedAmount * legacy.goldValueBps / 10_000);
+}
+
+export function getCurrencyBalance(profile, currencyId) {
+  normalizeCurrencyId(currencyId);
+  return normalizeNonNegativeInteger(profile.balance);
 }
 
 export function setCurrencyBalance(profile, currencyId, amount) {
+  normalizeCurrencyId(currencyId);
   const normalizedAmount = normalizeNonNegativeInteger(amount);
-  const normalizedCurrencyId = normalizeCurrencyId(currencyId);
-  if (normalizedCurrencyId === CURRENCY_MAIN) {
-    profile.balance = normalizedAmount;
-    return profile.balance;
-  }
-
-  const wallets = ensureProfileWallets(profile);
-  wallets[CURRENCY_CONFIGS[normalizedCurrencyId].key] = normalizedAmount;
-  return normalizedAmount;
+  profile.balance = normalizedAmount;
+  profile.wallets = normalizeWallets(profile.wallets);
+  return profile.balance;
 }
 
 export function creditCurrency(profile, currencyId, amount) {
+  normalizeCurrencyId(currencyId);
   const normalizedAmount = normalizeNonNegativeInteger(amount);
-  const current = getCurrencyBalance(profile, currencyId);
-  return setCurrencyBalance(profile, currencyId, current + normalizedAmount);
+  const current = getCurrencyBalance(profile, CURRENCY_MAIN);
+  return setCurrencyBalance(profile, CURRENCY_MAIN, current + normalizedAmount);
 }
 
 export function debitCurrency(profile, currencyId, amount, errorMessage = null) {
+  normalizeCurrencyId(currencyId);
   const normalizedAmount = normalizePositiveInteger(amount, '금액');
-  const current = getCurrencyBalance(profile, currencyId);
+  const current = getCurrencyBalance(profile, CURRENCY_MAIN);
   if (current < normalizedAmount) {
-    const currency = getCurrencyConfig(currencyId);
-    throw new Error(errorMessage ?? `${currency.label}이(가) 부족합니다. 필요 금액: ${formatCurrencyAmount(normalizedAmount, currency.id)}`);
+    throw new Error(errorMessage ?? `골드가 부족합니다. 필요 금액: ${formatCurrencyAmount(normalizedAmount, CURRENCY_MAIN)}`);
   }
 
-  return setCurrencyBalance(profile, currencyId, current - normalizedAmount);
+  return setCurrencyBalance(profile, CURRENCY_MAIN, current - normalizedAmount);
 }
 
 export function exchangeCurrency(profile, { fromCurrency, toCurrency, amount }) {
+  const normalizedAmount = normalizePositiveInteger(amount, '환전 금액');
   const from = getCurrencyConfig(fromCurrency);
   const to = getCurrencyConfig(toCurrency);
-  const normalizedAmount = normalizePositiveInteger(amount, '환전 금액');
-
-  if (from.id === to.id) {
-    throw new Error('같은 재화끼리는 환전할 수 없습니다.');
-  }
-
-  debitCurrency(profile, from.id, normalizedAmount);
-  const mainValue = from.id === CURRENCY_MAIN
-    ? normalizedAmount
-    : Math.floor(normalizedAmount * from.cashOutBps / 10_000);
-  const received = to.id === CURRENCY_MAIN
-    ? mainValue
-    : Math.floor(mainValue * to.mainToCurrencyBps / 10_000);
-
-  if (received <= 0) {
-    creditCurrency(profile, from.id, normalizedAmount);
-    throw new Error('환전 후 받을 재화가 0입니다. 금액을 더 크게 입력하세요.');
-  }
-
-  creditCurrency(profile, to.id, received);
 
   return {
     from,
     to,
     spent: normalizedAmount,
-    received,
-    fee: normalizedAmount - mainValue,
-    cashOutRateBps: from.id === CURRENCY_MAIN ? 10_000 : from.cashOutBps,
-    cashInRateBps: to.id === CURRENCY_MAIN ? 10_000 : to.mainToCurrencyBps,
-    mainValue,
+    received: normalizedAmount,
+    fee: 0,
+    cashOutRateBps: 10_000,
+    cashInRateBps: 10_000,
+    mainValue: normalizedAmount,
+    unified: true,
+    message: '모든 재화가 골드로 통합되어 환전 없이 같은 잔액을 사용합니다.',
     balances: getCurrencyBalances(profile)
   };
 }
 
 export function getCurrencyBalances(profile) {
+  const gold = getCurrencyBalance(profile, CURRENCY_MAIN);
   ensureProfileWallets(profile);
   return {
-    [CURRENCY_MAIN]: getCurrencyBalance(profile, CURRENCY_MAIN),
-    [CURRENCY_CASINO]: getCurrencyBalance(profile, CURRENCY_CASINO),
-    [CURRENCY_RPG]: getCurrencyBalance(profile, CURRENCY_RPG),
-    [CURRENCY_SWORD]: getCurrencyBalance(profile, CURRENCY_SWORD),
-    [CURRENCY_STOCK]: getCurrencyBalance(profile, CURRENCY_STOCK)
+    [CURRENCY_MAIN]: gold,
+    [CURRENCY_CASINO]: gold,
+    [CURRENCY_RPG]: gold,
+    [CURRENCY_SWORD]: gold,
+    [CURRENCY_STOCK]: gold
   };
 }
 
 export function formatCurrencyAmount(amount, currencyId) {
-  const currency = getCurrencyConfig(currencyId);
-  return `${normalizeNonNegativeInteger(amount).toLocaleString()}${currency.unit}`;
+  normalizeCurrencyId(currencyId);
+  return `${normalizeNonNegativeInteger(amount).toLocaleString()}골드`;
+}
+
+function createUnifiedLegacyConfig(currencyId) {
+  const legacy = LEGACY_WALLET_CONFIGS[currencyId];
+  return Object.freeze({
+    ...UNIFIED_GOLD_CONFIG,
+    legacyId: currencyId,
+    legacyKey: legacy.key,
+    legacyLabel: legacy.label,
+    legacyUnit: legacy.unit,
+    legacyGoldValueBps: legacy.goldValueBps
+  });
 }
 
 function normalizeCurrencyKey(value) {
@@ -248,6 +261,15 @@ function normalizeCurrencyKey(value) {
     .trim()
     .toLocaleLowerCase('ko-KR')
     .replace(/[\s_\-·()]/g, '');
+}
+
+function normalizeCurrencyMigration(value = {}) {
+  const migration = value && typeof value === 'object' ? value : {};
+  return {
+    ...migration,
+    unifiedGoldVersion: normalizeNonNegativeInteger(migration.unifiedGoldVersion),
+    unifiedGoldAt: migration.unifiedGoldAt ?? null
+  };
 }
 
 function normalizeNonNegativeInteger(value) {

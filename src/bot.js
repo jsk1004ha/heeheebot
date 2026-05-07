@@ -15,6 +15,10 @@ import {
 import { handleRpgCommand } from './commands/rpg.js';
 import { handleSwordCommand } from './commands/sword.js';
 import {
+  handleTamagotchiAutocomplete,
+  handleTamagotchiCommand
+} from './commands/tamagotchi.js';
+import {
   handleStockAutocomplete,
   handleStockCommand
 } from './commands/stocks.js';
@@ -34,6 +38,7 @@ import {
   scheduleDailyMealAnnouncements
 } from './systems/meals.js';
 import { StockService } from './systems/stocks.js';
+import { TamagotchiService } from './systems/tamagotchi.js';
 import { TimetableService } from './systems/timetable.js';
 
 export function createBot({
@@ -59,6 +64,7 @@ export function createBot({
   const fortune = new FortuneService();
   const meals = new MealService({ store, apiKey: neisApiKey });
   const stocks = new StockService(store);
+  const tamagotchi = new TamagotchiService(store);
   const timetable = new TimetableService();
   const moderation = new ModerationService(store);
   let stopMealAnnouncementScheduler = () => {};
@@ -77,7 +83,8 @@ export function createBot({
   client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.isAutocomplete?.()) {
       try {
-        const handled = await handleStockAutocomplete(interaction, stocks);
+        const handled = await handleTamagotchiAutocomplete(interaction)
+          || await handleStockAutocomplete(interaction, stocks);
         if (!handled) await interaction.respond([]);
       } catch (error) {
         logger.error('Failed to handle autocomplete interaction:', error);
@@ -110,6 +117,7 @@ export function createBot({
         || await handleMealCommand(interaction, meals)
         || await handleTimetableCommand(interaction, timetable)
         || await handleStockCommand(interaction, stocks)
+        || await handleTamagotchiCommand(interaction, tamagotchi, logger)
         || await handleFishingCommand(interaction, fishing)
         || await handleSwordCommand(interaction, economy, logger)
         || await handleRpgCommand(interaction, economy)
@@ -163,12 +171,12 @@ export function createBot({
 
       if (result.leveledUp) {
         await message.channel.send(
-          `🎉 ${message.author}님 레벨업! Lv.${result.profile.level} 달성, 보너스 ${result.levelReward.toLocaleString()}원 지급!`
+          `🎉 ${message.author}님 레벨업! Lv.${result.profile.level} 달성, 보너스 ${result.levelReward.toLocaleString()}골드 지급!`
         );
       }
       if (eventBonus?.leveledUp) {
         await message.channel.send(
-          `📣 서버 이벤트 보너스로 ${message.author}님 레벨업! Lv.${eventBonus.profile.level} 달성, 보너스 ${eventBonus.levelReward.toLocaleString()}원 지급!`
+          `📣 서버 이벤트 보너스로 ${message.author}님 레벨업! Lv.${eventBonus.profile.level} 달성, 보너스 ${eventBonus.levelReward.toLocaleString()}골드 지급!`
         );
       }
     } catch (error) {
@@ -183,6 +191,7 @@ export function createBot({
     fortune,
     meals,
     stocks,
+    tamagotchi,
     timetable,
     moderation,
     stopMealAnnouncements() {

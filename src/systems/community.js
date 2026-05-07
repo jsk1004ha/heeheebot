@@ -1,4 +1,4 @@
-import { normalizeWallets } from './currencies.js';
+import { migrateLegacyWalletsToGold, normalizeWallets } from './currencies.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
@@ -57,9 +57,9 @@ const ACHIEVEMENTS = Object.freeze([
   achievement(
     'balance_10000',
     '돈 냄새',
-    '메인 코인 10,000원 보유',
+    '골드 10,000 보유',
     ({ profile }) => profile.balance >= 10_000,
-    ({ profile }) => `${Math.min(profile.balance, 10_000).toLocaleString()} / 10,000원`,
+    ({ profile }) => `${Math.min(profile.balance, 10_000).toLocaleString()} / 10,000골드`,
     { coins: 500, xp: 50, titleId: 'rich' }
   ),
   achievement(
@@ -135,9 +135,9 @@ const WEEKLY_MISSIONS = Object.freeze([
   mission(
     'weekly_balance_5000',
     '비상금 확보',
-    '메인 코인 5,000원 보유',
+    '골드 5,000 보유',
     ({ profile }) => profile.balance >= 5_000,
-    ({ profile }) => `${Math.min(profile.balance, 5_000).toLocaleString()} / 5,000원`,
+    ({ profile }) => `${Math.min(profile.balance, 5_000).toLocaleString()} / 5,000골드`,
     { coins: 1_000, xp: 100 }
   ),
   mission(
@@ -574,6 +574,7 @@ function getOrCreateProfile(data, guildId, userId, username, now) {
   profile.xp = normalizeStoredNonNegativeInteger(profile.xp);
   profile.totalXp = normalizeStoredNonNegativeInteger(profile.totalXp);
   profile.balance = normalizeStoredNonNegativeInteger(profile.balance);
+  migrateLegacyWalletsToGold(profile, { now });
   profile.wallets = normalizeWallets(profile.wallets);
   profile.lastMessageRewardAt = normalizeStoredNonNegativeInteger(profile.lastMessageRewardAt);
   profile.lastDailyAt = normalizeStoredNonNegativeInteger(profile.lastDailyAt);
@@ -886,7 +887,7 @@ function normalizeStringArray(value) {
 function debitBalance(profile, amount) {
   const normalizedAmount = normalizeBoundedInteger(amount, '금액', 1, Number.MAX_SAFE_INTEGER);
   if (profile.balance < normalizedAmount) {
-    throw new Error(`잔액이 부족합니다. 필요 금액: ${normalizedAmount.toLocaleString()}원`);
+    throw new Error(`골드가 부족합니다. 필요 금액: ${normalizedAmount.toLocaleString()}골드`);
   }
   profile.balance -= normalizedAmount;
 }
