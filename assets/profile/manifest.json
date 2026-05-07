@@ -1,0 +1,151 @@
+{
+  "badges": [
+    {
+      "minLevel": 1,
+      "maxLevel": 5,
+      "name": "새싹 뉴비 배지",
+      "badgeText": "SPROUT",
+      "file": "badges/profile_badge_001_005.png"
+    },
+    {
+      "minLevel": 6,
+      "maxLevel": 10,
+      "name": "첫 별 견습 배지",
+      "badgeText": "RISING",
+      "file": "badges/profile_badge_006_010.png"
+    },
+    {
+      "minLevel": 11,
+      "maxLevel": 20,
+      "name": "불씨 모험가 배지",
+      "badgeText": "EMBER",
+      "file": "badges/profile_badge_011_020.png"
+    },
+    {
+      "minLevel": 21,
+      "maxLevel": 30,
+      "name": "서리 도전자 배지",
+      "badgeText": "FROST",
+      "file": "badges/profile_badge_021_030.png"
+    },
+    {
+      "minLevel": 31,
+      "maxLevel": 40,
+      "name": "꽃빛 정예 배지",
+      "badgeText": "BLOOM",
+      "file": "badges/profile_badge_031_040.png"
+    },
+    {
+      "minLevel": 41,
+      "maxLevel": 50,
+      "name": "백금 수호자 배지",
+      "badgeText": "PLATINUM",
+      "file": "badges/profile_badge_041_050.png"
+    },
+    {
+      "minLevel": 51,
+      "maxLevel": 60,
+      "name": "푸른 기사 배지",
+      "badgeText": "AZURE",
+      "file": "badges/profile_badge_051_060.png"
+    },
+    {
+      "minLevel": 61,
+      "maxLevel": 70,
+      "name": "오로라 순례자 배지",
+      "badgeText": "AURORA",
+      "file": "badges/profile_badge_061_070.png"
+    },
+    {
+      "minLevel": 71,
+      "maxLevel": 80,
+      "name": "성운 항해자 배지",
+      "badgeText": "NEBULA",
+      "file": "badges/profile_badge_071_080.png"
+    },
+    {
+      "minLevel": 81,
+      "maxLevel": 90,
+      "name": "혜성 추적자 배지",
+      "badgeText": "COMET",
+      "file": "badges/profile_badge_081_090.png"
+    },
+    {
+      "minLevel": 91,
+      "maxLevel": 100,
+      "name": "전설 문장 배지",
+      "badgeText": "LEGEND",
+      "file": "badges/profile_badge_091_100.png"
+    },
+    {
+      "minLevel": 101,
+      "maxLevel": 110,
+      "name": "초신성 개척자 배지",
+      "badgeText": "NOVA",
+      "file": "badges/profile_badge_101_110.png"
+    },
+    {
+      "minLevel": 111,
+      "maxLevel": 120,
+      "name": "천공 기사 배지",
+      "badgeText": "SKYWARD",
+      "file": "badges/profile_badge_111_120.png"
+    },
+    {
+      "minLevel": 121,
+      "maxLevel": 130,
+      "name": "용맹 사령관 배지",
+      "badgeText": "VALOR",
+      "file": "badges/profile_badge_121_130.png"
+    },
+    {
+      "minLevel": 131,
+      "maxLevel": 140,
+      "name": "수호성 군주 배지",
+      "badgeText": "GUARDIAN",
+      "file": "badges/profile_badge_131_140.png"
+    },
+    {
+      "minLevel": 141,
+      "maxLevel": 150,
+      "name": "태양 왕관 배지",
+      "badgeText": "SOLAR",
+      "file": "badges/profile_badge_141_150.png"
+    },
+    {
+      "minLevel": 151,
+      "maxLevel": 160,
+      "name": "심연 보석 배지",
+      "badgeText": "ABYSS",
+      "file": "badges/profile_badge_151_160.png"
+    },
+    {
+      "minLevel": 161,
+      "maxLevel": 170,
+      "name": "시간 문장 배지",
+      "badgeText": "CHRONO",
+      "file": "badges/profile_badge_161_170.png"
+    },
+    {
+      "minLevel": 171,
+      "maxLevel": 180,
+      "name": "우주 항해자 배지",
+      "badgeText": "COSMIC",
+      "file": "badges/profile_badge_171_180.png"
+    },
+    {
+      "minLevel": 181,
+      "maxLevel": 190,
+      "name": "신화 전야 배지",
+      "badgeText": "MYTHIC",
+      "file": "badges/profile_badge_181_190.png"
+    },
+    {
+      "minLevel": 191,
+      "maxLevel": 200,
+      "name": "무지개 신화 배지",
+      "badgeText": "RADIANT",
+      "file": "badges/profile_badge_191_200.png"
+    }
+  ]
+}

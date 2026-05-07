@@ -1,13 +1,22 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { EmbedBuilder, SlashCommandBuilder } from 'discord.js';
 import {
   formatCurrencyAmount,
   getCurrencyChoices
 } from '../systems/currencies.js';
+import {
+  getCurrentProfileLevelBadge,
+  getDisplayProfileLevelBadge,
+  getNextProfileLevelBadge,
+  getProfileBadgeAttachment,
+  getProfileLevelBadges,
+  getProfileLevelTier,
+  normalizeProfileLevel
+} from '../systems/profile-assets.js';
 
 export const economyCommands = [
   new SlashCommandBuilder()
     .setName('프로필')
-    .setDescription('내 레벨, 경험치, 골드 잔액을 확인합니다.'),
+    .setDescription('내 레벨, 경험치, 골드, 성장 배지를 확인합니다.'),
   new SlashCommandBuilder()
     .setName('출석')
     .setDescription('하루 한 번 출석 골드 보상을 받습니다.'),
@@ -86,7 +95,7 @@ export async function handleEconomyCommand(interaction, economy) {
 
   if (interaction.commandName === '프로필') {
     const profile = await economy.getProfile(guildId, user.id, user.username);
-    await interaction.reply(formatProfile(profile));
+    await interaction.reply(createProfileReplyPayload(profile));
     return true;
   }
 
@@ -199,19 +208,118 @@ export async function handleEconomyCommand(interaction, economy) {
   return false;
 }
 
-function formatProfile(profile) {
+const PROFILE_SHOP_BADGE_LABELS = Object.freeze({
+  badge_luck: '행운 배지',
+  badge_gold: '골드 배지'
+});
+
+const PROFILE_TITLE_LABELS = Object.freeze({
+  steady: '성실한 출석러',
+  rich: '동네 부자',
+  gambler: '도박꾼',
+  lucky: '행운아',
+  missioner: '미션러',
+  host: '이벤트 주최자',
+  vip: 'VIP',
+  collector: '수집가'
+});
+
+export function createProfileReplyPayload(profile) {
+  const content = formatProfile(profile);
+  const displayBadge = getDisplayProfileLevelBadge(profile.level);
+  const attachment = getProfileBadgeAttachment(displayBadge);
+
+  if (!attachment) return content;
+
+  const tier = getProfileLevelTier(profile.level);
+  const embed = new EmbedBuilder()
+    .setTitle(`${displayBadge.badgeText} · ${displayBadge.name}`)
+    .setDescription('현재 성장 구간 대표 배지')
+    .setImage(`attachment://${attachment.name}`)
+    .setColor(tier.color)
+    .setFooter({ text: '프로필 성장 배지 이미지' });
+
+  return {
+    content,
+    embeds: [embed],
+    files: [attachment]
+  };
+}
+
+export function formatProfile(profile) {
+  const level = normalizeProfileLevel(profile.level);
+  const tier = getProfileLevelTier(level);
   const migrationText = profile.currencyMigration?.convertedGold > 0
     ? `기존 전용 지갑 정산: **+${formatCurrencyAmount(profile.currencyMigration.convertedGold, 'main')}**`
     : '기존 전용 지갑: **정산 완료**';
+  const titleText = getEquippedTitleText(profile);
+  const topBorder = `${tier.topLeft}${'─'.repeat(10)} ${tier.title} 성장 카드 ${'─'.repeat(10)}${tier.topRight}`;
+  const bottomBorder = `${tier.bottomLeft}${'─'.repeat(8)} ${formatNextBadgeHint(level)} ${'─'.repeat(8)}${tier.bottomRight}`;
 
   return [
-    `📌 **${profile.username}님의 프로필**`,
-    `레벨: **${profile.level}**`,
+    topBorder,
+    `**${profile.username}님의 프로필**${titleText}`,
+    `단계: **${tier.title}**`,
+    `카드 효과: **${tier.aura}**`,
+    `레벨: **${level}**`,
     `경험치: **${profile.totalXp.toLocaleString()} XP**`,
+    `성장 배지: ${formatLevelBadgeGallery(level)}`,
+    `대표 배지 이미지: ${formatDisplayBadgeText(level)}`,
+    `다음 배지: ${formatNextBadgeTarget(level)}`,
     `연속 출석: **${profile.dailyStreak.toLocaleString()}일**`,
     `골드: **${formatCurrencyAmount(profile.balance, 'main')}**`,
-    migrationText
+    `꾸미기 배지: ${formatShopBadgeGallery(profile)}`,
+    migrationText,
+    bottomBorder
   ].join('\n');
+}
+
+function formatLevelBadgeGallery(level) {
+  const badges = getProfileLevelBadges(level);
+  const currentBadge = getCurrentProfileLevelBadge(level);
+  const previousCount = Math.max(0, badges.length - 1);
+  const previousText = previousCount > 0
+    ? ` / 이전 배지 ${previousCount}개`
+    : '';
+
+  return `현재 **${currentBadge.badgeText} · ${currentBadge.name}**${previousText}`;
+}
+
+function formatDisplayBadgeText(level) {
+  const badge = getDisplayProfileLevelBadge(level);
+  return `**${badge.badgeText} · ${badge.name}**`;
+}
+
+function formatNextBadgeTarget(level) {
+  const nextBadge = getNextProfileLevelBadge(level);
+  if (!nextBadge) {
+    return '**RADIANT · 무지개 신화 배지까지 모두 도달했습니다!**';
+  }
+
+  return `**${nextBadge.badgeText} · ${nextBadge.name}**까지 ${nextBadge.minLevel - level}레벨`;
+}
+
+function formatNextBadgeHint(level) {
+  const nextBadge = getNextProfileLevelBadge(level);
+  if (!nextBadge) return '모든 성장 배지 해금';
+  return `다음 배지 ${nextBadge.badgeText}`;
+}
+
+function getEquippedTitleText(profile) {
+  const title = profile.community?.equippedTitle;
+  if (!title) return '';
+  return ` · 칭호 **${PROFILE_TITLE_LABELS[title] ?? title}**`;
+}
+
+function formatShopBadgeGallery(profile) {
+  const badgeIds = Array.isArray(profile.community?.cosmetics?.badges)
+    ? profile.community.cosmetics.badges
+    : [];
+  if (badgeIds.length === 0) return '없음';
+
+  return badgeIds
+    .map((badgeId) => PROFILE_SHOP_BADGE_LABELS[badgeId] ?? badgeId)
+    .join(' / ');
 }
 
 function formatExchangeResult(result) {

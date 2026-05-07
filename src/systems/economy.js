@@ -2594,9 +2594,23 @@ function cloneProfile(profile) {
     dailyStreak: profile.dailyStreak,
     lastFirstMessageBonusDay: profile.lastFirstMessageBonusDay,
     lastFortuneXpDay: profile.lastFortuneXpDay,
+    community: cloneProfileCommunity(profile.community),
     rpg: cloneRpgStats(profile.rpg),
     sword: cloneSwordStats(profile.sword),
     createdAt: profile.createdAt
+  };
+}
+
+function cloneProfileCommunity(community) {
+  if (!community || typeof community !== 'object') return null;
+
+  return {
+    equippedTitle: community.equippedTitle ?? null,
+    cosmetics: {
+      badges: Array.isArray(community.cosmetics?.badges)
+        ? [...community.cosmetics.badges]
+        : []
+    }
   };
 }
 
