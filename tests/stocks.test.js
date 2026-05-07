@@ -3,7 +3,11 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { getStockCommandPayloads, handleStockCommand } from '../src/commands/stocks.js';
+import {
+  getStockCommandPayloads,
+  handleStockAutocomplete,
+  handleStockCommand
+} from '../src/commands/stocks.js';
 import { createSqliteStore } from '../src/storage/sqlite-store.js';
 import {
   StockService,
@@ -16,17 +20,71 @@ test('주식 명령 payload는 현물과 레버리지 subcommand를 등록한다
   const subcommandNames = payload.options.map((option) => option.name);
   const buyCommand = payload.options.find((option) => option.name === '매수');
   const stockOption = buyCommand.options.find((option) => option.name === '종목');
+  const sellCommand = payload.options.find((option) => option.name === '매도');
+  const sellStockOption = sellCommand.options.find((option) => option.name === '종목');
   const leverageCommand = payload.options.find((option) => option.name === '레버리지진입');
+  const leverageStockOption = leverageCommand.options.find((option) => option.name === '종목');
   const sideOption = leverageCommand.options.find((option) => option.name === '방향');
   const leverageOption = leverageCommand.options.find((option) => option.name === '배율');
 
   assert.equal(payload.name, '주식');
   assert.deepEqual(subcommandNames, ['시세', '전체시세', '매수', '매도', '보유', '랭킹', '레버리지진입', '레버리지청산', '레버리지보유']);
   assert.equal(stockOption.required, true);
-  assert.equal(stockOption.choices, undefined, '36개 종목은 디스코드 choice 25개 제한 때문에 자유 입력으로 둔다');
+  assert.equal(stockOption.choices, undefined, '36개 종목은 디스코드 choice 25개 제한 때문에 autocomplete로 고른다');
+  assert.equal(stockOption.autocomplete, true);
+  assert.equal(sellStockOption.autocomplete, true);
+  assert.equal(leverageStockOption.autocomplete, true);
   assert.deepEqual(sideOption.choices.map((choice) => choice.value), ['long', 'short']);
   assert.equal(leverageOption.min_value, 1);
   assert.equal(leverageOption.max_value, 100);
+});
+
+test('주식 종목 autocomplete는 매수 후보를 검색하고 매도는 보유 종목을 우선 제안한다', async () => {
+  await withFixture(async ({ stocks, store }) => {
+    const buyInteraction = createStockAutocompleteInteraction('매수', '원숭이');
+
+    const handledBuy = await handleStockAutocomplete(buyInteraction, stocks);
+
+    assert.equal(handledBuy, true);
+    assert.ok(buyInteraction.choices.length <= 25);
+    assert.ok(buyInteraction.choices.some((choice) => choice.name.includes('원숭이닉스') && choice.value === 'monkeynix'));
+
+    await seedBalance(store, 'guild-1', 'user-1', '희희', 100_000);
+    await stocks.buyStock({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '희희',
+      stockId: '희진전자',
+      quantity: 3,
+      now: 0
+    });
+
+    const sellInteraction = createStockAutocompleteInteraction('매도', '');
+
+    const handledSell = await handleStockAutocomplete(sellInteraction, stocks);
+
+    assert.equal(handledSell, true);
+    assert.deepEqual(sellInteraction.choices, [
+      {
+        name: '희진전자 · HEEL · 보유 3주',
+        value: 'heejin_electronics'
+      }
+    ]);
+  });
+});
+
+test('주식 autocomplete는 서버 밖에서는 빈 후보만 반환한다', async () => {
+  await withFixture(async ({ stocks }) => {
+    const interaction = createStockAutocompleteInteraction('매수', '희진', {
+      guildId: null,
+      inGuild: false
+    });
+
+    const handled = await handleStockAutocomplete(interaction, stocks);
+
+    assert.equal(handled, true);
+    assert.deepEqual(interaction.choices, []);
+  });
 });
 
 test('주식 카탈로그는 승인된 밈 종목 36개와 원숭이 계열을 포함한다', () => {
@@ -128,6 +186,57 @@ test('시세 응답은 자유 입력에 쓸 수 있는 종목 심볼을 함께 �
     await handleStockCommand(marketInteraction, stocks);
 
     assert.match(marketInteraction.replies[0], /희진전자.*`HEEL`/);
+    assert.match(marketInteraction.replies[0], new RegExp(`${getStockCatalog().length}개 전체`));
+  });
+});
+
+test('전체시세 응답은 실제 결과 길이와 상승/하락 색상 표시를 보여준다', async () => {
+  const fullMarketInteraction = createStockInteraction('전체시세');
+  const fakeStocks = {
+    async getMarket() {
+      return {
+        tickIndex: 7,
+        stocks: [
+          createQuoteForTest('희진전자', 'HEEL', 7.5),
+          createQuoteForTest('원숭이닉스', 'MO', -2.4),
+          createQuoteForTest('도훈건설', 'DOCO', 0)
+        ]
+      };
+    }
+  };
+
+  await handleStockCommand(fullMarketInteraction, fakeStocks);
+
+  assert.match(fullMarketInteraction.replies[0], /전체 시세 3종목/);
+  assert.match(fullMarketInteraction.replies[0], /🔴 ▲ \*\*희진전자\*\* `HEEL` 1,000원 \(\+7.5%\)/);
+  assert.match(fullMarketInteraction.replies[0], /🔵 ▼ \*\*원숭이닉스\*\* `MO` 1,000원 \(-2.4%\)/);
+  assert.match(fullMarketInteraction.replies[0], /⚪ — \*\*도훈건설\*\* `DOCO` 1,000원 \(0%\)/);
+});
+
+test('개별 시세 응답도 상승/하락 색상 표시를 보여준다', async () => {
+  const quoteInteraction = createStockInteraction('시세', {
+    strings: {
+      종목: 'heejin_electronics'
+    }
+  });
+  const fakeStocks = {
+    async getQuote() {
+      return createQuoteForTest('희진전자', 'HEEL', 7.5);
+    }
+  };
+
+  await handleStockCommand(quoteInteraction, fakeStocks);
+
+  assert.match(quoteInteraction.replies[0], /변동: 🔴 ▲ \*\*\+7.5%\*\*/);
+});
+
+test('알 수 없는 주식 subcommand는 응답 없이 timeout 되지 않는다', async () => {
+  await withFixture(async ({ stocks }) => {
+    const interaction = createStockInteraction('없는명령');
+
+    await handleStockCommand(interaction, stocks);
+
+    assert.match(interaction.replies[0], /알 수 없는 주식 명령/);
   });
 });
 
@@ -343,6 +452,48 @@ function createStockInteraction(subcommand, options = {}) {
     },
     async followUp(payload) {
       replies.push(typeof payload === 'string' ? payload : payload.content);
+    }
+  };
+}
+
+function createQuoteForTest(name, symbol, changePercent = 0) {
+  return {
+    id: symbol.toLocaleLowerCase('ko-KR'),
+    name,
+    symbol,
+    sector: '테스트',
+    risk: 'stable',
+    price: 1_000,
+    previousPrice: 1_000,
+    changeBps: Math.round(changePercent * 100),
+    changePercent,
+    news: '테스트 뉴스',
+    updatedAt: 0,
+    aliases: []
+  };
+}
+
+function createStockAutocompleteInteraction(subcommand, focusedValue, options = {}) {
+  const {
+    guildId = 'guild-1',
+    user = { id: 'user-1', username: '희희' },
+    inGuild = true
+  } = options;
+  const choices = [];
+
+  return {
+    commandName: '주식',
+    guildId,
+    user,
+    choices,
+    isAutocomplete: () => true,
+    inGuild: () => inGuild,
+    options: {
+      getSubcommand: () => subcommand,
+      getFocused: () => ({ name: '종목', value: focusedValue })
+    },
+    async respond(nextChoices) {
+      choices.push(...nextChoices);
     }
   };
 }

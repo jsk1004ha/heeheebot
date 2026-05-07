@@ -9,7 +9,10 @@ import {
 } from './commands/moderation.js';
 import { handleRpgCommand } from './commands/rpg.js';
 import { handleSwordCommand } from './commands/sword.js';
-import { handleStockCommand } from './commands/stocks.js';
+import {
+  handleStockAutocomplete,
+  handleStockCommand
+} from './commands/stocks.js';
 import {
   handleWordChainCommand,
   handleWordChainMessage
@@ -48,6 +51,17 @@ export function createBot({
   });
 
   client.on(Events.InteractionCreate, async (interaction) => {
+    if (interaction.isAutocomplete?.()) {
+      try {
+        const handled = await handleStockAutocomplete(interaction, stocks);
+        if (!handled) await interaction.respond([]);
+      } catch (error) {
+        logger.error('Failed to handle autocomplete interaction:', error);
+        await interaction.respond([]).catch(() => {});
+      }
+      return;
+    }
+
     if (!interaction.isChatInputCommand() && !interaction.isButton()) return;
 
     try {

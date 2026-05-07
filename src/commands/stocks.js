@@ -1,4 +1,7 @@
 import { SlashCommandBuilder } from 'discord.js';
+import { getStockCatalog } from '../systems/stocks.js';
+
+const STOCK_AUTOCOMPLETE_LIMIT = 25;
 
 export const stockCommands = [
   new SlashCommandBuilder()
@@ -13,12 +16,13 @@ export const stockCommands = [
             .setName('종목')
             .setDescription('확인할 종목명 또는 id. 예: 원숭이닉스')
             .setMaxLength(50)
+            .setAutocomplete(true)
         )
     )
     .addSubcommand((subcommand) =>
       subcommand
         .setName('전체시세')
-        .setDescription('36개 가상주식 전체 시세를 봅니다.')
+        .setDescription('전체 가상주식 시세를 봅니다.')
     )
     .addSubcommand((subcommand) =>
       subcommand
@@ -29,6 +33,7 @@ export const stockCommands = [
             .setName('종목')
             .setDescription('매수할 종목명 또는 id. 예: 희진전자')
             .setMaxLength(50)
+            .setAutocomplete(true)
             .setRequired(true)
         )
         .addIntegerOption((option) =>
@@ -49,6 +54,7 @@ export const stockCommands = [
             .setName('종목')
             .setDescription('매도할 종목명 또는 id. 예: 원숭이닉스')
             .setMaxLength(50)
+            .setAutocomplete(true)
             .setRequired(true)
         )
         .addIntegerOption((option) =>
@@ -91,6 +97,7 @@ export const stockCommands = [
             .setName('종목')
             .setDescription('진입할 종목명 또는 id. 예: 원숭이닉스')
             .setMaxLength(50)
+            .setAutocomplete(true)
             .setRequired(true)
         )
         .addStringOption((option) =>
@@ -145,6 +152,32 @@ export const stockCommands = [
 
 export function getStockCommandPayloads() {
   return stockCommands.map((command) => command.toJSON());
+}
+
+export async function handleStockAutocomplete(interaction, stocks) {
+  if (!interaction.isAutocomplete?.() || interaction.commandName !== '주식') {
+    return false;
+  }
+
+  if (!interaction.guildId || interaction.inGuild?.() === false) {
+    await interaction.respond([]);
+    return true;
+  }
+
+  const focused = interaction.options.getFocused(true);
+  if (focused.name !== '종목') {
+    await interaction.respond([]);
+    return true;
+  }
+
+  const subcommand = interaction.options.getSubcommand(false);
+  const query = String(focused.value ?? '');
+  const choices = subcommand === '매도'
+    ? await getSellStockAutocompleteChoices(interaction, stocks, query)
+    : getCatalogAutocompleteChoices(query);
+
+  await interaction.respond(choices.slice(0, STOCK_AUTOCOMPLETE_LIMIT));
+  return true;
 }
 
 export async function handleStockCommand(interaction, stocks) {
@@ -270,28 +303,78 @@ async function routeStockCommand(interaction, stocks) {
       username: target.username
     });
     await interaction.reply(formatLeveragePortfolio(target, portfolio));
+    return;
   }
+
+  await interaction.reply('알 수 없는 주식 명령입니다. `/주식 시세` 또는 `/주식 전체시세`로 다시 시도해주세요.');
+}
+
+async function getSellStockAutocompleteChoices(interaction, stocks, query) {
+  if (!interaction.guildId || !interaction.user?.id) return [];
+
+  const portfolio = await stocks.getPortfolio({
+    guildId: interaction.guildId,
+    userId: interaction.user.id,
+    username: interaction.user.username
+  });
+
+  return portfolio.positions
+    .filter((position) => matchesStockQuery(position.stock, query))
+    .map((position) => ({
+      name: `${position.stock.name} · ${position.stock.symbol} · 보유 ${position.quantity.toLocaleString()}주`,
+      value: position.stockId
+    }));
+}
+
+function getCatalogAutocompleteChoices(query) {
+  return getStockCatalog()
+    .filter((stock) => matchesStockQuery(stock, query))
+    .map((stock) => ({
+      name: `${stock.name} · ${stock.symbol} · ${stock.sector} · ${formatRisk(stock.risk)}`,
+      value: stock.id
+    }));
+}
+
+function matchesStockQuery(stock, query) {
+  const normalizedQuery = normalizeAutocompleteQuery(query);
+  if (!normalizedQuery) return true;
+
+  return [
+    stock.id,
+    stock.name,
+    stock.symbol,
+    stock.sector,
+    ...(stock.aliases ?? [])
+  ].some((value) => normalizeAutocompleteQuery(value).includes(normalizedQuery));
+}
+
+function normalizeAutocompleteQuery(value) {
+  return String(value ?? '')
+    .trim()
+    .toLocaleLowerCase('ko-KR')
+    .replace(/[\s_\-()·]/g, '');
 }
 
 function formatMarketSummary(market) {
   const body = market.stocks.map(formatMarketLine).join('\n');
+  const totalStockCount = getStockCatalog().length;
   return [
     `📈 **디코밈 가상주식 시세 TOP ${market.stocks.length}** — tick #${market.tickIndex}`,
     body,
     '',
-    '`/주식 전체시세`로 36개 전체를 볼 수 있고, `/주식 시세 종목:원숭이닉스`처럼 개별 조회도 됩니다.'
+    `\`/주식 전체시세\`로 ${totalStockCount}개 전체를 볼 수 있고, \`/주식 시세 종목:원숭이닉스\`처럼 개별 조회도 됩니다.`
   ].join('\n');
 }
 
 function formatFullMarket(market) {
   const body = market.stocks.map(formatMarketLine).join('\n');
-  return `📊 **디코밈 가상주식 전체 시세 36종목** — tick #${market.tickIndex}\n${body}`;
+  return `📊 **디코밈 가상주식 전체 시세 ${market.stocks.length}종목** — tick #${market.tickIndex}\n${body}`;
 }
 
 function formatQuote(quote) {
   return [
     `📌 **${quote.name}** (${quote.sector} / ${formatRisk(quote.risk)})`,
-    `현재가: **${quote.price.toLocaleString()}원** (${formatSignedPercent(quote.changePercent)})`,
+    `현재가: **${quote.price.toLocaleString()}원** / 변동: ${formatTrendMarker(quote.changePercent)} **${formatSignedPercent(quote.changePercent)}**`,
     `이전가: ${quote.previousPrice.toLocaleString()}원`,
     `뉴스: ${quote.news}`
   ].join('\n');
@@ -400,12 +483,18 @@ function formatLeveragePortfolio(user, portfolio) {
 }
 
 function formatMarketLine(stock) {
-  return `- **${stock.name}** \`${stock.symbol}\` ${stock.price.toLocaleString()}원 (${formatSignedPercent(stock.changePercent)})`;
+  return `- ${formatTrendMarker(stock.changePercent)} **${stock.name}** \`${stock.symbol}\` ${stock.price.toLocaleString()}원 (${formatSignedPercent(stock.changePercent)})`;
 }
 
 function formatSignedPercent(percent) {
   const sign = percent > 0 ? '+' : '';
   return `${sign}${percent.toLocaleString()}%`;
+}
+
+function formatTrendMarker(percent) {
+  if (percent > 0) return '🔴 ▲';
+  if (percent < 0) return '🔵 ▼';
+  return '⚪ —';
 }
 
 function formatSignedMoney(amount) {
