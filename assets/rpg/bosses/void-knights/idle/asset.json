@@ -4,5 +4,13 @@
   "category": "monster",
   "kind": "sprite",
   "sheet": "3x3",
-  "prompt": "Generated local fallback raid boss sprite for 공허 기사단 대기 모션; clean HD RPG boss, 3x3 transparent idle sheet, no text."
+  "prompt": "assets/rpg/bosses/void-knights/idle/prompt-used.txt",
+  "source": "/home/jio/.codex/generated_images/019dffb5-dcb4-7ab3-a969-b44a2c3e55d2/ig_094151999effdb840169fc5111d590819191ea6d9b1636753c.png",
+  "raw": "assets/rpg/bosses/void-knights/idle/raw/raw-sheet.png",
+  "processedDir": "assets/rpg/bosses/void-knights/idle/processed",
+  "status": "processed",
+  "processorStdout": "assets/rpg/bosses/void-knights/idle/processed",
+  "meta": "assets/rpg/bosses/void-knights/idle/processed/pipeline-meta.json",
+  "transparentSheet": "assets/rpg/bosses/void-knights/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/bosses/void-knights/idle/processed/animation.gif"
 }

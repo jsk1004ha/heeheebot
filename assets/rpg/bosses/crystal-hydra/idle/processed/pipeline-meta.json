@@ -1,7 +1,315 @@
 {
-  "id": "boss_crystal_hydra_idle",
-  "generatedBy": "local-pillow-raid-asset-generator",
-  "frames": 9,
-  "sheet": "3x3",
-  "transparent": true
+  "target": "creature",
+  "mode": "idle",
+  "prompt": "",
+  "role": "",
+  "input": "assets/rpg/bosses/crystal-hydra/idle/raw/raw-sheet.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 160,
+  "rows": 3,
+  "cols": 3,
+  "cell_size": 160,
+  "fit_scale": 0.66,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "bottom",
+  "shared_scale": true,
+  "component_mode": "all",
+  "component_padding": 10,
+  "min_component_area": 1,
+  "edge_touch_margin": 2,
+  "frame_labels": [
+    "boss_crystal_hydra_idle-1",
+    "boss_crystal_hydra_idle-2",
+    "boss_crystal_hydra_idle-3",
+    "boss_crystal_hydra_idle-4",
+    "boss_crystal_hydra_idle-5",
+    "boss_crystal_hydra_idle-6",
+    "boss_crystal_hydra_idle-7",
+    "boss_crystal_hydra_idle-8",
+    "boss_crystal_hydra_idle-9"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        418,
+        418
+      ],
+      "component_mode": "all",
+      "component_count": 4,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        51,
+        42,
+        391,
+        384
+      ],
+      "edge_touch": false,
+      "output_size": [
+        98,
+        98
+      ],
+      "paste_position": [
+        31,
+        35
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        418,
+        0,
+        836,
+        418
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        52,
+        46,
+        359,
+        385
+      ],
+      "edge_touch": false,
+      "output_size": [
+        88,
+        97
+      ],
+      "paste_position": [
+        36,
+        36
+      ]
+    },
+    {
+      "grid": [
+        0,
+        2
+      ],
+      "source_box": [
+        836,
+        0,
+        1254,
+        418
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        49,
+        63,
+        382,
+        384
+      ],
+      "edge_touch": false,
+      "output_size": [
+        96,
+        92
+      ],
+      "paste_position": [
+        32,
+        41
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        418,
+        418,
+        836
+      ],
+      "component_mode": "all",
+      "component_count": 3,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        36,
+        61,
+        365,
+        383
+      ],
+      "edge_touch": false,
+      "output_size": [
+        94,
+        92
+      ],
+      "paste_position": [
+        33,
+        41
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        418,
+        418,
+        836,
+        836
+      ],
+      "component_mode": "all",
+      "component_count": 2,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        41,
+        56,
+        364,
+        384
+      ],
+      "edge_touch": false,
+      "output_size": [
+        93,
+        94
+      ],
+      "paste_position": [
+        33,
+        39
+      ]
+    },
+    {
+      "grid": [
+        1,
+        2
+      ],
+      "source_box": [
+        836,
+        418,
+        1254,
+        836
+      ],
+      "component_mode": "all",
+      "component_count": 2,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        23,
+        73,
+        389,
+        384
+      ],
+      "edge_touch": false,
+      "output_size": [
+        105,
+        89
+      ],
+      "paste_position": [
+        27,
+        44
+      ]
+    },
+    {
+      "grid": [
+        2,
+        0
+      ],
+      "source_box": [
+        0,
+        836,
+        418,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 6,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        54,
+        45,
+        373,
+        380
+      ],
+      "edge_touch": false,
+      "output_size": [
+        92,
+        96
+      ],
+      "paste_position": [
+        34,
+        37
+      ]
+    },
+    {
+      "grid": [
+        2,
+        1
+      ],
+      "source_box": [
+        418,
+        836,
+        836,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 4,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        54,
+        47,
+        369,
+        380
+      ],
+      "edge_touch": false,
+      "output_size": [
+        90,
+        96
+      ],
+      "paste_position": [
+        35,
+        37
+      ]
+    },
+    {
+      "grid": [
+        2,
+        2
+      ],
+      "source_box": [
+        836,
+        836,
+        1254,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 2,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        53,
+        71,
+        374,
+        380
+      ],
+      "edge_touch": false,
+      "output_size": [
+        92,
+        89
+      ],
+      "paste_position": [
+        34,
+        44
+      ]
+    }
+  ],
+  "edge_touch_frames": []
 }

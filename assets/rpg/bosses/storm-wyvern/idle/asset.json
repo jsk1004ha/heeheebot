@@ -4,5 +4,13 @@
   "category": "monster",
   "kind": "sprite",
   "sheet": "3x3",
-  "prompt": "Generated local fallback raid boss sprite for 폭풍 와이번 대기 모션; clean HD RPG boss, 3x3 transparent idle sheet, no text."
+  "prompt": "assets/rpg/bosses/storm-wyvern/idle/prompt-used.txt",
+  "source": "/home/jio/.codex/generated_images/019dffb5-dcb4-7ab3-a969-b44a2c3e55d2/ig_094151999effdb840169fc509210e08191956d5874c70a3b09.png",
+  "raw": "assets/rpg/bosses/storm-wyvern/idle/raw/raw-sheet.png",
+  "processedDir": "assets/rpg/bosses/storm-wyvern/idle/processed",
+  "status": "processed",
+  "processorStdout": "assets/rpg/bosses/storm-wyvern/idle/processed",
+  "meta": "assets/rpg/bosses/storm-wyvern/idle/processed/pipeline-meta.json",
+  "transparentSheet": "assets/rpg/bosses/storm-wyvern/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/bosses/storm-wyvern/idle/processed/animation.gif"
 }

@@ -7,5 +7,10 @@
   "prompt": "assets/rpg/maps/volcanic-rift/prompt-used.txt",
   "status": "generated",
   "generatedWith": "agent-sprite-forge:$generate2dmap",
-  "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_0bd4e574af6750910169fbefeb38d48191a1bf8f6be6b5ab52.png"
+  "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_0bd4e574af6750910169fbefeb38d48191a1bf8f6be6b5ab52.png",
+  "meta": "assets/rpg/maps/volcanic-rift/processed/pipeline-meta.json",
+  "outputSize": [
+    1024,
+    576
+  ]
 }

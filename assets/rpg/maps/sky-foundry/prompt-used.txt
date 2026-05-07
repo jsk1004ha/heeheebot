@@ -1,1 +1,1 @@
-Generated local fallback raid battlefield for 천공 주조소 전투 배경; clean HD 2D RPG background, open center, no UI, no text.
+Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: floating sky foundry, gold gears and cloud furnaces, open metal platform center, no characters, no UI, no text.

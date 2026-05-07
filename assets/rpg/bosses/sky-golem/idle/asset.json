@@ -4,5 +4,13 @@
   "category": "monster",
   "kind": "sprite",
   "sheet": "3x3",
-  "prompt": "Generated local fallback raid boss sprite for 천공 골렘 대기 모션; clean HD RPG boss, 3x3 transparent idle sheet, no text."
+  "prompt": "assets/rpg/bosses/sky-golem/idle/prompt-used.txt",
+  "source": "/home/jio/.codex/generated_images/019dffb5-dcb4-7ab3-a969-b44a2c3e55d2/ig_094151999effdb840169fc5229ca148191b50ba4e381ee49b4.png",
+  "raw": "assets/rpg/bosses/sky-golem/idle/raw/raw-sheet.png",
+  "processedDir": "assets/rpg/bosses/sky-golem/idle/processed",
+  "status": "processed",
+  "processorStdout": "assets/rpg/bosses/sky-golem/idle/processed",
+  "meta": "assets/rpg/bosses/sky-golem/idle/processed/pipeline-meta.json",
+  "transparentSheet": "assets/rpg/bosses/sky-golem/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/bosses/sky-golem/idle/processed/animation.gif"
 }

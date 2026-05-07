@@ -234,6 +234,7 @@ test('낚시 명령 핸들러는 /낚시 응답을 이미지 embed 카드로 반
     assert.equal(payload.embeds[0].data.image.url, 'attachment://icon.png');
     assert.deepEqual(payload.files, [getFishConfig('붕어').imagePath]);
     assert.equal(payload.content, undefined);
+    assert.equal(payload.embeds[0].data.footer, undefined);
     assert.doesNotMatch(payload.embeds[0].data.description, /이미지 에셋|fish_/);
   } finally {
     await fixture.cleanup();
@@ -258,6 +259,7 @@ test('낚시강화 응답은 낚싯대 이미지를 embed 카드로 첨부하고
     assert.match(payload.embeds[0].data.description, /성공/);
     assert.doesNotMatch(payload.embeds[0].data.description, /rod_|이미지 에셋/);
     assert.equal(payload.embeds[0].data.image.url, 'attachment://icon.png');
+    assert.equal(payload.embeds[0].data.footer, undefined);
     assert.deepEqual(payload.files, [getFishingRodAssetForLevel(5).imagePath]);
   } finally {
     await fixture.cleanup();

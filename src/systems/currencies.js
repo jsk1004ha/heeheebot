@@ -85,10 +85,6 @@ const CURRENCY_ALIASES = Object.freeze(new Map([
   ['주식현금', CURRENCY_MAIN]
 ]));
 
-export function getCurrencyChoices() {
-  return [{ name: '골드 · 단일 통합 화폐', value: CURRENCY_MAIN }];
-}
-
 export function normalizeCurrencyId(currencyId) {
   const key = normalizeCurrencyKey(currencyId);
   const matched = CURRENCY_ALIASES.get(key) ?? CURRENCY_CONFIGS[key]?.id;

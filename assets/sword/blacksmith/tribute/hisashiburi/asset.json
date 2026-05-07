@@ -3,10 +3,12 @@
   "generatedWith": "agent-sprite-forge:$generate2dsprite",
   "target": "npc",
   "mode": "single",
-  "prompt": "Use $generate2dsprite / agent-sprite-forge style to create a clean HD 2D fantasy RPG blacksmith NPC reaction image: the same cheerful forge blacksmith dramatically says hisashiburi / long time no see, one arm raised in a confident greeting pose, playful meme energy, readable as a Discord embed thumbnail. Single centered character scene on solid #FF00FF background only, no UI frame, no watermark, generous padding.",
+  "prompt": "Clean HD 2D fantasy RPG blacksmith memorial thumbnail generated with agent-sprite-forge. One cheerful blacksmith, solemn bowed pose, hammer held to chest, small anvil candle and broken sword shards, pure visual only. Solid #FF00FF background. NO text, NO letters, NO words, NO signs, NO UI, NO watermark.",
+  "source": "/home/jio/.codex/generated_images/019dfd64-811e-7561-a000-5b3212cc9327/ig_03133c262f4ce7880169fc4bfb1f20819189e4b2b18328b9f9.png",
   "raw": "assets/sword/blacksmith/tribute/hisashiburi/raw/raw-sheet.png",
   "processed": "assets/sword/blacksmith/tribute/hisashiburi/processed/sheet-transparent.png",
   "output": "assets/sword/blacksmith/blacksmith_hisashiburi.png",
   "size": "512x512",
-  "backgroundRemoval": "solid #FF00FF via generate2dsprite.py process"
+  "backgroundRemoval": "solid #FF00FF via generate2dsprite.py process",
+  "noTextPolicy": "NO text, NO letters, NO words, NO signs, NO UI, NO watermark"
 }

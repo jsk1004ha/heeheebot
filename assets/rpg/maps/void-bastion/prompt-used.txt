@@ -1,1 +1,1 @@
-Generated local fallback raid battlefield for 공허 요새 전투 배경; clean HD 2D RPG background, open center, no UI, no text.
+Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: void bastion, black stone walls, purple portals at edges, open center arena with violet glow, no characters, no UI, no text.

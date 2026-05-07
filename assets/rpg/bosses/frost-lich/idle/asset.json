@@ -4,5 +4,13 @@
   "category": "monster",
   "kind": "sprite",
   "sheet": "3x3",
-  "prompt": "Generated local fallback raid boss sprite for 빙결 리치 대기 모션; clean HD RPG boss, 3x3 transparent idle sheet, no text."
+  "prompt": "assets/rpg/bosses/frost-lich/idle/prompt-used.txt",
+  "source": "/home/jio/.codex/generated_images/019dffb5-dcb4-7ab3-a969-b44a2c3e55d2/ig_094151999effdb840169fc4fff088081918e1ab91d935e9950.png",
+  "raw": "assets/rpg/bosses/frost-lich/idle/raw/raw-sheet.png",
+  "processedDir": "assets/rpg/bosses/frost-lich/idle/processed",
+  "status": "processed",
+  "processorStdout": "assets/rpg/bosses/frost-lich/idle/processed",
+  "meta": "assets/rpg/bosses/frost-lich/idle/processed/pipeline-meta.json",
+  "transparentSheet": "assets/rpg/bosses/frost-lich/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/bosses/frost-lich/idle/processed/animation.gif"
 }

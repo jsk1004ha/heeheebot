@@ -3,5 +3,14 @@
   "label": "늪 심연 전투 배경",
   "category": "map",
   "kind": "map",
-  "prompt": "Generated local fallback raid battlefield for 늪 심연 전투 배경; clean HD 2D RPG background, open center, no UI, no text."
+  "prompt": "assets/rpg/maps/marsh-depths/prompt-used.txt",
+  "raw": "assets/rpg/maps/marsh-depths/raw/background.png",
+  "status": "generated",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "source": "/home/jio/.codex/generated_images/019e01ef-1657-76a3-84df-77f86363a886/ig_0528b1dbcbf7114a0169fc675394c081918396007db1b340fc.png",
+  "meta": "assets/rpg/maps/marsh-depths/processed/pipeline-meta.json",
+  "outputSize": [
+    1024,
+    576
+  ]
 }

@@ -690,7 +690,7 @@ export class EconomyService {
         classPaths: getRpgAdvancedClassStatuses(profile),
         dailyMissions: getRpgDailyMissionStatuses(profile, now),
         adventureGuide: actionContext.adventureGuide,
-        availableSkillIds: getAvailableRpgSkillIds(profile.rpg.characterClass),
+        availableSkillIds: getAvailableRpgSkillIds(profile.rpg.characterClass, profile.rpg.advancedClass),
         currentArea: getRpgAreaConfig(profile.rpg.currentArea),
         unlockedAreas: profile.rpg.unlockedAreas.map((area) => ({
           id: area,
@@ -1045,7 +1045,7 @@ export class EconomyService {
               potion: profile.rpg.inventory.potion ?? 0,
               mana_potion: profile.rpg.inventory.mana_potion ?? 0
             },
-            availableSkillIds: getAvailableRpgSkillIds(profile.rpg.characterClass),
+            availableSkillIds: getAvailableRpgSkillIds(profile.rpg.characterClass, profile.rpg.advancedClass),
             advancedClass: profile.rpg.advancedClass,
             assets: {
               hero: getProfileRpgHeroAssetId(profile)
@@ -4051,7 +4051,7 @@ function createRpgPvpSessionFighter(profile, participant = {}) {
       potion: profile.rpg.inventory.potion ?? 0,
       mana_potion: profile.rpg.inventory.mana_potion ?? 0
     },
-    availableSkillIds: getAvailableRpgSkillIds(profile.rpg.characterClass),
+    availableSkillIds: getAvailableRpgSkillIds(profile.rpg.characterClass, profile.rpg.advancedClass),
     assets: {
       hero: getProfileRpgHeroAssetId(profile)
     }
@@ -4514,7 +4514,7 @@ function getRpgCombatBonuses(profile) {
 function prepareRpgSkill(profile, skillId) {
   const normalizedSkillId = normalizeRpgSkillId(skillId);
   const skill = getRpgSkillConfig(normalizedSkillId);
-  const availableSkillIds = getAvailableRpgSkillIds(profile.rpg.characterClass);
+  const availableSkillIds = getAvailableRpgSkillIds(profile.rpg.characterClass, profile.rpg.advancedClass);
 
   if (!availableSkillIds.includes(normalizedSkillId)) {
     throw new Error(`${getRpgClassConfig(profile.rpg.characterClass).label} 직업은 ${skill.label} 스킬을 사용할 수 없습니다.`);

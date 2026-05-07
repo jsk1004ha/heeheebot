@@ -2,8 +2,15 @@
   "id": "map_ancient_ruins",
   "category": "map",
   "kind": "map",
-  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb3f1bcf708191be06e37add9fbb71.png",
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc52741d008191b507dc0d1ca350c6.png",
   "raw": "assets/rpg/maps/ancient-ruins/raw/background.png",
   "prompt": "assets/rpg/maps/ancient-ruins/prompt-used.txt",
-  "status": "raw-map-copied"
+  "status": "generated",
+  "label": "고대 유적 전투 배경",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "meta": "assets/rpg/maps/ancient-ruins/processed/pipeline-meta.json",
+  "outputSize": [
+    1024,
+    576
+  ]
 }

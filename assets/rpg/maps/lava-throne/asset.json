@@ -3,5 +3,14 @@
   "label": "용암 왕좌 전투 배경",
   "category": "map",
   "kind": "map",
-  "prompt": "Generated local fallback raid battlefield for 용암 왕좌 전투 배경; clean HD 2D RPG background, open center, no UI, no text."
+  "prompt": "assets/rpg/maps/lava-throne/prompt-used.txt",
+  "raw": "assets/rpg/maps/lava-throne/raw/background.png",
+  "status": "generated",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "source": "/home/jio/.codex/generated_images/019e01ef-dd18-7bc1-94a5-051cef836b33/ig_07d5c7ddea2c31bf0169fc668f66208191962e9093f15d85d8.png",
+  "meta": "assets/rpg/maps/lava-throne/processed/pipeline-meta.json",
+  "outputSize": [
+    1024,
+    576
+  ]
 }

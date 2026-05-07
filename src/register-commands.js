@@ -5,6 +5,7 @@ import { getCommunityCommandPayloads } from './commands/community.js';
 import { getEconomyCommandPayloads } from './commands/economy.js';
 import { getFishingCommandPayloads } from './commands/fishing.js';
 import { getFortuneCommandPayloads } from './commands/fortune.js';
+import { getHelpCommandPayloads } from './commands/help.js';
 import { getMealCommandPayloads } from './commands/meals.js';
 import { getModerationCommandPayloads } from './commands/moderation.js';
 import { getRpgCommandPayloads } from './commands/rpg.js';
@@ -23,6 +24,7 @@ const rest = new REST({ version: '10' }).setToken(config.token);
 const commands = [
   ...getEconomyCommandPayloads(),
   ...getCommunityCommandPayloads(),
+  ...getHelpCommandPayloads(),
   ...getFortuneCommandPayloads(),
   ...getTodayCommandPayloads(),
   ...getModerationCommandPayloads(),

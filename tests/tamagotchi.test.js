@@ -151,6 +151,41 @@ test('희진 다마고치는 케어로 회복하고 장시간 방치하면 죽�
   }
 });
 
+test('살아있는 희진은 부활 명령을 회복 꼼수로 쓰지 못한다', async () => {
+  const fixture = createFixture();
+
+  try {
+    const revived = await fixture.tamagotchi.care(context({ action: 'revive', now: 0 }));
+
+    assert.equal(revived.performed, false);
+    assert.equal(revived.pet.status, 'alive');
+    assert.equal(revived.pet.counters.revivals, 0);
+    assert.match(revived.eventMessage, /살아있어요/);
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test('희진 다마고치는 같은 행동 연타를 쿨다운으로 막는다', async () => {
+  const fixture = createFixture({ actionCooldownMs: 60_000 });
+
+  try {
+    const first = await fixture.tamagotchi.care(context({ action: 'feed', now: 0 }));
+    const blocked = await fixture.tamagotchi.care(context({ action: 'feed', now: 10_000 }));
+    const ready = await fixture.tamagotchi.care(context({ action: 'feed', now: 61_000 }));
+
+    assert.equal(first.performed, true);
+    assert.equal(blocked.performed, false);
+    assert.ok(blocked.cooldown.remainingMs > 0);
+    assert.match(blocked.eventMessage, /뒤에 다시/);
+    assert.equal(blocked.pet.counters.feeds, 1);
+    assert.equal(ready.performed, true);
+    assert.equal(ready.pet.counters.feeds, 2);
+  } finally {
+    fixture.cleanup();
+  }
+});
+
 test('기존 병든 희진 기록은 schemaVersion과 안전한 병 시작 시각으로 마이그레이션된다', async () => {
   const fixture = createFixture();
 
@@ -284,6 +319,54 @@ test('여가는 행복/애정과 피로 트레이드오프를 주고 원숭이 �
   }
 });
 
+test('오늘의 돌봄 미션은 케어 루프를 만들고 경제 보상 없이 추억 조각을 준다', async () => {
+  const fixture = createFixture({
+    actionCooldownMs: 0,
+    leisureCooldownMs: 0,
+    randomEventEveryActions: 0,
+    dailyRewardMemoryShards: 2
+  });
+
+  try {
+    await fixture.tamagotchi.care(context({ action: 'feed', now: 0 }));
+    await fixture.tamagotchi.care(context({ action: 'play', now: 1_000 }));
+    await fixture.tamagotchi.care(context({ action: 'clean', now: 2_000 }));
+    const complete = await fixture.tamagotchi.leisure(context({ leisureId: 'walk', now: 3_000 }));
+
+    assert.equal(complete.daily.complete, true);
+    assert.equal(complete.daily.rewardClaimed, true);
+    assert.equal(complete.codex.memoryShards, 2);
+    assert.equal(complete.codex.dailyCompletions, 1);
+    assert.equal(Object.hasOwn(complete.pet, 'balance'), false);
+    assert.match(complete.eventMessage, /오늘의 돌봄 완료/);
+    assert.match(complete.recentEvents[0].title, /오늘의 돌봄/);
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test('랜덤 사건은 상태와 도감만 바꾸고 골드 경제를 건드리지 않는다', async () => {
+  const fixture = createFixture({
+    actionCooldownMs: 0,
+    randomEventEveryActions: 2
+  });
+
+  try {
+    await fixture.tamagotchi.care(context({ action: 'feed', now: 0 }));
+    const evented = await fixture.tamagotchi.care(context({ action: 'play', now: 1_000 }));
+
+    assert.ok(evented.randomEvent);
+    assert.equal(evented.codex.eventCount, 1);
+    assert.equal(evented.codex.memoryShards, 1);
+    assert.equal(evented.recentEvents[0].type, 'random');
+    assert.equal(Object.hasOwn(evented.pet, 'money'), false);
+    assert.equal(Object.hasOwn(evented.pet, 'balance'), false);
+    assert.match(evented.eventMessage, /랜덤 사건/);
+  } finally {
+    fixture.cleanup();
+  }
+});
+
 test('만족도와 특화 행동은 청소년기/성년기 성장 분기를 결정하고 저장한다', async () => {
   const fixture = createFixture({
     neglectDeathMs: 1_000 * 24 * HOUR_MS,
@@ -306,10 +389,12 @@ test('만족도와 특화 행동은 청소년기/성년기 성장 분기를 결�
     assert.equal(teen.growthStage.id, 'teen');
     assert.equal(teen.pet.growth.teenBranchId, 'gourmet');
     assert.equal(teen.growthBranch.id, 'gourmet');
+    assert.ok(teen.codex.discoveredBranches.includes('gourmet'));
     assert.equal(adult.growthStage.id, 'adult');
     assert.ok(adult.pet.growth.adultBranchId);
     assert.ok(adult.pet.growth.branchHistory.length >= 2);
     assert.ok(adult.growthProfile.satisfactionScore >= 45);
+    assert.ok(adult.codex.branchCount >= 1);
   } finally {
     fixture.cleanup();
   }
@@ -344,6 +429,9 @@ test('희진 다마고치 응답 payload는 도트 이미지 첨부와 주인 �
     assert.equal(payload.embeds[0].data.image.url, `attachment://${payload.files[0].name}`);
     assert.equal(payload.components.length, 4);
     assert.ok(payload.components.every((row) => row.components.length <= 5));
+    assert.match(payload.embeds[0].data.description, /추천 행동/);
+    assert.match(payload.embeds[0].data.description, /오늘의 돌봄/);
+    assert.match(payload.embeds[0].data.description, /성장도감/);
     assert.match(payload.components[0].components[0].data.custom_id, /^heejin_pet:feed:user-1$/);
     assert.match(payload.components[2].components[0].data.custom_id, /^heejin_pet:leisure_reels:user-1$/);
   } finally {

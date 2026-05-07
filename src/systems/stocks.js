@@ -183,6 +183,55 @@ const AUTO_IPO_THEMES = Object.freeze([
   Object.freeze({ suffix: '퀀트', sector: '핀테크', risk: 'volatile', basePriceMin: 500, basePriceMax: 1_700, volatilityBps: 1500, eventChance: 20 })
 ]);
 
+const AUTO_IPO_PREFIX_SYMBOLS = Object.freeze({
+  희진: 'HJ',
+  재성: 'JS',
+  준서: 'JN',
+  지오: 'JI',
+  현겸: 'HY',
+  지민: 'JM',
+  용하: 'YH',
+  민건: 'MG',
+  도혜: 'DH',
+  서정: 'SJ',
+  원숭이: 'MO',
+  도훈: 'DO'
+});
+
+const AUTO_IPO_SECTOR_SYMBOLS = Object.freeze({
+  AI: 'AI',
+  IT: 'IT',
+  모빌리티: 'MB',
+  바이오: 'BI',
+  클라우드: 'CL',
+  식품: 'FD',
+  엔터: 'EN',
+  부동산: 'RE',
+  핀테크: 'FT',
+  전자: 'EL',
+  중공업: 'HI',
+  에너지: 'EG',
+  플랫폼: 'PF',
+  건설: 'CN',
+  게임: 'GM',
+  자동차: 'AU',
+  제약: 'PH',
+  화학: 'CH',
+  해운: 'SH',
+  반도체: 'SC',
+  금융: 'FN',
+  증권: 'SE',
+  커머스: 'CM',
+  물산: 'TR',
+  로봇: 'RB',
+  방산: 'DF',
+  화장품: 'BE',
+  의료기기: 'MD',
+  항공: 'AR',
+  철강: 'ST',
+  밈: 'MM'
+});
+
 export class StockService {
   constructor(store, options = {}) {
     const hasCustomRandomInt = options.randomInt !== undefined;
@@ -859,16 +908,16 @@ function normalizeDynamicStockDefinition(definition = {}, fallbackId = null) {
   const safeDefinition = definition && typeof definition === 'object' ? definition : {};
   const id = String(safeDefinition.id ?? fallbackId ?? '').trim();
   const name = String(safeDefinition.name ?? '').trim();
-  const symbol = String(safeDefinition.symbol ?? '').trim();
+  const rawSymbol = String(safeDefinition.symbol ?? '').trim();
   const sector = String(safeDefinition.sector ?? '밈').trim() || '밈';
   const risk = normalizeStockRisk(safeDefinition.risk);
 
-  if (!id || !name || !symbol) throw new Error('동적 상장 종목 정의가 불완전합니다.');
+  if (!id || !name) throw new Error('동적 상장 종목 정의가 불완전합니다.');
 
   return {
     id,
     name,
-    symbol,
+    symbol: normalizeDynamicStockSymbol(rawSymbol, { id, name, sector }),
     sector,
     risk,
     basePrice: normalizePositiveStoredInteger(safeDefinition.basePrice, 500),
@@ -1152,9 +1201,60 @@ function createAutomaticIpoDefinition(guild, market, randomIntFn) {
 }
 
 function createAutomaticIpoSymbol(prefix, theme, sequence) {
-  const prefixPart = normalizeLookupKey(prefix).slice(0, 2).toUpperCase() || 'IP';
-  const sectorPart = normalizeLookupKey(theme.sector).slice(0, 2).toUpperCase() || 'O';
-  return `${prefixPart}${sectorPart}${sequence.toString(36).toUpperCase()}`.slice(0, 6);
+  const prefixPart = AUTO_IPO_PREFIX_SYMBOLS[prefix] ?? createAsciiSymbolPart(prefix, 'IP', 2);
+  const sectorPart = AUTO_IPO_SECTOR_SYMBOLS[theme.sector] ?? createAsciiSymbolPart(theme.sector, 'ST', 2);
+  return `${prefixPart}${sectorPart}${formatSequenceSymbolPart(sequence)}`.slice(0, 6);
+}
+
+function normalizeDynamicStockSymbol(rawSymbol, definition) {
+  const asciiSymbol = normalizeAsciiStockSymbol(rawSymbol);
+  if (asciiSymbol && asciiSymbol === rawSymbol.toUpperCase()) return asciiSymbol;
+  return createDynamicStockSymbol(definition);
+}
+
+function createDynamicStockSymbol({ id, name, sector }) {
+  const prefix = AUTO_IPO_PREFIXES.find((candidate) => name.startsWith(candidate));
+  const prefixPart = prefix
+    ? AUTO_IPO_PREFIX_SYMBOLS[prefix]
+    : createAsciiSymbolPart(name, 'IP', 2);
+  const sectorPart = AUTO_IPO_SECTOR_SYMBOLS[sector] ?? createAsciiSymbolPart(sector, 'ST', 2);
+  return `${prefixPart}${sectorPart}${formatSequenceSymbolPart(extractDynamicStockSequence(id, name))}`.slice(0, 6);
+}
+
+function normalizeAsciiStockSymbol(value) {
+  return String(value ?? '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 6);
+}
+
+function createAsciiSymbolPart(value, fallback, length) {
+  const ascii = normalizeAsciiStockSymbol(value).replace(/^[0-9]+/, '');
+  if (ascii.length >= length) return ascii.slice(0, length);
+  return `${fallback}${createStableSymbolHash(value)}`.slice(0, length);
+}
+
+function createStableSymbolHash(value) {
+  const source = String(value ?? '');
+  let hash = 0;
+  for (const char of source) {
+    hash = (hash * 31 + char.codePointAt(0)) >>> 0;
+  }
+  return hash.toString(36).toUpperCase();
+}
+
+function extractDynamicStockSequence(id, name) {
+  const idMatch = String(id ?? '').match(/_(\d+)$/);
+  if (idMatch) return Number(idMatch[1]);
+  const nameMatch = String(name ?? '').match(/(\d+)호?$/);
+  if (nameMatch) return Number(nameMatch[1]);
+  return 0;
+}
+
+function formatSequenceSymbolPart(sequence) {
+  const safeSequence = normalizeNonNegativeInteger(sequence);
+  return safeSequence > 0 ? safeSequence.toString(36).toUpperCase() : '';
 }
 
 function getActiveStockDefinitions(guild, market) {
@@ -1210,14 +1310,14 @@ function createPreMarketNewsMessage(definition, type, tickIndex) {
   const typedTemplates = PRE_MARKET_NEWS_TEMPLATES[type] ?? PRE_MARKET_NEWS_TEMPLATES.negative;
   const templates = typedTemplates[definition.risk] ?? typedTemplates.stable ?? typedTemplates.meme ?? typedTemplates.volatile;
   const template = templates[tickIndex % templates.length];
-  return `${formatMarketNewsTitle(type)}: ${template.replaceAll('{name}', definition.name)}`;
+  return template.replaceAll('{name}', definition.name);
 }
 
 function createIpoMarketNews(definition, state) {
   return {
     type: 'ipo',
     title: formatMarketNewsTitle('ipo'),
-    message: `${formatMarketNewsTitle('ipo')}: ${state.news}`,
+    message: state.news,
     impactBps: 0
   };
 }
@@ -1598,7 +1698,7 @@ function normalizeMarketNewsEntry(entry = {}, fallbackId = null, guild = null) {
     type: normalizeMarketNewsType(safeEntry.type),
     stockId: normalizeStoredStockId(safeEntry.stockId, guild),
     title: String(safeEntry.title ?? '').trim() || '시장 뉴스',
-    message: String(safeEntry.message ?? '').trim() || '시장 뉴스가 없습니다.',
+    message: stripMarketNewsTitlePrefix(safeEntry.message) || '시장 뉴스가 없습니다.',
     tickIndex: normalizeNonNegativeInteger(safeEntry.tickIndex),
     publishedTickIndex: normalizeNonNegativeInteger(safeEntry.publishedTickIndex ?? safeEntry.tickIndex),
     effectiveTickIndex: normalizeNonNegativeInteger(safeEntry.effectiveTickIndex ?? safeEntry.tickIndex),
@@ -1710,7 +1810,7 @@ function recordMarketNews(guild, definition, news, effectiveTickIndex, at, publi
     type,
     stockId: definition.id,
     title: news.title ?? formatMarketNewsTitle(type),
-    message: news.message,
+    message: stripMarketNewsTitlePrefix(news.message),
     tickIndex: effectiveTickIndex,
     publishedTickIndex,
     effectiveTickIndex,
@@ -1748,6 +1848,19 @@ function formatMarketNewsTitle(type) {
     negative: '시장 공시',
     risk: '시장 공시'
   }[type] ?? '시장 뉴스';
+}
+
+function stripMarketNewsTitlePrefix(message) {
+  let text = String(message ?? '').trim();
+  if (!text) return '';
+
+  let previous;
+  do {
+    previous = text;
+    text = text.replace(/^(시장 공시|신규상장 공시|시장 뉴스)\s*[:：]\s*/u, '').trim();
+  } while (text !== previous);
+
+  return text;
 }
 
 function buildPortfolio(profile, stockUser, market) {

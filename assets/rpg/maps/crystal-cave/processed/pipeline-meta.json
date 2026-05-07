@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "skill": "$generate2dmap",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "mapMode": "baked_scene_mode",
+  "visualModel": "baked_raster",
+  "engineTarget": "Discord attachment battle background",
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc51a4ae4481918901a670b6c113d5.png",
+  "raw": "assets/rpg/maps/crystal-cave/raw/background.png",
+  "originalSize": [
+    1672,
+    941
+  ],
+  "outputSize": [
+    1024,
+    576
+  ],
+  "normalization": "lanczos resize to project 16:9 map contract",
+  "auditReason": "raw-map-copied non-forge map replaced with single agent-sprite-forge baked_scene output",
+  "recordedAt": "2026-05-07T08:48:52Z"
+}

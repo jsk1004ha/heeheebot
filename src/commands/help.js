@@ -1,0 +1,179 @@
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  EmbedBuilder,
+  SlashCommandBuilder
+} from 'discord.js';
+
+const HELP_CATEGORIES = Object.freeze({
+  home: Object.freeze({
+    label: '전체',
+    emoji: '📚',
+    title: '희희봇 통합 도움말',
+    description: [
+      '자주 쓰는 명령어를 분류별 버튼으로 바로 확인합니다.',
+      '`/프로필`에서 통합 성장 상태를 보고, 아래 버튼으로 RPG·검·주식·생활 기능을 골라보세요.'
+    ].join('\n'),
+    fields: Object.freeze([
+      { name: '성장/프로필', value: '`/프로필` `/출석` `/랭킹` `/재화정보`' },
+      { name: '전투 성장', value: '`/rpg 메뉴` `/rpg 전투` `/검강화` `/검배틀` `/검도감`' },
+      { name: '경제/놀이', value: '`/주식 시세` `/주식 보유` `/낚시` `/카지노정보`' }
+    ])
+  }),
+  rpg: Object.freeze({
+    label: 'RPG',
+    emoji: '🧙',
+    title: 'RPG 도움말',
+    description: '캐릭터를 키우고 전직, 스킬트리, 장비, 레이드까지 이어가는 성장 루프입니다.',
+    fields: Object.freeze([
+      { name: '시작/상태', value: '`/rpg 시작` `/rpg 메뉴` `/rpg 상태` `/rpg 지역`' },
+      { name: '성장 루프', value: '`/rpg 전투` `/rpg 탐험` `/rpg 던전` `/rpg 휴식` `/rpg 일일`' },
+      { name: '심화', value: '`/rpg 스킬트리` `/rpg 전직` `/rpg 보스` `/rpg 레이드` `/rpg 길드레이드`' }
+    ])
+  }),
+  sword: Object.freeze({
+    label: '검',
+    emoji: '🗡️',
+    title: '검 강화 도움말',
+    description: '`/검강화`로 100강까지 키우고 `/검도감`으로 해금 기록을 확인합니다.',
+    fields: Object.freeze([
+      { name: '강화', value: '`/검강화` `/검상급강화` `/검정보` `/선물받기`' },
+      { name: '수집/보상', value: '`/검도감` `/검업적` `/검판매` `/검보호권`' },
+      { name: '대결', value: '`/검배틀 상대:@유저` 또는 상대 없이 랜덤배틀' }
+    ])
+  }),
+  stock: Object.freeze({
+    label: '주식',
+    emoji: '📈',
+    title: '가상주식 도움말',
+    description: '골드로 가상주식을 사고팔고, 시세 화면 버튼으로 시장 흐름을 빠르게 넘겨봅니다.',
+    fields: Object.freeze([
+      { name: '조회', value: '`/주식 시세` `/주식 전체시세` `/주식 신규상장` `/주식 보유`' },
+      { name: '거래', value: '`/주식 매수` `/주식 매도` `/주식 지정가매수` `/주식 지정가매도`' },
+      { name: '심화', value: '`/주식 차트` `/주식 뉴스` `/주식 알림설정` `/주식 레버리지진입`' }
+    ])
+  }),
+  life: Object.freeze({
+    label: '생활',
+    emoji: '🎒',
+    title: '생활/서버 도움말',
+    description: '학교 급식, 시간표, 오늘 정보, 커뮤니티 활동처럼 서버에서 자주 쓰는 편의 기능입니다.',
+    fields: Object.freeze([
+      { name: '생활 정보', value: '`/급식` `/시간표` `/오늘` `/운세`' },
+      { name: '커뮤니티', value: '`/칭호` `/미션` `/이벤트` `/끝말잇기`' },
+      { name: '관리/안전', value: '`/청소` `/경고` 등 서버 권한 명령은 권한이 있을 때만 사용됩니다.' }
+    ])
+  }),
+  games: Object.freeze({
+    label: '놀이',
+    emoji: '🎮',
+    title: '놀이/미니게임 도움말',
+    description: '골드와 성장 루프를 가볍게 즐기는 미니게임 묶음입니다.',
+    fields: Object.freeze([
+      { name: '낚시', value: '`/낚시` `/낚시가방` `/낚시판매` `/낚시랭킹`' },
+      { name: '카지노', value: '`/카지노정보` `/슬롯` `/블랙잭` 등 카지노 명령' },
+      { name: '기타', value: '프로필 성장과 재화는 대부분 통합 골드/XP 시스템에 연결됩니다.' }
+    ])
+  })
+});
+
+const HELP_CATEGORY_CHOICES = Object.freeze(
+  Object.entries(HELP_CATEGORIES).map(([value, category]) => ({
+    name: `${category.emoji} ${category.label}`,
+    value
+  }))
+);
+
+export const helpCommands = [
+  new SlashCommandBuilder()
+    .setName('도움말')
+    .setDescription('희희봇 명령어를 카테고리별 버튼으로 확인합니다.')
+    .addStringOption((option) =>
+      option
+        .setName('분류')
+        .setDescription('먼저 열어볼 도움말 분류')
+        .addChoices(...HELP_CATEGORY_CHOICES)
+    )
+];
+
+export function getHelpCommandPayloads() {
+  return helpCommands.map((command) => command.toJSON());
+}
+
+export async function handleHelpCommand(interaction) {
+  if (interaction.isButton?.() && interaction.customId?.startsWith('help:')) {
+    return handleHelpButton(interaction);
+  }
+
+  if (!interaction.isChatInputCommand?.() || interaction.commandName !== '도움말') {
+    return false;
+  }
+
+  const category = interaction.options.getString('분류') ?? 'home';
+  await interaction.reply(createHelpPayload(category, interaction.user.id));
+  return true;
+}
+
+async function handleHelpButton(interaction) {
+  const [, category, ownerId] = interaction.customId.split(':');
+
+  if (ownerId && interaction.user.id !== ownerId) {
+    await interaction.reply({
+      content: '이 도움말 버튼은 명령어를 실행한 유저만 사용할 수 있습니다.',
+      ephemeral: true
+    });
+    return true;
+  }
+
+  await interaction.update(createHelpPayload(category, interaction.user.id));
+  return true;
+}
+
+function createHelpPayload(categoryId = 'home', userId = null) {
+  const safeCategoryId = HELP_CATEGORIES[categoryId] ? categoryId : 'home';
+  const category = HELP_CATEGORIES[safeCategoryId];
+  const embed = new EmbedBuilder()
+    .setTitle(`${category.emoji} ${category.title}`)
+    .setDescription(category.description)
+    .setColor(getHelpCategoryColor(safeCategoryId))
+    .setFooter({ text: '버튼으로 분류를 바꾸거나 /도움말 분류:<이름>으로 바로 열 수 있어요.' });
+
+  for (const field of category.fields) {
+    embed.addFields({ ...field, inline: false });
+  }
+
+  return {
+    embeds: [embed],
+    components: createHelpRows(userId, safeCategoryId)
+  };
+}
+
+function createHelpRows(userId, activeCategoryId) {
+  const entries = Object.entries(HELP_CATEGORIES);
+  return [
+    entries.slice(0, 3),
+    entries.slice(3)
+  ].map((group) =>
+    new ActionRowBuilder().addComponents(
+      ...group.map(([id, category]) =>
+        new ButtonBuilder()
+          .setCustomId(`help:${id}:${userId ?? 'public'}`)
+          .setLabel(category.label)
+          .setEmoji(category.emoji)
+          .setStyle(id === activeCategoryId ? ButtonStyle.Primary : ButtonStyle.Secondary)
+      )
+    )
+  );
+}
+
+function getHelpCategoryColor(categoryId) {
+  return {
+    home: 0x38bdf8,
+    rpg: 0xa855f7,
+    sword: 0xf59e0b,
+    stock: 0x22c55e,
+    life: 0x60a5fa,
+    games: 0xec4899
+  }[categoryId] ?? 0x38bdf8;
+}

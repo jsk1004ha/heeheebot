@@ -3,10 +3,12 @@
   "generatedWith": "agent-sprite-forge:$generate2dsprite",
   "target": "npc",
   "mode": "single",
-  "prompt": "Use $generate2dsprite / agent-sprite-forge style to create a clean HD 2D fantasy RPG blacksmith NPC reaction image: tiny blacksmith pallbearer squad doing a coffin dance around a small fantasy sword coffin, funny memorial mood for a destroyed sword, readable as a Discord embed thumbnail. Single centered character scene on solid #FF00FF background only, no UI frame, no watermark, generous padding.",
+  "prompt": "Clean HD 2D fantasy RPG blacksmith sword funeral thumbnail generated with agent-sprite-forge. Same blacksmith with tiny forge helpers carrying a plain sword coffin in playful solemn coffin-dance pose, pure visual only. Solid #FF00FF background. NO text, NO letters, NO words, NO signs, NO UI, NO watermark.",
+  "source": "/home/jio/.codex/generated_images/019dfd64-811e-7561-a000-5b3212cc9327/ig_03133c262f4ce7880169fc4bfb1f20819189e4b2b18328b9f9.png",
   "raw": "assets/sword/blacksmith/tribute/coffin_dance/raw/raw-sheet.png",
   "processed": "assets/sword/blacksmith/tribute/coffin_dance/processed/sheet-transparent.png",
   "output": "assets/sword/blacksmith/blacksmith_coffin_dance.png",
   "size": "512x512",
-  "backgroundRemoval": "solid #FF00FF via generate2dsprite.py process"
+  "backgroundRemoval": "solid #FF00FF via generate2dsprite.py process",
+  "noTextPolicy": "NO text, NO letters, NO words, NO signs, NO UI, NO watermark"
 }

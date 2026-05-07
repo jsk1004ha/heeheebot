@@ -294,28 +294,49 @@
       "id": "map_forest_glade",
       "category": "map",
       "kind": "map",
-      "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb3e8935188191abcb87c024191c39.png",
+      "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc513ef86081918072d01cf5c152c8.png",
       "raw": "assets/rpg/maps/forest-glade/raw/background.png",
       "prompt": "assets/rpg/maps/forest-glade/prompt-used.txt",
-      "status": "raw-map-copied"
+      "status": "generated",
+      "label": "초록 숲 전투 배경",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "meta": "assets/rpg/maps/forest-glade/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_crystal_cave",
       "category": "map",
       "kind": "map",
-      "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb3ece064881919c91645eab7dec98.png",
+      "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc51a4ae4481918901a670b6c113d5.png",
       "raw": "assets/rpg/maps/crystal-cave/raw/background.png",
       "prompt": "assets/rpg/maps/crystal-cave/prompt-used.txt",
-      "status": "raw-map-copied"
+      "status": "generated",
+      "label": "수정 동굴 전투 배경",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "meta": "assets/rpg/maps/crystal-cave/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_ancient_ruins",
       "category": "map",
       "kind": "map",
-      "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb3f1bcf708191be06e37add9fbb71.png",
+      "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc52741d008191b507dc0d1ca350c6.png",
       "raw": "assets/rpg/maps/ancient-ruins/raw/background.png",
       "prompt": "assets/rpg/maps/ancient-ruins/prompt-used.txt",
-      "status": "raw-map-copied"
+      "status": "generated",
+      "label": "고대 유적 전투 배경",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "meta": "assets/rpg/maps/ancient-ruins/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_shadow_marsh",
@@ -325,7 +346,13 @@
       "raw": "assets/rpg/maps/shadow-marsh/raw/background.png",
       "prompt": "assets/rpg/maps/shadow-marsh/prompt-used.txt",
       "status": "generated",
-      "generatedWith": "agent-sprite-forge:$generate2dmap"
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "label": "그림자 늪 전투 배경",
+      "meta": "assets/rpg/maps/shadow-marsh/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_volcanic_rift",
@@ -335,7 +362,13 @@
       "raw": "assets/rpg/maps/volcanic-rift/raw/background.png",
       "prompt": "assets/rpg/maps/volcanic-rift/prompt-used.txt",
       "status": "generated",
-      "generatedWith": "agent-sprite-forge:$generate2dmap"
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "label": "화산 협곡 전투 배경",
+      "meta": "assets/rpg/maps/volcanic-rift/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_frozen_peak",
@@ -345,7 +378,13 @@
       "raw": "assets/rpg/maps/frozen-peak/raw/background.png",
       "prompt": "assets/rpg/maps/frozen-peak/prompt-used.txt",
       "status": "generated",
-      "generatedWith": "agent-sprite-forge:$generate2dmap"
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "label": "빙결 봉우리 전투 배경",
+      "meta": "assets/rpg/maps/frozen-peak/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_sky_citadel",
@@ -355,7 +394,13 @@
       "raw": "assets/rpg/maps/sky-citadel/raw/background.png",
       "prompt": "assets/rpg/maps/sky-citadel/prompt-used.txt",
       "status": "generated",
-      "generatedWith": "agent-sprite-forge:$generate2dmap"
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "label": "하늘 성채 전투 배경",
+      "meta": "assets/rpg/maps/sky-citadel/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "item_potion_icon",
@@ -581,13 +626,12 @@
     },
     {
       "id": "boss_goblin_warband_idle",
+      "label": "고블린 전투부대 대기 모션",
       "category": "monster",
       "kind": "sprite",
       "sheet": "3x3",
-      "source": "local-procedural-raid-assets",
-      "raw": "assets/rpg/bosses/goblin-warband/idle/raw/raw-sheet.png",
-      "prompt": "assets/rpg/bosses/goblin-warband/idle/prompt-used.txt",
-      "processedDir": "assets/rpg/bosses/goblin-warband/idle/processed",
+      "prompt": "Generated local fallback raid boss sprite for 고블린 전투부대 대기 모션; clean HD RPG boss, 3x3 transparent idle sheet, no text.",
+      "source": "/home/jio/.codex/generated_images/019dffb5-dcb4-7ab3-a969-b44a2c3e55d2/ig_094151999effdb840169fc4b2f71b48191a4fe8f2961a86991.png",
       "status": "processed",
       "processorStdout": "assets/rpg/bosses/goblin-warband/idle/processed",
       "meta": "assets/rpg/bosses/goblin-warband/idle/processed/pipeline-meta.json",
@@ -596,12 +640,13 @@
     },
     {
       "id": "boss_crystal_hydra_idle",
+      "label": "수정 히드라 대기 모션",
       "category": "monster",
       "kind": "sprite",
       "sheet": "3x3",
-      "source": "local-procedural-raid-assets",
-      "raw": "assets/rpg/bosses/crystal-hydra/idle/raw/raw-sheet.png",
       "prompt": "assets/rpg/bosses/crystal-hydra/idle/prompt-used.txt",
+      "source": "/home/jio/.codex/generated_images/019dffb5-dcb4-7ab3-a969-b44a2c3e55d2/ig_094151999effdb840169fc4bdb4484819189b08f105ba60cc6.png",
+      "raw": "assets/rpg/bosses/crystal-hydra/idle/raw/raw-sheet.png",
       "processedDir": "assets/rpg/bosses/crystal-hydra/idle/processed",
       "status": "processed",
       "processorStdout": "assets/rpg/bosses/crystal-hydra/idle/processed",
@@ -611,12 +656,13 @@
     },
     {
       "id": "boss_marsh_behemoth_idle",
+      "label": "늪지 베헤모스 대기 모션",
       "category": "monster",
       "kind": "sprite",
       "sheet": "3x3",
-      "source": "local-procedural-raid-assets",
-      "raw": "assets/rpg/bosses/marsh-behemoth/idle/raw/raw-sheet.png",
       "prompt": "assets/rpg/bosses/marsh-behemoth/idle/prompt-used.txt",
+      "source": "/home/jio/.codex/generated_images/019dffb5-dcb4-7ab3-a969-b44a2c3e55d2/ig_094151999effdb840169fc4ca99370819194932abf8af31c53.png",
+      "raw": "assets/rpg/bosses/marsh-behemoth/idle/raw/raw-sheet.png",
       "processedDir": "assets/rpg/bosses/marsh-behemoth/idle/processed",
       "status": "processed",
       "processorStdout": "assets/rpg/bosses/marsh-behemoth/idle/processed",
@@ -626,12 +672,13 @@
     },
     {
       "id": "boss_ruins_sentinel_idle",
+      "label": "유적 감시자 대기 모션",
       "category": "monster",
       "kind": "sprite",
       "sheet": "3x3",
-      "source": "local-procedural-raid-assets",
-      "raw": "assets/rpg/bosses/ruins-sentinel/idle/raw/raw-sheet.png",
       "prompt": "assets/rpg/bosses/ruins-sentinel/idle/prompt-used.txt",
+      "source": "/home/jio/.codex/generated_images/019dffb5-dcb4-7ab3-a969-b44a2c3e55d2/ig_094151999effdb840169fc4d50ef248191912c6aee540a33dc.png",
+      "raw": "assets/rpg/bosses/ruins-sentinel/idle/raw/raw-sheet.png",
       "processedDir": "assets/rpg/bosses/ruins-sentinel/idle/processed",
       "status": "processed",
       "processorStdout": "assets/rpg/bosses/ruins-sentinel/idle/processed",
@@ -641,12 +688,13 @@
     },
     {
       "id": "boss_flame_giant_idle",
+      "label": "화염 거인 대기 모션",
       "category": "monster",
       "kind": "sprite",
       "sheet": "3x3",
-      "source": "local-procedural-raid-assets",
-      "raw": "assets/rpg/bosses/flame-giant/idle/raw/raw-sheet.png",
       "prompt": "assets/rpg/bosses/flame-giant/idle/prompt-used.txt",
+      "source": "/home/jio/.codex/generated_images/019dffb5-dcb4-7ab3-a969-b44a2c3e55d2/ig_094151999effdb840169fc4e55f120819190f2ac162610937e.png",
+      "raw": "assets/rpg/bosses/flame-giant/idle/raw/raw-sheet.png",
       "processedDir": "assets/rpg/bosses/flame-giant/idle/processed",
       "status": "processed",
       "processorStdout": "assets/rpg/bosses/flame-giant/idle/processed",
@@ -656,12 +704,13 @@
     },
     {
       "id": "boss_frost_lich_idle",
+      "label": "빙결 리치 대기 모션",
       "category": "monster",
       "kind": "sprite",
       "sheet": "3x3",
-      "source": "local-procedural-raid-assets",
-      "raw": "assets/rpg/bosses/frost-lich/idle/raw/raw-sheet.png",
       "prompt": "assets/rpg/bosses/frost-lich/idle/prompt-used.txt",
+      "source": "/home/jio/.codex/generated_images/019dffb5-dcb4-7ab3-a969-b44a2c3e55d2/ig_094151999effdb840169fc4fff088081918e1ab91d935e9950.png",
+      "raw": "assets/rpg/bosses/frost-lich/idle/raw/raw-sheet.png",
       "processedDir": "assets/rpg/bosses/frost-lich/idle/processed",
       "status": "processed",
       "processorStdout": "assets/rpg/bosses/frost-lich/idle/processed",
@@ -671,12 +720,13 @@
     },
     {
       "id": "boss_storm_wyvern_idle",
+      "label": "폭풍 와이번 대기 모션",
       "category": "monster",
       "kind": "sprite",
       "sheet": "3x3",
-      "source": "local-procedural-raid-assets",
-      "raw": "assets/rpg/bosses/storm-wyvern/idle/raw/raw-sheet.png",
       "prompt": "assets/rpg/bosses/storm-wyvern/idle/prompt-used.txt",
+      "source": "/home/jio/.codex/generated_images/019dffb5-dcb4-7ab3-a969-b44a2c3e55d2/ig_094151999effdb840169fc509210e08191956d5874c70a3b09.png",
+      "raw": "assets/rpg/bosses/storm-wyvern/idle/raw/raw-sheet.png",
       "processedDir": "assets/rpg/bosses/storm-wyvern/idle/processed",
       "status": "processed",
       "processorStdout": "assets/rpg/bosses/storm-wyvern/idle/processed",
@@ -686,12 +736,13 @@
     },
     {
       "id": "boss_void_knights_idle",
+      "label": "공허 기사단 대기 모션",
       "category": "monster",
       "kind": "sprite",
       "sheet": "3x3",
-      "source": "local-procedural-raid-assets",
-      "raw": "assets/rpg/bosses/void-knights/idle/raw/raw-sheet.png",
       "prompt": "assets/rpg/bosses/void-knights/idle/prompt-used.txt",
+      "source": "/home/jio/.codex/generated_images/019dffb5-dcb4-7ab3-a969-b44a2c3e55d2/ig_094151999effdb840169fc5111d590819191ea6d9b1636753c.png",
+      "raw": "assets/rpg/bosses/void-knights/idle/raw/raw-sheet.png",
       "processedDir": "assets/rpg/bosses/void-knights/idle/processed",
       "status": "processed",
       "processorStdout": "assets/rpg/bosses/void-knights/idle/processed",
@@ -701,12 +752,13 @@
     },
     {
       "id": "boss_sky_golem_idle",
+      "label": "천공 골렘 대기 모션",
       "category": "monster",
       "kind": "sprite",
       "sheet": "3x3",
-      "source": "local-procedural-raid-assets",
-      "raw": "assets/rpg/bosses/sky-golem/idle/raw/raw-sheet.png",
       "prompt": "assets/rpg/bosses/sky-golem/idle/prompt-used.txt",
+      "source": "/home/jio/.codex/generated_images/019dffb5-dcb4-7ab3-a969-b44a2c3e55d2/ig_094151999effdb840169fc5229ca148191b50ba4e381ee49b4.png",
+      "raw": "assets/rpg/bosses/sky-golem/idle/raw/raw-sheet.png",
       "processedDir": "assets/rpg/bosses/sky-golem/idle/processed",
       "status": "processed",
       "processorStdout": "assets/rpg/bosses/sky-golem/idle/processed",
@@ -716,12 +768,13 @@
     },
     {
       "id": "boss_apocalypse_dragon_idle",
+      "label": "종말의 용 대기 모션",
       "category": "monster",
       "kind": "sprite",
       "sheet": "3x3",
-      "source": "local-procedural-raid-assets",
-      "raw": "assets/rpg/bosses/apocalypse-dragon/idle/raw/raw-sheet.png",
       "prompt": "assets/rpg/bosses/apocalypse-dragon/idle/prompt-used.txt",
+      "source": "/home/jio/.codex/generated_images/019dffb5-dcb4-7ab3-a969-b44a2c3e55d2/ig_094151999effdb840169fc52fea06c8191940c8a35554d75fc.png",
+      "raw": "assets/rpg/bosses/apocalypse-dragon/idle/raw/raw-sheet.png",
       "processedDir": "assets/rpg/bosses/apocalypse-dragon/idle/processed",
       "status": "processed",
       "processorStdout": "assets/rpg/bosses/apocalypse-dragon/idle/processed",
@@ -733,91 +786,161 @@
       "id": "map_goblin_war_camp",
       "category": "map",
       "kind": "map",
-      "source": "local-procedural-raid-assets",
+      "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc50b35b7081918d3a38b0ecbcd8e0.png",
       "raw": "assets/rpg/maps/goblin-war-camp/raw/background.png",
       "prompt": "assets/rpg/maps/goblin-war-camp/prompt-used.txt",
-      "status": "generated"
+      "status": "generated",
+      "label": "고블린 전쟁 야영지 전투 배경",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "meta": "assets/rpg/maps/goblin-war-camp/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_crystal_nest",
       "category": "map",
       "kind": "map",
-      "source": "local-procedural-raid-assets",
+      "source": "/home/jio/.codex/generated_images/019e01ef-1657-76a3-84df-77f86363a886/ig_0528b1dbcbf7114a0169fc670ab2248191897f5ba54db4f25b.png",
       "raw": "assets/rpg/maps/crystal-nest/raw/background.png",
       "prompt": "assets/rpg/maps/crystal-nest/prompt-used.txt",
-      "status": "generated"
+      "status": "generated",
+      "label": "수정 둥지 전투 배경",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "meta": "assets/rpg/maps/crystal-nest/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_marsh_depths",
       "category": "map",
       "kind": "map",
-      "source": "local-procedural-raid-assets",
+      "source": "/home/jio/.codex/generated_images/019e01ef-1657-76a3-84df-77f86363a886/ig_0528b1dbcbf7114a0169fc675394c081918396007db1b340fc.png",
       "raw": "assets/rpg/maps/marsh-depths/raw/background.png",
       "prompt": "assets/rpg/maps/marsh-depths/prompt-used.txt",
-      "status": "generated"
+      "status": "generated",
+      "label": "늪 심연 전투 배경",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "meta": "assets/rpg/maps/marsh-depths/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_ruins_obelisk",
       "category": "map",
       "kind": "map",
-      "source": "local-procedural-raid-assets",
+      "source": "/home/jio/.codex/generated_images/019e01ef-1657-76a3-84df-77f86363a886/ig_0528b1dbcbf7114a0169fc6793fae081919e2871ce29cb5e30.png",
       "raw": "assets/rpg/maps/ruins-obelisk/raw/background.png",
       "prompt": "assets/rpg/maps/ruins-obelisk/prompt-used.txt",
-      "status": "generated"
+      "status": "generated",
+      "label": "유적 방첨탑 전투 배경",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "meta": "assets/rpg/maps/ruins-obelisk/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_lava_throne",
       "category": "map",
       "kind": "map",
-      "source": "local-procedural-raid-assets",
+      "source": "/home/jio/.codex/generated_images/019e01ef-dd18-7bc1-94a5-051cef836b33/ig_07d5c7ddea2c31bf0169fc668f66208191962e9093f15d85d8.png",
       "raw": "assets/rpg/maps/lava-throne/raw/background.png",
       "prompt": "assets/rpg/maps/lava-throne/prompt-used.txt",
-      "status": "generated"
+      "status": "generated",
+      "label": "용암 왕좌 전투 배경",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "meta": "assets/rpg/maps/lava-throne/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_frost_catacomb",
       "category": "map",
       "kind": "map",
-      "source": "local-procedural-raid-assets",
+      "source": "/home/jio/.codex/generated_images/019e01ef-dd18-7bc1-94a5-051cef836b33/ig_07d5c7ddea2c31bf0169fc670d0cec8191a0d031d29b7ff908.png",
       "raw": "assets/rpg/maps/frost-catacomb/raw/background.png",
       "prompt": "assets/rpg/maps/frost-catacomb/prompt-used.txt",
-      "status": "generated"
+      "status": "generated",
+      "label": "빙결 지하묘지 전투 배경",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "meta": "assets/rpg/maps/frost-catacomb/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_storm_spire",
       "category": "map",
       "kind": "map",
-      "source": "local-procedural-raid-assets",
+      "source": "/home/jio/.codex/generated_images/019e01ef-dd18-7bc1-94a5-051cef836b33/ig_07d5c7ddea2c31bf0169fc6753f85c8191bd696a59496c1f6d.png",
       "raw": "assets/rpg/maps/storm-spire/raw/background.png",
       "prompt": "assets/rpg/maps/storm-spire/prompt-used.txt",
-      "status": "generated"
+      "status": "generated",
+      "label": "폭풍 첨탑 전투 배경",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "meta": "assets/rpg/maps/storm-spire/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_void_bastion",
       "category": "map",
       "kind": "map",
-      "source": "local-procedural-raid-assets",
+      "source": "/home/jio/.codex/generated_images/019e01f0-8f2f-7001-bef0-e080c9ee38d9/ig_0fc1a8c78b345bcc0169fc669c419c8191b72cf30796925159.png",
       "raw": "assets/rpg/maps/void-bastion/raw/background.png",
       "prompt": "assets/rpg/maps/void-bastion/prompt-used.txt",
-      "status": "generated"
+      "status": "generated",
+      "label": "공허 요새 전투 배경",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "meta": "assets/rpg/maps/void-bastion/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_sky_foundry",
       "category": "map",
       "kind": "map",
-      "source": "local-procedural-raid-assets",
+      "source": "/home/jio/.codex/generated_images/019e01f0-8f2f-7001-bef0-e080c9ee38d9/ig_0fc1a8c78b345bcc0169fc6712ab0481918af457e0736d2b94.png",
       "raw": "assets/rpg/maps/sky-foundry/raw/background.png",
       "prompt": "assets/rpg/maps/sky-foundry/prompt-used.txt",
-      "status": "generated"
+      "status": "generated",
+      "label": "천공 주조소 전투 배경",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "meta": "assets/rpg/maps/sky-foundry/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_eclipse_throne",
       "category": "map",
       "kind": "map",
-      "source": "local-procedural-raid-assets",
+      "source": "/home/jio/.codex/generated_images/019e01f0-8f2f-7001-bef0-e080c9ee38d9/ig_0fc1a8c78b345bcc0169fc678dae7c8191a3047e77f44c1c64.png",
       "raw": "assets/rpg/maps/eclipse-throne/raw/background.png",
       "prompt": "assets/rpg/maps/eclipse-throne/prompt-used.txt",
-      "status": "generated"
+      "status": "generated",
+      "label": "일식 왕좌 전투 배경",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "meta": "assets/rpg/maps/eclipse-throne/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_wildflower_plains",
@@ -825,9 +948,9 @@
       "kind": "map",
       "raw": "assets/rpg/maps/wildflower-plains/raw/background.png",
       "prompt": "assets/rpg/maps/wildflower-plains/prompt-used.txt",
-      "status": "generated-contact-sheet-crop",
+      "status": "generated",
       "generatedWith": "agent-sprite-forge:$generate2dmap",
-      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc535652448191bd5fb5748c490748.png",
       "crop": {
         "contactSheetColumns": 4,
         "contactSheetRows": 3,
@@ -844,7 +967,13 @@
           1024,
           576
         ]
-      }
+      },
+      "label": "들꽃 평원 전투 배경",
+      "meta": "assets/rpg/maps/wildflower-plains/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_moonlit_hill",
@@ -852,9 +981,9 @@
       "kind": "map",
       "raw": "assets/rpg/maps/moonlit-hill/raw/background.png",
       "prompt": "assets/rpg/maps/moonlit-hill/prompt-used.txt",
-      "status": "generated-contact-sheet-crop",
+      "status": "generated",
       "generatedWith": "agent-sprite-forge:$generate2dmap",
-      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc53c426ec819195e33f83075cd0a3.png",
       "crop": {
         "contactSheetColumns": 4,
         "contactSheetRows": 3,
@@ -871,7 +1000,13 @@
           1024,
           576
         ]
-      }
+      },
+      "label": "달빛 언덕 전투 배경",
+      "meta": "assets/rpg/maps/moonlit-hill/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_mushroom_grove",
@@ -879,9 +1014,9 @@
       "kind": "map",
       "raw": "assets/rpg/maps/mushroom-grove/raw/background.png",
       "prompt": "assets/rpg/maps/mushroom-grove/prompt-used.txt",
-      "status": "generated-contact-sheet-crop",
+      "status": "generated",
       "generatedWith": "agent-sprite-forge:$generate2dmap",
-      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc54819bc8819184d8d9db7112c4d6.png",
       "crop": {
         "contactSheetColumns": 4,
         "contactSheetRows": 3,
@@ -898,7 +1033,13 @@
           1024,
           576
         ]
-      }
+      },
+      "label": "버섯 숲 전투 배경",
+      "meta": "assets/rpg/maps/mushroom-grove/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_bandit_outpost",
@@ -906,9 +1047,9 @@
       "kind": "map",
       "raw": "assets/rpg/maps/bandit-outpost/raw/background.png",
       "prompt": "assets/rpg/maps/bandit-outpost/prompt-used.txt",
-      "status": "generated-contact-sheet-crop",
+      "status": "generated",
       "generatedWith": "agent-sprite-forge:$generate2dmap",
-      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc55a744688191a7416fda91c845e7.png",
       "crop": {
         "contactSheetColumns": 4,
         "contactSheetRows": 3,
@@ -925,7 +1066,13 @@
           1024,
           576
         ]
-      }
+      },
+      "label": "도적 전초기지 전투 배경",
+      "meta": "assets/rpg/maps/bandit-outpost/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_red_desert",
@@ -933,9 +1080,9 @@
       "kind": "map",
       "raw": "assets/rpg/maps/red-desert/raw/background.png",
       "prompt": "assets/rpg/maps/red-desert/prompt-used.txt",
-      "status": "generated-contact-sheet-crop",
+      "status": "generated",
       "generatedWith": "agent-sprite-forge:$generate2dmap",
-      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc567d92208191b4f8655af6ea8b70.png",
       "crop": {
         "contactSheetColumns": 4,
         "contactSheetRows": 3,
@@ -952,7 +1099,13 @@
           1024,
           576
         ]
-      }
+      },
+      "label": "붉은 사막 전투 배경",
+      "meta": "assets/rpg/maps/red-desert/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_thunder_plateau",
@@ -960,9 +1113,9 @@
       "kind": "map",
       "raw": "assets/rpg/maps/thunder-plateau/raw/background.png",
       "prompt": "assets/rpg/maps/thunder-plateau/prompt-used.txt",
-      "status": "generated-contact-sheet-crop",
+      "status": "generated",
       "generatedWith": "agent-sprite-forge:$generate2dmap",
-      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc5762c27481918b48a45b6bf8f53c.png",
       "crop": {
         "contactSheetColumns": 4,
         "contactSheetRows": 3,
@@ -979,7 +1132,13 @@
           1024,
           576
         ]
-      }
+      },
+      "label": "천둥 고원 전투 배경",
+      "meta": "assets/rpg/maps/thunder-plateau/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_crystal_lake",
@@ -987,9 +1146,9 @@
       "kind": "map",
       "raw": "assets/rpg/maps/crystal-lake/raw/background.png",
       "prompt": "assets/rpg/maps/crystal-lake/prompt-used.txt",
-      "status": "generated-contact-sheet-crop",
+      "status": "generated",
       "generatedWith": "agent-sprite-forge:$generate2dmap",
-      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc5891c35c819199764d04e67e7936.png",
       "crop": {
         "contactSheetColumns": 4,
         "contactSheetRows": 3,
@@ -1006,7 +1165,13 @@
           1024,
           576
         ]
-      }
+      },
+      "label": "수정 호수 전투 배경",
+      "meta": "assets/rpg/maps/crystal-lake/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_phantom_forest",
@@ -1014,9 +1179,9 @@
       "kind": "map",
       "raw": "assets/rpg/maps/phantom-forest/raw/background.png",
       "prompt": "assets/rpg/maps/phantom-forest/prompt-used.txt",
-      "status": "generated-contact-sheet-crop",
+      "status": "generated",
       "generatedWith": "agent-sprite-forge:$generate2dmap",
-      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc599a37588191960df6b52ec1a551.png",
       "crop": {
         "contactSheetColumns": 4,
         "contactSheetRows": 3,
@@ -1033,7 +1198,13 @@
           1024,
           576
         ]
-      }
+      },
+      "label": "환영 숲 전투 배경",
+      "meta": "assets/rpg/maps/phantom-forest/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_abyss_mine",
@@ -1041,9 +1212,9 @@
       "kind": "map",
       "raw": "assets/rpg/maps/abyss-mine/raw/background.png",
       "prompt": "assets/rpg/maps/abyss-mine/prompt-used.txt",
-      "status": "generated-contact-sheet-crop",
+      "status": "generated",
       "generatedWith": "agent-sprite-forge:$generate2dmap",
-      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc5b282f608191a16fac64e0b95105.png",
       "crop": {
         "contactSheetColumns": 4,
         "contactSheetRows": 3,
@@ -1060,7 +1231,13 @@
           1024,
           576
         ]
-      }
+      },
+      "label": "심연 광산 전투 배경",
+      "meta": "assets/rpg/maps/abyss-mine/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_starfall_crater",
@@ -1068,9 +1245,9 @@
       "kind": "map",
       "raw": "assets/rpg/maps/starfall-crater/raw/background.png",
       "prompt": "assets/rpg/maps/starfall-crater/prompt-used.txt",
-      "status": "generated-contact-sheet-crop",
+      "status": "generated",
       "generatedWith": "agent-sprite-forge:$generate2dmap",
-      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc5eeaaef081919e14c8958eb6125e.png",
       "crop": {
         "contactSheetColumns": 4,
         "contactSheetRows": 3,
@@ -1087,7 +1264,13 @@
           1024,
           576
         ]
-      }
+      },
+      "label": "별무리 분화구 전투 배경",
+      "meta": "assets/rpg/maps/starfall-crater/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_dragon_nest",
@@ -1095,9 +1278,9 @@
       "kind": "map",
       "raw": "assets/rpg/maps/dragon-nest/raw/background.png",
       "prompt": "assets/rpg/maps/dragon-nest/prompt-used.txt",
-      "status": "generated-contact-sheet-crop",
+      "status": "generated",
       "generatedWith": "agent-sprite-forge:$generate2dmap",
-      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc609d329481919c4e8e493f4a366a.png",
       "crop": {
         "contactSheetColumns": 4,
         "contactSheetRows": 3,
@@ -1114,7 +1297,13 @@
           1024,
           576
         ]
-      }
+      },
+      "label": "용의 둥지 전투 배경",
+      "meta": "assets/rpg/maps/dragon-nest/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "map_void_gate",
@@ -1122,9 +1311,9 @@
       "kind": "map",
       "raw": "assets/rpg/maps/void-gate/raw/background.png",
       "prompt": "assets/rpg/maps/void-gate/prompt-used.txt",
-      "status": "generated-contact-sheet-crop",
+      "status": "generated",
       "generatedWith": "agent-sprite-forge:$generate2dmap",
-      "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
+      "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc62a7ae2481918fa1f543d41d3e00.png",
       "crop": {
         "contactSheetColumns": 4,
         "contactSheetRows": 3,
@@ -1141,7 +1330,13 @@
           1024,
           576
         ]
-      }
+      },
+      "label": "공허 관문 전투 배경",
+      "meta": "assets/rpg/maps/void-gate/processed/pipeline-meta.json",
+      "outputSize": [
+        1024,
+        576
+      ]
     },
     {
       "id": "hero_berserker_idle",
@@ -1363,6 +1558,7 @@
   "failures": [],
   "femaleHeroGeneratedAt": "2026-05-06T14:06:35.045374+00:00",
   "notes": [
-    "Added 12 advanced-class hero single-sprite assets from agent-sprite-forge roster for RPG 전직 visuals."
+    "Added 12 advanced-class hero single-sprite assets from agent-sprite-forge roster for RPG 전직 visuals.",
+    "Regenerated local-procedural RPG raid boss sprites with agent-sprite-forge/image_gen and generate2dsprite processor; boss manifest sources now point to generated image files."
   ]
 }

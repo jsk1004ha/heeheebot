@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "skill": "$generate2dmap",
+  "mapMode": "baked_scene_mode",
+  "visualModel": "baked_raster",
+  "engineTarget": "Discord attachment battle background",
+  "originalSize": [
+    1024,
+    576
+  ],
+  "outputSize": [
+    1024,
+    576
+  ],
+  "normalization": "none",
+  "auditReason": "existing forge map backfilled with durable pipeline metadata during map audit",
+  "recordedAt": "2026-05-07T10:26:54Z",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "raw": "assets/rpg/maps/sky-citadel/raw/background.png",
+  "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_0bd4e574af6750910169fbf05df4788191b00be09a5beba390.png"
+}

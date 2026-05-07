@@ -274,6 +274,75 @@ const RPG_SKILLS = Object.freeze({
       description: '빛의 심판 뒤에 회복의 가호가 남습니다.'
     }),
     classes: Object.freeze(['priest'])
+  }),
+  berserker_rage: Object.freeze({
+    label: '광전사의 피의 광폭화',
+    description: '광전사 전직 스킬. 체력을 담보로 전투력 +16',
+    mpCost: 18,
+    attackBonus: 16,
+    defenseBonus: -2,
+    classes: Object.freeze(['warrior']),
+    advancedClasses: Object.freeze(['berserker'])
+  }),
+  archmage_arcana: Object.freeze({
+    label: '대마법사의 비전 폭발',
+    description: '대마법사 전직 스킬. 응축된 마력으로 전투력 +18',
+    mpCost: 22,
+    attackBonus: 18,
+    defenseBonus: 0,
+    classes: Object.freeze(['mage']),
+    advancedClasses: Object.freeze(['archmage'])
+  }),
+  sniper_deadeye: Object.freeze({
+    label: '저격수의 무결점 사선',
+    description: '저격수 전직 스킬. 숨을 멈춘 한 발로 전투력 +15, 방어 +1',
+    mpCost: 19,
+    attackBonus: 15,
+    defenseBonus: 1,
+    statusEffect: Object.freeze({
+      type: 'pin',
+      label: '조준 고정',
+      description: '완벽한 사선으로 적의 움직임을 봉쇄합니다.'
+    }),
+    classes: Object.freeze(['ranger']),
+    advancedClasses: Object.freeze(['sniper'])
+  }),
+  crusader_oath: Object.freeze({
+    label: '크루세이더의 불굴 성전',
+    description: '크루세이더 전직 스킬. 성전 맹세로 전투력 +9, 방어 +12',
+    mpCost: 21,
+    attackBonus: 9,
+    defenseBonus: 12,
+    statusEffect: Object.freeze({
+      type: 'barrier',
+      label: '불굴의 성전',
+      description: '성스러운 맹세가 방패처럼 전장을 덮습니다.'
+    }),
+    classes: Object.freeze(['paladin']),
+    advancedClasses: Object.freeze(['crusader'])
+  }),
+  shadow_assault: Object.freeze({
+    label: '섀도우의 무음 암살극',
+    description: '섀도우 전직 스킬. 그림자 연격으로 전투력 +17',
+    mpCost: 20,
+    attackBonus: 17,
+    defenseBonus: 0,
+    statusEffect: Object.freeze({
+      type: 'vulnerable',
+      label: '암영 낙인',
+      description: '무음의 칼날이 적에게 치명적인 틈을 남깁니다.'
+    }),
+    classes: Object.freeze(['rogue']),
+    advancedClasses: Object.freeze(['shadow'])
+  }),
+  saint_blessing: Object.freeze({
+    label: '성자의 축복',
+    description: '성자 전직 스킬. 신성한 축복으로 전투력 +8, 방어 +10',
+    mpCost: 20,
+    attackBonus: 8,
+    defenseBonus: 10,
+    classes: Object.freeze(['priest']),
+    advancedClasses: Object.freeze(['saint'])
   })
 });
 
@@ -1533,10 +1602,19 @@ export function getRpgDerivedStats({
   return stats;
 }
 
-export function getAvailableRpgSkillIds(characterClass = 'novice') {
+export function getAvailableRpgSkillIds(characterClass = 'novice', advancedClass = null) {
   const normalizedClass = normalizeRpgClass(characterClass);
+  let normalizedAdvancedClass = null;
+  try {
+    normalizedAdvancedClass = normalizeNullableRpgAdvancedClass(advancedClass);
+  } catch {
+    normalizedAdvancedClass = null;
+  }
   return Object.entries(RPG_SKILLS)
-    .filter(([, skill]) => skill.classes.includes(normalizedClass))
+    .filter(([, skill]) =>
+      skill.classes.includes(normalizedClass)
+      && (!skill.advancedClasses || skill.advancedClasses.includes(normalizedAdvancedClass))
+    )
     .map(([id]) => id);
 }
 
@@ -1879,6 +1957,12 @@ export function normalizeRpgSkillId(skillId = 'basic') {
   if (['신성한 방벽', '신성한방벽', 'divine_aegis', 'divine aegis'].includes(normalized)) return 'divine_aegis';
   if (['그림자 처형', '그림자처형', 'shadow_execute', 'shadow execute'].includes(normalized)) return 'shadow_execute';
   if (['기적의 심판', '기적의심판', 'miracle_judgement', 'miracle judgement', 'miracle_judgment', 'miracle judgment'].includes(normalized)) return 'miracle_judgement';
+  if (['광전사의 피의 광폭화', '광전사의피의광폭화', '피의 광폭화', '피의광폭화', 'berserker_rage', 'berserker rage'].includes(normalized)) return 'berserker_rage';
+  if (['대마법사의 비전 폭발', '대마법사의비전폭발', '비전 폭발', '비전폭발', 'archmage_arcana', 'archmage arcana'].includes(normalized)) return 'archmage_arcana';
+  if (['저격수의 무결점 사선', '저격수의무결점사선', '무결점 사선', '무결점사선', 'sniper_deadeye', 'sniper deadeye'].includes(normalized)) return 'sniper_deadeye';
+  if (['크루세이더의 불굴 성전', '크루세이더의불굴성전', '불굴 성전', '불굴성전', 'crusader_oath', 'crusader oath'].includes(normalized)) return 'crusader_oath';
+  if (['섀도우의 무음 암살극', '섀도우의무음암살극', '무음 암살극', '무음암살극', 'shadow_assault', 'shadow assault'].includes(normalized)) return 'shadow_assault';
+  if (['성자의 축복', '성자의축복', 'saint_blessing', 'saint blessing'].includes(normalized)) return 'saint_blessing';
 
   throw new Error('알 수 없는 RPG 스킬입니다.');
 }
@@ -2421,7 +2505,7 @@ function createRpgBossTurnPlayer(player) {
     inventory: normalizeRpgBossInventory(safePlayer.inventory),
     availableSkillIds: Array.isArray(safePlayer.availableSkillIds)
       ? safePlayer.availableSkillIds.map((skillId) => normalizeRpgSkillId(skillId))
-      : getAvailableRpgSkillIds(normalizedClass),
+      : getAvailableRpgSkillIds(normalizedClass, normalizedAdvancedClass),
     assets: {
       hero: getRpgHeroAssetId({
         characterClass: normalizedClass,

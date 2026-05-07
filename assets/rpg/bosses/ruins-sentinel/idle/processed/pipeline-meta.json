@@ -1,7 +1,324 @@
 {
-  "id": "boss_ruins_sentinel_idle",
-  "generatedBy": "local-pillow-raid-asset-generator",
-  "frames": 9,
-  "sheet": "3x3",
-  "transparent": true
+  "target": "creature",
+  "mode": "idle",
+  "prompt": "",
+  "role": "",
+  "input": "assets/rpg/bosses/ruins-sentinel/idle/raw/raw-sheet.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 160,
+  "rows": 3,
+  "cols": 3,
+  "cell_size": 160,
+  "fit_scale": 0.66,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "bottom",
+  "shared_scale": true,
+  "component_mode": "all",
+  "component_padding": 10,
+  "min_component_area": 1,
+  "edge_touch_margin": 2,
+  "frame_labels": [
+    "boss_ruins_sentinel_idle-1",
+    "boss_ruins_sentinel_idle-2",
+    "boss_ruins_sentinel_idle-3",
+    "boss_ruins_sentinel_idle-4",
+    "boss_ruins_sentinel_idle-5",
+    "boss_ruins_sentinel_idle-6",
+    "boss_ruins_sentinel_idle-7",
+    "boss_ruins_sentinel_idle-8",
+    "boss_ruins_sentinel_idle-9"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        512,
+        341
+      ],
+      "component_mode": "all",
+      "component_count": 4,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        70,
+        16,
+        440,
+        317
+      ],
+      "edge_touch": false,
+      "output_size": [
+        105,
+        85
+      ],
+      "paste_position": [
+        27,
+        48
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        512,
+        0,
+        1024,
+        341
+      ],
+      "component_mode": "all",
+      "component_count": 7,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        46,
+        15,
+        409,
+        317
+      ],
+      "edge_touch": false,
+      "output_size": [
+        103,
+        85
+      ],
+      "paste_position": [
+        28,
+        48
+      ]
+    },
+    {
+      "grid": [
+        0,
+        2
+      ],
+      "source_box": [
+        1024,
+        0,
+        1536,
+        341
+      ],
+      "component_mode": "all",
+      "component_count": 7,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        15,
+        24,
+        379,
+        318
+      ],
+      "edge_touch": false,
+      "output_size": [
+        103,
+        83
+      ],
+      "paste_position": [
+        28,
+        50
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        341,
+        512,
+        682
+      ],
+      "component_mode": "all",
+      "component_count": 7,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        69,
+        17,
+        429,
+        311
+      ],
+      "edge_touch": false,
+      "output_size": [
+        102,
+        83
+      ],
+      "paste_position": [
+        29,
+        50
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        512,
+        341,
+        1024,
+        682
+      ],
+      "component_mode": "all",
+      "component_count": 6,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        29,
+        8,
+        401,
+        310
+      ],
+      "edge_touch": false,
+      "output_size": [
+        105,
+        85
+      ],
+      "paste_position": [
+        27,
+        48
+      ]
+    },
+    {
+      "grid": [
+        1,
+        2
+      ],
+      "source_box": [
+        1024,
+        341,
+        1536,
+        682
+      ],
+      "component_mode": "all",
+      "component_count": 6,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        8,
+        14,
+        370,
+        310
+      ],
+      "edge_touch": false,
+      "output_size": [
+        102,
+        84
+      ],
+      "paste_position": [
+        29,
+        49
+      ]
+    },
+    {
+      "grid": [
+        2,
+        0
+      ],
+      "source_box": [
+        0,
+        682,
+        512,
+        1023
+      ],
+      "component_mode": "all",
+      "component_count": 9,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        72,
+        4,
+        418,
+        295
+      ],
+      "edge_touch": false,
+      "output_size": [
+        98,
+        82
+      ],
+      "paste_position": [
+        31,
+        51
+      ]
+    },
+    {
+      "grid": [
+        2,
+        1
+      ],
+      "source_box": [
+        512,
+        682,
+        1024,
+        1023
+      ],
+      "component_mode": "all",
+      "component_count": 14,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        48,
+        2,
+        393,
+        298
+      ],
+      "edge_touch": true,
+      "output_size": [
+        97,
+        84
+      ],
+      "paste_position": [
+        31,
+        49
+      ]
+    },
+    {
+      "grid": [
+        2,
+        2
+      ],
+      "source_box": [
+        1024,
+        682,
+        1536,
+        1023
+      ],
+      "component_mode": "all",
+      "component_count": 8,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        0,
+        7,
+        354,
+        301
+      ],
+      "edge_touch": true,
+      "output_size": [
+        100,
+        83
+      ],
+      "paste_position": [
+        30,
+        50
+      ]
+    }
+  ],
+  "edge_touch_frames": [
+    [
+      2,
+      1
+    ],
+    [
+      2,
+      2
+    ]
+  ]
 }

@@ -268,8 +268,7 @@ async function replyWithFishCard(interaction, content, fish) {
   const imagePath = fish?.imagePath;
   await interaction.reply(createFishingCardPayload(content, {
     imagePath: imagePath && existsSync(imagePath) ? imagePath : null,
-    color: getFishingEmbedColor(fish?.rarity),
-    footer: '낚시 결과 카드'
+    color: getFishingEmbedColor(fish?.rarity)
   }));
 }
 
@@ -277,20 +276,18 @@ async function replyWithRodCard(interaction, content, rodLevel) {
   const rodAsset = getFishingRodAssetForLevel(rodLevel);
   await interaction.reply(createFishingCardPayload(content, {
     imagePath: rodAsset?.imagePath && existsSync(rodAsset.imagePath) ? rodAsset.imagePath : null,
-    color: getRodEmbedColor(rodLevel),
-    footer: '낚싯대 강화 카드'
+    color: getRodEmbedColor(rodLevel)
   }));
 }
 
-function createFishingCardPayload(content, { imagePath = null, color = 0x38bdf8, footer = '낚시 카드' } = {}) {
+function createFishingCardPayload(content, { imagePath = null, color = 0x38bdf8 } = {}) {
   const [rawTitle, ...bodyLines] = String(content).split('\n');
   const title = rawTitle.replace(/\*\*/g, '').slice(0, 256);
   const description = truncateEmbedText(bodyLines.join('\n').trim() || rawTitle);
   const embed = new EmbedBuilder()
     .setColor(color)
     .setTitle(title)
-    .setDescription(description)
-    .setFooter({ text: footer });
+    .setDescription(description);
 
   const payload = { embeds: [embed] };
   if (imagePath) {

@@ -3,5 +3,14 @@
   "label": "일식 왕좌 전투 배경",
   "category": "map",
   "kind": "map",
-  "prompt": "Generated local fallback raid battlefield for 일식 왕좌 전투 배경; clean HD 2D RPG background, open center, no UI, no text."
+  "prompt": "assets/rpg/maps/eclipse-throne/prompt-used.txt",
+  "raw": "assets/rpg/maps/eclipse-throne/raw/background.png",
+  "status": "generated",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "source": "/home/jio/.codex/generated_images/019e01f0-8f2f-7001-bef0-e080c9ee38d9/ig_0fc1a8c78b345bcc0169fc678dae7c8191a3047e77f44c1c64.png",
+  "meta": "assets/rpg/maps/eclipse-throne/processed/pipeline-meta.json",
+  "outputSize": [
+    1024,
+    576
+  ]
 }

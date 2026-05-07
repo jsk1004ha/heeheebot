@@ -28,6 +28,9 @@ export const swordCommands = [
     .setName('검정보')
     .setDescription('현재 검, 다음 강화 확률/비용, 판매가와 전적을 확인합니다.'),
   new SlashCommandBuilder()
+    .setName('검도감')
+    .setDescription('최고 강화 기준으로 해금된 검 이미지와 다음 잠금을 확인합니다.'),
+  new SlashCommandBuilder()
     .setName('검보호권')
     .setDescription('골드으로 파괴 방지 보호권을 구매합니다.')
     .addIntegerOption((option) =>
@@ -177,6 +180,21 @@ async function routeSwordCommand(interaction, economy) {
       formatSwordInfo(user, result),
       result.profile.sword.level,
       `내 검 정보 — ${getSwordAssetLabel(result.profile.sword.level)}`
+    ));
+    return;
+  }
+
+  if (interaction.commandName === '검도감') {
+    const result = await economy.getSwordStatus({
+      guildId,
+      userId: user.id,
+      username: user.username
+    });
+    const highestLevel = Math.max(0, Number(result.profile.sword.highestLevel) || 0);
+    await interaction.reply(createSwordReplyPayload(
+      formatSwordCodex(user, result),
+      highestLevel,
+      `검도감 — ${getSwordAssetLabel(highestLevel)}`
     ));
     return;
   }
@@ -401,10 +419,7 @@ function formatSwordEnhancement(user, result) {
 function formatSwordSilentTribute(user) {
   const attachment = getRandomBlacksmithTributeAssetAttachment();
   const payload = {
-    content: [
-      `🕯️ ${user}님이 조용히 묵념합니다.`,
-      '방금 터졌거나 언젠가 터질 모든 검과 제련석에게 잠시 침묵을...'
-    ].join('\n')
+    content: `🕯️ ${user}님이 조용히 묵념합니다.`
   };
 
   if (!attachment) return payload;
@@ -449,6 +464,33 @@ function formatSwordInfo(user, result) {
     `판매 예상가: **${result.saleValue.toLocaleString()}골드**`,
     `전적: **${profile.sword.battleWins}승 ${profile.sword.battleLosses}패** / 파괴: **${profile.sword.destructions.toLocaleString()}회**`,
     `오늘 검배틀: **${result.battleRemaining}회 남음** / 제련석 보상: **${result.battleStoneRemaining}개 남음**`
+  ].join('\n');
+}
+
+function formatSwordCodex(user, result) {
+  const { profile } = result;
+  const currentLevel = Math.max(0, Number(profile.sword.level) || 0);
+  const highestLevel = Math.max(0, Number(profile.sword.highestLevel) || 0);
+  const nextLockedLevel = highestLevel >= 100 ? null : highestLevel + 1;
+  const recentLevels = Array.from(
+    { length: Math.min(5, highestLevel + 1) },
+    (_, index) => Math.max(0, highestLevel - index)
+  ).reverse();
+  const recentText = recentLevels
+    .map((level) => `+${level} ${getSwordAssetName(level)}`)
+    .join(' / ');
+  const nextText = nextLockedLevel === null
+    ? '모든 검을 해금했습니다.'
+    : `다음 잠금: **+${nextLockedLevel} ${getSwordAssetName(nextLockedLevel)}**`;
+
+  return [
+    `📚 **검도감** — ${user}`,
+    `해금: **${highestLevel}/100**`,
+    `현재 검: **${formatSwordLevel(currentLevel)}**`,
+    `최고 해금: **${formatSwordLevel(highestLevel)}**`,
+    nextText,
+    `최근 해금: ${recentText || '+0 기본 검'}`,
+    '검도감은 최고 강화 기록 기준으로 유지되며, 검이 파괴되어도 해금 기록은 사라지지 않습니다.'
   ].join('\n');
 }
 

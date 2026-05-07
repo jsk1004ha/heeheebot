@@ -1,8 +1,5 @@
 import { EmbedBuilder, SlashCommandBuilder } from 'discord.js';
-import {
-  formatCurrencyAmount,
-  getCurrencyChoices
-} from '../systems/currencies.js';
+import { formatCurrencyAmount } from '../systems/currencies.js';
 import {
   getCurrentProfileLevelBadge,
   getDisplayProfileLevelBadge,
@@ -46,30 +43,6 @@ export const economyCommands = [
       option
         .setName('금액')
         .setDescription('송금할 골드 금액')
-        .setMinValue(1)
-        .setRequired(true)
-    ),
-  new SlashCommandBuilder()
-    .setName('환전')
-    .setDescription('이전 전용 재화는 골드로 통합되어 환전 없이 같은 잔액을 사용합니다.')
-    .addStringOption((option) =>
-      option
-        .setName('보낼재화')
-        .setDescription('이전 재화명 또는 골드')
-        .setRequired(true)
-        .addChoices(...getCurrencyChoices())
-    )
-    .addStringOption((option) =>
-      option
-        .setName('받을재화')
-        .setDescription('이전 재화명 또는 골드')
-        .setRequired(true)
-        .addChoices(...getCurrencyChoices())
-    )
-    .addIntegerOption((option) =>
-      option
-        .setName('금액')
-        .setDescription('확인할 골드 금액')
         .setMinValue(1)
         .setRequired(true)
     ),
@@ -192,28 +165,6 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
     return true;
   }
 
-  if (interaction.commandName === '환전') {
-    try {
-      const result = await economy.exchangeWallet({
-        guildId,
-        userId: user.id,
-        username: user.username,
-        fromCurrency: interaction.options.getString('보낼재화', true),
-        toCurrency: interaction.options.getString('받을재화', true),
-        amount: interaction.options.getInteger('금액', true)
-      });
-
-      await interaction.reply(formatExchangeResult(result));
-    } catch (error) {
-      await interaction.reply({
-        content: `환전 확인 실패: ${error.message}`,
-        ephemeral: true
-      });
-    }
-
-    return true;
-  }
-
   if (interaction.commandName === '랭킹') {
     const limit = interaction.options.getInteger('개수') ?? 10;
     const rows = await economy.getLeaderboard(guildId, limit);
@@ -252,25 +203,55 @@ const PROFILE_TITLE_LABELS = Object.freeze({
 });
 
 export function createProfileReplyPayload(profile, context = {}) {
-  const content = formatProfile(profile, context);
+  const profileText = formatProfile(profile, context);
   const displayBadge = getDisplayProfileLevelBadge(profile.level);
   const attachment = getProfileBadgeAttachment(displayBadge);
 
-  if (!attachment) return content;
+  if (!attachment) return profileText;
 
   const tier = getProfileLevelTier(profile.level);
   const embed = new EmbedBuilder()
     .setTitle(`${displayBadge.badgeText} · ${displayBadge.name}`)
     .setDescription('현재 성장 구간 대표 배지')
+    .addFields(createProfileEmbedFields(profileText))
     .setImage(`attachment://${attachment.name}`)
     .setColor(tier.color)
     .setFooter({ text: '프로필 성장 배지 이미지' });
 
   return {
-    content,
+    content: `🪪 **${profile.username}님의 통합 프로필**`,
     embeds: [embed],
     files: [attachment]
   };
+}
+
+function createProfileEmbedFields(profileText) {
+  const lines = profileText.split('\n');
+  const summaryIndex = lines.findIndex((line) => line.includes('통합 성장 요약'));
+  const safeSummaryIndex = summaryIndex >= 0 ? summaryIndex : lines.length;
+
+  return [
+    {
+      name: '성장 카드',
+      value: lines.slice(0, 4).join('\n') || '성장 카드 정보 없음'
+    },
+    {
+      name: '기본 정보',
+      value: lines.slice(4, 11).join('\n') || '기본 정보 없음'
+    },
+    {
+      name: '꾸미기',
+      value: lines.slice(11, safeSummaryIndex).filter(Boolean).join('\n') || '꾸미기 없음'
+    },
+    {
+      name: '통합 성장 요약',
+      value: lines.slice(safeSummaryIndex + 1, -2).filter(Boolean).join('\n') || '연동된 성장 컨텐츠 없음'
+    },
+    {
+      name: '정산/다음 목표',
+      value: lines.slice(-2).filter(Boolean).join('\n') || '정산 완료'
+    }
+  ];
 }
 
 export function formatProfile(profile, context = {}) {
@@ -489,15 +470,6 @@ function formatShopBadgeGallery(profile) {
     .join(' / ');
 }
 
-function formatExchangeResult(result) {
-  return [
-    '🔁 **환전 불필요**',
-    result.message ?? '모든 재화가 골드 하나로 통합되어 있습니다.',
-    `확인 금액: **${formatCurrencyAmount(result.spent, 'main')}**`,
-    `현재 골드: **${formatCurrencyAmount(result.profile.balance, 'main')}**`
-  ].join('\n');
-}
-
 function formatCurrencyInfo() {
   return [
     '💱 **재화정보 / 통합 골드**',
@@ -506,7 +478,6 @@ function formatCurrencyInfo() {
     '📌 **현재 기준**',
     '- 단일 화폐: **골드**',
     '- 카지노, RPG, 검강화, 가상주식, 커뮤니티 상점/복권/송금이 모두 같은 골드 잔액을 사용합니다.',
-    '- `/환전`은 호환용 안내 명령이며 더 이상 잔액을 이동하지 않습니다.',
     '',
     '🧮 **기존 지갑 정산 기준**',
     '- 카지노칩: 기존 잔액의 90%를 골드로 반영',

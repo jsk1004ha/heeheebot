@@ -12,6 +12,7 @@ const STOCK_PAGE_CONTENT_MAX_LENGTH = 1900;
 const STOCK_PAGINATION_TTL_MS = 10 * 60 * 1000;
 const STOCK_PAGE_BUTTON_PREFIX = 'stock_page';
 const stockPaginationSessions = new Map();
+const FULL_MARKET_PAGE_SIZE = 10;
 
 export const stockCommands = [
   new SlashCommandBuilder()
@@ -361,6 +362,12 @@ export async function handleStockAutocomplete(interaction, stocks) {
 
 export async function handleStockCommand(interaction, stocks) {
   if (interaction.isButton?.()) {
+    if (interaction.customId?.startsWith('stock_quick:')) {
+      return handleStockQuickButton(interaction, stocks);
+    }
+    if (interaction.customId?.startsWith('stock_market_page:')) {
+      return handleStockMarketPageButton(interaction, stocks);
+    }
     return handleStockPaginationButton(interaction);
   }
 
@@ -391,18 +398,24 @@ async function routeStockCommand(interaction, stocks) {
     const stockId = interaction.options.getString('종목');
     if (stockId) {
       const quote = await stocks.getQuote({ guildId, stockId });
-      await replyStockContent(interaction, formatQuote(quote));
+      await replyStockContent(interaction, formatQuote(quote), {
+        components: createStockQuickRows(user.id)
+      });
       return;
     }
 
     const market = await stocks.getMarket({ guildId, limit: 12 });
-    await replyStockContent(interaction, formatMarketSummary(market));
+    await replyStockContent(interaction, formatMarketSummary(market), {
+      components: createStockQuickRows(user.id)
+    });
     return;
   }
 
   if (subcommand === '전체시세') {
     const market = await stocks.getMarket({ guildId });
-    await replyStockContent(interaction, formatFullMarket(market));
+    await replyStockContent(interaction, formatFullMarket(market), {
+      components: createFullMarketPageRows(user.id, market)
+    });
     return;
   }
 
@@ -594,6 +607,157 @@ async function routeStockCommand(interaction, stocks) {
   await replyStockContent(interaction, '알 수 없는 주식 명령입니다. `/주식 시세` 또는 `/주식 전체시세`로 다시 시도해주세요.');
 }
 
+async function handleStockQuickButton(interaction, stocks) {
+  const [, action, ownerId] = interaction.customId.split(':');
+
+  if (ownerId && interaction.user.id !== ownerId) {
+    await interaction.reply({
+      content: '이 주식 시세 버튼은 명령어를 실행한 유저만 사용할 수 있습니다.',
+      ephemeral: true
+    });
+    return true;
+  }
+
+  if (!interaction.inGuild()) {
+    await interaction.reply({
+      content: '서버에서만 사용할 수 있는 명령어입니다.',
+      ephemeral: true
+    });
+    return true;
+  }
+
+  const guildId = interaction.guildId;
+  const user = interaction.user;
+  let content = '';
+
+  if (action === 'gainers') {
+    const market = await stocks.getMarket({ guildId });
+    content = formatTopMovers(market, {
+      title: '📈 **상승 TOP**',
+      direction: 'desc'
+    });
+  } else if (action === 'losers') {
+    const market = await stocks.getMarket({ guildId });
+    content = formatTopMovers(market, {
+      title: '📉 **하락 TOP**',
+      direction: 'asc'
+    });
+  } else if (action === 'listings') {
+    content = formatListings(await stocks.getListings({ guildId }));
+  } else if (action === 'portfolio') {
+    content = formatPortfolio(user, await stocks.getPortfolio({
+      guildId,
+      userId: user.id,
+      username: user.username
+    }));
+  } else {
+    await interaction.reply({
+      content: '알 수 없는 주식 빠른 버튼입니다.',
+      ephemeral: true
+    });
+    return true;
+  }
+
+  await interaction.update({
+    content,
+    components: createStockQuickRows(user.id)
+  });
+  return true;
+}
+
+async function handleStockMarketPageButton(interaction, stocks) {
+  const [, rawPage, ownerId] = interaction.customId.split(':');
+
+  if (ownerId && interaction.user.id !== ownerId) {
+    await interaction.reply({
+      content: '이 주식 전체시세 페이지는 명령어를 실행한 유저만 넘길 수 있습니다.',
+      ephemeral: true
+    });
+    return true;
+  }
+
+  if (!interaction.inGuild()) {
+    await interaction.reply({
+      content: '서버에서만 사용할 수 있는 명령어입니다.',
+      ephemeral: true
+    });
+    return true;
+  }
+
+  const requestedPage = Number.parseInt(rawPage, 10);
+  const market = await stocks.getMarket({ guildId: interaction.guildId });
+  const totalPages = getFullMarketPageCount(market.stocks.length);
+  const page = clampFullMarketPage(Number.isFinite(requestedPage) ? requestedPage : 0, totalPages);
+
+  await interaction.update({
+    content: formatFullMarket(market, { page }),
+    components: createFullMarketPageRows(interaction.user.id, market, page)
+  });
+  return true;
+}
+
+function createStockQuickRows(userId) {
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`stock_quick:gainers:${userId}`)
+        .setLabel('상승 TOP')
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId(`stock_quick:losers:${userId}`)
+        .setLabel('하락 TOP')
+        .setStyle(ButtonStyle.Danger),
+      new ButtonBuilder()
+        .setCustomId(`stock_quick:listings:${userId}`)
+        .setLabel('신규상장')
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId(`stock_quick:portfolio:${userId}`)
+        .setLabel('내 보유')
+        .setStyle(ButtonStyle.Secondary)
+    )
+  ];
+}
+
+function createFullMarketPageRows(userId, market, page = 0) {
+  const totalPages = getFullMarketPageCount(market.stocks.length);
+  if (totalPages <= 1) return [];
+  const currentPage = clampFullMarketPage(page, totalPages);
+
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`stock_market_page:${Math.max(0, currentPage - 1)}:${userId}`)
+        .setLabel('이전 10개')
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(currentPage <= 0),
+      new ButtonBuilder()
+        .setCustomId(`stock_market_page:${Math.min(totalPages - 1, currentPage + 1)}:${userId}`)
+        .setLabel('다음 10개')
+        .setStyle(ButtonStyle.Primary)
+        .setDisabled(currentPage >= totalPages - 1)
+    )
+  ];
+}
+
+function formatTopMovers(market, { title, direction }) {
+  const stocks = [...market.stocks]
+    .sort((a, b) => direction === 'asc'
+      ? a.changePercent - b.changePercent
+      : b.changePercent - a.changePercent)
+    .slice(0, 5);
+  const body = stocks.length > 0
+    ? stocks.map(formatMarketLine).join('\n')
+    : '표시할 종목이 없습니다.';
+
+  return [
+    `${title}`,
+    body,
+    '',
+    '`/주식 시세` 기본 화면으로 돌아가려면 명령어를 다시 실행하면 됩니다.'
+  ].join('\n');
+}
+
 async function getSellStockAutocompleteChoices(interaction, stocks, query) {
   if (!interaction.guildId || !interaction.user?.id) return [];
 
@@ -661,32 +825,50 @@ function formatMarketSummary(market) {
   const body = market.stocks.map(formatMarketLine).join('\n');
   const totalStockCount = getStockCatalog().length;
   return [
-    `📈 **디코밈 가상주식 시세 TOP ${market.stocks.length}** — tick #${market.tickIndex}`,
+    `📈 **디코밈 가상주식 시세 TOP ${market.stocks.length}**`,
     body,
     '',
     `\`/주식 전체시세\`로 ${totalStockCount}개 전체를 볼 수 있고, \`/주식 시세 종목:원숭이닉스\`처럼 개별 조회도 됩니다.`
   ].join('\n');
 }
 
-function formatFullMarket(market) {
-  const body = market.stocks.map(formatMarketLine).join('\n');
-  return `📊 **디코밈 가상주식 전체 시세 ${market.stocks.length}종목** — tick #${market.tickIndex}\n${body}`;
+function formatFullMarket(market, { page = 0, pageSize = FULL_MARKET_PAGE_SIZE } = {}) {
+  const totalPages = getFullMarketPageCount(market.stocks.length, pageSize);
+  const currentPage = clampFullMarketPage(page, totalPages);
+  const start = currentPage * pageSize;
+  const visibleStocks = market.stocks.slice(start, start + pageSize);
+  const body = visibleStocks.length > 0
+    ? visibleStocks.map(formatMarketLine).join('\n')
+    : '표시할 종목이 없습니다.';
+  const pageText = totalPages > 1
+    ? ` · ${currentPage + 1}/${totalPages}페이지 · 페이지당 ${pageSize}개`
+    : '';
+
+  return `📊 **디코밈 가상주식 전체 시세 ${market.stocks.length}종목**${pageText}\n${body}`;
+}
+
+function getFullMarketPageCount(totalCount, pageSize = FULL_MARKET_PAGE_SIZE) {
+  return Math.max(1, Math.ceil(totalCount / pageSize));
+}
+
+function clampFullMarketPage(page, totalPages) {
+  return Math.min(Math.max(0, page), Math.max(1, totalPages) - 1);
 }
 
 function formatListings(listings) {
   const recent = listings.recent.length > 0
     ? listings.recent
-      .map((stock) => `- 🆕 **${stock.name}** \`${stock.symbol}\` ${stock.price.toLocaleString()}골드 / tick #${stock.listedAtTick ?? stock.listedFromTick ?? 0}`)
+      .map((stock) => `- 🆕 **${stock.name}** \`${stock.symbol}\` ${stock.price.toLocaleString()}골드 / 최근 상장`)
       .join('\n')
     : '최근 신규상장 종목이 없습니다.';
   const upcoming = listings.upcoming.length > 0
     ? listings.upcoming
-      .map((stock) => `- 예정 tick #${stock.listedFromTick}: **${stock.name}** \`${stock.symbol}\` (${stock.sector})`)
+      .map((stock) => `- 상장 예정: **${stock.name}** \`${stock.symbol}\` (${stock.sector})`)
       .join('\n')
     : '상장 예정 종목이 없습니다.';
 
   return [
-    `🆕 **신규상장 보드** — 현재 tick #${listings.tickIndex}`,
+    `🆕 **신규상장 보드**`,
     '**최근 상장**',
     recent,
     '',
@@ -817,21 +999,32 @@ function formatStockNews(news) {
     : '최근 시장 뉴스/공시가 없습니다.';
 
   return [
-    `🗞️ **주식 뉴스/공시** — tick #${news.tickIndex}`,
+    `🗞️ **주식 뉴스/공시**`,
     body
   ].join('\n');
 }
 
 function formatStockNewsLine(entry) {
-  const publishedTick = entry.publishedTickIndex ?? Math.max(0, (entry.effectiveTickIndex ?? entry.tickIndex ?? 0) - 1);
-  const effectiveTick = entry.effectiveTickIndex ?? entry.tickIndex ?? publishedTick;
-  return `- tick #${publishedTick} → 반영 #${effectiveTick} **${entry.stock.name}** ${formatNewsType(entry.type)}: ${entry.message}`;
+  return `- **${entry.stock.name}** ${stripStockNewsPrefix(entry.message)}`;
+}
+
+function stripStockNewsPrefix(message) {
+  let text = String(message ?? '').trim();
+  if (!text) return '내용 없음';
+
+  let previous;
+  do {
+    previous = text;
+    text = text.replace(/^(시장 공시|신규상장 공시|시장 뉴스)\s*[:：]\s*/u, '').trim();
+  } while (text !== previous);
+
+  return text || '내용 없음';
 }
 
 function formatStockChart(chart) {
   const body = chart.history.length > 0
     ? chart.history
-      .map((point) => `- tick #${point.tickIndex}: ${point.price.toLocaleString()}골드`)
+      .map((point, index) => `- 기록 ${index + 1}: ${point.price.toLocaleString()}골드`)
       .join('\n')
     : '표시할 가격 기록이 없습니다.';
 
@@ -1005,15 +1198,6 @@ function formatTradeType(type) {
   }[type] ?? type;
 }
 
-function formatNewsType(type) {
-  return {
-    ipo: '신규상장',
-    positive: '시장공시',
-    negative: '시장공시',
-    risk: '시장공시'
-  }[type] ?? '뉴스';
-}
-
 function formatStockStatus(stock) {
   if (stock.status === 'delisted') return '상장폐지';
   if (stock.eventType === 'ipo') return '신규상장';
@@ -1023,13 +1207,15 @@ function formatStockStatus(stock) {
 }
 
 async function safeReply(interaction, content, ephemeral = false) {
-  await replyStockContent(interaction, content, ephemeral);
+  await replyStockContent(interaction, content, { ephemeral });
 }
 
-async function replyStockContent(interaction, content, ephemeral = false) {
+async function replyStockContent(interaction, content, options = {}) {
+  const payloadOptions = typeof options === 'boolean' ? { ephemeral: options } : options;
+  const { ephemeral = false, components = [] } = payloadOptions;
   const contentText = String(content ?? '');
   if (contentText.length <= DISCORD_CONTENT_MAX_LENGTH) {
-    await sendStockPayload(interaction, { content: contentText, ephemeral });
+    await sendStockPayload(interaction, { content: contentText, ephemeral, components });
     return;
   }
 

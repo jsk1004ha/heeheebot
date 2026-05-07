@@ -3,5 +3,14 @@
   "label": "폭풍 첨탑 전투 배경",
   "category": "map",
   "kind": "map",
-  "prompt": "Generated local fallback raid battlefield for 폭풍 첨탑 전투 배경; clean HD 2D RPG background, open center, no UI, no text."
+  "prompt": "assets/rpg/maps/storm-spire/prompt-used.txt",
+  "raw": "assets/rpg/maps/storm-spire/raw/background.png",
+  "status": "generated",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "source": "/home/jio/.codex/generated_images/019e01ef-dd18-7bc1-94a5-051cef836b33/ig_07d5c7ddea2c31bf0169fc6753f85c8191bd696a59496c1f6d.png",
+  "meta": "assets/rpg/maps/storm-spire/processed/pipeline-meta.json",
+  "outputSize": [
+    1024,
+    576
+  ]
 }

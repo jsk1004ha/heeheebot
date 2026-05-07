@@ -3,5 +3,14 @@
   "label": "빙결 지하묘지 전투 배경",
   "category": "map",
   "kind": "map",
-  "prompt": "Generated local fallback raid battlefield for 빙결 지하묘지 전투 배경; clean HD 2D RPG background, open center, no UI, no text."
+  "prompt": "assets/rpg/maps/frost-catacomb/prompt-used.txt",
+  "raw": "assets/rpg/maps/frost-catacomb/raw/background.png",
+  "status": "generated",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "source": "/home/jio/.codex/generated_images/019e01ef-dd18-7bc1-94a5-051cef836b33/ig_07d5c7ddea2c31bf0169fc670d0cec8191a0d031d29b7ff908.png",
+  "meta": "assets/rpg/maps/frost-catacomb/processed/pipeline-meta.json",
+  "outputSize": [
+    1024,
+    576
+  ]
 }

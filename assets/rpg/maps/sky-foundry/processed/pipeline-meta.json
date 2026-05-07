@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "skill": "$generate2dmap",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "mapMode": "baked_scene_mode",
+  "visualModel": "baked_raster",
+  "engineTarget": "Discord attachment battle background",
+  "source": "/home/jio/.codex/generated_images/019e01f0-8f2f-7001-bef0-e080c9ee38d9/ig_0fc1a8c78b345bcc0169fc6712ab0481918af457e0736d2b94.png",
+  "raw": "assets/rpg/maps/sky-foundry/raw/background.png",
+  "originalSize": [
+    1672,
+    941
+  ],
+  "outputSize": [
+    1024,
+    576
+  ],
+  "normalization": "lanczos resize to project 16:9 map contract",
+  "auditReason": "procedural fallback replaced with one-map agent-sprite-forge baked_scene output",
+  "recordedAt": "2026-05-07T10:20:52Z"
+}

@@ -5,24 +5,12 @@
   "kind": "map",
   "raw": "assets/rpg/maps/abyss-mine/raw/background.png",
   "prompt": "assets/rpg/maps/abyss-mine/prompt-used.txt",
-  "status": "generated-contact-sheet-crop",
+  "status": "generated",
   "generatedWith": "agent-sprite-forge:$generate2dmap",
-  "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_00abc93765fc62c70169fc26443c148191908d0d3f233a0f16.png",
-  "crop": {
-    "contactSheetColumns": 4,
-    "contactSheetRows": 3,
-    "cellIndex": 8,
-    "cellColumn": 0,
-    "cellRow": 2,
-    "sourceCell": [
-      0,
-      724,
-      362,
-      1086
-    ],
-    "outputSize": [
-      1024,
-      576
-    ]
-  }
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc5b282f608191a16fac64e0b95105.png",
+  "meta": "assets/rpg/maps/abyss-mine/processed/pipeline-meta.json",
+  "outputSize": [
+    1024,
+    576
+  ]
 }

@@ -8,6 +8,7 @@ import {
   formatMealMessage,
   handleMealCommand
 } from './commands/meals.js';
+import { handleHelpCommand } from './commands/help.js';
 import {
   handleModerationCommand,
   inspectMessageForModeration
@@ -112,6 +113,7 @@ export function createBot({
       }
 
       const handled = await handleCommunityCommand(interaction, community, logger)
+        || await handleHelpCommand(interaction)
         || await handleModerationCommand(interaction, moderation, logger)
         || await handleWordChainCommand(interaction, economy, logger)
         || await handleFortuneCommand(interaction, fortune, economy)

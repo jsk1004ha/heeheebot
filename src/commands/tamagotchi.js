@@ -142,7 +142,7 @@ export function createTamagotchiReplyPayload(user, result) {
     content: result.eventMessage ?? undefined,
     embeds: [embed],
     files,
-    components: createTamagotchiActionRows(user.id, result.pet.status === 'dead')
+    components: createTamagotchiActionRows(user.id, result)
   };
 }
 
@@ -219,14 +219,15 @@ async function resolveButtonAction(action, tamagotchi, context) {
   return tamagotchi.care({ ...context, action });
 }
 
-function createTamagotchiActionRows(userId, dead) {
+function createTamagotchiActionRows(userId, result) {
+  const dead = result.pet.status === 'dead';
   return [
     new ActionRowBuilder().addComponents(
-      button('feed', userId, '밥주기', '🍚', ButtonStyle.Success, dead),
-      button('play', userId, '놀아주기', '🧸', ButtonStyle.Primary, dead),
-      button('clean', userId, '씻기기', '🫧', ButtonStyle.Primary, dead),
-      button('nap', userId, '재우기', '💤', ButtonStyle.Secondary, dead),
-      button('medicine', userId, '약주기', '💊', ButtonStyle.Secondary, dead)
+      button('feed', userId, '밥주기', '🍚', ButtonStyle.Success, isActionDisabled(result, 'feed', dead)),
+      button('play', userId, '놀아주기', '🧸', ButtonStyle.Primary, isActionDisabled(result, 'play', dead)),
+      button('clean', userId, '씻기기', '🫧', ButtonStyle.Primary, isActionDisabled(result, 'clean', dead)),
+      button('nap', userId, '재우기', '💤', ButtonStyle.Secondary, isActionDisabled(result, 'nap', dead)),
+      button('medicine', userId, '약주기', '💊', ButtonStyle.Secondary, isActionDisabled(result, 'medicine', dead))
     ),
     new ActionRowBuilder().addComponents(
       button('skin', userId, '스킨변경', '🎨', ButtonStyle.Secondary, false),
@@ -235,16 +236,27 @@ function createTamagotchiActionRows(userId, dead) {
       button('revive', userId, '부활', '✨', ButtonStyle.Danger, !dead)
     ),
     new ActionRowBuilder().addComponents(
-      button('leisure_reels', userId, '릴스보기', '📱', ButtonStyle.Primary, dead),
-      button('leisure_heeheebot', userId, '희희봇', '🤖', ButtonStyle.Primary, dead),
-      button('leisure_djmax', userId, '디맥하기', '🎹', ButtonStyle.Primary, dead),
-      button('leisure_walk', userId, '산책', '🚶', ButtonStyle.Secondary, dead)
+      button('leisure_reels', userId, '릴스보기', '📱', ButtonStyle.Primary, isLeisureDisabled(result, 'reels', dead)),
+      button('leisure_heeheebot', userId, '희희봇', '🤖', ButtonStyle.Primary, isLeisureDisabled(result, 'heeheebot', dead)),
+      button('leisure_djmax', userId, '디맥하기', '🎹', ButtonStyle.Primary, isLeisureDisabled(result, 'djmax', dead)),
+      button('leisure_walk', userId, '산책', '🚶', ButtonStyle.Secondary, isLeisureDisabled(result, 'walk', dead))
     ),
     new ActionRowBuilder().addComponents(
-      button('leisure_monkey', userId, '원숭이', '🐒', ButtonStyle.Secondary, dead),
-      button('leisure_tease_monkey', userId, '원숭이괴롭히기', '🙈', ButtonStyle.Secondary, dead)
+      button('leisure_music', userId, '음악듣기', '🎧', ButtonStyle.Secondary, isLeisureDisabled(result, 'music', dead)),
+      button('leisure_monkey', userId, '원숭이', '🐒', ButtonStyle.Secondary, isLeisureDisabled(result, 'monkey', dead)),
+      button('leisure_tease_monkey', userId, '원숭이괴롭히기', '🙈', ButtonStyle.Secondary, isLeisureDisabled(result, 'tease_monkey', dead))
     )
   ];
+}
+
+function isActionDisabled(result, action, dead) {
+  if (dead) return true;
+  return Number(result.cooldowns?.actions?.[action]?.remainingMs ?? 0) > 0;
+}
+
+function isLeisureDisabled(result, leisureId, dead) {
+  if (dead) return true;
+  return Number(result.cooldowns?.leisure?.[leisureId]?.remainingMs ?? 0) > 0;
 }
 
 function button(action, userId, label, emoji, style, disabled = false) {
@@ -272,6 +284,12 @@ function formatTamagotchiStatus(user, result) {
     '',
     `${mood.emoji} 상태: **${mood.label}** · 성장: **${result.growthStage?.label ?? '알 수 없음'}** · 나이: **${result.ageDays}일**`,
     `🌱 성장 분기: **${growthBranch?.label ?? '분기 전'}** · 만족도 **${growthProfile?.satisfactionScore ?? 0}점** · 특화 **${formatDominantTrait(growthProfile?.dominantTrait)}**`,
+    `🎯 추천 행동: ${formatRecommendations(result.recommendations)}`,
+    `📋 오늘의 돌봄: **${result.daily.completedCount}/${result.daily.totalCount}** ${formatDailyMissions(result.daily)}`,
+    `📚 성장도감: **${result.codex.branchCount}/${result.codex.totalBranches}** · 사건도감 **${result.codex.eventCount}/${result.codex.totalEvents}** · 추억 조각 **${result.codex.memoryShards.toLocaleString()}개**`,
+    result.nextGrowth?.complete
+      ? '🌿 다음 성장: **성년기 도달**'
+      : `🌿 다음 성장: **${result.nextGrowth?.label ?? '알 수 없음'}**까지 약 **${result.nextGrowth?.remainingDays ?? 0}일**`,
     pet.status === 'dead' ? '방치 사망까지: **이미 사망**' : `방치 사망까지: **${result.neglectRemaining}**`,
     '',
     `🍚 배부름 ${formatStatBar(stats.fullness)} **${Math.round(stats.fullness)}**`,
@@ -284,8 +302,30 @@ function formatTamagotchiStatus(user, result) {
     `🎨 스킨: **${skin?.label ?? pet.cosmetic.skinId}**`,
     `🧸 꾸미기: **${decoration?.label ?? pet.cosmetic.decorationId}**`,
     `🎮 최애 여가: **${favoriteLeisure}**`,
-    `총 케어: **${pet.counters.totalCareActions.toLocaleString()}회** / 부활: **${pet.counters.revivals.toLocaleString()}회**`
+    `총 케어: **${pet.counters.totalCareActions.toLocaleString()}회** / 부활: **${pet.counters.revivals.toLocaleString()}회**`,
+    formatRecentEvents(result.recentEvents)
   ].join('\n');
+}
+
+function formatRecommendations(recommendations = []) {
+  if (recommendations.length === 0) return '상태 안정 · 원하는 여가를 골라 주세요';
+  return recommendations
+    .map((item) => {
+      const cooldown = item.cooldownRemainingMs > 0 ? ` (${formatShortDuration(item.cooldownRemainingMs)} 대기)` : '';
+      return `${item.emoji} **${item.label}**${cooldown}`;
+    })
+    .join(' / ');
+}
+
+function formatDailyMissions(daily) {
+  return daily.missions
+    .map((mission) => `${mission.completed ? '✅' : '⬜'}${mission.emoji}`)
+    .join(' ');
+}
+
+function formatRecentEvents(events = []) {
+  if (!events.length) return '📝 최근 추억: **아직 없음**';
+  return `📝 최근 추억: ${events.map((event) => `**${event.title}**`).join(' · ')}`;
 }
 
 function parseTamagotchiCustomId(customId) {
@@ -333,6 +373,13 @@ function formatDominantTrait(trait) {
     neglected: '방치'
   };
   return labels[trait] ?? '아직 없음';
+}
+
+function formatShortDuration(ms) {
+  const seconds = Math.max(0, Math.ceil(Number(ms) / 1000));
+  const minutes = Math.floor(seconds / 60);
+  if (minutes > 0) return `${minutes}분`;
+  return `${seconds}초`;
 }
 
 function filterAutocompleteChoices(catalog, rawQuery) {

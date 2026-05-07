@@ -7,5 +7,10 @@
   "prompt": "assets/rpg/maps/frozen-peak/prompt-used.txt",
   "status": "generated",
   "generatedWith": "agent-sprite-forge:$generate2dmap",
-  "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_0bd4e574af6750910169fbf02f235c8191b8ef1a3c729351b3.png"
+  "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_0bd4e574af6750910169fbf02f235c8191b8ef1a3c729351b3.png",
+  "meta": "assets/rpg/maps/frozen-peak/processed/pipeline-meta.json",
+  "outputSize": [
+    1024,
+    576
+  ]
 }

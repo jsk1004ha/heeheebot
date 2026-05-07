@@ -11,11 +11,11 @@
     "success": "/home/jio/.codex/generated_images/019dfd96-21ac-7661-a40e-ce58d64ca566/ig_00f95e77ca4aa3f10169fbe15387188191ac9fe3be9bf5894d.png",
     "maintain": "/home/jio/.codex/generated_images/019dfd96-21ac-7661-a40e-ce58d64ca566/ig_00f95e77ca4aa3f10169fbe19fa7148191839d1062223d1f8b.png",
     "destroy": "/home/jio/.codex/generated_images/019dfd96-21ac-7661-a40e-ce58d64ca566/ig_00f95e77ca4aa3f10169fbe1e740188191a08638c2a953569a.png",
-    "hisashiburi": "assets/sword/blacksmith/tribute/hisashiburi/raw/raw-sheet.png",
-    "coffinDance": "assets/sword/blacksmith/tribute/coffin_dance/raw/raw-sheet.png"
+    "hisashiburi": "/home/jio/.codex/generated_images/019dfd64-811e-7561-a000-5b3212cc9327/ig_03133c262f4ce7880169fc4bfb1f20819189e4b2b18328b9f9.png",
+    "coffinDance": "/home/jio/.codex/generated_images/019dfd64-811e-7561-a000-5b3212cc9327/ig_03133c262f4ce7880169fc4bfb1f20819189e4b2b18328b9f9.png"
   },
   "size": "512x512",
-  "backgroundRemoval": "chroma-key #ff00ff via remove_chroma_key.py",
+  "backgroundRemoval": "solid #ff00ff via generate2dsprite.py process",
   "tribute": {
     "generatedWith": "agent-sprite-forge:$generate2dsprite",
     "variants": [
@@ -25,6 +25,7 @@
     "outputs": [
       "assets/sword/blacksmith/blacksmith_hisashiburi.png",
       "assets/sword/blacksmith/blacksmith_coffin_dance.png"
-    ]
+    ],
+    "noTextPolicy": "NO text, NO letters, NO words, NO signs, NO UI, NO watermark"
   }
 }

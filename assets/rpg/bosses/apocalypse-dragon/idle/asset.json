@@ -4,5 +4,13 @@
   "category": "monster",
   "kind": "sprite",
   "sheet": "3x3",
-  "prompt": "Generated local fallback raid boss sprite for 종말의 용 대기 모션; clean HD RPG boss, 3x3 transparent idle sheet, no text."
+  "prompt": "assets/rpg/bosses/apocalypse-dragon/idle/prompt-used.txt",
+  "source": "/home/jio/.codex/generated_images/019dffb5-dcb4-7ab3-a969-b44a2c3e55d2/ig_094151999effdb840169fc52fea06c8191940c8a35554d75fc.png",
+  "raw": "assets/rpg/bosses/apocalypse-dragon/idle/raw/raw-sheet.png",
+  "processedDir": "assets/rpg/bosses/apocalypse-dragon/idle/processed",
+  "status": "processed",
+  "processorStdout": "assets/rpg/bosses/apocalypse-dragon/idle/processed",
+  "meta": "assets/rpg/bosses/apocalypse-dragon/idle/processed/pipeline-meta.json",
+  "transparentSheet": "assets/rpg/bosses/apocalypse-dragon/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/bosses/apocalypse-dragon/idle/processed/animation.gif"
 }

@@ -13,9 +13,11 @@ import {
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
+const KOREA_TIME_OFFSET_MS = 9 * HOUR_MS;
 const MAX_STAT = 100;
 const MIN_STAT = 0;
 const TAMAGOTCHI_SCHEMA_VERSION = 1;
+const EVENT_LOG_LIMIT = 10;
 
 const DEFAULT_OPTIONS = Object.freeze({
   neglectDeathMs: 48 * HOUR_MS,
@@ -25,7 +27,11 @@ const DEFAULT_OPTIONS = Object.freeze({
   energyDecayPerHour: 3,
   healthDecayPerLowNeedPerHour: 7,
   sicknessHealthDecayPerHour: 9,
-  illnessDeathMs: 24 * HOUR_MS
+  illnessDeathMs: 24 * HOUR_MS,
+  actionCooldownMs: 60 * 1000,
+  leisureCooldownMs: 3 * 60 * 1000,
+  randomEventEveryActions: 7,
+  dailyRewardMemoryShards: 2
 });
 
 const DEFAULT_STATS = Object.freeze({
@@ -115,6 +121,36 @@ export const TAMAGOTCHI_GROWTH_BRANCHES = Object.freeze({
   neglected: branch('neglected', '쓸쓸한 희진', '만족도와 케어 품질이 크게 낮은 방치 성장 분기')
 });
 
+export const TAMAGOTCHI_DAILY_MISSIONS = Object.freeze([
+  dailyMission('feed', '아침밥 챙기기', '🍚', 'feed'),
+  dailyMission('play', '기분 풀어주기', '🧸', 'play'),
+  dailyMission('clean', '보송하게 씻기기', '🫧', 'clean'),
+  dailyMission('leisure', '여가 한 번 보내기', '🎮', 'leisure')
+]);
+
+const TAMAGOTCHI_RANDOM_EVENTS = Object.freeze([
+  randomEvent('secret_snack', '몰래 간식', '🍪 희진이 몰래 간식을 찾아냈어요. 배부름이 조금 올랐습니다.', {
+    fullness: 7,
+    happiness: 2
+  }),
+  randomEvent('monkey_visit', '원숭이 방문', '🐒 원숭이가 놀러 와서 희진이 한참 웃었어요.', {
+    happiness: 8,
+    cleanliness: -3
+  }),
+  randomEvent('sparkle_room', '반짝이는 방', '✨ 방 안에 반짝이는 기운이 돌아 청결과 애정이 올랐어요.', {
+    cleanliness: 5,
+    affection: 3
+  }),
+  randomEvent('sleepy_yawn', '꾸벅꾸벅', '💤 희진이 꾸벅꾸벅 졸다가 잠깐 기운을 회복했어요.', {
+    energy: 6,
+    fullness: -2
+  }),
+  randomEvent('tiny_melody', '작은 멜로디', '🎧 어디선가 들린 멜로디에 희진이 기분 좋아졌어요.', {
+    happiness: 5,
+    affection: 2
+  })
+]);
+
 export class TamagotchiService {
   constructor(store, options = {}) {
     this.store = store;
@@ -128,7 +164,7 @@ export class TamagotchiService {
     return this.store.update((data) => {
       const pet = getOrCreatePet(data, { guildId, userId, username, now });
       applyDecay(pet, now, this.options);
-      return createStatusResult(pet, now);
+      return createStatusResult(pet, now, {}, this.options);
     });
   }
 
@@ -147,15 +183,52 @@ export class TamagotchiService {
           action: normalizedAction,
           performed: false,
           eventMessage: '💀 희진이 쓰러져 있어요. 먼저 **부활**을 눌러 주세요.'
-        });
+        }, this.options);
+      }
+
+      if (pet.status !== 'dead' && normalizedAction === 'revive') {
+        return createStatusResult(pet, now, {
+          action: normalizedAction,
+          performed: false,
+          eventMessage: '✨ 희진은 아직 살아있어요. 아프다면 **약주기**로 치료해 주세요.'
+        }, this.options);
+      }
+
+      const cooldown = getActionCooldown(pet, normalizedAction, now, this.options);
+      if (cooldown.remainingMs > 0) {
+        return createStatusResult(pet, now, {
+          action: normalizedAction,
+          performed: false,
+          cooldown,
+          eventMessage: `⏳ **${TAMAGOTCHI_ACTIONS[normalizedAction]}**은(는) ${formatDuration(cooldown.remainingMs)} 뒤에 다시 할 수 있어요.`
+        }, this.options);
       }
 
       performCareAction(pet, normalizedAction, now);
+      recordActionCooldown(pet, normalizedAction, now);
+      const dailyReward = normalizedAction === 'revive'
+        ? null
+        : recordDailyProgress(pet, { action: normalizedAction }, now, this.options);
+      const randomEvent = normalizedAction === 'revive'
+        ? null
+        : maybeTriggerRandomEvent(pet, {
+          guildId,
+          userId,
+          now,
+          action: normalizedAction,
+          options: this.options
+        });
       return createStatusResult(pet, now, {
         action: normalizedAction,
         performed: true,
-        eventMessage: getActionMessage(normalizedAction, pet)
-      });
+        dailyReward,
+        randomEvent,
+        eventMessage: combineEventMessages(
+          getActionMessage(normalizedAction, pet),
+          randomEvent?.message,
+          dailyReward?.message
+        )
+      }, this.options);
     });
   }
 
@@ -175,16 +248,45 @@ export class TamagotchiService {
           leisure: TAMAGOTCHI_LEISURES[normalizedLeisureId],
           performed: false,
           eventMessage: '💀 희진이 쓰러져 있어요. 먼저 **부활**을 눌러 주세요.'
-        });
+        }, this.options);
+      }
+
+      const cooldown = getLeisureCooldown(pet, normalizedLeisureId, now, this.options);
+      if (cooldown.remainingMs > 0) {
+        return createStatusResult(pet, now, {
+          action: `leisure_${normalizedLeisureId}`,
+          leisure: TAMAGOTCHI_LEISURES[normalizedLeisureId],
+          performed: false,
+          cooldown,
+          eventMessage: `⏳ **${TAMAGOTCHI_LEISURES[normalizedLeisureId].label}**은(는) ${formatDuration(cooldown.remainingMs)} 뒤에 다시 할 수 있어요.`
+        }, this.options);
       }
 
       performLeisureAction(pet, normalizedLeisureId, now);
+      recordLeisureCooldown(pet, normalizedLeisureId, now);
+      const dailyReward = recordDailyProgress(pet, {
+        action: 'leisure',
+        leisureId: normalizedLeisureId
+      }, now, this.options);
+      const randomEvent = maybeTriggerRandomEvent(pet, {
+        guildId,
+        userId,
+        now,
+        action: `leisure_${normalizedLeisureId}`,
+        options: this.options
+      });
       return createStatusResult(pet, now, {
         action: `leisure_${normalizedLeisureId}`,
         leisure: TAMAGOTCHI_LEISURES[normalizedLeisureId],
         performed: true,
-        eventMessage: getLeisureMessage(normalizedLeisureId)
-      });
+        dailyReward,
+        randomEvent,
+        eventMessage: combineEventMessages(
+          getLeisureMessage(normalizedLeisureId),
+          randomEvent?.message,
+          dailyReward?.message
+        )
+      }, this.options);
     });
   }
 
@@ -199,7 +301,7 @@ export class TamagotchiService {
         action: 'skin',
         performed: true,
         eventMessage: `🎨 희진 스킨을 **${getTamagotchiSkinById(normalizedSkinId)?.label ?? normalizedSkinId}**(으)로 바꿨어요.`
-      });
+      }, this.options);
     });
   }
 
@@ -214,7 +316,7 @@ export class TamagotchiService {
         action: 'decoration',
         performed: true,
         eventMessage: `🧸 주변 꾸미기를 **${getTamagotchiDecorationById(normalizedDecorationId)?.label ?? normalizedDecorationId}**(으)로 바꿨어요.`
-      });
+      }, this.options);
     });
   }
 
@@ -228,7 +330,7 @@ export class TamagotchiService {
         action: 'skin',
         performed: true,
         eventMessage: `🎨 다음 스킨: **${getTamagotchiSkinById(pet.cosmetic.skinId)?.label ?? pet.cosmetic.skinId}**`
-      });
+      }, this.options);
     });
   }
 
@@ -242,7 +344,7 @@ export class TamagotchiService {
         action: 'decoration',
         performed: true,
         eventMessage: `🧸 다음 꾸미기: **${getTamagotchiDecorationById(pet.cosmetic.decorationId)?.label ?? pet.cosmetic.decorationId}**`
-      });
+      }, this.options);
     });
   }
 }
@@ -326,6 +428,20 @@ function createDefaultPet({ userId, username, now }) {
       dominantTrait: null,
       branchHistory: []
     },
+    daily: createDailyState(now),
+    cooldowns: {
+      actions: {},
+      leisure: {}
+    },
+    codex: {
+      memoryShards: 0,
+      dailyCompletions: 0,
+      discoveredBranches: [],
+      discoveredEvents: []
+    },
+    memories: {
+      eventLog: []
+    },
     counters: {
       feeds: 0,
       plays: 0,
@@ -369,6 +485,19 @@ function normalizePet(pet, { userId, username, now }) {
   pet.growth.satisfactionScore = clamp(numberOrDefault(pet.growth.satisfactionScore, 0), MIN_STAT, MAX_STAT);
   pet.growth.dominantTrait = typeof pet.growth.dominantTrait === 'string' ? pet.growth.dominantTrait : null;
   pet.growth.branchHistory = Array.isArray(pet.growth.branchHistory) ? pet.growth.branchHistory : [];
+  pet.daily = normalizeDailyState(pet.daily, now);
+  pet.cooldowns ??= {};
+  pet.cooldowns.actions = normalizeTimestampMap(pet.cooldowns.actions, Object.keys(TAMAGOTCHI_ACTIONS));
+  pet.cooldowns.leisure = normalizeTimestampMap(pet.cooldowns.leisure, Object.keys(TAMAGOTCHI_LEISURES));
+  pet.codex ??= {};
+  pet.codex.memoryShards = Math.max(0, Math.floor(numberOrDefault(pet.codex.memoryShards, 0)));
+  pet.codex.dailyCompletions = Math.max(0, Math.floor(numberOrDefault(pet.codex.dailyCompletions, 0)));
+  pet.codex.discoveredBranches = normalizeIdList(pet.codex.discoveredBranches, Object.keys(TAMAGOTCHI_GROWTH_BRANCHES));
+  pet.codex.discoveredEvents = normalizeIdList(pet.codex.discoveredEvents, TAMAGOTCHI_RANDOM_EVENTS.map((event) => event.id));
+  pet.memories ??= {};
+  pet.memories.eventLog = Array.isArray(pet.memories.eventLog)
+    ? pet.memories.eventLog.slice(-EVENT_LOG_LIMIT)
+    : [];
   pet.counters ??= {};
   for (const key of ['feeds', 'plays', 'cleans', 'naps', 'medicines', 'revivals', 'totalCareActions']) {
     pet.counters[key] = Math.max(0, Math.floor(numberOrDefault(pet.counters[key], 0)));
@@ -549,7 +678,7 @@ function cureIllness(pet) {
   pet.conditions.illnessReason = null;
 }
 
-function createStatusResult(pet, now, event = {}) {
+function createStatusResult(pet, now, event = {}, options = DEFAULT_OPTIONS) {
   updateGrowthBranch(pet, now);
   const skin = getTamagotchiSkinById(pet.cosmetic.skinId);
   const decoration = getTamagotchiDecorationById(pet.cosmetic.decorationId);
@@ -565,6 +694,12 @@ function createStatusResult(pet, now, event = {}) {
     growthProfile: calculateGrowthProfile(pet),
     ageDays: Math.max(0, Math.floor((now - pet.createdAt) / DAY_MS)),
     neglectRemaining: formatRemainingNeglectTime(pet, now),
+    nextGrowth: getNextGrowthInfo(pet, now),
+    recommendations: getTamagotchiRecommendations(pet, now, options),
+    daily: getDailyMissionSummary(pet.daily),
+    codex: getCodexSummary(pet),
+    cooldowns: getCooldownSummary(pet, now, options),
+    recentEvents: pet.memories.eventLog.slice(-3).reverse(),
     ...event
   };
 }
@@ -579,11 +714,338 @@ function clonePet(pet) {
       ...pet.growth,
       branchHistory: [...pet.growth.branchHistory]
     },
+    daily: {
+      ...pet.daily,
+      completedMissionIds: [...pet.daily.completedMissionIds],
+      progress: { ...pet.daily.progress }
+    },
+    cooldowns: {
+      actions: { ...pet.cooldowns.actions },
+      leisure: { ...pet.cooldowns.leisure }
+    },
+    codex: {
+      ...pet.codex,
+      discoveredBranches: [...pet.codex.discoveredBranches],
+      discoveredEvents: [...pet.codex.discoveredEvents]
+    },
+    memories: {
+      eventLog: pet.memories.eventLog.map((entry) => ({ ...entry }))
+    },
     counters: {
       ...pet.counters,
       leisure: { ...pet.counters.leisure }
     }
   };
+}
+
+function getActionCooldown(pet, action, now, options) {
+  const cooldownMs = action === 'revive' ? 0 : Math.max(0, numberOrDefault(options.actionCooldownMs, DEFAULT_OPTIONS.actionCooldownMs));
+  const lastAt = numberOrDefault(pet.cooldowns?.actions?.[action], null);
+  const remainingMs = cooldownMs > 0 && lastAt !== null
+    ? Math.max(0, cooldownMs - (now - lastAt))
+    : 0;
+  return {
+    kind: 'action',
+    id: action,
+    label: TAMAGOTCHI_ACTIONS[action] ?? action,
+    lastAt,
+    cooldownMs,
+    remainingMs,
+    ready: remainingMs <= 0
+  };
+}
+
+function getLeisureCooldown(pet, leisureId, now, options) {
+  const cooldownMs = Math.max(0, numberOrDefault(options.leisureCooldownMs, DEFAULT_OPTIONS.leisureCooldownMs));
+  const lastAt = numberOrDefault(pet.cooldowns?.leisure?.[leisureId], null);
+  const remainingMs = cooldownMs > 0 && lastAt !== null
+    ? Math.max(0, cooldownMs - (now - lastAt))
+    : 0;
+  return {
+    kind: 'leisure',
+    id: leisureId,
+    label: TAMAGOTCHI_LEISURES[leisureId]?.label ?? leisureId,
+    lastAt,
+    cooldownMs,
+    remainingMs,
+    ready: remainingMs <= 0
+  };
+}
+
+function recordActionCooldown(pet, action, now) {
+  pet.cooldowns.actions[action] = now;
+}
+
+function recordLeisureCooldown(pet, leisureId, now) {
+  pet.cooldowns.leisure[leisureId] = now;
+}
+
+function getCooldownSummary(pet, now, options) {
+  return {
+    actions: Object.fromEntries(
+      Object.keys(TAMAGOTCHI_ACTIONS).map((action) => [action, getActionCooldown(pet, action, now, options)])
+    ),
+    leisure: Object.fromEntries(
+      Object.keys(TAMAGOTCHI_LEISURES).map((leisureId) => [leisureId, getLeisureCooldown(pet, leisureId, now, options)])
+    )
+  };
+}
+
+function createDailyState(now) {
+  const dayIndex = getDayIndex(now);
+  return {
+    dayIndex,
+    dateKey: formatDateKey(dayIndex),
+    progress: Object.fromEntries(TAMAGOTCHI_DAILY_MISSIONS.map((mission) => [mission.id, 0])),
+    completedMissionIds: [],
+    rewardClaimed: false
+  };
+}
+
+function normalizeDailyState(daily, now) {
+  const currentDayIndex = getDayIndex(now);
+  if (!daily || Math.floor(numberOrDefault(daily.dayIndex, -1)) !== currentDayIndex) {
+    return createDailyState(now);
+  }
+
+  const normalized = {
+    dayIndex: currentDayIndex,
+    dateKey: formatDateKey(currentDayIndex),
+    progress: {},
+    completedMissionIds: Array.isArray(daily.completedMissionIds) ? daily.completedMissionIds : [],
+    rewardClaimed: Boolean(daily.rewardClaimed)
+  };
+  const completed = new Set();
+  for (const mission of TAMAGOTCHI_DAILY_MISSIONS) {
+    const progress = Math.max(0, Math.floor(numberOrDefault(daily.progress?.[mission.id], 0)));
+    normalized.progress[mission.id] = Math.min(progress, mission.count);
+    if (
+      normalized.completedMissionIds.includes(mission.id)
+      || normalized.progress[mission.id] >= mission.count
+    ) {
+      completed.add(mission.id);
+    }
+  }
+  normalized.completedMissionIds = [...completed];
+  return normalized;
+}
+
+function recordDailyProgress(pet, event, now, options) {
+  pet.daily = normalizeDailyState(pet.daily, now);
+  const newlyCompleted = [];
+
+  for (const mission of TAMAGOTCHI_DAILY_MISSIONS) {
+    if (!matchesDailyMission(mission, event)) continue;
+    const before = pet.daily.progress[mission.id] ?? 0;
+    pet.daily.progress[mission.id] = Math.min(mission.count, before + 1);
+    if (before < mission.count && pet.daily.progress[mission.id] >= mission.count) {
+      pet.daily.completedMissionIds.push(mission.id);
+      newlyCompleted.push(mission);
+    }
+  }
+
+  pet.daily.completedMissionIds = [...new Set(pet.daily.completedMissionIds)];
+  const allComplete = TAMAGOTCHI_DAILY_MISSIONS.every((mission) =>
+    pet.daily.completedMissionIds.includes(mission.id)
+  );
+
+  if (!allComplete || pet.daily.rewardClaimed) {
+    return newlyCompleted.length > 0
+      ? {
+        missions: newlyCompleted,
+        rewarded: false,
+        message: `📋 오늘의 돌봄 완료: ${newlyCompleted.map((mission) => `**${mission.label}**`).join(', ')}`
+      }
+      : null;
+  }
+
+  const memoryShards = Math.max(0, Math.floor(numberOrDefault(
+    options.dailyRewardMemoryShards,
+    DEFAULT_OPTIONS.dailyRewardMemoryShards
+  )));
+  pet.daily.rewardClaimed = true;
+  pet.codex.memoryShards += memoryShards;
+  pet.codex.dailyCompletions += 1;
+  pet.stats.affection = clamp(pet.stats.affection + 6, MIN_STAT, MAX_STAT);
+  pet.stats.health = clamp(pet.stats.health + 4, MIN_STAT, MAX_STAT);
+  addEventLog(pet, {
+    type: 'daily',
+    id: `daily_${pet.daily.dateKey}`,
+    title: '오늘의 돌봄 완료',
+    message: `오늘의 돌봄을 전부 끝내 추억 조각 ${memoryShards}개를 얻었어요.`,
+    at: now
+  });
+
+  return {
+    missions: newlyCompleted,
+    rewarded: true,
+    memoryShards,
+    message: `🎁 오늘의 돌봄 완료! 추억 조각 **${memoryShards}개**와 애정/건강 보너스를 받았어요.`
+  };
+}
+
+function matchesDailyMission(mission, event) {
+  if (mission.type === 'leisure') return event.action === 'leisure';
+  return mission.action === event.action;
+}
+
+function getDailyMissionSummary(daily) {
+  const completed = new Set(daily.completedMissionIds);
+  const missions = TAMAGOTCHI_DAILY_MISSIONS.map((mission) => {
+    const progress = Math.min(mission.count, Math.max(0, daily.progress[mission.id] ?? 0));
+    return {
+      ...mission,
+      progress,
+      completed: completed.has(mission.id) || progress >= mission.count
+    };
+  });
+  return {
+    dayIndex: daily.dayIndex,
+    dateKey: daily.dateKey,
+    rewardClaimed: daily.rewardClaimed,
+    complete: missions.every((mission) => mission.completed),
+    completedCount: missions.filter((mission) => mission.completed).length,
+    totalCount: missions.length,
+    missions
+  };
+}
+
+function maybeTriggerRandomEvent(pet, { guildId, userId, now, action, options }) {
+  const everyActions = Math.max(0, Math.floor(numberOrDefault(
+    options.randomEventEveryActions,
+    DEFAULT_OPTIONS.randomEventEveryActions
+  )));
+  if (everyActions <= 0 || pet.counters.totalCareActions <= 0) return null;
+  if (pet.counters.totalCareActions % everyActions !== 0) return null;
+
+  const eventIndex = stableIndex(`${guildId}:${userId}:${now}:${action}:${pet.counters.totalCareActions}`, TAMAGOTCHI_RANDOM_EVENTS.length);
+  const event = TAMAGOTCHI_RANDOM_EVENTS[eventIndex];
+  for (const [stat, delta] of Object.entries(event.effects)) {
+    pet.stats[stat] = clamp(pet.stats[stat] + delta, MIN_STAT, MAX_STAT);
+  }
+  if (!pet.codex.discoveredEvents.includes(event.id)) {
+    pet.codex.discoveredEvents.push(event.id);
+  }
+  pet.codex.memoryShards += 1;
+  addEventLog(pet, {
+    type: 'random',
+    id: event.id,
+    title: event.title,
+    message: event.message,
+    at: now
+  });
+
+  return {
+    id: event.id,
+    title: event.title,
+    message: `🎲 랜덤 사건: **${event.title}** — ${event.message} 추억 조각 **1개**를 얻었어요.`,
+    effects: { ...event.effects },
+    memoryShards: 1
+  };
+}
+
+function addEventLog(pet, entry) {
+  pet.memories.eventLog.push({
+    type: entry.type,
+    id: entry.id,
+    title: entry.title,
+    message: entry.message,
+    at: entry.at
+  });
+  pet.memories.eventLog = pet.memories.eventLog.slice(-EVENT_LOG_LIMIT);
+}
+
+function getCodexSummary(pet) {
+  return {
+    memoryShards: pet.codex.memoryShards,
+    dailyCompletions: pet.codex.dailyCompletions,
+    discoveredBranches: [...pet.codex.discoveredBranches],
+    discoveredEvents: [...pet.codex.discoveredEvents],
+    branchCount: pet.codex.discoveredBranches.length,
+    totalBranches: Object.keys(TAMAGOTCHI_GROWTH_BRANCHES).length,
+    eventCount: pet.codex.discoveredEvents.length,
+    totalEvents: TAMAGOTCHI_RANDOM_EVENTS.length
+  };
+}
+
+function getNextGrowthInfo(pet, now) {
+  const ageDays = Math.max(0, Math.floor((now - pet.createdAt) / DAY_MS));
+  const stages = [...getTamagotchiGrowthStages()]
+    .sort((a, b) => Number(a.minAgeDays ?? 0) - Number(b.minAgeDays ?? 0));
+  const nextStage = stages.find((stage) => Number(stage.minAgeDays ?? 0) > ageDays);
+  if (!nextStage) {
+    return {
+      complete: true,
+      label: '성년기 도달',
+      remainingDays: 0
+    };
+  }
+  return {
+    complete: false,
+    stageId: nextStage.id,
+    label: nextStage.label,
+    remainingDays: Math.max(0, Number(nextStage.minAgeDays ?? 0) - ageDays)
+  };
+}
+
+function getTamagotchiRecommendations(pet, now, options) {
+  if (pet.status === 'dead') {
+    return [recommendation('revive', '부활', '희진이 쓰러져 있어 먼저 깨워야 합니다.', '✨', 0)];
+  }
+
+  const candidates = [];
+  if (pet.conditions.sick || pet.stats.health <= 35) {
+    candidates.push(recommendation('medicine', '약주기', '건강이 낮거나 병이 있어 치료가 우선입니다.', '💊', getActionCooldown(pet, 'medicine', now, options).remainingMs));
+  }
+  if (pet.stats.fullness <= 45) {
+    candidates.push(recommendation('feed', '밥주기', '배부름이 낮아 방치하면 건강이 떨어집니다.', '🍚', getActionCooldown(pet, 'feed', now, options).remainingMs));
+  }
+  if (pet.stats.cleanliness <= 45) {
+    candidates.push(recommendation('clean', '씻기기', '청결이 낮으면 병 위험이 커집니다.', '🫧', getActionCooldown(pet, 'clean', now, options).remainingMs));
+  }
+  if (pet.stats.energy <= 45) {
+    candidates.push(recommendation('nap', '재우기', '에너지가 낮아 휴식이 필요합니다.', '💤', getActionCooldown(pet, 'nap', now, options).remainingMs));
+  }
+  if (pet.stats.happiness <= 45) {
+    candidates.push(recommendation('play', '놀아주기', '행복이 낮아 심심해하고 있어요.', '🧸', getActionCooldown(pet, 'play', now, options).remainingMs));
+  }
+
+  const nextDailyMission = getDailyMissionSummary(pet.daily).missions.find((mission) => !mission.completed);
+  if (nextDailyMission) {
+    candidates.push(recommendation(
+      nextDailyMission.type === 'leisure' ? 'leisure' : nextDailyMission.action,
+      nextDailyMission.label,
+      '오늘의 돌봄 미션을 채우면 추억 조각을 얻습니다.',
+      nextDailyMission.emoji,
+      0
+    ));
+  }
+
+  if (candidates.length === 0) {
+    candidates.push(recommendation('leisure', '여가 보내기', '상태가 안정적이라 성장 분기용 특화 여가를 고르기 좋습니다.', '🎮', 0));
+  }
+
+  return dedupeRecommendations(candidates).slice(0, 3);
+}
+
+function recommendation(action, label, reason, emoji, cooldownRemainingMs = 0) {
+  return {
+    action,
+    label,
+    reason,
+    emoji,
+    cooldownRemainingMs,
+    ready: cooldownRemainingMs <= 0
+  };
+}
+
+function dedupeRecommendations(candidates) {
+  const seen = new Set();
+  return candidates.filter((candidate) => {
+    if (seen.has(candidate.action)) return false;
+    seen.add(candidate.action);
+    return true;
+  });
 }
 
 function updateGrowthBranch(pet, now) {
@@ -599,12 +1061,17 @@ function updateGrowthBranch(pet, now) {
   if (growthStage.id === 'adult') {
     assignGrowthBranch(pet, 'adultBranchId', 'adult', profile, now);
   }
+
+  for (const branchId of [pet.growth.teenBranchId, pet.growth.adultBranchId]) {
+    if (branchId) discoverGrowthBranch(pet, branchId);
+  }
 }
 
 function assignGrowthBranch(pet, property, stageId, profile, now) {
   if (pet.growth[property]) return;
   const branchId = selectGrowthBranch(profile);
   pet.growth[property] = branchId;
+  const newlyDiscovered = discoverGrowthBranch(pet, branchId);
   pet.growth.branchHistory.push({
     stageId,
     branchId,
@@ -612,6 +1079,22 @@ function assignGrowthBranch(pet, property, stageId, profile, now) {
     dominantTrait: profile.dominantTrait,
     at: now
   });
+  if (newlyDiscovered) {
+    addEventLog(pet, {
+      type: 'growth',
+      id: branchId,
+      title: TAMAGOTCHI_GROWTH_BRANCHES[branchId]?.label ?? branchId,
+      message: `${stageId === 'adult' ? '성년기' : '청소년기'} 성장 분기 도감에 기록됐어요.`,
+      at: now
+    });
+  }
+}
+
+function discoverGrowthBranch(pet, branchId) {
+  const normalized = normalizeGrowthBranchId(branchId);
+  if (!normalized || pet.codex.discoveredBranches.includes(normalized)) return false;
+  pet.codex.discoveredBranches.push(normalized);
+  return true;
 }
 
 function calculateGrowthProfile(pet) {
@@ -701,6 +1184,22 @@ function normalizeLeisureId(leisureId) {
   return Object.prototype.hasOwnProperty.call(TAMAGOTCHI_LEISURES, normalized) ? normalized : null;
 }
 
+function normalizeTimestampMap(rawMap, allowedKeys) {
+  const map = rawMap && typeof rawMap === 'object' ? rawMap : {};
+  return Object.fromEntries(
+    allowedKeys
+      .map((key) => [key, numberOrDefault(map[key], null)])
+      .filter(([, value]) => value !== null)
+  );
+}
+
+function normalizeIdList(rawList, allowedIds) {
+  const allowed = new Set(allowedIds);
+  return [...new Set(Array.isArray(rawList) ? rawList : [])]
+    .map((id) => String(id ?? '').trim())
+    .filter((id) => allowed.has(id));
+}
+
 function leisure(id, label, emoji, effects) {
   return Object.freeze({
     id,
@@ -712,6 +1211,26 @@ function leisure(id, label, emoji, effects) {
 
 function branch(id, label, description) {
   return Object.freeze({ id, label, description });
+}
+
+function dailyMission(id, label, emoji, action) {
+  return Object.freeze({
+    id,
+    label,
+    emoji,
+    action,
+    type: action === 'leisure' ? 'leisure' : 'action',
+    count: 1
+  });
+}
+
+function randomEvent(id, title, message, effects) {
+  return Object.freeze({
+    id,
+    title,
+    message,
+    effects: Object.freeze(effects)
+  });
 }
 
 function getActionMessage(action, pet) {
@@ -740,6 +1259,41 @@ function getLeisureMessage(leisureId) {
     tease_monkey: '🙈 희진이 원숭이 괴롭히기에 너무 몰입했어요. 행복은 올랐지만 양심과 컨디션이 조금 흔들립니다!'
   };
   return messages[leisureId] ?? `${leisureConfig?.emoji ?? '🎈'} 희진이 여가 시간을 보냈어요.`;
+}
+
+function combineEventMessages(...messages) {
+  return messages.filter(Boolean).join('\n');
+}
+
+function getDayIndex(now, timezoneOffsetMs = KOREA_TIME_OFFSET_MS) {
+  return Math.floor((now + timezoneOffsetMs) / DAY_MS);
+}
+
+function formatDateKey(dayIndex) {
+  return new Date(dayIndex * DAY_MS).toISOString().slice(0, 10);
+}
+
+function formatDuration(ms) {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return remainingMinutes > 0 ? `${hours}시간 ${remainingMinutes}분` : `${hours}시간`;
+  }
+  if (minutes > 0) return `${minutes}분 ${seconds}초`;
+  return `${seconds}초`;
+}
+
+function stableIndex(seed, max) {
+  if (max <= 0) return 0;
+  let hash = 2166136261;
+  for (const char of String(seed)) {
+    hash ^= char.codePointAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) % max;
 }
 
 function numberOrDefault(value, fallback) {

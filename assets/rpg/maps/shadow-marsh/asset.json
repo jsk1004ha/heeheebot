@@ -7,5 +7,10 @@
   "prompt": "assets/rpg/maps/shadow-marsh/prompt-used.txt",
   "status": "generated",
   "generatedWith": "agent-sprite-forge:$generate2dmap",
-  "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_0bd4e574af6750910169fbef9abc708191bcc139a8539bb94e.png"
+  "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_0bd4e574af6750910169fbef9abc708191bcc139a8539bb94e.png",
+  "meta": "assets/rpg/maps/shadow-marsh/processed/pipeline-meta.json",
+  "outputSize": [
+    1024,
+    576
+  ]
 }

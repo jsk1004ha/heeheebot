@@ -1,1 +1,1 @@
-Generated local fallback raid battlefield for 고블린 전쟁 야영지 전투 배경; clean HD 2D RPG background, open center, no UI, no text.
+Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: goblin war camp, torn banners, crude palisades, open dirt arena center, no characters, no UI, no text.
