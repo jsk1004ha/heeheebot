@@ -17,6 +17,10 @@ import {
   getRpgGenderConfig
 } from '../systems/rpg.js';
 import { getSwordAssetLabel } from '../systems/sword-assets.js';
+import {
+  createAllowedMentionsForUsers,
+  formatUserMention
+} from './ui.js';
 
 export const economyCommands = [
   new SlashCommandBuilder()
@@ -152,9 +156,10 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
         amount
       });
 
-      await interaction.reply(
-        `💸 ${target}님에게 ${formatCurrencyAmount(result.amount, 'main')}를 송금했습니다. 내 골드: ${formatCurrencyAmount(result.from.balance, 'main')}`
-      );
+      await interaction.reply({
+        content: `💸 ${formatUserMention(target, target.username)}님에게 ${formatCurrencyAmount(result.amount, 'main')}를 송금했습니다. 내 골드: ${formatCurrencyAmount(result.from.balance, 'main')}`,
+        allowedMentions: createAllowedMentionsForUsers([target.id])
+      });
     } catch (error) {
       await interaction.reply({
         content: `송금 실패: ${error.message}`,
@@ -477,7 +482,7 @@ function formatCurrencyInfo() {
     '',
     '📌 **현재 기준**',
     '- 단일 화폐: **골드**',
-    '- 카지노, RPG, 검강화, 가상주식, 커뮤니티 상점/복권/송금이 모두 같은 골드 잔액을 사용합니다.',
+    '- 카지노, RPG, 검강화, 낚시강화, 가상주식, 커뮤니티 상점/복권/송금이 모두 같은 골드 잔액을 사용합니다.',
     '',
     '🧮 **기존 지갑 정산 기준**',
     '- 카지노칩: 기존 잔액의 90%를 골드로 반영',

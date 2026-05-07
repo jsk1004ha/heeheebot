@@ -114,29 +114,23 @@ export function formatSeasonAwardLine(award) {
 
 function formatSeasonOverview(overview) {
   const rewardRows = overview.rewards
+    .slice(0, 5)
     .map((reward) => {
       const marker = reward.claimed ? '✅' : reward.claimable ? '🎁' : reward.unlocked ? '⬜' : '🔒';
-      return `- ${marker} **${reward.label}** — ${reward.requiredPoints.toLocaleString()}점 / ${reward.description}`;
+      return `- ${marker} **${reward.label}** ${reward.requiredPoints.toLocaleString()}점`;
     })
     .join('\n');
   const leaderboard = overview.leaderboardPreview.length > 0
-    ? overview.leaderboardPreview.map((row) => `${row.rank}. ${row.username} ${row.points.toLocaleString()}점`).join('\n')
-    : '아직 시즌 포인트를 모은 유저가 없습니다.';
+    ? overview.leaderboardPreview.slice(0, 3).map((row) => `${row.rank}. ${row.username} ${row.points.toLocaleString()}점`).join(' / ')
+    : '랭킹 없음';
 
   return [
     `🏆 **${overview.season.name}**`,
-    overview.season.description,
-    '',
-    `내 점수: **${overview.profile.totalPoints.toLocaleString()}점**`,
-    `오늘 획득: **${overview.daily.earned.toLocaleString()} / ${overview.daily.cap.toLocaleString()}점** · 남은 ${overview.daily.remaining.toLocaleString()}점`,
-    '',
-    '🎁 **시즌 보상**',
+    `${overview.season.description} · 내 점수 **${overview.profile.totalPoints.toLocaleString()}점**`,
+    `오늘 **${overview.daily.earned.toLocaleString()} / ${overview.daily.cap.toLocaleString()}점** · 남은 ${overview.daily.remaining.toLocaleString()}점`,
+    '🎁 보상',
     rewardRows,
-    '',
-    '🏅 **상위 랭킹 미리보기**',
-    leaderboard,
-    '',
-    '`/시즌 과제`로 오늘/이번 주 목표를 보고, `/시즌 보상`으로 달성한 보상을 받을 수 있습니다.'
+    `🏅 상위: ${leaderboard}`
   ].join('\n');
 }
 
@@ -161,8 +155,7 @@ function formatSeasonRewardClaim(result) {
   return [
     `🎁 **시즌 보상 수령**`,
     `수령 보상: ${result.claimed.map((reward) => `**${reward.label}**`).join(', ')}`,
-    `현재 점수: **${result.profile.totalPoints.toLocaleString()}점**`,
-    '보상은 시즌 기록에 영구 저장됩니다.'
+    `현재 점수: **${result.profile.totalPoints.toLocaleString()}점**`
   ].join('\n');
 }
 
@@ -174,16 +167,13 @@ function formatSeasonChallenges(board) {
   return [
     `🏆 **시즌 과제** — ${board.season.name}`,
     `내 점수: **${board.profile.totalPoints.toLocaleString()}점** · 수령 가능 과제 **${claimableCount}개**`,
-    '',
-    '🌅 **오늘 과제**',
+    '🌅 오늘',
     dailyRows,
-    '',
-    '📆 **이번 주 과제**',
+    '📆 이번 주',
     weeklyRows,
-    '',
     claimableCount > 0
-      ? '`/시즌 과제보상`으로 완료한 과제 보너스를 받을 수 있습니다.'
-      : '과제를 완료하면 `/시즌 과제보상`으로 보너스 시즌 포인트를 받을 수 있습니다.'
+      ? '`/시즌 과제보상` 수령 가능'
+      : '완료 후 `/시즌 과제보상`'
   ].join('\n');
 }
 
@@ -205,15 +195,13 @@ function formatSeasonChallengeClaim(result) {
     '🏆 **시즌 과제 보상**',
     claimedRows,
     `총 보너스: **+${result.totalRewardPoints.toLocaleString()}점**`,
-    awardLine,
-    `현재 점수: **${result.profile.totalPoints.toLocaleString()}점**`
+    awardLine
   ].filter(Boolean).join('\n');
 }
 
 function formatSeasonChallengeRow(challenge) {
   const marker = challenge.claimed ? '✅' : challenge.claimable ? '🎁' : challenge.completed ? '⬜' : '🔒';
   return [
-    `- ${marker} **${challenge.label}** — ${challenge.progress.toLocaleString()} / ${challenge.requiredPoints.toLocaleString()}점 · 보상 +${challenge.rewardPoints.toLocaleString()}점`,
-    `  ${challenge.description}`
+    `- ${marker} **${challenge.label}** — ${challenge.progress.toLocaleString()} / ${challenge.requiredPoints.toLocaleString()}점 · +${challenge.rewardPoints.toLocaleString()}점`
   ].join('\n');
 }

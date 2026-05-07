@@ -1163,7 +1163,7 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
       const raid = getRpgRaidConfig(raidId);
       await replyWithRpgAssets(
         interaction,
-        `🐉 **RPG 길드 레이드 모집 실패** — ${user}\n${error.message}`,
+        `🐉 **RPG 길드 레이드 모집 실패** — ${formatDiscordUserMention(user)}\n${error.message}`,
         [raid.backgroundAssetId],
         { ephemeral: true }
       );
@@ -2310,7 +2310,7 @@ async function handleRpgQuickButton(interaction, economy, services = {}) {
         user: interaction.user,
         result
       });
-      await updateWithRpgAssets(interaction, appendSeasonAwardLine(formatBattleResult(interaction.user, result), seasonAward), getBattleAssetIds(result), {
+      await replyWithRpgAssets(interaction, appendSeasonAwardLine(formatBattleResult(interaction.user, result), seasonAward), getBattleAssetIds(result), {
         components: createRpgActionLoopRows(interaction.user.id)
       });
       return true;
@@ -2322,7 +2322,7 @@ async function handleRpgQuickButton(interaction, economy, services = {}) {
         userId: interaction.user.id,
         username: interaction.user.username
       });
-      await updateWithRpgAssets(interaction, formatRpgExplore(interaction.user, result), getExploreAssetIds(result), {
+      await replyWithRpgAssets(interaction, formatRpgExplore(interaction.user, result), getExploreAssetIds(result), {
         components: createRpgActionLoopRows(interaction.user.id)
       });
       return true;
@@ -2335,7 +2335,7 @@ async function handleRpgQuickButton(interaction, economy, services = {}) {
         username: interaction.user.username,
         depth: 3
       });
-      await updateWithRpgAssets(interaction, formatRpgDungeon(interaction.user, result), getDungeonAssetIds(result), {
+      await replyWithRpgAssets(interaction, formatRpgDungeon(interaction.user, result), getDungeonAssetIds(result), {
         components: createRpgActionLoopRows(interaction.user.id)
       });
       return true;
@@ -2348,7 +2348,7 @@ async function handleRpgQuickButton(interaction, economy, services = {}) {
         username: interaction.user.username,
         raidId: 'slime_horde'
       });
-      await updateWithRpgAssets(interaction, formatRpgRaid(interaction.user, result), getBattleAssetIds(result), {
+      await replyWithRpgAssets(interaction, formatRpgRaid(interaction.user, result), getBattleAssetIds(result), {
         components: createRpgActionLoopRows(interaction.user.id)
       });
       return true;
@@ -2596,7 +2596,7 @@ function formatRpgCharacterCreation(user, status) {
     : '';
 
   return [
-    `🎭 **캐릭터 생성 / 직업 변경** — ${user}`,
+    `🎭 **캐릭터 생성 / 직업 변경** — ${formatDiscordUserMention(user)}`,
     `현재 캐릭터: **${genderConfig.label} ${classConfig.label}** / 현재 지역: **${currentArea.label}**`,
     '아래 선택 메뉴에서 **성별 + 직업**을 한 번에 고르면 바로 적용됩니다.',
     '',
@@ -2610,7 +2610,7 @@ function formatRpgStart(user, result) {
   const { classConfig, genderConfig, profile, derivedStats, currentArea } = result;
 
   return [
-    `🧭 **모험가 등록 완료** — ${user}`,
+    `🧭 **모험가 등록 완료** — ${formatDiscordUserMention(user)}`,
     `캐릭터: **${genderConfig.label} ${classConfig.label}**`,
     classConfig.description,
     `현재 레벨: **Lv.${profile.level}** / 경험치: **${profile.totalXp.toLocaleString()} XP**`,
@@ -2645,7 +2645,7 @@ function formatBattleResult(user, result) {
   ].filter(Boolean);
 
   return [
-    `⚔️ **RPG 전투 결과** — ${user}`,
+    `⚔️ **RPG 전투 결과** — ${formatDiscordUserMention(user)}`,
     `📍 전장: **${battle.areaLabel}** · 난이도 **${battle.difficultyLabel}** · 몬스터 **${battle.monster}**`,
     `🧙 캐릭터: **${battle.characterGenderLabel} ${battle.characterClassLabel}** · 스킬 **${battle.skillLabel}** (MP -${battle.skillMpCost})`,
     `🎲 전투 판정: 내 전투력 **${battle.playerPower}** (Lv.${battle.playerLevel}, 주사위 ${battle.playerRoll}, 장비 +${battle.attackBonus}) vs 몬스터 **${monsterPowerText}**`,
@@ -2664,7 +2664,7 @@ function formatRpgBossEncounter(user, result) {
   const bossPattern = getRpgBossPattern(session.bossId, session.turn);
 
   return [
-    `🐲 **수동 보스전 시작** — ${user}`,
+    `🐲 **수동 보스전 시작** — ${formatDiscordUserMention(user)}`,
     `보스: **${session.bossLabel}** / 지역: **${session.areaLabel}**`,
     `예고 패턴: **${bossPattern.label}** — ${bossPattern.telegraph ?? bossPattern.description}`,
     `추천 대응: **${bossPattern.counterLabel ?? '상황에 맞는 행동'}** / 약점: **${bossPattern.weaknessLabel ?? '없음'}**`,
@@ -2707,7 +2707,7 @@ function formatRpgBossTurn(user, result) {
     : `추천 대응: **${bossPattern.counterLabel ?? '상황 판단'}** / 약점 **${bossPattern.weaknessLabel ?? '없음'}**`;
 
   return [
-    `🐲 **수동 보스전** — ${user}`,
+    `🐲 **수동 보스전** — ${formatDiscordUserMention(user)}`,
     `🧭 전장 상태: **${session.bossLabel} ${session.turn}턴**`,
     `보스 패턴: **${bossPattern.label}** — ${bossPattern.telegraph ?? bossPattern.description}`,
     `최근 행동: **${actionText}** / 보스 반격 **-${turn.bossDamage} HP**`,
@@ -2750,7 +2750,7 @@ function formatRpgBossFinish(user, result) {
   ].filter(Boolean);
 
   return [
-    `🐲 **수동 보스전 종료** — ${user}`,
+    `🐲 **수동 보스전 종료** — ${formatDiscordUserMention(user)}`,
     `보스: **${battle.bossLabel}** / 결과: **${outcomeText}**`,
     `마지막 패턴: **${bossPattern.label}**`,
     turn.patternCountered ? `마지막 대응: **성공**${turn.weaknessHit ? ' · 약점 적중' : ''}` : null,
@@ -2995,27 +2995,15 @@ function formatRpgMainMenu(user, status) {
   const tutorialText = formatRpgTutorialMiniSummary(status.tutorial);
 
   return [
-    `🎮 **RPG 메인 허브 · 스마트 허브** — ${user.username}`,
-    `🧙 캐릭터: **${genderConfig.label} ${classConfig.label}${advancedText}** · 지역 **${currentArea.label}** · 전투력 **${adventureGuide.powerScore}**`,
-    `📈 Lv.${profile.level} ${adventureGuide.levelProgress.bar} **${adventureGuide.levelProgress.current}/${adventureGuide.levelProgress.required} XP** (${adventureGuide.levelProgress.percent}%)`,
-    `❤️ HP **${profile.rpg.hp}/${derivedStats.maxHp}** · 🔷 MP **${profile.rpg.mp}/${derivedStats.maxMp}** · 🪙 골드 **${getRpgGold(profile).toLocaleString()}**`,
-    `💰 오늘 RPG 반복 보상: ${dailyGoldText}`,
-    `🌟 궁극기 게이지 ${formatRpgMeter(profile.rpg.ultimateCharge, 100)} **${profile.rpg.ultimateCharge}/100**${profile.rpg.ultimateCharge >= 100 ? ' · 사용 준비 완료' : ''}`,
-    `🎯 메인 목표: **${adventureGuide.mainObjective.label}** — ${adventureGuide.mainObjective.progressText}`,
+    `🎮 **RPG 메인 허브** — ${user.username}`,
+    `Lv.${profile.level} **${classConfig.label}${advancedText}** · 지역 **${currentArea.label}** · 전투력 **${adventureGuide.powerScore}** · 골드 **${getRpgGold(profile).toLocaleString()}**`,
+    `HP **${profile.rpg.hp}/${derivedStats.maxHp}** · MP **${profile.rpg.mp}/${derivedStats.maxMp}** · XP ${adventureGuide.levelProgress.current}/${adventureGuide.levelProgress.required} (${adventureGuide.levelProgress.percent}%)`,
+    `목표: **${adventureGuide.mainObjective.label}** — ${adventureGuide.mainObjective.progressText}`,
+    `다음 행동: **${adventureGuide.recommendedAction.label}** · \`${adventureGuide.recommendedAction.command}\``,
+    `스마트 추천: ${formatRpgSmartRecommendationSummary(status)}`,
     `🎓 초보자 여정: ${tutorialText}`,
-    `➡️ 다음 행동: **${adventureGuide.recommendedAction.label}** · 버튼 또는 \`${adventureGuide.recommendedAction.command}\``,
-    `   └ ${adventureGuide.recommendedAction.reason}`,
-    `⚙️ 행동 가능: ${actionAvailabilityText}`,
-    `🗺️ ${nextAreaText}`,
-    '',
-    `📋 오늘 의뢰: ${dailySummary}`,
-    '',
-    `**스마트 추천**`,
-    formatRpgSmartRecommendationSummary(status),
-    '',
-    '**버튼 배치**',
-    '첫 줄은 지금 할 만한 추천 행동입니다.',
-    '아래 허브에서 `전투`, `모험`, `성장`, `관리`, `오늘 할 일`만 골라 들어가면 됩니다.'
+    `오늘: ${dailySummary} · 보상 ${dailyGoldText}`,
+    `버튼: 전투 / 모험 / 성장 / 관리 / 오늘 할 일 · ${actionAvailabilityText} · ${nextAreaText}`
   ].join('\n');
 }
 
@@ -3040,7 +3028,13 @@ function formatRpgTutorial(status) {
   const tutorial = status.tutorial;
   const claimable = tutorial.steps.filter((step) => step.canClaim);
   const nextActionStep = getRpgTutorialNextActionStep(tutorial);
-  const rows = tutorial.steps.map((step) => {
+  const visibleSteps = [
+    ...claimable,
+    ...(nextActionStep ? [nextActionStep] : [])
+  ].filter((step, index, values) =>
+    values.findIndex((candidate) => candidate.id === step.id) === index
+  ).slice(0, 3);
+  const rows = visibleSteps.map((step) => {
     const state = step.claimed
       ? '✅ 완료'
       : step.canClaim
@@ -3048,30 +3042,24 @@ function formatRpgTutorial(status) {
         : step.complete
           ? '완료'
           : '진행 중';
-    return [
-      `- **${step.order}. ${step.label}** — ${state} · 진행도 ${formatRpgProgress(step.current, step.required)}`,
-      `  ${step.description}`,
-      `  다음 조작: **${step.actionLabel}** · \`${step.command}\` · 보상 ${formatRpgRewardSummary(step.rewards)}`
-    ].join('\n');
+    return `- **${step.label}** ${state} · ${formatRpgProgress(step.current, step.required)} · \`${step.command}\``;
   });
 
   const nextLine = nextActionStep
-    ? `다음 목표: **${nextActionStep.label}** — ${nextActionStep.description}`
+    ? `다음 목표: **${nextActionStep.label}** · \`${nextActionStep.command}\``
     : '다음 목표: 모든 초보자 여정을 완료했습니다.';
   const claimLine = claimable.length > 0
-    ? `받을 수 있는 보상: **${claimable.map((step) => step.label).join(', ')}**`
-    : '받을 수 있는 보상: 아직 없음';
+    ? `보상 가능 **${claimable.map((step) => step.label).join(', ')}**`
+    : '보상 가능 없음';
 
   return [
     '🎓 **RPG 초보자 여정**',
-    `진행도: **${tutorial.claimedCount}/${tutorial.total} 보상 수령** · ${claimLine}`,
+    `진행도 **${tutorial.claimedCount}/${tutorial.total}** · ${claimLine}`,
     nextLine,
-    '',
-    rows.join('\n'),
-    '',
+    rows.join('\n') || '모든 튜토리얼 완료',
     status.profile.rpg.startedAt <= 0
-      ? '먼저 아래 선택 메뉴에서 성별과 직업을 고르면 캐릭터가 생성됩니다.'
-      : '보상 가능한 단계는 아래 선택 메뉴로 바로 수령하고, 버튼으로 다음 목표를 이어가세요.'
+      ? '아래 선택 메뉴에서 캐릭터 생성'
+      : '선택 메뉴로 보상 수령'
   ].join('\n');
 }
 
@@ -3463,7 +3451,7 @@ function formatRpgExplore(user, result) {
   ].filter(Boolean);
 
   return [
-    `🧭 **RPG 탐험 결과** — ${user}`,
+    `🧭 **RPG 탐험 결과** — ${formatDiscordUserMention(user)}`,
     `📍 지역: **${result.exploration.areaLabel}** · 이벤트 **${result.exploration.eventLabel}**`,
     `📝 ${result.exploration.description}`,
     `🎁 보상: +${result.xpGained.toLocaleString()} XP, +${formatRpgGoldReward(result.coinReward, result.requestedCoinReward)}`,
@@ -3486,7 +3474,7 @@ function formatRpgDungeon(user, result) {
   ].filter(Boolean);
 
   return [
-    `🏰 **RPG 던전 결과** — ${user}`,
+    `🏰 **RPG 던전 결과** — ${formatDiscordUserMention(user)}`,
     `📍 지역: **${result.areaConfig.label}** · 깊이 **${result.depth}층**`,
     rows.join('\n'),
     `🎁 합계: +${result.totalXp.toLocaleString()} XP, +${formatRpgGoldReward(result.totalCoins, result.requestedTotalCoins)} · 피해 **${result.totalDamage.toLocaleString()}**`,
@@ -3692,7 +3680,7 @@ function formatRpgRaid(user, result) {
   ].filter(Boolean);
 
   return [
-    `🐉 **RPG 레이드 결과** — ${user}`,
+    `🐉 **RPG 레이드 결과** — ${formatDiscordUserMention(user)}`,
     `📍 레이드: **${battle.raidLabel}** · 지역 **${battle.areaLabel}**`,
     `🧙 스킬: **${battle.skillLabel}** (MP -${battle.skillMpCost})`,
     `🎲 전투 판정: 파티 **${battle.playerPower}** (주사위 ${battle.playerRoll}, 지원 ${battle.allyPower}, 보너스 +${battle.attackBonus}) vs 레이드 **${battle.monsterPower} → ${battle.mitigatedMonsterPower}**`,
@@ -3750,7 +3738,7 @@ function formatRpgGuildRaid(user, result) {
   ].filter(Boolean);
 
   return [
-    `🐉 **RPG 길드 레이드 결과** — ${user}`,
+    `🐉 **RPG 길드 레이드 결과** — ${formatDiscordUserMention(user)}`,
     `📍 레이드: **${battle.raidLabel}** · 지역 **${battle.areaLabel}** · 파티 **${battle.partySize}명**`,
     `🧙 스킬: **${battle.skillLabel}**${ultimateText} (MP -${battle.skillMpCost})`,
     `👥 참가자: ${partyText}`,
@@ -3816,27 +3804,24 @@ function formatRpgAreas(status) {
       : area.unlocked
         ? area.mastered ? '✅ 마스터' : '✅ 입장 가능'
         : `🔒 Lv.${area.unlockLevel} 필요`;
-    const row = `${area.current ? '📍' : area.unlocked ? '✅' : '🔒'} **${area.label}** · ${state} · 탐사 ${area.progress}% ${area.progressBar} · XP×${area.xpMultiplier}/골드×${area.coinMultiplier}`;
+    const row = `${area.current ? '📍' : area.unlocked ? '✅' : '🔒'} **${area.label}** ${state} · 진행도 ${area.progress}%`;
     if (!tiers.has(tier)) tiers.set(tier, []);
     tiers.get(tier).push(row);
   }
 
-  const tierRows = [...tiers.entries()].map(([tier, rows]) => [
-    `**${tier}**`,
-    rows.join('\n')
-  ].join('\n'));
+  const tierRows = [...tiers.entries()]
+    .slice(0, 3)
+    .map(([tier, rows]) => `**${tier}** ${rows.slice(0, 3).join(' / ')}`);
 
   return [
     '🗺️ **RPG 월드맵 · 사냥터 선택**',
-    `현재 지역: **${status.currentArea.label}**`,
-    `추천 사냥터: **${recommendedArea.label}** — 지금 해금된 가장 높은 보상 배율 지역`,
+    `현재 **${status.currentArea.label}** · 추천 사냥터 **${recommendedArea.label}**`,
+    '선택 가이드: ✅ 이동 가능 / 📍 현재 / 🔒 잠김',
     nextLockedArea
       ? `다음 해금: **${nextLockedArea.label}** Lv.${nextLockedArea.unlockLevel}+`
       : '다음 해금: 모든 지역 개방 완료',
-    '',
-    tierRows.join('\n\n'),
-    '',
-    '선택 가이드 / 버튼 가이드: ✅ 이동 가능 / 📍 현재 지역 / 🔒 잠김. 아래 선택 메뉴나 빠른 버튼으로 이동하고, 이동 후 `/rpg 전투`, `/rpg 탐험`, `/rpg 던전`의 기본 지역이 바뀝니다.'
+    tierRows.join('\n'),
+    '아래 선택 메뉴로 바로 이동'
   ].filter(Boolean).join('\n');
 }
 

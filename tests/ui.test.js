@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  createAllowedMentionsForUsers,
   createButtonRows,
   createPagedButtonRow,
+  formatUserMention,
   shortenComponentText
 } from '../src/commands/ui.js';
 
@@ -26,4 +28,14 @@ test('공통 UI helper는 버튼 row 분할과 페이지 버튼 생성을 제공
   assert.equal(pageRow.components[0].data.disabled, true);
   assert.equal(pageRow.components[1].data.disabled, false);
   assert.equal(shortenComponentText('가'.repeat(105), 100).length, 100);
+});
+
+test('공통 UI helper는 유저 객체와 원시 id를 안전한 멘션으로 바꾼다', () => {
+  assert.equal(formatUserMention({ id: 'user-1', username: '테스터' }), '<@user-1>');
+  assert.equal(formatUserMention('user-2'), '<@user-2>');
+  assert.equal(formatUserMention({ username: '이름만있음' }), '이름만있음');
+  assert.deepEqual(createAllowedMentionsForUsers(['user-1', 'user-2', 'user-1']), {
+    parse: [],
+    users: ['user-1', 'user-2']
+  });
 });

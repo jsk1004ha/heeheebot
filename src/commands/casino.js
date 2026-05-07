@@ -25,6 +25,10 @@ import {
   standPlayerBlackjackRound,
   playSlots
 } from '../systems/casino.js';
+import {
+  createAllowedMentionsForUsers,
+  formatUserMention
+} from './ui.js';
 
 const CHALLENGE_TTL_MS = 60_000;
 const pendingBlackjackChallenges = new Map();
@@ -594,7 +598,8 @@ async function createPlayerBlackjackChallenge(interaction, economy, bet, opponen
   );
 
   await interaction.reply({
-    content: `🃏 ${opponent}, ${interaction.user}님이 블랙잭 대결을 신청했습니다.\n베팅: **${bet.toLocaleString()}골드씩**, 승자 독식: **${(bet * 2).toLocaleString()}골드**\n60초 안에 수락해주세요.`,
+    content: `🃏 ${formatUserMention(opponent, opponent.username)}, ${formatUserMention(interaction.user, interaction.user.username)}님이 블랙잭 대결을 신청했습니다.\n베팅: **${bet.toLocaleString()}골드씩**, 승자 독식: **${(bet * 2).toLocaleString()}골드**\n60초 안에 수락해주세요.`,
+    allowedMentions: createAllowedMentionsForUsers([interaction.user.id, opponent.id]),
     components: [row]
   });
 }
@@ -652,7 +657,7 @@ async function handleCasinoQuickButton(interaction, economy, logger) {
     if (action === 'slots') {
       const game = playSlots({ bet });
       const settlement = await settleGame(interaction, economy, bet, game.payout);
-      await interaction.update(createCasinoGamePayload({
+      await interaction.reply(createCasinoGamePayload({
         content: formatSlotResult(interaction.user, game, settlement),
         userId: interaction.user.id,
         game: action,
@@ -665,7 +670,7 @@ async function handleCasinoQuickButton(interaction, economy, logger) {
       const normalizedChoice = normalizeOddEvenChoice(choice);
       const game = playOddEven({ choice: normalizedChoice, bet });
       const settlement = await settleGame(interaction, economy, bet, game.payout);
-      await interaction.update(createCasinoGamePayload({
+      await interaction.reply(createCasinoGamePayload({
         content: formatOddEvenResult(interaction.user, game, settlement),
         userId: interaction.user.id,
         game: action,
@@ -679,7 +684,7 @@ async function handleCasinoQuickButton(interaction, economy, logger) {
       const normalizedChoice = normalizeDiceChoice(choice);
       const game = playDice({ choice: normalizedChoice, bet });
       const settlement = await settleGame(interaction, economy, bet, game.payout);
-      await interaction.update(createCasinoGamePayload({
+      await interaction.reply(createCasinoGamePayload({
         content: formatDiceResult(interaction.user, game, settlement),
         userId: interaction.user.id,
         game: action,
@@ -737,7 +742,11 @@ async function handleBlackjackChallengeButton(interaction, economy, logger) {
 
   if (action === 'blackjack_decline') {
     await interaction.update({
-      content: `🃏 ${interaction.user}님이 블랙잭 대결을 거절했습니다.`,
+      content: `🃏 ${formatUserMention(interaction.user, interaction.user.username)}님이 블랙잭 대결을 거절했습니다.`,
+      allowedMentions: createAllowedMentionsForUsers([
+        challenge.challenger.userId,
+        challenge.opponent.userId
+      ]),
       components: []
     });
     return true;
@@ -762,10 +771,9 @@ async function handleBlackjackChallengeButton(interaction, economy, logger) {
       expiresAt: Date.now() + CHALLENGE_TTL_MS
     });
 
-    await interaction.update({
-      content: formatPlayerBlackjackProgress(challenge, game),
-      components: [createPlayerBlackjackActionRow(gameId)]
-    });
+    await interaction.update(createPlayerBlackjackProgressPayload(challenge, game, [
+      createPlayerBlackjackActionRow(gameId)
+    ]));
   } catch (error) {
     if (reserved) {
       await economy.resolveReservedPlayerPot({
@@ -922,10 +930,9 @@ async function handlePlayerBlackjackButton(interaction, economy, logger) {
 
     if (game.status !== 'settled') {
       pending.expiresAt = Date.now() + CHALLENGE_TTL_MS;
-      await interaction.update({
-        content: formatPlayerBlackjackProgress(pending, game),
-        components: [createPlayerBlackjackActionRow(gameId)]
-      });
+      await interaction.update(createPlayerBlackjackProgressPayload(pending, game, [
+        createPlayerBlackjackActionRow(gameId)
+      ]));
       return true;
     }
 
@@ -943,10 +950,7 @@ async function handlePlayerBlackjackButton(interaction, economy, logger) {
       winnerUserId
     });
 
-    await interaction.update({
-      content: formatPlayerBlackjackResult(pending, game, settlement),
-      components: []
-    });
+    await interaction.update(createPlayerBlackjackResultPayload(pending, game, settlement));
   } catch (error) {
     pendingPlayerBlackjackGames.delete(gameId);
     if (pending.reserved) {
@@ -970,7 +974,7 @@ async function handlePlayerBlackjackButton(interaction, economy, logger) {
 
 function formatOddEvenResult(user, game, settlement) {
   return [
-    `🎲 **홀짝** — ${user}`,
+    `🎲 **홀짝** — ${formatUserMention(user, user.username)}`,
     `선택: ${game.choice === 'odd' ? '홀' : '짝'} / 결과: ${game.roll} (${game.outcome === 'odd' ? '홀' : '짝'})`,
     formatSettlement(game.win, settlement)
   ].join('\n');
@@ -978,7 +982,7 @@ function formatOddEvenResult(user, game, settlement) {
 
 function formatDiceResult(user, game, settlement) {
   return [
-    `🎲 **주사위** — ${user}`,
+    `🎲 **주사위** — ${formatUserMention(user, user.username)}`,
     `선택: ${game.choice === 'high' ? '높음(4~6)' : '낮음(1~3)'} / 결과: ${game.roll}`,
     formatSettlement(game.win, settlement)
   ].join('\n');
@@ -986,7 +990,7 @@ function formatDiceResult(user, game, settlement) {
 
 function formatSlotResult(user, game, settlement) {
   return [
-    `🎰 **슬롯** — ${user}`,
+    `🎰 **슬롯** — ${formatUserMention(user, user.username)}`,
     `${game.reels.join(' | ')}`,
     game.win ? `배수: ${game.multiplier}배` : '꽝',
     formatSettlement(game.win, settlement)
@@ -995,7 +999,7 @@ function formatSlotResult(user, game, settlement) {
 
 function formatLuckySevenResult(user, game, settlement) {
   return [
-    `🎲 **럭키세븐** — ${user}`,
+    `🎲 **럭키세븐** — ${formatUserMention(user, user.username)}`,
     `주사위: ${game.dice.join(' + ')} = ${game.total}`,
     game.win ? `합계 7 적중! 배수: ${game.multiplier}배` : '합계 7 실패',
     formatSettlement(game.win, settlement)
@@ -1010,7 +1014,7 @@ function formatHighLowResult(user, game, settlement) {
   }[game.outcome];
 
   return [
-    `🃏 **하이로우** — ${user}`,
+    `🃏 **하이로우** — ${formatUserMention(user, user.username)}`,
     `선택: ${formatHighLowChoice(game.choice)} / 카드: ${game.firstCard} → ${game.secondCard} (${outcomeText})`,
     game.push ? '같은 숫자라 베팅금이 환불됩니다.' : '',
     formatSettlement(game.win || game.push, settlement)
@@ -1019,7 +1023,7 @@ function formatHighLowResult(user, game, settlement) {
 
 function formatRouletteResult(user, game, settlement) {
   return [
-    `🎡 **룰렛** — ${user}`,
+    `🎡 **룰렛** — ${formatUserMention(user, user.username)}`,
     `선택: ${formatRouletteChoice(game.choice)} / 결과: ${game.roll} (${formatRouletteColor(game.color)})`,
     formatSettlement(game.win, settlement)
   ].join('\n');
@@ -1027,7 +1031,7 @@ function formatRouletteResult(user, game, settlement) {
 
 function formatBaccaratResult(user, game, settlement) {
   return [
-    `🂡 **바카라** — ${user}`,
+    `🂡 **바카라** — ${formatUserMention(user, user.username)}`,
     `선택: ${formatBaccaratChoice(game.choice)} / 결과: ${formatBaccaratChoice(game.result)}`,
     `플레이어: ${formatCards(game.playerHand)} = ${game.playerValue}`,
     `뱅커: ${formatCards(game.bankerHand)} = ${game.bankerValue}`,
@@ -1046,7 +1050,7 @@ function formatCrapsResult(user, game, settlement) {
       : '패배';
 
   return [
-    `🎲 **크랩스** — ${user}`,
+    `🎲 **크랩스** — ${formatUserMention(user, user.username)}`,
     `선택: ${game.choice === 'pass' ? '패스' : '돈패스'}${game.point ? ` / 포인트: ${game.point}` : ''}`,
     `롤: ${rolls}`,
     `결과: **${outcomeText}**`,
@@ -1056,7 +1060,7 @@ function formatCrapsResult(user, game, settlement) {
 
 function formatSicBoResult(user, game, settlement) {
   return [
-    `🎲 **시크보** — ${user}`,
+    `🎲 **시크보** — ${formatUserMention(user, user.username)}`,
     `선택: ${formatSicBoChoice(game.choice)} / 주사위: ${game.dice.join(' + ')} = ${game.total}`,
     game.triple ? '트리플!' : '트리플 아님',
     formatSettlement(game.win, settlement)
@@ -1065,7 +1069,7 @@ function formatSicBoResult(user, game, settlement) {
 
 function formatKenoResult(user, game, settlement) {
   return [
-    `🔢 **키노** — ${user}`,
+    `🔢 **키노** — ${formatUserMention(user, user.username)}`,
     `내 번호: ${game.picks.join(', ')}`,
     `추첨: ${game.draw.join(', ')}`,
     `적중: ${game.hits.length > 0 ? game.hits.join(', ') : '없음'} (${game.hits.length}개)`,
@@ -1076,7 +1080,7 @@ function formatKenoResult(user, game, settlement) {
 
 function formatAiBlackjackProgress(user, game) {
   return [
-    `🃏 **블랙잭 vs AI** — ${user}`,
+    `🃏 **블랙잭 vs AI** — ${formatUserMention(user, user.username)}`,
     `내 패: ${formatCards(game.playerHand)} = ${game.playerValue}`,
     `AI 공개 패: ${game.dealerHand[0]} ?`,
     '버튼으로 히트 또는 스탠드를 선택하세요. 60초 동안 입력이 없으면 만료됩니다.'
@@ -1091,7 +1095,7 @@ function formatAiBlackjackResult(user, game, settlement) {
   }[game.result];
 
   return [
-    `🃏 **블랙잭 vs AI** — ${user}`,
+    `🃏 **블랙잭 vs AI** — ${formatUserMention(user, user.username)}`,
     `내 패: ${formatCards(game.playerHand)} = ${game.playerValue}`,
     `AI 패: ${formatCards(game.dealerHand)} = ${game.dealerValue}`,
     `결과: **${resultText}**${game.multiplier > 0 ? ` (${game.multiplier}배)` : ''}`,
@@ -1111,6 +1115,18 @@ function formatPlayerBlackjackProgress(challenge, game) {
     `현재 차례: ${currentMention}`,
     '버튼으로 히트 또는 스탠드를 선택하세요. 60초 동안 입력이 없으면 만료됩니다.'
   ].join('\n');
+}
+
+function createPlayerBlackjackProgressPayload(challenge, game, components = []) {
+  return {
+    content: formatPlayerBlackjackProgress(challenge, game),
+    allowedMentions: createAllowedMentionsForUsers([
+      game.currentTurn === 'challenger'
+        ? challenge.challenger.userId
+        : challenge.opponent.userId
+    ]),
+    components
+  };
 }
 
 function formatPlayerBlackjackResult(challenge, game, settlement) {
@@ -1136,6 +1152,24 @@ function formatPlayerBlackjackResult(challenge, game, settlement) {
     `승자: ${winnerMention}`,
     `상금: **${settlement.pot.toLocaleString()}골드** / 승자 골드: **${winnerBalance}골드**`
   ].join('\n');
+}
+
+function createPlayerBlackjackResultPayload(challenge, game, settlement) {
+  const winnerUserId = game.winner === 'challenger'
+    ? challenge.challenger.userId
+    : game.winner === 'opponent'
+      ? challenge.opponent.userId
+      : null;
+
+  return {
+    content: formatPlayerBlackjackResult(challenge, game, settlement),
+    allowedMentions: createAllowedMentionsForUsers([
+      winnerUserId,
+      challenge.challenger.userId,
+      challenge.opponent.userId
+    ]),
+    components: []
+  };
 }
 
 async function settleGame(interaction, economy, bet, payout) {

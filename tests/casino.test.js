@@ -163,7 +163,8 @@ test('단순 도박 결과만 같은 베팅 재시도 버튼을 제공하고 카
   assert.equal(await handleCasinoCommand(replayButton, fakeEconomy, quietLogger), true);
   assert.equal(settled[1].bet, 250);
   assert.equal(settled[1].userId, 'user-1');
-  assert.match(replayButton.updated.content, /슬롯/);
+  assert.equal(replayButton.updated, undefined);
+  assert.match(replayButton.replied.content, /슬롯/);
 
   const otherUserButton = createCasinoButtonInteraction({
     customId: resultButtons[0].data.custom_id,
@@ -172,6 +173,51 @@ test('단순 도박 결과만 같은 베팅 재시도 버튼을 제공하고 카
   assert.equal(await handleCasinoCommand(otherUserButton, fakeEconomy, quietLogger), true);
   assert.equal(otherUserButton.replied.ephemeral, true);
   assert.match(otherUserButton.replied.content, /명령어를 실행한 유저만/);
+});
+
+test('유저 블랙잭 신청과 진행 안내는 상대와 현재 차례를 실제 멘션으로 제한한다', async () => {
+  const fakeEconomy = {
+    async getProfile(_guildId, userId, username) {
+      return {
+        userId,
+        username,
+        balance: 1_000
+      };
+    },
+    async reservePlayerPot() {},
+    async resolveReservedPlayerPot() {
+      throw new Error('정산은 이 테스트에서 호출되지 않아야 합니다.');
+    }
+  };
+  const opponent = {
+    id: 'user-2',
+    username: '상대',
+    bot: false
+  };
+  const challenge = createChatInputInteraction('블랙잭', {
+    integers: { 돈: 100 },
+    targetUser: opponent
+  });
+
+  assert.equal(await handleCasinoCommand(challenge, fakeEconomy, quietLogger), true);
+  assert.match(challenge.replied.content, /<@user-1>/);
+  assert.match(challenge.replied.content, /<@user-2>/);
+  assert.deepEqual(challenge.replied.allowedMentions, {
+    parse: [],
+    users: ['user-1', 'user-2']
+  });
+
+  const acceptId = challenge.replied.components[0].components[0].data.custom_id;
+  const accept = createCasinoButtonInteraction({
+    customId: acceptId,
+    userId: 'user-2'
+  });
+  assert.equal(await handleCasinoCommand(accept, fakeEconomy, quietLogger), true);
+  assert.match(accept.updated.content, /현재 차례: <@user-1>/);
+  assert.deepEqual(accept.updated.allowedMentions, {
+    parse: [],
+    users: ['user-1']
+  });
 });
 
 test('룰렛, 바카라, 크랩스, 시크보, 키노 결과를 계산한다', () => {

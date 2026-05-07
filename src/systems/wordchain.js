@@ -234,7 +234,6 @@ export class WordChainGame {
       return {
         accepted: false,
         ...validation,
-        exampleWord: this.getExampleWord(),
         currentPlayer: player
       };
     }
@@ -330,15 +329,6 @@ export class WordChainGame {
       nextRequiredStart: this.requiredStart,
       nextPlayer: this.currentPlayer
     };
-  }
-
-  getExampleWord() {
-    return this.dictionary.chooseWord({
-      requiredStart: this.requiredStart,
-      usedWords: this.usedWords,
-      ...this.rules,
-      randomInt: this.randomInt
-    });
   }
 
   acceptWord(word) {

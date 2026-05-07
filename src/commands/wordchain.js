@@ -573,11 +573,6 @@ function createLobbyActionRow(state) {
 
 function formatRejectedWordReply(state, result) {
   const lines = [`❌ ${result.reason}`];
-
-  if (result.exampleWord) {
-    lines.push(`예시 단어: **${result.exampleWord}**`);
-  }
-
   lines.push(formatTurnHint(state));
   return lines.join('\n');
 }

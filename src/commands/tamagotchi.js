@@ -6,7 +6,6 @@ import {
   SlashCommandBuilder
 } from 'discord.js';
 import {
-  formatStatBar,
   TAMAGOTCHI_ACTIONS,
   TAMAGOTCHI_FRIEND_ACTIONS,
   TAMAGOTCHI_LEISURES,
@@ -18,6 +17,9 @@ import {
   getTamagotchiStageSkinAttachment,
   getTamagotchiSkins
 } from '../systems/tamagotchi-assets.js';
+import {
+  formatUserMention
+} from './ui.js';
 
 const BUTTON_PREFIX = 'heejin_pet';
 const STATUS_COLOR = 0xff9fca;
@@ -198,7 +200,7 @@ export function createTamagotchiReplyPayload(user, result) {
     .setTitle(screen.title)
     .setDescription(screen.description)
     .setColor(resolveStatusColor(result.pet))
-    .setFooter({ text: '버튼은 주인만 누를 수 있어요 · 방치/질병을 오래 두면 사망합니다' });
+    .setFooter({ text: '주인 전용 버튼 · 방치/질병 주의' });
 
   if (skinAttachment) embed.setImage(`attachment://${skinAttachment.name}`);
   if (decorationAttachment) embed.setThumbnail(`attachment://${decorationAttachment.name}`);
@@ -450,38 +452,24 @@ function getTamagotchiScreen(user, result) {
 function formatTamagotchiStatus(user, result) {
   const { pet, mood, skin, decoration, growthBranch, growthProfile } = result;
   const stats = pet.stats;
-  const deathLine = pet.status === 'dead'
-    ? `\n💀 사망 이유: **${pet.deathReason ?? '알 수 없음'}**\n✨ **부활** 버튼을 누르면 다시 시작할 수 있어요.`
-    : '';
-  const illnessLine = pet.conditions?.sick && pet.status !== 'dead'
-    ? `\n🤒 병듦: **${pet.conditions.illnessReason ?? '컨디션 악화'}** — **약주기**와 기본 케어가 필요해요.`
-    : '';
   const favoriteLeisure = getFavoriteLeisure(pet);
+  const warning = pet.status === 'dead'
+    ? ` · 💀 ${pet.deathReason ?? '사망'} · 부활 가능`
+    : pet.conditions?.sick
+      ? ` · 🤒 ${pet.conditions.illnessReason ?? '아픔'} · 약주기 추천`
+      : '';
+  const nextGrowth = result.nextGrowth?.complete
+    ? '성년기 도달'
+    : `${result.nextGrowth?.label ?? '알 수 없음'}까지 약 ${result.nextGrowth?.remainingDays ?? 0}일`;
 
   return [
-    `${user}님의 도트 희진입니다.${deathLine}${illnessLine}`,
-    '',
-    `${mood.emoji} 상태: **${mood.label}** · 성장: **${result.growthStage?.label ?? '알 수 없음'}** · 나이: **${result.ageDays}일**`,
-    `🌱 성장 분기: **${growthBranch?.label ?? '분기 전'}** · 만족도 **${growthProfile?.satisfactionScore ?? 0}점** · 특화 **${formatDominantTrait(growthProfile?.dominantTrait)}**`,
-    `🎯 추천 행동: ${formatRecommendations(result.recommendations)}`,
-    `📋 오늘의 돌봄: **${result.daily.completedCount}/${result.daily.totalCount}** ${formatDailyMissions(result.daily)}`,
-    `📚 성장도감: **${result.codex.branchCount}/${result.codex.totalBranches}** · 사건도감 **${result.codex.eventCount}/${result.codex.totalEvents}** · 추억 조각 **${result.codex.memoryShards.toLocaleString()}개**`,
-    result.nextGrowth?.complete
-      ? '🌿 다음 성장: **성년기 도달**'
-      : `🌿 다음 성장: **${result.nextGrowth?.label ?? '알 수 없음'}**까지 약 **${result.nextGrowth?.remainingDays ?? 0}일**`,
-    pet.status === 'dead' ? '방치 사망까지: **이미 사망**' : `방치 사망까지: **${result.neglectRemaining}**`,
-    '',
-    `🍚 배부름 ${formatStatBar(stats.fullness)} **${Math.round(stats.fullness)}**`,
-    `😊 행복 ${formatStatBar(stats.happiness)} **${Math.round(stats.happiness)}**`,
-    `🫧 청결 ${formatStatBar(stats.cleanliness)} **${Math.round(stats.cleanliness)}**`,
-    `💤 에너지 ${formatStatBar(stats.energy)} **${Math.round(stats.energy)}**`,
-    `💊 건강 ${formatStatBar(stats.health)} **${Math.round(stats.health)}**`,
-    `💖 애정 ${formatStatBar(stats.affection)} **${Math.round(stats.affection)}**`,
-    '',
-    `🎨 스킨: **${skin?.label ?? pet.cosmetic.skinId}**`,
-    `🧸 꾸미기: **${decoration?.label ?? pet.cosmetic.decorationId}**`,
-    `🎮 최애 여가: **${favoriteLeisure}**`,
-    `총 케어: **${pet.counters.totalCareActions.toLocaleString()}회** / 부활: **${pet.counters.revivals.toLocaleString()}회**`,
+    `${formatUserMention(user, user?.username)}님의 도트 희진 · ${mood.emoji} **${mood.label}**${warning}`,
+    `성장 **${result.growthStage?.label ?? '알 수 없음'}**(${result.ageDays}일) · 분기 **${growthBranch?.label ?? '분기 전'}** · 만족도 **${growthProfile?.satisfactionScore ?? 0}점**`,
+    `추천 행동: ${formatRecommendations(result.recommendations)}`,
+    `오늘의 돌봄 **${result.daily.completedCount}/${result.daily.totalCount}** ${formatDailyMissions(result.daily)} · 성장도감 **${result.codex.branchCount}/${result.codex.totalBranches}** · 사건 **${result.codex.eventCount}/${result.codex.totalEvents}** · 조각 **${result.codex.memoryShards.toLocaleString()}개**`,
+    `다음 성장 **${nextGrowth}** · 방치 사망까지 **${pet.status === 'dead' ? '이미 사망' : result.neglectRemaining}**`,
+    `능력치: 🍚${Math.round(stats.fullness)} 😊${Math.round(stats.happiness)} 🫧${Math.round(stats.cleanliness)} 💤${Math.round(stats.energy)} 💊${Math.round(stats.health)} 💖${Math.round(stats.affection)}`,
+    `스킨 **${skin?.label ?? pet.cosmetic.skinId}** · 꾸미기 **${decoration?.label ?? pet.cosmetic.decorationId}** · 최애 **${favoriteLeisure}** · 케어 **${pet.counters.totalCareActions.toLocaleString()}회**`,
     formatRecentEvents(result.recentEvents)
   ].join('\n');
 }
@@ -491,66 +479,48 @@ function formatTamagotchiRoom(result) {
     ? `${result.room.nextUnlock.emoji} **${result.room.nextUnlock.label}** · 추억 조각 ${result.room.nextUnlock.cost}개`
     : '모든 방 아이템 해금 완료';
   const slots = result.room.slots
-    .map((slot) => `${slot.item ? slot.item.emoji : '▫️'} ${slot.label}: **${slot.item?.label ?? '비어 있음'}**`)
-    .join('\n');
+    .map((slot) => `${slot.item ? slot.item.emoji : '▫️'} ${slot.label} **${slot.item?.label ?? '비어 있음'}**`)
+    .join(' / ');
 
   return [
-    `희진 방은 **추억 조각**으로 꾸미는 장기 목표예요. 골드는 쓰지 않습니다.`,
-    `해금: **${result.room.unlockedCount}/${result.room.totalItems}** · 안락도 **${result.room.comfortScore}점** · 남은 조각 **${result.codex.memoryShards.toLocaleString()}개**`,
-    `다음 추천 해금: ${nextUnlock}`,
-    '',
-    slots,
-    '',
-    `최근 추억: ${formatRecentEvents(result.recentEvents)}`
+    `해금 **${result.room.unlockedCount}/${result.room.totalItems}** · 안락도 **${result.room.comfortScore}점** · 조각 **${result.codex.memoryShards.toLocaleString()}개**`,
+    `다음 해금: ${nextUnlock}`,
+    `배치: ${slots}`,
+    formatRecentEvents(result.recentEvents)
   ].join('\n');
 }
 
 function formatTamagotchiAlbum(result) {
-  const branchLines = result.album.branches
-    .slice(0, 6)
-    .map((item) => `${item.discovered ? '✅' : '⬜'} **${item.title}**`)
-    .join('\n');
-  const eventLines = result.album.events
-    .map((item) => `${item.discovered ? '✅' : '⬜'} **${item.title}**`)
-    .join('\n');
-  const roomLines = result.album.roomItems
-    .slice(0, 8)
-    .map((item) => `${item.discovered ? '✅' : '⬜'} **${item.title}**`)
-    .join('\n');
-
   return [
     `성장도감 **${result.codex.branchCount}/${result.codex.totalBranches}** · 사건도감 **${result.codex.eventCount}/${result.codex.totalEvents}** · 방 아이템 **${result.codex.roomItemCount}/${result.codex.totalRoomItems}**`,
-    '',
-    '🌱 **성장 앨범**',
-    branchLines,
-    '',
-    '🎲 **사건 앨범**',
-    eventLines,
-    '',
-    '🏠 **방 앨범**',
-    roomLines
+    `🌱 성장 앨범: ${formatAlbumSummary(result.album.branches, 5)}`,
+    `🎲 사건 앨범: ${formatAlbumSummary(result.album.events, 6)}`,
+    `🏠 방 앨범: ${formatAlbumSummary(result.album.roomItems, 6)}`
   ].join('\n');
 }
 
 function formatTamagotchiJournal(result) {
   const entries = result.journal.entries.length > 0
     ? result.journal.entries
+        .slice(0, 5)
         .map((entry) => `- **${entry.title}**: ${entry.message}`)
         .join('\n')
     : '아직 기록된 일기가 없습니다. 밥주기/여가/방문/방꾸미기를 해보세요.';
+  const omitted = result.journal.entries.length > 5
+    ? `\n… ${result.journal.entries.length - 5}개 더 있음`
+    : '';
 
   return [
     `최근 기록 **${result.journal.entries.length}/${result.journal.totalEntries}**`,
-    '',
-    entries
+    `${entries}${omitted}`
   ].join('\n');
 }
 
 function formatTamagotchiQuest(result) {
   const quest = result.adultQuest;
   const requirements = quest.requirements
-    .map((requirement) => `${requirement.complete ? '✅' : '⬜'} ${requirement.label}: **${Math.min(requirement.current, requirement.required)}/${requirement.required}**`)
-    .join('\n');
+    .map((requirement) => `${requirement.complete ? '✅' : '⬜'} ${requirement.label} **${Math.min(requirement.current, requirement.required)}/${requirement.required}**`)
+    .join(' / ');
   const state = !quest.stageReady
     ? '성년기 이후 열림'
     : quest.rewardClaimed
@@ -560,15 +530,23 @@ function formatTamagotchiQuest(result) {
         : '진행 중';
 
   return [
-    `상태: **${state}** · 분기: **${result.growthBranch?.label ?? '분기 전'}**`,
-    `퀘스트: **${quest.label}**`,
-    quest.description,
-    '',
-    requirements,
-    '',
+    `상태 **${state}** · 분기 **${result.growthBranch?.label ?? '분기 전'}**`,
+    `퀘스트 **${quest.label}** — ${quest.description}`,
+    `조건: ${requirements}`,
     `보상: 추억 조각 **${quest.reward.memoryShards}개** + **${quest.reward.roomItemLabel}**`,
-    quest.complete && !quest.rewardClaimed ? '`/희진퀘스트 행동:보상 받기` 또는 **퀘보상** 버튼으로 받을 수 있어요.' : ''
+    quest.complete && !quest.rewardClaimed ? '**퀘보상** 버튼으로 받을 수 있어요.' : ''
   ].filter(Boolean).join('\n');
+}
+
+function formatAlbumSummary(items = [], limit = 5) {
+  const visibleItems = items.slice(0, limit);
+  const summary = visibleItems
+    .map((item) => `${item.discovered ? '✅' : '⬜'}${item.title}`)
+    .join(' / ');
+  const omitted = items.length > visibleItems.length
+    ? ` / …${items.length - visibleItems.length}개`
+    : '';
+  return `${summary || '없음'}${omitted}`;
 }
 
 function formatRecommendations(recommendations = []) {

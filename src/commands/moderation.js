@@ -8,6 +8,7 @@ import {
   formatDurationMs,
   parseDuration
 } from '../systems/moderation.js';
+import { formatUserMention } from './ui.js';
 
 export const moderationCommands = [
   new SlashCommandBuilder()
@@ -302,7 +303,7 @@ async function routeModerationCommand(interaction, moderation, logger) {
     const count = interaction.options.getInteger('개수', true);
     const deleted = await interaction.channel.bulkDelete(count, true);
     await safeReply(interaction, `🧹 메시지 ${deleted.size}개를 삭제했습니다.`, true);
-    await sendModerationLog(interaction.guild, moderation, `🧹 ${interaction.user}님이 <#${interaction.channelId}>에서 메시지 ${deleted.size}개를 삭제했습니다.`);
+    await sendModerationLog(interaction.guild, moderation, `🧹 ${formatUserMention(interaction.user, interaction.user.username)}님이 <#${interaction.channelId}>에서 메시지 ${deleted.size}개를 삭제했습니다.`);
     return;
   }
 
@@ -325,8 +326,8 @@ async function routeModerationCommand(interaction, moderation, logger) {
       punishmentText = `\n자동 처벌: ${punishmentResult}`;
     }
 
-    await interaction.reply(`⚠️ ${target}님에게 경고를 부여했습니다. 현재 경고: ${result.count}회${punishmentText}`);
-    await sendModerationLog(interaction.guild, moderation, `⚠️ 경고: ${target} / 관리자: ${interaction.user} / 사유: ${reason} / 누적 ${result.count}회${punishmentText}`);
+    await interaction.reply(`⚠️ ${formatUserMention(target, target.username)}님에게 경고를 부여했습니다. 현재 경고: ${result.count}회${punishmentText}`);
+    await sendModerationLog(interaction.guild, moderation, `⚠️ 경고: ${formatUserMention(target, target.username)} / 관리자: ${formatUserMention(interaction.user, interaction.user.username)} / 사유: ${reason} / 누적 ${result.count}회${punishmentText}`);
     return;
   }
 
@@ -335,7 +336,7 @@ async function routeModerationCommand(interaction, moderation, logger) {
     const warnings = await moderation.getWarnings(interaction.guildId, target.id);
 
     if (warnings.length === 0) {
-      await safeReply(interaction, `${target}님의 경고 내역이 없습니다.`, true);
+      await safeReply(interaction, `${formatUserMention(target, target.username)}님의 경고 내역이 없습니다.`, true);
       return;
     }
 
@@ -344,15 +345,15 @@ async function routeModerationCommand(interaction, moderation, logger) {
       .map((warning, index) => `${index + 1}. ${warning.reason} — <@${warning.moderatorId}>`)
       .join('\n');
 
-    await safeReply(interaction, `⚠️ ${target}님의 경고 ${warnings.length}회\n${body}`, true);
+    await safeReply(interaction, `⚠️ ${formatUserMention(target, target.username)}님의 경고 ${warnings.length}회\n${body}`, true);
     return;
   }
 
   if (commandName === '경고삭제') {
     const target = interaction.options.getUser('유저', true);
     const result = await moderation.clearWarnings(interaction.guildId, target.id);
-    await interaction.reply(`✅ ${target}님의 경고 ${result.removed}개를 삭제했습니다.`);
-    await sendModerationLog(interaction.guild, moderation, `✅ 경고삭제: ${target} / 관리자: ${interaction.user} / 삭제 ${result.removed}개`);
+    await interaction.reply(`✅ ${formatUserMention(target, target.username)}님의 경고 ${result.removed}개를 삭제했습니다.`);
+    await sendModerationLog(interaction.guild, moderation, `✅ 경고삭제: ${formatUserMention(target, target.username)} / 관리자: ${formatUserMention(interaction.user, interaction.user.username)} / 삭제 ${result.removed}개`);
     return;
   }
 
@@ -363,24 +364,24 @@ async function routeModerationCommand(interaction, moderation, logger) {
     assertNotBotTarget(target);
 
     await timeoutMember(interaction.guild, target.id, durationMs, reason);
-    await interaction.reply(`🔇 ${target}님을 ${formatDurationMs(durationMs)} 동안 뮤트했습니다.`);
-    await sendModerationLog(interaction.guild, moderation, `🔇 뮤트: ${target} / 관리자: ${interaction.user} / 시간: ${formatDurationMs(durationMs)} / 사유: ${reason}`);
+    await interaction.reply(`🔇 ${formatUserMention(target, target.username)}님을 ${formatDurationMs(durationMs)} 동안 뮤트했습니다.`);
+    await sendModerationLog(interaction.guild, moderation, `🔇 뮤트: ${formatUserMention(target, target.username)} / 관리자: ${formatUserMention(interaction.user, interaction.user.username)} / 시간: ${formatDurationMs(durationMs)} / 사유: ${reason}`);
     return;
   }
 
   if (commandName === '언뮤트') {
     const target = interaction.options.getUser('유저', true);
     await timeoutMember(interaction.guild, target.id, null, '언뮤트');
-    await interaction.reply(`🔈 ${target}님의 뮤트를 해제했습니다.`);
-    await sendModerationLog(interaction.guild, moderation, `🔈 언뮤트: ${target} / 관리자: ${interaction.user}`);
+    await interaction.reply(`🔈 ${formatUserMention(target, target.username)}님의 뮤트를 해제했습니다.`);
+    await sendModerationLog(interaction.guild, moderation, `🔈 언뮤트: ${formatUserMention(target, target.username)} / 관리자: ${formatUserMention(interaction.user, interaction.user.username)}`);
     return;
   }
 
   if (commandName === '슬로우모드풀기') {
     const target = interaction.options.getUser('유저', true);
     await timeoutMember(interaction.guild, target.id, null, '유저 슬로우모드 해제');
-    await interaction.reply(`✅ ${target}님의 유저 슬로우모드를 해제했습니다.`);
-    await sendModerationLog(interaction.guild, moderation, `✅ 유저 슬로우모드 해제: ${target} / 관리자: ${interaction.user}`);
+    await interaction.reply(`✅ ${formatUserMention(target, target.username)}님의 유저 슬로우모드를 해제했습니다.`);
+    await sendModerationLog(interaction.guild, moderation, `✅ 유저 슬로우모드 해제: ${formatUserMention(target, target.username)} / 관리자: ${formatUserMention(interaction.user, interaction.user.username)}`);
     return;
   }
 
@@ -391,8 +392,8 @@ async function routeModerationCommand(interaction, moderation, logger) {
 
     const member = await interaction.guild.members.fetch(target.id);
     await member.kick(reason);
-    await interaction.reply(`👢 ${target}님을 킥했습니다.`);
-    await sendModerationLog(interaction.guild, moderation, `👢 킥: ${target} / 관리자: ${interaction.user} / 사유: ${reason}`);
+    await interaction.reply(`👢 ${formatUserMention(target, target.username)}님을 킥했습니다.`);
+    await sendModerationLog(interaction.guild, moderation, `👢 킥: ${formatUserMention(target, target.username)} / 관리자: ${formatUserMention(interaction.user, interaction.user.username)} / 사유: ${reason}`);
     return;
   }
 
@@ -402,8 +403,8 @@ async function routeModerationCommand(interaction, moderation, logger) {
     assertNotBotTarget(target);
 
     await interaction.guild.members.ban(target.id, { reason });
-    await interaction.reply(`🔨 ${target}님을 밴했습니다.`);
-    await sendModerationLog(interaction.guild, moderation, `🔨 밴: ${target} / 관리자: ${interaction.user} / 사유: ${reason}`);
+    await interaction.reply(`🔨 ${formatUserMention(target, target.username)}님을 밴했습니다.`);
+    await sendModerationLog(interaction.guild, moderation, `🔨 밴: ${formatUserMention(target, target.username)} / 관리자: ${formatUserMention(interaction.user, interaction.user.username)} / 사유: ${reason}`);
     return;
   }
 
@@ -411,7 +412,7 @@ async function routeModerationCommand(interaction, moderation, logger) {
     const userId = interaction.options.getString('유저id', true);
     await interaction.guild.members.unban(userId);
     await interaction.reply(`✅ ${formatUserIdMention(userId)} 유저의 밴을 해제했습니다.`);
-    await sendModerationLog(interaction.guild, moderation, `✅ 언밴: ${formatUserIdMention(userId)} / 관리자: ${interaction.user}`);
+    await sendModerationLog(interaction.guild, moderation, `✅ 언밴: ${formatUserIdMention(userId)} / 관리자: ${formatUserMention(interaction.user, interaction.user.username)}`);
     return;
   }
 
@@ -427,7 +428,7 @@ async function handleModerationSettings(interaction, moderation) {
     const channel = interaction.options.getChannel('채널', true);
     await moderation.setLogChannel(interaction.guildId, channel.id);
     await interaction.reply(`✅ 관리 로그 채널을 ${channel}로 설정했습니다.`);
-    await sendModerationLog(interaction.guild, moderation, `✅ 관리 로그 채널 설정: ${channel} / 관리자: ${interaction.user}`);
+    await sendModerationLog(interaction.guild, moderation, `✅ 관리 로그 채널 설정: ${channel} / 관리자: ${formatUserMention(interaction.user, interaction.user.username)}`);
     return;
   }
 
@@ -435,7 +436,7 @@ async function handleModerationSettings(interaction, moderation) {
     const word = interaction.options.getString('단어', true);
     const settings = await moderation.addBannedWord(interaction.guildId, word);
     await interaction.reply(`✅ 금칙어를 추가했습니다. 현재 ${settings.bannedWords.length}개`);
-    await sendModerationLog(interaction.guild, moderation, `🚫 금칙어 추가: **${word}** / 관리자: ${interaction.user}`);
+    await sendModerationLog(interaction.guild, moderation, `🚫 금칙어 추가: **${word}** / 관리자: ${formatUserMention(interaction.user, interaction.user.username)}`);
     return;
   }
 
@@ -451,7 +452,7 @@ async function handleModerationSettings(interaction, moderation) {
 
     const durationText = durationMs ? ` ${formatDurationMs(durationMs)}` : '';
     await interaction.reply(`✅ 경고 ${threshold}회마다 ${formatAction(action)}${durationText} 처벌하도록 설정했습니다.`);
-    await sendModerationLog(interaction.guild, moderation, `✅ 경고 누적 처벌 설정: ${threshold}회 → ${formatAction(action)}${durationText} / 관리자: ${interaction.user}`);
+    await sendModerationLog(interaction.guild, moderation, `✅ 경고 누적 처벌 설정: ${threshold}회 → ${formatAction(action)}${durationText} / 관리자: ${formatUserMention(interaction.user, interaction.user.username)}`);
   }
 }
 

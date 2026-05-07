@@ -53,6 +53,29 @@ export function shortenComponentText(value, maxLength = 100) {
     : text;
 }
 
+export function formatUserMention(userOrId, fallback = '알 수 없는 유저') {
+  if (userOrId && typeof userOrId === 'object') {
+    if (userOrId.id) return `<@${String(userOrId.id).trim()}>`;
+
+    const rendered = String(userOrId).trim();
+    if (rendered && rendered !== '[object Object]') return rendered;
+
+    return userOrId.username ?? fallback;
+  }
+
+  const id = String(userOrId ?? '').trim();
+  if (!id) return fallback;
+  if (/^<@!?\d+>$/.test(id)) return id;
+  return `<@${id}>`;
+}
+
+export function createAllowedMentionsForUsers(userIds) {
+  return {
+    parse: [],
+    users: normalizeMentionUserIds(userIds)
+  };
+}
+
 export function createTextCardPayload({
   content,
   files = [],
@@ -94,4 +117,11 @@ export function truncateEmbedDescription(text, maxLength = 4096) {
   return normalized.length > safeMaxLength
     ? `${normalized.slice(0, safeMaxLength - 1)}…`
     : normalized;
+}
+
+function normalizeMentionUserIds(userIds) {
+  const rawIds = Array.isArray(userIds) ? userIds : [userIds];
+  return [...new Set(rawIds
+    .map((userId) => String(userId ?? '').trim())
+    .filter(Boolean))];
 }

@@ -215,17 +215,19 @@ test('검강화 응답 버튼은 같은 유저가 강화와 판매 흐름을 이
   const components = replies[0].components[0].components;
   assert.deepEqual(components.map((component) => component.data.label), ['검강화', '상급강화', '검판매']);
 
+  const enhanceReplies = [];
   const enhanceButton = createSwordButtonInteraction({
     customId: 'sword_quick:enhance:user-1',
     updates,
-    replies: []
+    replies: enhanceReplies
   });
   await handleSwordCommand(enhanceButton, economy, silentLogger);
 
   assert.equal(enhanceCalls, 2);
-  assert.match(updates[0].content, /현재 검: \*\*\+2 /);
+  assert.equal(updates.length, 0);
+  assert.match(enhanceReplies[0].content, /현재 검: \*\*\+2 /);
   assert.deepEqual(
-    updates[0].components[0].components.map((component) => component.data.label),
+    enhanceReplies[0].components[0].components.map((component) => component.data.label),
     ['검강화', '상급강화', '검판매']
   );
 
@@ -236,8 +238,8 @@ test('검강화 응답 버튼은 같은 유저가 강화와 판매 흐름을 이
   });
   await handleSwordCommand(saleButton, economy, silentLogger);
 
-  assert.match(updates[1].content, /검판매 확인/);
-  assert.equal(updates[1].components[0].components[0].data.custom_id, 'sword_sell_confirm:user-1');
+  assert.match(updates[0].content, /검판매 확인/);
+  assert.equal(updates[0].components[0].components[0].data.custom_id, 'sword_sell_confirm:user-1');
 });
 
 test('검강화 실패 계열 응답은 대장장이 위로와 놀림 메시지를 구분한다', async () => {
@@ -305,6 +307,7 @@ test('검정보 명령은 현재 검, 다음 강화, 판매가를 보여준다',
   assert.match(replies[0].content, /다음 일반 강화: \*\*\+12 → \+13\*\*/);
   assert.match(replies[0].content, /보호권: \*\*0개\*\*/);
   assert.match(replies[0].content, /판매 예상가: \*\*1,014골드\*\*/);
+  assert.ok(replies[0].content.split('\n').filter((line) => line.trim()).length <= 7);
   assert.equal(replies[0].files[0].name, 'sword_012.png');
 });
 
@@ -334,6 +337,8 @@ test('검도감 명령은 최고 강화 기준으로 해금 검과 다음 잠금
   assert.match(replies[0].content, /최고 해금: \*\*\+42 /);
   assert.match(replies[0].content, /다음 잠금: \*\*\+43 /);
   assert.match(replies[0].content, /최근 해금/);
+  assert.equal((replies[0].content.match(/최고 해금/g) ?? []).length, 1);
+  assert.ok(replies[0].content.split('\n').filter((line) => line.trim()).length <= 6);
   assert.equal(replies[0].files[0].name, 'sword_042.png');
 });
 
@@ -603,6 +608,12 @@ test('유저 검배틀 명령은 수락 버튼 없이 즉시 자동 정산한다
   assert.equal(receivedBattle.opponent.userId, 'target');
   assert.equal(replies.length, 1);
   assert.match(replies[0].content, /검배틀 결과/);
+  assert.match(replies[0].content, /<@user-1>/);
+  assert.match(replies[0].content, /<@target>/);
+  assert.deepEqual(replies[0].allowedMentions, {
+    parse: [],
+    users: ['user-1', 'target']
+  });
   assert.equal(replies[0].components, undefined);
 });
 

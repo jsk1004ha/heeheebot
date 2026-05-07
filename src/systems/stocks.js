@@ -94,68 +94,171 @@ const PRE_MARKET_NEWS_TEMPLATES = Object.freeze({
     stable: Object.freeze([
       '{name} 배당 정책 검토 자료가 게시됐습니다',
       '{name} 실적 설명회 일정이 공개됐습니다',
-      '{name} 장기 공급 계약 진행 상황 안내가 올라왔습니다'
+      '{name} 장기 공급 계약 진행 상황 안내가 올라왔습니다',
+      '{name} 자사주 매입 검토 일정이 공지됐습니다',
+      '{name} 핵심 거래처 갱신 미팅 일정이 공개됐습니다',
+      '{name} 비용 효율화 결과 설명회가 예고됐습니다',
+      '{name} 신규 유통 채널 계약 검토 자료가 게시됐습니다',
+      '{name} 현금흐름 개선 계획 질의응답이 잡혔습니다'
     ]),
     growth: Object.freeze([
       '{name} 신제품 공개 일정이 예고됐습니다',
       '{name} 신규 서비스 사전 안내가 게시됐습니다',
-      '{name} AI 협업 관련 질의응답 일정이 잡혔습니다'
+      '{name} AI 협업 관련 질의응답 일정이 잡혔습니다',
+      '{name} 베타 테스트 참가자 확대 안내가 공개됐습니다',
+      '{name} 해외 파트너 실증 일정이 공지됐습니다',
+      '{name} 구독 지표 설명회 일정이 잡혔습니다',
+      '{name} 신규 기능 로드맵 자료가 게시됐습니다',
+      '{name} 클라우드 전환 성과 발표가 예고됐습니다'
     ]),
     cyclical: Object.freeze([
       '{name} 신규 수주 협상 진행 상황이 공지됐습니다',
       '{name} 원가 구조 점검 자료가 공시됐습니다',
-      '{name} 대형 프로젝트 관련 일정 안내가 나왔습니다'
+      '{name} 대형 프로젝트 관련 일정 안내가 나왔습니다',
+      '{name} 설비 가동률 점검 결과 발표가 예고됐습니다',
+      '{name} 공급망 정상화 관련 설명자료가 게시됐습니다',
+      '{name} 수주 잔고 업데이트 일정이 공개됐습니다',
+      '{name} 원자재 헤지 계획 질의응답이 잡혔습니다',
+      '{name} 해외 프로젝트 현장 점검 일정이 안내됐습니다'
     ]),
     volatile: Object.freeze([
       '{name} 임상 데이터 공개 일정이 잡혔습니다',
       '{name} 연구 성과 발표 예고가 게시됐습니다',
-      '{name} 기술 이전 논의 관련 자료가 게시됐습니다'
+      '{name} 기술 이전 논의 관련 자료가 게시됐습니다',
+      '{name} 공동 연구 계약 검토 자료가 공개됐습니다',
+      '{name} 특허 심사 일정 관련 안내가 올라왔습니다',
+      '{name} 후속 실험 프로토콜 설명회가 예고됐습니다',
+      '{name} 데이터 검증 회의 일정이 공지됐습니다',
+      '{name} 해외 학회 발표 초록이 접수됐습니다'
     ]),
     meme: Object.freeze([
       '{name} 커뮤니티 협업 이벤트 예고가 퍼졌습니다',
       '{name} 신규 굿즈 공개 일정이 알려졌습니다',
-      '{name} 유명 스트리머 협업 관련 안내가 나왔습니다'
+      '{name} 유명 스트리머 협업 관련 안내가 나왔습니다',
+      '{name} 팝업스토어 운영 일정이 공개됐습니다',
+      '{name} SNS 캠페인 사전 티저가 올라왔습니다',
+      '{name} 팬 투표 기반 상품 기획안이 게시됐습니다',
+      '{name} 라이브 커머스 편성표가 공개됐습니다',
+      '{name} 커뮤니티 AMA 일정이 안내됐습니다'
     ])
   }),
   negative: Object.freeze({
     stable: Object.freeze([
       '{name} 비용 구조 점검 자료가 게시됐습니다',
       '{name} 배당 정책 재검토 가능성이 공시됐습니다',
-      '{name} 주요 고객사 발주 일정 조율 안내가 나왔습니다'
+      '{name} 주요 고객사 발주 일정 조율 안내가 나왔습니다',
+      '{name} 판매관리비 확대 관련 설명자료가 게시됐습니다',
+      '{name} 핵심 거래처 단가 협상 일정이 조정됐습니다',
+      '{name} 재고 회전율 점검 보고서가 공개됐습니다',
+      '{name} 분기 실적 가이던스 보완 자료가 올라왔습니다',
+      '{name} 보수적 투자 집행 계획이 안내됐습니다'
     ]),
     growth: Object.freeze([
       '{name} 신사업 출시 일정 지연 가능성이 제기됐습니다',
       '{name} 개발비 집행 계획 변경 공시가 게시됐습니다',
-      '{name} 경쟁 환경 관련 설명자료가 공개됐습니다'
+      '{name} 경쟁 환경 관련 설명자료가 공개됐습니다',
+      '{name} 이용자 성장률 점검 자료가 게시됐습니다',
+      '{name} 파트너 계약 조건 재협의 일정이 안내됐습니다',
+      '{name} 서버 증설 비용 관련 질의응답이 잡혔습니다',
+      '{name} 신규 서비스 안정화 계획이 보완됐습니다',
+      '{name} 마케팅 집행 일정 조정 안내가 나왔습니다'
     ]),
     cyclical: Object.freeze([
       '{name} 원자재 조달 비용 점검 자료가 나왔습니다',
       '{name} 수주 일정 조정 가능성이 전해졌습니다',
-      '{name} 경기 민감도 검토 보고서가 나왔습니다'
+      '{name} 경기 민감도 검토 보고서가 나왔습니다',
+      '{name} 물류비 변동 관련 설명자료가 공개됐습니다',
+      '{name} 주요 현장 납기 일정이 다시 안내됐습니다',
+      '{name} 설비 보수 기간 연장 가능성이 공지됐습니다',
+      '{name} 해외 발주처 검수 일정이 조정됐습니다',
+      '{name} 재고 평가손 반영 기준이 안내됐습니다'
     ]),
     volatile: Object.freeze([
       '{name} 허가 심사 보완 요청 가능성이 제기됐습니다',
       '{name} 연구비 조달 계획 보완 공시가 게시됐습니다',
-      '{name} 핵심 데이터 공개 지연 가능성이 나왔습니다'
+      '{name} 핵심 데이터 공개 지연 가능성이 나왔습니다',
+      '{name} 후속 실험 일정 재조정 안내가 게시됐습니다',
+      '{name} 공동 연구 범위 변경 자료가 공개됐습니다',
+      '{name} 특허 의견서 제출 일정이 보완됐습니다',
+      '{name} 임상 등록 속도 점검 자료가 나왔습니다',
+      '{name} 외부 검증 보고서 제출 일정이 조정됐습니다'
     ]),
     meme: Object.freeze([
       '{name} 커뮤니티 운영 관련 추가 공지가 예고됐습니다',
       '{name} 운영진 해명 공지 예고가 나왔습니다',
-      '{name} 밈 캠페인 일정 연기 가능성이 제기됐습니다'
+      '{name} 밈 캠페인 일정 연기 가능성이 제기됐습니다',
+      '{name} 굿즈 배송 일정 재공지 예고가 올라왔습니다',
+      '{name} 라이브 방송 편성 변경 안내가 게시됐습니다',
+      '{name} 팬 이벤트 운영 기준 보완 공지가 예고됐습니다',
+      '{name} SNS 채널 운영 정책 변경 안내가 나왔습니다',
+      '{name} 콜라보 상품 검수 일정이 조정됐습니다'
     ])
   }),
   risk: Object.freeze({
     volatile: Object.freeze([
       '{name} 거래소 확인 자료 제출 일정이 공지됐습니다',
       '{name} 핵심 파이프라인 추가 설명자료가 게시됐습니다',
-      '{name} 자금 조달 계획 보완 자료가 접수됐습니다'
+      '{name} 자금 조달 계획 보완 자료가 접수됐습니다',
+      '{name} 공시 정정 자료 접수 일정이 안내됐습니다',
+      '{name} 감사의견 관련 추가 설명자료가 게시됐습니다',
+      '{name} 유통 주식 수 변동 확인 자료가 접수됐습니다',
+      '{name} 보호예수 해제 일정 안내가 게시됐습니다',
+      '{name} 외부 평가기관 질의 답변서가 접수됐습니다'
     ]),
     meme: Object.freeze([
       '{name} 거래소 확인 자료 제출 일정이 공지됐습니다',
       '{name} 운영 관련 소명 자료 접수 가능성이 나왔습니다',
-      '{name} 커뮤니티 집계 방식 추가 설명 공지가 게시됐습니다'
+      '{name} 커뮤니티 집계 방식 추가 설명 공지가 게시됐습니다',
+      '{name} 유통 물량 변동 확인 자료가 접수됐습니다',
+      '{name} 프로모션 정산 기준 설명자료가 게시됐습니다',
+      '{name} 제휴 채널 운영 자료 제출 일정이 안내됐습니다',
+      '{name} 이벤트 참여 집계 검증 자료가 공개됐습니다',
+      '{name} 운영 지표 산정 방식 설명회가 예고됐습니다'
     ])
   })
+});
+
+const MARKET_SUMMARY_TEMPLATES = Object.freeze({
+  surge: Object.freeze([
+    '시황: {name}에 강한 매수세가 몰렸습니다',
+    '시황: {name} 거래량이 평소보다 크게 늘었습니다',
+    '시황: {name} 단기 수급이 매수 쪽으로 기울었습니다',
+    '시황: {name} 장중 호가 공백을 빠르게 메웠습니다',
+    '시황: {name} 종가 부근까지 매수 대기열이 유지됐습니다',
+    '시황: {name} {sector} 테마 매수 흐름을 이끌었습니다'
+  ]),
+  crash: Object.freeze([
+    '시황: {name} 매도 물량이 늘며 약세로 마감했습니다',
+    '시황: {name} 단기 차익 매물이 집중됐습니다',
+    '시황: {name} 장중 반등 시도가 오래 이어지지 못했습니다',
+    '시황: {name} 거래량 증가 속에 매도 우위가 나타났습니다',
+    '시황: {name} {sector} 업종 경계 매물에 눌렸습니다',
+    '시황: {name} 종가 부근 방어 매수가 부족했습니다'
+  ]),
+  positive: Object.freeze([
+    '시황: {name} 투자심리가 개선됐습니다',
+    '시황: {name} 저가 매수세가 천천히 유입됐습니다',
+    '시황: {name} {sector} 업종 선호 흐름을 탔습니다',
+    '시황: {name} 장 후반 매수 호가가 두꺼워졌습니다',
+    '시황: {name} 최근 조정분 일부를 되돌렸습니다',
+    '시황: {name} 거래대금이 완만하게 늘었습니다'
+  ]),
+  negative: Object.freeze([
+    '시황: {name} 경계 매물이 늘었습니다',
+    '시황: {name} 장중 반등 폭을 대부분 반납했습니다',
+    '시황: {name} {sector} 업종 관망세가 짙어졌습니다',
+    '시황: {name} 단기 매수세가 약해졌습니다',
+    '시황: {name} 종가 부근 매도 호가가 두꺼워졌습니다',
+    '시황: {name} 거래대금 감소 속에 밀렸습니다'
+  ]),
+  quiet: Object.freeze([
+    '시황: {name} 보합권에서 조용히 거래됐습니다',
+    '시황: {name} 투자자들이 다음 공시를 기다리고 있습니다',
+    '시황: {name} 거래 흐름이 안정적으로 유지됐습니다',
+    '시황: {name} {sector} 업종 평균과 비슷하게 움직였습니다',
+    '시황: {name} 호가 범위가 좁은 채 마감했습니다',
+    '시황: {name} 뚜렷한 방향 없이 거래를 마쳤습니다'
+  ])
 });
 
 const AUTO_IPO_PREFIXES = Object.freeze([
@@ -1408,8 +1511,7 @@ function createPreMarketNews(definition, impactBps, tickIndex) {
 function createPreMarketNewsMessage(definition, type, tickIndex) {
   const typedTemplates = PRE_MARKET_NEWS_TEMPLATES[type] ?? PRE_MARKET_NEWS_TEMPLATES.negative;
   const templates = typedTemplates[definition.risk] ?? typedTemplates.stable ?? typedTemplates.meme ?? typedTemplates.volatile;
-  const template = templates[tickIndex % templates.length];
-  return template.replaceAll('{name}', definition.name);
+  return renderStockNewsTemplate(pickStockNewsTemplate(templates, definition, tickIndex), definition);
 }
 
 function createIpoMarketNews(definition, state) {
@@ -1423,24 +1525,53 @@ function createIpoMarketNews(definition, state) {
 
 function createMarketSummary(definition, moveBps, tickIndex, eventType = null) {
   if (eventType === 'surge') {
-    return `시황: ${definition.name}에 강한 매수세가 몰렸습니다`;
+    return renderStockNewsTemplate(
+      pickStockNewsTemplate(MARKET_SUMMARY_TEMPLATES.surge, definition, tickIndex),
+      definition
+    );
   }
   if (eventType === 'crash') {
-    return `시황: ${definition.name} 매도 물량이 늘며 약세로 마감했습니다`;
+    return renderStockNewsTemplate(
+      pickStockNewsTemplate(MARKET_SUMMARY_TEMPLATES.crash, definition, tickIndex),
+      definition
+    );
   }
   if (moveBps >= 900) {
-    return `시황: ${definition.name} 투자심리가 개선됐습니다`;
+    return renderStockNewsTemplate(
+      pickStockNewsTemplate(MARKET_SUMMARY_TEMPLATES.positive, definition, tickIndex),
+      definition
+    );
   }
   if (moveBps <= -900) {
-    return `시황: ${definition.name} 경계 매물이 늘었습니다`;
+    return renderStockNewsTemplate(
+      pickStockNewsTemplate(MARKET_SUMMARY_TEMPLATES.negative, definition, tickIndex),
+      definition
+    );
   }
 
-  const quietSummaries = [
-    `시황: ${definition.name} 보합권에서 조용히 거래됐습니다`,
-    `시황: ${definition.name} 투자자들이 다음 공시를 기다리고 있습니다`,
-    `시황: ${definition.name} 거래 흐름이 안정적으로 유지됐습니다`
-  ];
-  return quietSummaries[tickIndex % quietSummaries.length];
+  return renderStockNewsTemplate(
+    pickStockNewsTemplate(MARKET_SUMMARY_TEMPLATES.quiet, definition, tickIndex),
+    definition
+  );
+}
+
+function pickStockNewsTemplate(templates, definition, tickIndex) {
+  const source = Array.isArray(templates) && templates.length > 0
+    ? templates
+    : ['{name} 시장 상황 안내가 게시됐습니다'];
+  const offset = getStockNewsTemplateOffset(definition);
+  return source[(normalizeNonNegativeInteger(tickIndex) + offset) % source.length];
+}
+
+function renderStockNewsTemplate(template, definition) {
+  return String(template)
+    .replaceAll('{name}', definition.name)
+    .replaceAll('{sector}', definition.sector);
+}
+
+function getStockNewsTemplateOffset(definition) {
+  return [...String(definition.id ?? definition.name ?? '')]
+    .reduce((sum, character) => sum + character.codePointAt(0), 0);
 }
 
 function getOrCreateMoneyProfile(guild, userId, username, now) {

@@ -5,7 +5,7 @@ import {
   SlashCommandBuilder
 } from 'discord.js';
 import { getStockCatalog } from '../systems/stocks.js';
-import { createPagedButtonRow } from './ui.js';
+import { createPagedButtonRow, formatUserMention } from './ui.js';
 
 const STOCK_AUTOCOMPLETE_LIMIT = 25;
 const DISCORD_CONTENT_MAX_LENGTH = 2000;
@@ -904,7 +904,7 @@ function formatQuote(quote) {
 
 function formatBuyResult(user, result) {
   return [
-    `🛒 **가상주식 매수 완료** — ${user}`,
+    `🛒 **가상주식 매수 완료** — ${formatUserMention(user, user.username)}`,
     `종목: **${result.stock.name}** × ${result.quantity.toLocaleString()}주`,
     `단가: ${result.price.toLocaleString()}골드 / 매수금액: ${result.subtotal.toLocaleString()}골드 / 수수료: ${result.fee.toLocaleString()}골드`,
     `골드: **${result.profile.balance.toLocaleString()}골드** / 보유: ${result.holding.quantity.toLocaleString()}주 / 평단: ${result.holding.averageCost.toLocaleString()}골드`
@@ -913,7 +913,7 @@ function formatBuyResult(user, result) {
 
 function formatSellResult(user, result) {
   return [
-    `💸 **가상주식 매도 완료** — ${user}`,
+    `💸 **가상주식 매도 완료** — ${formatUserMention(user, user.username)}`,
     `종목: **${result.stock.name}** × ${result.quantity.toLocaleString()}주`,
     `단가: ${result.price.toLocaleString()}골드 / 매도금액: ${result.subtotal.toLocaleString()}골드 / 수수료: ${result.fee.toLocaleString()}골드`,
     `실현손익: **${formatSignedMoney(result.realizedProfit)}** / 골드: **${result.profile.balance.toLocaleString()}골드** / 남은 보유: ${result.holding.quantity.toLocaleString()}주`
@@ -927,7 +927,7 @@ function formatLimitOrderPlaced(user, result) {
     : `예약 수량: **${result.reservedQuantity.toLocaleString()}주**`;
 
   return [
-    `🧾 **지정가 ${sideLabel} 주문 등록** — ${user}`,
+    `🧾 **지정가 ${sideLabel} 주문 등록** — ${formatUserMention(user, user.username)}`,
     `주문: \`${result.id}\` / 종목: **${result.stock.name}** × ${result.quantity.toLocaleString()}주`,
     `조건: ${result.side === 'buy' ? '현재가가' : '현재가가'} **${result.limitPrice.toLocaleString()}골드** ${result.side === 'buy' ? '이하' : '이상'}이면 체결`,
     reserveText,
@@ -955,7 +955,7 @@ function formatLimitOrders(user, orders) {
 
 function formatLimitOrderCancelled(user, order) {
   return [
-    `🧾 **지정가 주문 취소** — ${user}`,
+    `🧾 **지정가 주문 취소** — ${formatUserMention(user, user.username)}`,
     `주문: \`${order.id}\` / 종목: **${order.stock.name}** / ${formatOrderSide(order.side)} ${order.quantity.toLocaleString()}주`,
     '예약 골드/주식은 지갑과 보유량으로 되돌렸습니다.'
   ].join('\n');
@@ -963,7 +963,7 @@ function formatLimitOrderCancelled(user, order) {
 
 function formatAlertCreated(user, alert) {
   return [
-    `🔔 **가격 알림 등록** — ${user}`,
+    `🔔 **가격 알림 등록** — ${formatUserMention(user, user.username)}`,
     `알림: \`${alert.id}\` / 종목: **${alert.stock.name}**`,
     `조건: 현재가가 **${alert.targetPrice.toLocaleString()}골드** ${formatAlertCondition(alert.condition)}이면 트리거`,
     '목표가에 닿으면 이 채널에 자동 푸시되고, `/주식 알림`으로 활성/트리거 알림을 확인할 수 있습니다.'
@@ -990,7 +990,7 @@ function formatAlerts(user, alerts) {
 
 function formatAlertDeleted(user, alert) {
   return [
-    `🔕 **가격 알림 삭제** — ${user}`,
+    `🔕 **가격 알림 삭제** — ${formatUserMention(user, user.username)}`,
     `알림: \`${alert.id}\` / 종목: **${alert.stock.name}**`
   ].join('\n');
 }
@@ -1095,7 +1095,7 @@ function formatOpenLeverageResult(user, result) {
   const position = result.position;
   const sideLabel = formatLeverageSide(position.side);
   return [
-    `⚡ **레버리지 ${sideLabel} 진입 완료** — ${user}`,
+    `⚡ **레버리지 ${sideLabel} 진입 완료** — ${formatUserMention(user, user.username)}`,
     `포지션: \`${position.id}\` / 종목: **${position.stock.name}** / 배율: **${position.leverage}배**`,
     `진입가: ${position.entryPrice.toLocaleString()}골드 / 증거금: ${position.margin.toLocaleString()}골드 / 수수료: ${result.fee.toLocaleString()}골드`,
     `골드: **${result.profile.balance.toLocaleString()}골드**`,
@@ -1107,7 +1107,7 @@ function formatCloseLeverageResult(user, result) {
   const position = result.position;
   if (result.liquidated) {
     return [
-      `💥 **레버리지 포지션 자동 청산** — ${user}`,
+      `💥 **레버리지 포지션 자동 청산** — ${formatUserMention(user, user.username)}`,
       `포지션: \`${position.id}\` / 종목: **${position.stock.name}** / ${formatLeverageSide(position.side)} ${position.leverage}배`,
       `손익: **${formatSignedMoney(result.realizedProfit)}** / 지급액: 0골드`,
       `골드: **${result.profile.balance.toLocaleString()}골드**`
@@ -1115,7 +1115,7 @@ function formatCloseLeverageResult(user, result) {
   }
 
   return [
-    `✅ **레버리지 포지션 청산 완료** — ${user}`,
+    `✅ **레버리지 포지션 청산 완료** — ${formatUserMention(user, user.username)}`,
     `포지션: \`${position.id}\` / 종목: **${position.stock.name}** / ${formatLeverageSide(position.side)} ${position.leverage}배`,
     `진입가: ${position.entryPrice.toLocaleString()}골드 → 청산가: ${position.currentPrice.toLocaleString()}골드`,
     `손익: **${formatSignedMoney(result.realizedProfit)}** / 지급액: **${result.payout.toLocaleString()}골드**`,

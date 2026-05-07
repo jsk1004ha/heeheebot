@@ -1,3 +1,10 @@
+import {
+  CURRENCY_MAIN,
+  debitCurrency,
+  migrateLegacyWalletsToGold,
+  normalizeWallets
+} from './currencies.js';
+
 const TEAM_SIZE = 3;
 const MAX_ROD_LEVEL = 20;
 const MAX_IDLE_REWARD_MS = 12 * 60 * 60 * 1000;
@@ -145,6 +152,7 @@ export class FishingService {
   async enhanceRod({ guildId, userId, username, now = Date.now() }) {
     return this.store.update((data) => {
       const profile = getOrCreateFishingProfile(data, guildId, userId, username);
+      const goldProfile = getOrCreateGoldProfile(data, guildId, userId, username);
       const beforeLevel = profile.rod.level;
 
       if (beforeLevel >= MAX_ROD_LEVEL) {
@@ -159,11 +167,14 @@ export class FishingService {
       }
 
       const cost = getEnhancementCost(beforeLevel);
-      if (profile.stats.fishingPoints < cost) {
-        throw new Error(`낚시 포인트가 부족합니다. 필요: ${cost.toLocaleString()}점, 보유: ${profile.stats.fishingPoints.toLocaleString()}점`);
-      }
+      const goldBalanceBefore = goldProfile.balance;
+      debitCurrency(
+        goldProfile,
+        CURRENCY_MAIN,
+        cost,
+        `골드가 부족합니다. 필요: ${cost.toLocaleString()}골드, 보유: ${goldProfile.balance.toLocaleString()}골드`
+      );
 
-      profile.stats.fishingPoints -= cost;
       profile.rod.totalEnhancementAttempts += 1;
       profile.rod.lastEnhancedAt = now;
 
@@ -186,6 +197,8 @@ export class FishingService {
         beforeLevel,
         afterLevel: profile.rod.level,
         cost,
+        goldBalanceBefore,
+        goldBalanceAfter: goldProfile.balance,
         profile: cloneFishingProfile(profile)
       };
     });
@@ -209,8 +222,6 @@ export class FishingService {
       const cappedElapsedMs = Math.min(elapsedMs, MAX_IDLE_REWARD_MS);
       const minutes = Math.floor(cappedElapsedMs / 60_000);
       const fishCount = Math.max(1, Math.floor(cappedElapsedMs / IDLE_FISH_INTERVAL_MS));
-      const pointMultiplier = 1 + Math.floor(profile.rod.level / 5);
-      const pointsGained = Math.max(1, minutes * pointMultiplier);
       const catches = [];
 
       for (let index = 0; index < fishCount; index += 1) {
@@ -219,7 +230,6 @@ export class FishingService {
         catches.push(catchResult);
       }
 
-      profile.stats.fishingPoints += pointsGained;
       profile.idle.startedAt = 0;
       profile.idle.lastClaimedAt = now;
       profile.idle.totalMinutes += minutes;
@@ -231,7 +241,6 @@ export class FishingService {
         cappedElapsedMs,
         minutes,
         fishCount,
-        pointsGained,
         catches,
         profile: cloneFishingProfile(profile)
       };
@@ -324,12 +333,10 @@ export class FishingService {
       profile.battle.lastBattleAt = now;
       if (battle.winner === 'player') {
         profile.battle.wins += 1;
-        profile.stats.fishingPoints += 20;
       } else if (battle.winner === 'opponent') {
         profile.battle.losses += 1;
       } else {
         profile.battle.draws += 1;
-        profile.stats.fishingPoints += 5;
       }
 
       if (opponentProfile) {
@@ -428,6 +435,32 @@ function getOrCreateFishingProfile(data, guildId, userId, username = 'Unknown') 
   return profile;
 }
 
+function getOrCreateGoldProfile(data, guildId, userId, username = 'Unknown') {
+  data.guilds ??= {};
+  data.guilds[guildId] ??= {};
+
+  const guild = data.guilds[guildId];
+  guild.users ??= {};
+  guild.users[userId] ??= {
+    userId,
+    username,
+    level: 1,
+    xp: 0,
+    totalXp: 0,
+    balance: 0,
+    wallets: normalizeWallets(),
+    createdAt: Date.now()
+  };
+
+  const profile = guild.users[userId];
+  profile.userId = userId;
+  profile.username = username || profile.username || 'Unknown';
+  profile.balance = normalizeNonNegativeInteger(profile.balance);
+  profile.wallets = normalizeWallets(profile.wallets);
+  migrateLegacyWalletsToGold(profile);
+  return profile;
+}
+
 function createDefaultFishingProfile(userId, username) {
   return {
     userId,
@@ -454,8 +487,7 @@ function createDefaultFishingProfile(userId, username) {
       lastBattleAt: 0
     },
     stats: {
-      totalCatches: 0,
-      fishingPoints: 0
+      totalCatches: 0
     },
     createdAt: Date.now()
   };
@@ -468,24 +500,21 @@ function rollCatch(profile, randomIntFn, now) {
   const [fishId, fish] = candidates[randomIntFn(0, candidates.length - 1)];
   const sizeBonus = Math.floor(profile.rod.level / 4);
   const size = Math.min(fish.maxSize + sizeBonus, randomIntFn(fish.minSize, fish.maxSize) + sizeBonus);
-  const pointsGained = fish.value + Math.floor(size / 10) + profile.rod.level;
 
   return {
     fishId,
     fish,
     rarity,
     size,
-    pointsGained,
     caughtAt: now
   };
 }
 
 function applyCatch(profile, catchResult, now) {
-  const { fishId, size, pointsGained } = catchResult;
+  const { fishId, size } = catchResult;
   profile.inventory[fishId] = (profile.inventory[fishId] ?? 0) + 1;
   profile.collection[fishId] ??= now;
   profile.stats.totalCatches += 1;
-  profile.stats.fishingPoints += pointsGained;
 
   if (!profile.bestFish[fishId] || profile.bestFish[fishId].size < size) {
     profile.bestFish[fishId] = { size, caughtAt: now };
@@ -762,8 +791,7 @@ function normalizeBattleStats(battle = {}) {
 
 function normalizeStats(stats = {}) {
   return {
-    totalCatches: normalizeNonNegativeInteger(stats?.totalCatches),
-    fishingPoints: normalizeNonNegativeInteger(stats?.fishingPoints)
+    totalCatches: normalizeNonNegativeInteger(stats?.totalCatches)
   };
 }
 

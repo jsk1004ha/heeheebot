@@ -14,14 +14,19 @@ import {
   getFishConfig,
   getRarityLabel
 } from '../systems/fishing.js';
+import {
+  createAllowedMentionsForUsers,
+  formatUserMention,
+  truncateEmbedDescription
+} from './ui.js';
 
 export const fishingCommands = [
   new SlashCommandBuilder()
     .setName('낚시')
-    .setDescription('낚싯대로 물고기를 잡고 낚시 포인트를 얻습니다.'),
+    .setDescription('낚싯대로 물고기를 잡아 수집합니다.'),
   new SlashCommandBuilder()
     .setName('낚시강화')
-    .setDescription('낚시 포인트를 사용해 낚싯대를 1~20강까지 강화합니다.'),
+    .setDescription('골드를 사용해 낚싯대를 1~20강까지 강화합니다.'),
   new SlashCommandBuilder()
     .setName('잠수')
     .setDescription('잠수를 시작하거나 종료해서 방치 보상을 받습니다.'),
@@ -113,7 +118,7 @@ async function handleFishingButton(interaction, fishing) {
         userId: interaction.user.id,
         username: interaction.user.username
       });
-      await updateWithFishCard(interaction, formatCatchResult(interaction.user, result), result.fish, interaction.user.id);
+      await replyWithFishCard(interaction, formatCatchResult(interaction.user, result), result.fish, interaction.user.id);
       return true;
     }
 
@@ -123,7 +128,7 @@ async function handleFishingButton(interaction, fishing) {
         userId: interaction.user.id,
         username: interaction.user.username
       });
-      await updateWithRodCard(interaction, formatEnhancementResult(interaction.user, result), result.afterLevel, interaction.user.id);
+      await replyWithRodCard(interaction, formatEnhancementResult(interaction.user, result), result.afterLevel, interaction.user.id);
       return true;
     }
 
@@ -210,17 +215,17 @@ function formatCatchResult(user, result) {
   const count = result.profile.inventory[result.fishId] ?? 0;
 
   return [
-    `🎣 **낚시 성공** — ${user}`,
+    `🎣 **낚시 성공** — ${formatUserMention(user, user.username)}`,
     `획득: **${result.fish.label}** (${getRarityLabel(result.rarity)} / ${result.fish.type})`,
-    `크기: **${result.size.toLocaleString()}cm** / 낚시 포인트: **+${result.pointsGained.toLocaleString()}점**`,
+    `크기: **${result.size.toLocaleString()}cm**`,
     `보유 ${result.fish.label}: **${count.toLocaleString()}마리**`,
-    `낚싯대: **+${result.profile.rod.level}강** / 총 포인트: **${result.profile.stats.fishingPoints.toLocaleString()}점**`
+    `낚싯대: **${formatRodName(result.profile.rod.level)}**`
   ].join('\n');
 }
 
 function formatEnhancementResult(user, result) {
   if (result.capped) {
-    return `🎣 **낚싯대 강화** — ${user}\n이미 최고 강화 단계입니다. 현재 낚싯대: **+${result.afterLevel}강**`;
+    return `🎣 **낚싯대 강화** — ${formatUserMention(user, user.username)}\n이미 최고 강화 단계입니다. 현재 낚싯대: **${formatRodName(result.afterLevel)}**`;
   }
 
   const outcomeText = {
@@ -228,14 +233,17 @@ function formatEnhancementResult(user, result) {
     maintain: '➖ 유지',
     destroy: '💥 파괴'
   }[result.outcome];
+  const beforeRodName = formatRodName(result.beforeLevel);
+  const afterRodName = formatRodName(result.afterLevel);
   const levelText = result.outcome === 'destroy'
-    ? `+${result.beforeLevel}강 → +${result.afterLevel}강으로 리셋`
-    : `+${result.beforeLevel}강 → +${result.afterLevel}강`;
+    ? `${beforeRodName} → ${afterRodName}로 리셋`
+    : `${beforeRodName} → ${afterRodName}`;
 
   return [
-    `🎣 **낚싯대 강화** — ${user}`,
+    `🎣 **낚싯대 강화** — ${formatUserMention(user, user.username)}`,
     `결과: **${outcomeText}** (${levelText})`,
-    `사용 포인트: **${result.cost.toLocaleString()}점** / 남은 포인트: **${result.profile.stats.fishingPoints.toLocaleString()}점**`,
+    `현재 낚싯대: **${afterRodName}**`,
+    `사용 골드: **${formatGold(result.cost)}** / 남은 골드: **${formatGold(result.goldBalanceAfter)}**`,
     `누적 시도: **${result.profile.rod.totalEnhancementAttempts.toLocaleString()}회** / 파괴: **${result.profile.rod.destroyedCount.toLocaleString()}회**`
   ].join('\n');
 }
@@ -243,7 +251,7 @@ function formatEnhancementResult(user, result) {
 function formatIdleResult(user, result) {
   if (result.action === 'started') {
     return [
-      `🌊 **잠수 시작** — ${user}`,
+      `🌊 **잠수 시작** — ${formatUserMention(user, user.username)}`,
       '다시 `/잠수`를 입력하면 방치 보상을 정산합니다.',
       '보상은 최대 12시간까지만 누적됩니다.'
     ].join('\n');
@@ -252,9 +260,8 @@ function formatIdleResult(user, result) {
   const catchSummary = summarizeCatches(result.catches);
 
   return [
-    `🌊 **잠수 보상 정산** — ${user}`,
+    `🌊 **잠수 보상 정산** — ${formatUserMention(user, user.username)}`,
     `잠수 시간: **${formatMinutes(result.minutes)}** / 획득 물고기: **${result.fishCount.toLocaleString()}마리**`,
-    `추가 포인트: **+${result.pointsGained.toLocaleString()}점** / 총 포인트: **${result.profile.stats.fishingPoints.toLocaleString()}점**`,
     `획득 목록: ${catchSummary}`
   ].join('\n');
 }
@@ -265,30 +272,42 @@ function formatTeamResult(user, result) {
   );
 
   return [
-    `🐟 **물고기 팀 설정** — ${user}`,
+    `🐟 **물고기 팀 설정** — ${formatUserMention(user, user.username)}`,
     `${result.slot}번 슬롯에 **${result.fish.label}**을(를) 배치했습니다.`,
     `현재 팀:\n${rows.join('\n')}`
   ].join('\n');
 }
 
 function formatBattleResult(user, opponent, result) {
+  const playerMention = formatUserMention(user);
+  const opponentMention = opponent
+    ? formatUserMention(opponent)
+    : result.opponentUserId
+      ? `<@${result.opponentUserId}>`
+      : result.opponentLabel;
   const winnerText = result.winner === 'player'
-    ? `${user.username} 승리`
+    ? `${playerMention} 승리`
     : result.winner === 'opponent'
-      ? `${opponent?.username ?? result.opponentLabel} 승리`
+      ? `${opponentMention} 승리`
       : '무승부';
   const playerRows = summarizeBattleTeam(result.playerTeam);
   const opponentRows = summarizeBattleTeam(result.opponentTeam);
+  const mentionedUsers = [user.id, opponent?.id ?? result.opponentUserId]
+    .filter(Boolean)
+    .map(String);
 
-  return [
-    `⚔️ **물고기배틀** — ${user}`,
-    `상대: **${opponent ? opponent.username : result.opponentLabel}**`,
-    `결과: **${winnerText}**`,
-    `내 팀: ${playerRows}`,
-    `상대 팀: ${opponentRows}`,
-    `전투 로그:\n${result.log.join('\n') || '- 기록 없음'}`,
-    `전적: **${result.profile.battle.wins}승 ${result.profile.battle.losses}패 ${result.profile.battle.draws}무** / 포인트: **${result.profile.stats.fishingPoints.toLocaleString()}점**`
-  ].join('\n');
+  return {
+    content: [
+      `⚔️ **물고기배틀** — ${playerMention}`,
+      `상대: **${opponentMention}**`,
+      `결과: **${winnerText}**`,
+      `내 팀: ${playerRows}`,
+      `상대 팀: ${opponentRows}`,
+      `전투 로그:\n${result.log.join('\n') || '- 기록 없음'}`,
+      `전적: **${result.profile.battle.wins}승 ${result.profile.battle.losses}패 ${result.profile.battle.draws}무**`
+    ].join('\n'),
+    allowedMentions: createAllowedMentionsForUsers(mentionedUsers)
+  };
 }
 
 function summarizeCatches(catches) {
@@ -313,6 +332,14 @@ function formatMinutes(minutes) {
   const rest = minutes % 60;
   if (hours > 0) return `${hours}시간 ${rest}분`;
   return `${rest}분`;
+}
+
+function formatRodName(level) {
+  return getFishingRodAssetForLevel(level)?.label ?? `+${Number(level) || 1}강 낚싯대`;
+}
+
+function formatGold(amount) {
+  return `${Number(amount ?? 0).toLocaleString()}골드`;
 }
 
 function isFishingCommand(commandName) {
@@ -356,7 +383,7 @@ function createRodCardPayload(content, rodLevel, userId = null) {
 function createFishingCardPayload(content, { imagePath = null, color = 0x38bdf8, components = [] } = {}) {
   const [rawTitle, ...bodyLines] = String(content).split('\n');
   const title = rawTitle.replace(/\*\*/g, '').slice(0, 256);
-  const description = truncateEmbedText(bodyLines.join('\n').trim() || rawTitle);
+  const description = truncateEmbedDescription(bodyLines.join('\n').trim() || rawTitle);
   const embed = new EmbedBuilder()
     .setColor(color)
     .setTitle(title)
@@ -405,11 +432,4 @@ function getRodEmbedColor(level) {
   if (level >= 10) return 0x3b82f6;
   if (level >= 5) return 0x22c55e;
   return 0x94a3b8;
-}
-
-function truncateEmbedText(text) {
-  const normalized = String(text || '').trim();
-  return normalized.length > 4096
-    ? `${normalized.slice(0, 4092)}…`
-    : normalized;
 }
