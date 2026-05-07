@@ -205,7 +205,7 @@ function formatProfile(profile) {
 
 function formatExchangeResult(result) {
   const feeText = result.fee > 0
-    ? ` / 환전 손실: **${result.fee.toLocaleString()}원 상당**`
+    ? ` / 환전 보정: **-${formatCurrencyAmount(result.fee, result.from.id)} 상당**`
     : '';
 
   return [

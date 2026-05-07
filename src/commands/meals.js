@@ -12,6 +12,12 @@ const MEAL_FILTERS = Object.freeze({
   3: '석식'
 });
 
+const MEAL_STYLES = Object.freeze({
+  1: Object.freeze({ emoji: '🌅', vibe: '아침 부스터' }),
+  2: Object.freeze({ emoji: '☀️', vibe: '점심 메인딜' }),
+  3: Object.freeze({ emoji: '🌙', vibe: '저녁 회복팩' })
+});
+
 export const mealCommands = [
   new SlashCommandBuilder()
     .setName('급식')
@@ -125,29 +131,46 @@ export function formatMealMessage(dailyMeals, { mealFilter = 'all' } = {}) {
   const normalizedMealFilter = normalizeMealFilter(mealFilter);
   const filterLabel = MEAL_FILTERS[normalizedMealFilter];
   const title = normalizedMealFilter === 'all' ? '급식' : `${filterLabel} 급식`;
-  const header = `🍱 **${dailyMeals.school.name} ${title}** (${formatDisplayDate(dailyMeals.date)})`;
+  const header = [
+    `🍱 **${dailyMeals.school.name} ${title}**`,
+    `📅 \`${formatDisplayDate(dailyMeals.date)}\` · ${normalizedMealFilter === 'all' ? '오늘의 전체 식단' : `${filterLabel}만 보기`}`
+  ].join('\n');
   const meals = normalizedMealFilter === 'all'
     ? dailyMeals.meals
     : dailyMeals.meals.filter((meal) => meal.mealCode === normalizedMealFilter);
 
   if (meals.length === 0) {
-    return `${header}\n등록된 ${filterLabel === '전체' ? '급식' : filterLabel} 정보가 없습니다.`;
+    return [
+      header,
+      `\n╭─ 🍽️ **${filterLabel === '전체' ? '급식' : filterLabel} 정보 없음**`,
+      '│ 아직 NEIS에 등록된 급식 정보가 없습니다.',
+      '╰─ 나중에 다시 확인해줘.'
+    ].join('\n');
   }
 
-  const sections = meals.map((meal) => {
-    const calories = meal.calories ? ` / ${meal.calories}` : '';
-    const dishes = meal.dishes.length > 0
-      ? meal.dishes.map((dish) => `- ${dish}`).join('\n')
-      : '- 등록된 메뉴 없음';
-
-    return `**${meal.mealName}**${calories}\n${dishes}`;
-  });
+  const sections = meals.map(formatMealSection);
 
   return [
     header,
     ...sections,
-    '※ 괄호 안 숫자는 NEIS 알레르기 유발 식재료 번호입니다.'
+    '🍚 오늘도 맛있게 먹고 살아남자.',
+    '🧾 괄호 안 숫자는 NEIS 알레르기 유발 식재료 번호입니다.'
   ].join('\n\n');
+}
+
+function formatMealSection(meal) {
+  const style = MEAL_STYLES[meal.mealCode] ?? { emoji: '🍽️', vibe: '식사' };
+  const calories = meal.calories ? ` · \`${meal.calories}\`` : '';
+  const dishes = meal.dishes.length > 0
+    ? meal.dishes.map((dish) => `│ • ${dish}`).join('\n')
+    : '│ • 등록된 메뉴 없음';
+
+  return [
+    `╭─ ${style.emoji} **${meal.mealName}**${calories}`,
+    `│ ${style.vibe}`,
+    dishes,
+    '╰────────────'
+  ].join('\n');
 }
 
 function normalizeMealFilter(mealFilter) {

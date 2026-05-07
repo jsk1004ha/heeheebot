@@ -6,6 +6,14 @@ const WEEKDAY_CHOICES = Object.freeze([
   ...WEEK_DAYS.map((day) => ({ name: day, value: day }))
 ]);
 
+const DAY_STYLES = Object.freeze({
+  월: Object.freeze({ emoji: '📘', label: '월요일' }),
+  화: Object.freeze({ emoji: '📗', label: '화요일' }),
+  수: Object.freeze({ emoji: '📙', label: '수요일' }),
+  목: Object.freeze({ emoji: '📕', label: '목요일' }),
+  금: Object.freeze({ emoji: '💜', label: '금요일' })
+});
+
 export const timetableCommands = [
   new SlashCommandBuilder()
     .setName('시간표')
@@ -67,12 +75,12 @@ export function formatTimetableMessage(result, { weekday = 'all' } = {}) {
   const normalizedWeekday = normalizeWeekday(weekday);
   const days = normalizedWeekday === 'all' ? WEEK_DAYS : [normalizedWeekday];
   const metadata = [
-    result.weekStartDate ? `시작일: ${result.weekStartDate}` : null,
-    result.updatedAt ? `갱신: ${result.updatedAt}` : null
-  ].filter(Boolean).join(' / ');
+    result.weekStartDate ? `시작일 \`${result.weekStartDate}\`` : null,
+    result.updatedAt ? `갱신 \`${result.updatedAt}\`` : null
+  ].filter(Boolean).join(' · ');
   const header = [
     `🗓️ **${result.school.name} ${result.className} 시간표**`,
-    metadata || null
+    metadata ? `📌 ${metadata}` : null
   ].filter(Boolean).join('\n');
   const sections = days.map((day) => formatDaySection(day, result.timetable?.[day] ?? []));
   const changed = sections.some((section) => section.includes('🔁'));
@@ -82,19 +90,29 @@ export function formatTimetableMessage(result, { weekday = 'all' } = {}) {
 }
 
 function formatDaySection(day, periods) {
+  const style = DAY_STYLES[day] ?? { emoji: '📒', label: `${day}요일` };
+
   if (periods.length === 0) {
-    return `**${day}**\n등록된 시간표가 없습니다.`;
+    return [
+      `╭─ ${style.emoji} **${style.label}**`,
+      '│ 등록된 시간표가 없습니다.',
+      '╰────────────'
+    ].join('\n');
   }
 
   const lines = periods.map((entry) => {
     const subject = entry.empty
-      ? '-'
-      : [entry.subject, entry.teacher ? `(${entry.teacher})` : null].filter(Boolean).join(' ');
+      ? '자습/공강'
+      : [entry.subject, entry.teacher ? `· ${entry.teacher}` : null].filter(Boolean).join(' ');
     const marker = entry.changed ? ' 🔁' : '';
-    return `${entry.label}: ${subject}${marker}`;
+    return `│ \`${entry.label}\` ${subject}${marker}`;
   });
 
-  return [`**${day}**`, ...lines].join('\n');
+  return [
+    `╭─ ${style.emoji} **${style.label}**`,
+    ...lines,
+    '╰────────────'
+  ].join('\n');
 }
 
 function normalizeWeekday(weekday) {

@@ -138,12 +138,11 @@ test('시간표 메시지는 전체 요일과 변경 표시를 출력한다', ()
   const message = formatTimetableMessage(result);
 
   assert.match(message, /인천과학고등학교 1-1 시간표/);
-  assert.match(message, /시작일: 2026-05-04/);
-  assert.match(message, /갱신: 2026-05-07 08:50:22/);
-  assert.match(message, /\*\*월\*\*/);
-  assert.match(message, /1교시: 국어 \(김옙\*\)/);
-  assert.match(message, /2교시: 수학 \(박몽\*\) 🔁/);
-  assert.match(message, /\*\*금\*\*/);
+  assert.match(message, /📌 시작일 `2026-05-04` · 갱신 `2026-05-07 08:50:22`/);
+  assert.match(message, /╭─ 📘 \*\*월요일\*\*/);
+  assert.match(message, /│ `1교시` 국어 · 김옙\*/);
+  assert.match(message, /│ `2교시` 수학 · 박몽\* 🔁/);
+  assert.match(message, /╭─ 💜 \*\*금요일\*\*/);
   assert.match(message, /🔁 표시/);
 });
 
@@ -154,9 +153,9 @@ test('시간표 메시지는 특정 요일만 출력할 수 있다', () => {
   });
   const message = formatTimetableMessage(result, { weekday: '화' });
 
-  assert.match(message, /\*\*화\*\*/);
+  assert.match(message, /╭─ 📗 \*\*화요일\*\*/);
   assert.match(message, /영어/);
-  assert.doesNotMatch(message, /\*\*월\*\*/);
+  assert.doesNotMatch(message, /월요일/);
   assert.doesNotMatch(message, /국어/);
 });
 

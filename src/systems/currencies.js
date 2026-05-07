@@ -18,6 +18,7 @@ export const CURRENCY_CONFIGS = Object.freeze({
     label: '메인 코인',
     shortLabel: '메인',
     unit: '원',
+    mainToCurrencyBps: 10_000,
     cashOutBps: 10_000
   }),
   [CURRENCY_CASINO]: Object.freeze({
@@ -26,6 +27,7 @@ export const CURRENCY_CONFIGS = Object.freeze({
     label: '카지노칩',
     shortLabel: '카지노',
     unit: '칩',
+    mainToCurrencyBps: 10_000,
     cashOutBps: 9_000
   }),
   [CURRENCY_RPG]: Object.freeze({
@@ -34,7 +36,8 @@ export const CURRENCY_CONFIGS = Object.freeze({
     label: 'RPG 골드',
     shortLabel: 'RPG',
     unit: '골드',
-    cashOutBps: 9_000
+    mainToCurrencyBps: 20_000,
+    cashOutBps: 3_000
   }),
   [CURRENCY_SWORD]: Object.freeze({
     id: CURRENCY_SWORD,
@@ -42,7 +45,8 @@ export const CURRENCY_CONFIGS = Object.freeze({
     label: '강화 코인',
     shortLabel: '검강화',
     unit: '코인',
-    cashOutBps: 9_000
+    mainToCurrencyBps: 10_000,
+    cashOutBps: 5_000
   }),
   [CURRENCY_STOCK]: Object.freeze({
     id: CURRENCY_STOCK,
@@ -50,7 +54,8 @@ export const CURRENCY_CONFIGS = Object.freeze({
     label: '현금',
     shortLabel: '주식',
     unit: '원',
-    cashOutBps: 9_800
+    mainToCurrencyBps: 10_000,
+    cashOutBps: 9_500
   })
 });
 
@@ -200,7 +205,7 @@ export function exchangeCurrency(profile, { fromCurrency, toCurrency, amount }) 
     : Math.floor(normalizedAmount * from.cashOutBps / 10_000);
   const received = to.id === CURRENCY_MAIN
     ? mainValue
-    : mainValue;
+    : Math.floor(mainValue * to.mainToCurrencyBps / 10_000);
 
   if (received <= 0) {
     creditCurrency(profile, from.id, normalizedAmount);
@@ -216,6 +221,8 @@ export function exchangeCurrency(profile, { fromCurrency, toCurrency, amount }) 
     received,
     fee: normalizedAmount - mainValue,
     cashOutRateBps: from.id === CURRENCY_MAIN ? 10_000 : from.cashOutBps,
+    cashInRateBps: to.id === CURRENCY_MAIN ? 10_000 : to.mainToCurrencyBps,
+    mainValue,
     balances: getCurrencyBalances(profile)
   };
 }

@@ -459,7 +459,7 @@ test('RPG 상점, 장비, 포션은 전투 스탯과 HP에 반영된다', async 
     });
 
     assert.equal(purchase.totalPrice, 500);
-    assert.equal(purchase.profile.currencyBalances.rpg, 500);
+    assert.equal(purchase.profile.currencyBalances.rpg, 1_500);
     assert.equal(equipped.profile.rpg.equipment.weapon, 'iron_sword');
     assert.equal(equipped.derivedStats.attack, 8);
     assert.equal(battle.battle.playerPower, 11);
@@ -620,7 +620,7 @@ test('RPG 가챠는 고급 직업을 해금하고 해당 직업 선택을 허용
     assert.equal(gacha.pulls[0].rarity, 'ssr');
     assert.equal(gacha.pulls[0].reward.type, 'class');
     assert.equal(gacha.pulls[0].reward.classId, 'paladin');
-    assert.equal(gacha.profile.currencyBalances.rpg, 700);
+    assert.equal(gacha.profile.currencyBalances.rpg, 1_700);
     assert.equal(gacha.profile.rpg.unlockedClasses.includes('paladin'), true);
     assert.equal(selected.profile.rpg.characterClass, 'paladin');
   } finally {
@@ -902,6 +902,7 @@ test('RPG 허브 버튼, 지역 진행도, 직업 숙련, 수동 보스전이 �
         'rpg_quick:user-1:enhance',
         'rpg_quick:user-1:skill_tree',
         'rpg_quick:user-1:class_path',
+        'rpg_quick:user-1:shop',
         'rpg_quick:user-1:area'
       ]
     );
@@ -1037,6 +1038,60 @@ test('RPG 빠른 버튼은 주요 화면과 다음 행동을 명령어 없이 �
         .map((button) => button.data.custom_id)
         .includes('rpg_quick:user-1:menu')
     );
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('RPG 상점은 메뉴 버튼과 구매 버튼으로 장비를 사고 포션은 보관한다', async () => {
+  const fixture = await createFixture({
+    randomInt: (min) => min,
+    rpgBattleCooldownMs: 0
+  });
+
+  try {
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      characterClass: 'warrior',
+      now: 1_000
+    });
+    await seedRpgGold(fixture.store, 'guild-1', 'user-1', 1_000);
+    const beforeShop = await fixture.economy.getRpgStatus({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사'
+    });
+    const initialPotionCount = beforeShop.profile.rpg.inventory.potion ?? 0;
+
+    const menu = createRpgInteraction('메뉴');
+    await handleRpgCommand(menu, fixture.economy);
+    assert.ok(getComponentCustomIds(menu.replies[0]).includes('rpg_quick:user-1:shop'));
+
+    const shop = createRpgButtonInteraction('rpg_quick:user-1:shop');
+    await handleRpgCommand(shop, fixture.economy);
+    assert.match(shop.updates[0].embeds[0].data.title, /RPG 상점/);
+    assert.ok(getComponentCustomIds(shop.updates[0]).includes('rpg_shop_buy:user-1:potion:1'));
+    assert.ok(getComponentCustomIds(shop.updates[0]).includes('rpg_shop_buy:user-1:iron_sword:1'));
+
+    const potionPurchase = createRpgButtonInteraction('rpg_shop_buy:user-1:potion:1');
+    await handleRpgCommand(potionPurchase, fixture.economy);
+    assert.match(potionPurchase.updates[0].embeds[0].data.title, /구매 완료/);
+    assert.ok(getComponentCustomIds(potionPurchase.updates[0]).includes('rpg_quick:user-1:inventory'));
+    assert.equal(getComponentCustomIds(potionPurchase.updates[0]).includes('rpg_item_use:user-1:potion'), false);
+
+    const afterPotion = await fixture.economy.getRpgStatus({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사'
+    });
+    assert.equal(afterPotion.profile.rpg.inventory.potion, initialPotionCount + 1);
+    assert.equal(afterPotion.profile.wallets.rpgGold, 880);
+
+    const swordPurchase = createRpgButtonInteraction('rpg_shop_buy:user-1:iron_sword:1');
+    await handleRpgCommand(swordPurchase, fixture.economy);
+    assert.ok(getComponentCustomIds(swordPurchase.updates[0]).includes('rpg_item_equip:user-1:iron_sword'));
   } finally {
     await fixture.cleanup();
   }
@@ -1352,6 +1407,13 @@ function createRpgButtonInteraction(customId) {
       updates.push(payload);
     }
   };
+}
+
+function getComponentCustomIds(payload) {
+  return (payload.components ?? [])
+    .flatMap((row) => row.components ?? [])
+    .map((component) => component.data.custom_id)
+    .filter(Boolean);
 }
 
 async function seedRpgGold(store, guildId, userId, amount) {

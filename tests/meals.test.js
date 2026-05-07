@@ -76,10 +76,11 @@ test('급식 메시지는 조식/중식/석식 섹션과 메뉴를 표시한다'
 
   assert.match(message, /인천과학고등학교 급식/);
   assert.match(message, /2026-05-07/);
-  assert.match(message, /\*\*조식\*\* \/ 500 Kcal/);
-  assert.match(message, /- 토스트 & 우유/);
-  assert.match(message, /\*\*중식\*\* \/ 700 Kcal/);
-  assert.match(message, /\*\*석식\*\* \/ 800 Kcal/);
+  assert.match(message, /╭─ 🌅 \*\*조식\*\* · `500 Kcal`/);
+  assert.match(message, /│ • 토스트 & 우유/);
+  assert.match(message, /╭─ ☀️ \*\*중식\*\* · `700 Kcal`/);
+  assert.match(message, /╭─ 🌙 \*\*석식\*\* · `800 Kcal`/);
+  assert.match(message, /오늘도 맛있게 먹고 살아남자/);
   assert.match(message, /알레르기/);
 });
 

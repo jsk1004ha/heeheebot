@@ -366,6 +366,9 @@ export async function handleRpgCommand(interaction, economy) {
     if (interaction.customId.startsWith('rpg_area:')) {
       return handleRpgAreaButton(interaction, economy);
     }
+    if (interaction.customId.startsWith('rpg_shop_buy:')) {
+      return handleRpgShopBuyButton(interaction, economy);
+    }
     if (interaction.customId.startsWith('rpg_item_equip:')) {
       return handleRpgItemEquipButton(interaction, economy);
     }
@@ -598,7 +601,14 @@ export async function handleRpgCommand(interaction, economy) {
     const quantity = interaction.options.getInteger('수량') ?? 1;
 
     if (!itemId) {
-      await interaction.reply(formatRpgShop());
+      const status = await economy.getRpgStatus({
+        guildId,
+        userId: user.id,
+        username: user.username
+      });
+      await replyWithRpgAssets(interaction, formatRpgShop(status), [status.heroAssetId], {
+        components: createRpgShopViewRows(user.id)
+      });
       return true;
     }
 
@@ -610,7 +620,9 @@ export async function handleRpgCommand(interaction, economy) {
         itemId,
         quantity
       });
-      await replyWithRpgAssets(interaction, formatRpgPurchase(result), [result.item.assetId]);
+      await replyWithRpgAssets(interaction, formatRpgPurchase(result), [result.item.assetId], {
+        components: createRpgPostPurchaseRows(result, user.id)
+      });
     } catch (error) {
       await interaction.reply({
         content: `구매 실패: ${error.message}`,
@@ -627,7 +639,9 @@ export async function handleRpgCommand(interaction, economy) {
       userId: user.id,
       username: user.username
     });
-    await interaction.reply(formatRpgInventory(status));
+    await replyWithRpgAssets(interaction, formatRpgInventory(status), [status.heroAssetId], {
+      components: createRpgInventoryRows(status, user.id)
+    });
     return true;
   }
 
@@ -1315,6 +1329,38 @@ async function handleRpgAreaButton(interaction, economy) {
   return true;
 }
 
+async function handleRpgShopBuyButton(interaction, economy) {
+  const [, userId, itemId, rawQuantity = '1'] = interaction.customId.split(':');
+
+  if (interaction.user.id !== userId) {
+    await interaction.reply({
+      content: '이 상점 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
+      ephemeral: true
+    });
+    return true;
+  }
+
+  try {
+    const result = await economy.buyRpgItem({
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username,
+      itemId,
+      quantity: Number.parseInt(rawQuantity, 10) || 1
+    });
+    await updateWithRpgAssets(interaction, formatRpgPurchase(result), [result.item.assetId], {
+      components: createRpgPostPurchaseRows(result, interaction.user.id)
+    });
+  } catch (error) {
+    await interaction.reply({
+      content: `구매 실패: ${error.message}`,
+      ephemeral: true
+    });
+  }
+
+  return true;
+}
+
 async function handleRpgItemEquipButton(interaction, economy) {
   const [, userId, itemId] = interaction.customId.split(':');
 
@@ -1614,7 +1660,14 @@ async function handleRpgQuickButton(interaction, economy) {
 
     if (action === 'inventory') {
       await updateWithRpgAssets(interaction, formatRpgInventory(status), [status.heroAssetId], {
-        components: createRpgActionLoopRows(interaction.user.id)
+        components: createRpgInventoryRows(status, interaction.user.id)
+      });
+      return true;
+    }
+
+    if (action === 'shop') {
+      await updateWithRpgAssets(interaction, formatRpgShop(status), [status.heroAssetId], {
+        components: createRpgShopViewRows(interaction.user.id)
       });
       return true;
     }
@@ -2068,13 +2121,23 @@ function formatRpgDailyClaim(result) {
   ].join('\n');
 }
 
-function formatRpgShop() {
+function formatRpgShop(status = null) {
   const rows = getRpgShopItemOptions().map((option) => {
     const item = getRpgItemConfig(option.value);
-    return `- \`${option.value}\` **${item.label}** — ${item.price.toLocaleString()}골드 / ${item.description}`;
+    const typeLabel = item.type === 'equipment' ? `장비/${formatEquipmentSlot(item.slot)}` : '소비품';
+    return `- **${item.label}** \`${option.value}\` — ${item.price.toLocaleString()}골드 / ${typeLabel} / ${item.description}`;
   });
+  const goldText = status
+    ? `보유 RPG 골드: **${getRpgGold(status.profile).toLocaleString()}골드**`
+    : '보유 RPG 골드는 `/rpg 인벤토리`에서 확인할 수 있습니다.';
 
-  return `🏪 **RPG 상점**\n${rows.join('\n')}\n\n구매: \`/rpg 상점 아이템:<이름> 수량:<개수>\``;
+  return [
+    '🏪 **RPG 상점**',
+    goldText,
+    rows.join('\n'),
+    '',
+    '아래 구매 버튼으로 바로 살 수 있습니다. 포션은 구매 후 인벤토리에 보관되고, 장비는 구매 후 바로 장착 버튼이 표시됩니다.'
+  ].join('\n');
 }
 
 function formatRpgPurchase(result) {
@@ -2728,6 +2791,65 @@ function createRpgEquipmentRows(status, userId) {
   return createButtonRows(buttons);
 }
 
+function createRpgShopRows(userId) {
+  const buttons = getRpgShopItemOptions().map((option) => {
+    const item = getRpgItemConfig(option.value);
+    return new ButtonBuilder()
+      .setCustomId(`rpg_shop_buy:${userId}:${option.value}:1`)
+      .setLabel(`${item.label} 구매`)
+      .setStyle(item.type === 'equipment' ? ButtonStyle.Primary : ButtonStyle.Success);
+  });
+
+  return createButtonRows(buttons);
+}
+
+function createRpgShopViewRows(userId) {
+  return [
+    ...createRpgShopRows(userId),
+    ...createRpgActionLoopRows(userId)
+  ].slice(0, 5);
+}
+
+function createRpgPostPurchaseRows(result, userId) {
+  const buttons = [];
+  if (result.item.type === 'equipment') {
+    buttons.push(
+      new ButtonBuilder()
+        .setCustomId(`rpg_item_equip:${userId}:${result.itemId}`)
+        .setLabel(`${result.item.label} 장착`)
+        .setStyle(ButtonStyle.Primary)
+    );
+  }
+
+  buttons.push(
+    new ButtonBuilder()
+      .setCustomId(`rpg_quick:${userId}:shop`)
+      .setLabel('상점')
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`rpg_quick:${userId}:inventory`)
+      .setLabel('인벤토리')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(`rpg_quick:${userId}:battle`)
+      .setLabel('전투')
+      .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId(`rpg_quick:${userId}:menu`)
+      .setLabel('메뉴')
+      .setStyle(ButtonStyle.Secondary)
+  );
+
+  return createButtonRows(buttons);
+}
+
+function createRpgInventoryRows(status, userId) {
+  return [
+    ...createRpgEquipmentRows(status, userId),
+    ...createRpgActionLoopRows(userId)
+  ].slice(0, 5);
+}
+
 function createRpgGearRows(status, userId) {
   const buttons = getSortedRpgGears(status)
     .slice(0, 10)
@@ -2854,6 +2976,10 @@ function createRpgMainMenuRows(status, userId) {
     ),
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
+        .setCustomId(`rpg_quick:${userId}:shop`)
+        .setLabel('상점')
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
         .setCustomId(`rpg_quick:${userId}:area`)
         .setLabel('월드맵')
         .setStyle(ButtonStyle.Secondary)
@@ -2906,6 +3032,12 @@ function createRpgActionLoopRows(userId) {
         .setCustomId(`rpg_quick:${userId}:rest`)
         .setLabel('휴식')
         .setStyle(ButtonStyle.Secondary)
+    ),
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`rpg_quick:${userId}:shop`)
+        .setLabel('상점')
+        .setStyle(ButtonStyle.Success)
     )
   ];
 }

@@ -29,7 +29,7 @@ test('새 프로필은 레벨 1과 잔액 0으로 시작한다', async () => {
   }
 });
 
-test('환전은 메인 코인과 컨텐츠별 지갑을 분리하고 출금 손실을 적용한다', async () => {
+test('환전은 메인 코인과 컨텐츠별 지갑을 분리하고 게임별 충전/출금 보정을 적용한다', async () => {
   const fixture = await createFixture();
 
   try {
@@ -56,7 +56,7 @@ test('환전은 메인 코인과 컨텐츠별 지갑을 분리하고 출금 손�
       toCurrency: 'casino',
       amount: 300
     });
-    const cashOut = await fixture.economy.exchangeWallet({
+    const casinoToRpg = await fixture.economy.exchangeWallet({
       guildId: 'guild-1',
       userId: 'user-1',
       username: '환전자',
@@ -64,16 +64,103 @@ test('환전은 메인 코인과 컨텐츠별 지갑을 분리하고 출금 손�
       toCurrency: 'rpg',
       amount: 100
     });
+    const rpgToMain = await fixture.economy.exchangeWallet({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '환전자',
+      fromCurrency: 'rpg',
+      toCurrency: 'main',
+      amount: 100
+    });
+    const mainToStock = await fixture.economy.exchangeWallet({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '환전자',
+      fromCurrency: 'main',
+      toCurrency: 'stock',
+      amount: 100
+    });
+    const stockToSword = await fixture.economy.exchangeWallet({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '환전자',
+      fromCurrency: 'stock',
+      toCurrency: 'sword',
+      amount: 100
+    });
 
     assert.equal(deposit.spent, 300);
     assert.equal(deposit.received, 300);
     assert.equal(deposit.profile.balance, 700);
     assert.equal(deposit.profile.wallets.casinoChips, 300);
-    assert.equal(cashOut.received, 90);
-    assert.equal(cashOut.fee, 10);
-    assert.equal(cashOut.profile.balance, 700);
-    assert.equal(cashOut.profile.wallets.casinoChips, 200);
-    assert.equal(cashOut.profile.wallets.rpgGold, 90);
+    assert.equal(casinoToRpg.received, 180);
+    assert.equal(casinoToRpg.fee, 10);
+    assert.equal(casinoToRpg.cashOutRateBps, 9_000);
+    assert.equal(casinoToRpg.cashInRateBps, 20_000);
+    assert.equal(casinoToRpg.mainValue, 90);
+    assert.equal(casinoToRpg.profile.balance, 700);
+    assert.equal(casinoToRpg.profile.wallets.casinoChips, 200);
+    assert.equal(casinoToRpg.profile.wallets.rpgGold, 180);
+    assert.equal(rpgToMain.received, 30);
+    assert.equal(rpgToMain.fee, 70);
+    assert.equal(rpgToMain.cashOutRateBps, 3_000);
+    assert.equal(rpgToMain.profile.balance, 730);
+    assert.equal(rpgToMain.profile.wallets.rpgGold, 80);
+    assert.equal(mainToStock.received, 100);
+    assert.equal(mainToStock.profile.balance, 630);
+    assert.equal(mainToStock.profile.wallets.stockCash, 100);
+    assert.equal(stockToSword.received, 95);
+    assert.equal(stockToSword.fee, 5);
+    assert.equal(stockToSword.cashOutRateBps, 9_500);
+    assert.equal(stockToSword.cashInRateBps, 10_000);
+    assert.equal(stockToSword.profile.wallets.stockCash, 0);
+    assert.equal(stockToSword.profile.wallets.swordCoins, 95);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('RPG 골드는 빠르게 벌리는 재화라 메인 코인 왕복 환전에서 큰 손실을 둔다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await fixture.store.update((data) => {
+      data.guilds['guild-1'] = {
+        users: {
+          'user-1': {
+            userId: 'user-1',
+            username: '밸런서',
+            level: 1,
+            xp: 0,
+            totalXp: 0,
+            balance: 1_000
+          }
+        }
+      };
+    });
+
+    const charge = await fixture.economy.exchangeWallet({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '밸런서',
+      fromCurrency: 'main',
+      toCurrency: 'rpg',
+      amount: 500
+    });
+    const cashOut = await fixture.economy.exchangeWallet({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '밸런서',
+      fromCurrency: 'rpg',
+      toCurrency: 'main',
+      amount: charge.received
+    });
+
+    assert.equal(charge.received, 1_000);
+    assert.equal(cashOut.received, 300);
+    assert.equal(cashOut.fee, 700);
+    assert.equal(cashOut.profile.balance, 800);
+    assert.equal(cashOut.profile.wallets.rpgGold, 0);
   } finally {
     await fixture.cleanup();
   }
