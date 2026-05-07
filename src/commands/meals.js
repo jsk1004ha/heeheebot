@@ -5,10 +5,28 @@ import {
 } from 'discord.js';
 import { formatDisplayDate } from '../systems/meals.js';
 
+const MEAL_FILTERS = Object.freeze({
+  all: '전체',
+  1: '조식',
+  2: '중식',
+  3: '석식'
+});
+
 export const mealCommands = [
   new SlashCommandBuilder()
     .setName('급식')
-    .setDescription('인천과학고등학교 오늘 급식을 알려줍니다.'),
+    .setDescription('인천과학고등학교 오늘 급식을 알려줍니다.')
+    .addStringOption((option) =>
+      option
+        .setName('식사')
+        .setDescription('확인할 식사')
+        .addChoices(
+          { name: '전체', value: 'all' },
+          { name: '조식', value: '1' },
+          { name: '중식', value: '2' },
+          { name: '석식', value: '3' }
+        )
+    ),
   new SlashCommandBuilder()
     .setName('자동급식')
     .setDescription('매일 00:00 급식 자동 알림 채널을 설정합니다.')
@@ -53,7 +71,8 @@ export async function handleMealCommand(interaction, meals) {
 
   try {
     const dailyMeals = await meals.getTodayMeals();
-    await interaction.reply(formatMealMessage(dailyMeals));
+    const mealFilter = interaction.options.getString('식사') ?? 'all';
+    await interaction.reply(formatMealMessage(dailyMeals, { mealFilter }));
   } catch (error) {
     await interaction.reply({
       content: `급식 정보를 불러오지 못했습니다: ${error.message}`,
@@ -102,14 +121,20 @@ async function handleAutoMealCommand(interaction, meals) {
   }
 }
 
-export function formatMealMessage(dailyMeals) {
-  const header = `🍱 **${dailyMeals.school.name} 급식** (${formatDisplayDate(dailyMeals.date)})`;
+export function formatMealMessage(dailyMeals, { mealFilter = 'all' } = {}) {
+  const normalizedMealFilter = normalizeMealFilter(mealFilter);
+  const filterLabel = MEAL_FILTERS[normalizedMealFilter];
+  const title = normalizedMealFilter === 'all' ? '급식' : `${filterLabel} 급식`;
+  const header = `🍱 **${dailyMeals.school.name} ${title}** (${formatDisplayDate(dailyMeals.date)})`;
+  const meals = normalizedMealFilter === 'all'
+    ? dailyMeals.meals
+    : dailyMeals.meals.filter((meal) => meal.mealCode === normalizedMealFilter);
 
-  if (dailyMeals.meals.length === 0) {
-    return `${header}\n등록된 급식 정보가 없습니다.`;
+  if (meals.length === 0) {
+    return `${header}\n등록된 ${filterLabel === '전체' ? '급식' : filterLabel} 정보가 없습니다.`;
   }
 
-  const sections = dailyMeals.meals.map((meal) => {
+  const sections = meals.map((meal) => {
     const calories = meal.calories ? ` / ${meal.calories}` : '';
     const dishes = meal.dishes.length > 0
       ? meal.dishes.map((dish) => `- ${dish}`).join('\n')
@@ -123,4 +148,9 @@ export function formatMealMessage(dailyMeals) {
     ...sections,
     '※ 괄호 안 숫자는 NEIS 알레르기 유발 식재료 번호입니다.'
   ].join('\n\n');
+}
+
+function normalizeMealFilter(mealFilter) {
+  const normalized = String(mealFilter ?? 'all');
+  return Object.hasOwn(MEAL_FILTERS, normalized) ? normalized : 'all';
 }

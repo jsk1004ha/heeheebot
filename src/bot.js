@@ -17,6 +17,7 @@ import {
   handleStockAutocomplete,
   handleStockCommand
 } from './commands/stocks.js';
+import { handleTimetableCommand } from './commands/timetable.js';
 import {
   handleWordChainCommand,
   handleWordChainMessage
@@ -31,6 +32,7 @@ import {
   scheduleDailyMealAnnouncements
 } from './systems/meals.js';
 import { StockService } from './systems/stocks.js';
+import { TimetableService } from './systems/timetable.js';
 
 export function createBot({
   databasePath = 'data/profiles.sqlite',
@@ -54,6 +56,7 @@ export function createBot({
   const fortune = new FortuneService();
   const meals = new MealService({ store, apiKey: neisApiKey });
   const stocks = new StockService(store);
+  const timetable = new TimetableService();
   const moderation = new ModerationService(store);
   let stopMealAnnouncementScheduler = () => {};
 
@@ -88,6 +91,7 @@ export function createBot({
         || await handleWordChainCommand(interaction, economy, logger)
         || await handleFortuneCommand(interaction, fortune, economy)
         || await handleMealCommand(interaction, meals)
+        || await handleTimetableCommand(interaction, timetable)
         || await handleStockCommand(interaction, stocks)
         || await handleFishingCommand(interaction, fishing)
         || await handleSwordCommand(interaction, economy, logger)
@@ -149,6 +153,7 @@ export function createBot({
     fortune,
     meals,
     stocks,
+    timetable,
     moderation,
     stopMealAnnouncements() {
       stopMealAnnouncementScheduler();
