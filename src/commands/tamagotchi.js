@@ -351,7 +351,6 @@ function createTamagotchiActionRows(userId, result) {
     new ActionRowBuilder().addComponents(
       button('skin', userId, '스킨변경', '🎨', ButtonStyle.Secondary, false),
       button('decor', userId, '꾸미기', '🧸', ButtonStyle.Secondary, false),
-      button('refresh', userId, '새로고침', '🔄', ButtonStyle.Secondary, false),
       button('revive', userId, '부활', '✨', ButtonStyle.Danger, !dead)
     ),
     new ActionRowBuilder().addComponents(
