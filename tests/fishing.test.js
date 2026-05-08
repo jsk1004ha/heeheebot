@@ -31,11 +31,15 @@ test('낚시 명령 payload는 요청한 명령들을 등록한다', () => {
   const teamCommand = payloads.find((command) => command.name === '물고기팀설정');
   const fishOption = teamCommand.options.find((option) => option.name === '물고기');
 
-  assert.deepEqual(names, ['낚시', '낚시강화', '잠수', '물고기팀설정', '물고기배틀']);
+  assert.deepEqual(names, ['낚시', '낚시도감', '낚시강화', '잠수', '물고기팀설정', '물고기배틀']);
   assert.equal(teamCommand.options.length, 2);
   assert.equal(fishOption.choices, undefined);
   assert.equal(fishOption.max_length, 50);
   assert.doesNotMatch(payloads.find((command) => command.name === '낚시').description, /포인트|점수/);
+  assert.deepEqual(
+    payloads.find((command) => command.name === '낚시도감').options[0].choices.map((choice) => choice.name),
+    ['전체', '일반', '고급', '희귀', '영웅', '전설', '히든']
+  );
   assert.match(payloads.find((command) => command.name === '낚시강화').description, /골드/);
   assert.doesNotMatch(payloads.find((command) => command.name === '낚시강화').description, /포인트/);
   assert.equal(payloads.find((command) => command.name === '물고기배틀').options.length, 1);
@@ -265,6 +269,48 @@ test('낚시 명령 핸들러는 /낚시 응답을 이미지 embed 카드로 반
   }
 });
 
+test('낚시도감은 수집률, 희귀도 진행도, 최고 크기를 embed 카드로 보여준다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await seedFishingProfile(fixture.store, {
+      inventory: {
+        crucian_carp: 2,
+        dragonfish: 1
+      },
+      bestFish: {
+        crucian_carp: { size: 31, caughtAt: 10_000 },
+        dragonfish: { size: 300, caughtAt: 20_000 }
+      },
+      collection: {
+        crucian_carp: 10_000,
+        dragonfish: 20_000
+      },
+      totalCatches: 3
+    });
+
+    const interaction = createInteraction('낚시도감', { 희귀도: 'legendary' });
+    const handled = await handleFishingCommand(interaction, fixture.fishing);
+    const payload = interaction.lastReply;
+    const description = payload.embeds[0].data.description;
+
+    assert.equal(handled, true);
+    assert.match(payload.embeds[0].data.title, /낚시 도감/);
+    assert.match(description, new RegExp(`진행도: \\*\\*2/${getFishCount()}종`));
+    assert.match(description, /전설 1\/11/);
+    assert.match(description, /현재 보기: \*\*전설\*\*/);
+    assert.match(description, /용왕의 물고기/);
+    assert.match(description, /최고 300cm/);
+    assert.doesNotMatch(description, /dragonfish|fish_dragonfish/);
+    assert.deepEqual(
+      payload.components[0].components.map((component) => component.data.label),
+      ['낚시', '낚싯대 강화', '도감']
+    );
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 test('물고기배틀 명령은 상대 유저를 실제 멘션으로 표시하고 허용 멘션을 제한한다', async () => {
   const fixture = await createFixture({ randomInt: minRandom });
 
@@ -314,7 +360,7 @@ test('낚시 카드 버튼은 같은 유저가 낚시와 강화 흐름을 이어
     await handleFishingCommand(interaction, fixture.fishing);
 
     const row = interaction.lastReply.components[0];
-    assert.deepEqual(row.components.map((component) => component.data.label), ['낚시', '낚싯대 강화']);
+    assert.deepEqual(row.components.map((component) => component.data.label), ['낚시', '낚싯대 강화', '도감']);
 
     const updates = [];
     const replies = [];
@@ -330,8 +376,19 @@ test('낚시 카드 버튼은 같은 유저가 낚시와 강화 흐름을 이어
     assert.doesNotMatch(replies[0].embeds[0].data.description, /포인트|점수/);
     assert.deepEqual(
       replies[0].components[0].components.map((component) => component.data.label),
-      ['낚시', '낚싯대 강화']
+      ['낚시', '낚싯대 강화', '도감']
     );
+
+    const codexButton = createFishingButtonInteraction({
+      customId: 'fishing_quick:codex:user-1',
+      updates,
+      replies
+    });
+    await handleFishingCommand(codexButton, fixture.fishing);
+
+    assert.equal(updates.length, 0);
+    assert.match(replies[1].embeds[0].data.title, /낚시 도감/);
+    assert.match(replies[1].embeds[0].data.description, /진행도/);
 
     const blocked = createFishingButtonInteraction({
       customId: 'fishing_quick:enhance:user-1',
@@ -487,7 +544,7 @@ async function seedFishingProfile(store, overrides = {}) {
       },
       inventory: overrides.inventory ?? {},
       bestFish: overrides.bestFish ?? {},
-      collection: {},
+      collection: overrides.collection ?? {},
       idle: {
         startedAt: 0,
         lastClaimedAt: 0,

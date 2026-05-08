@@ -11,6 +11,7 @@ import {
   getFishingRodAssetForLevel
 } from '../systems/fishing-assets.js';
 import {
+  getFishCatalog,
   getFishConfig,
   getRarityLabel
 } from '../systems/fishing.js';
@@ -24,6 +25,23 @@ export const fishingCommands = [
   new SlashCommandBuilder()
     .setName('낚시')
     .setDescription('낚싯대로 물고기를 잡아 수집합니다.'),
+  new SlashCommandBuilder()
+    .setName('낚시도감')
+    .setDescription('잡은 물고기와 미발견 물고기, 희귀도별 수집률을 봅니다.')
+    .addStringOption((option) =>
+      option
+        .setName('희귀도')
+        .setDescription('보고 싶은 희귀도')
+        .addChoices(
+          { name: '전체', value: 'all' },
+          { name: '일반', value: 'common' },
+          { name: '고급', value: 'uncommon' },
+          { name: '희귀', value: 'rare' },
+          { name: '영웅', value: 'epic' },
+          { name: '전설', value: 'legendary' },
+          { name: '히든', value: 'hidden' }
+        )
+    ),
   new SlashCommandBuilder()
     .setName('낚시강화')
     .setDescription('골드를 사용해 낚싯대를 1~20강까지 강화합니다.'),
@@ -132,6 +150,12 @@ async function handleFishingButton(interaction, fishing) {
       return true;
     }
 
+    if (action === 'codex') {
+      const profile = await fishing.getProfile(interaction.guildId, interaction.user.id, interaction.user.username);
+      await interaction.reply(createFishingCodexPayload(interaction.user, profile, 'all', interaction.user.id));
+      return true;
+    }
+
     await interaction.reply({
       content: '알 수 없는 낚시 버튼입니다.',
       ephemeral: true
@@ -157,6 +181,13 @@ async function routeFishingCommand(interaction, fishing) {
       username: user.username
     });
     await replyWithFishCard(interaction, formatCatchResult(user, result), result.fish, user.id);
+    return;
+  }
+
+  if (interaction.commandName === '낚시도감') {
+    const profile = await fishing.getProfile(guildId, user.id, user.username);
+    const rarity = interaction.options.getString('희귀도') ?? 'all';
+    await interaction.reply(createFishingCodexPayload(user, profile, rarity, user.id));
     return;
   }
 
@@ -278,6 +309,79 @@ function formatTeamResult(user, result) {
   ].join('\n');
 }
 
+function formatFishingCodex(user, profile, rarityFilter = 'all') {
+  const normalizedFilter = normalizeFishingCodexRarity(rarityFilter);
+  const catalog = getFishCatalog({ includeHidden: true });
+  const entries = catalog.map((fish) => createFishingCodexEntry(fish, profile));
+  const visibleEntries = normalizedFilter === 'all'
+    ? entries
+    : entries.filter((entry) => entry.fish.rarity === normalizedFilter);
+  const caughtTotal = entries.filter((entry) => entry.caught).length;
+  const progressPercent = catalog.length > 0
+    ? Math.floor(caughtTotal / catalog.length * 1000) / 10
+    : 0;
+  const rarityProgress = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'hidden']
+    .map((rarity) => {
+      const rarityEntries = entries.filter((entry) => entry.fish.rarity === rarity);
+      const rarityCaught = rarityEntries.filter((entry) => entry.caught).length;
+      return `${getRarityLabel(rarity)} ${rarityCaught}/${rarityEntries.length}`;
+    })
+    .join(' · ');
+  const caughtRows = visibleEntries
+    .filter((entry) => entry.caught)
+    .slice(0, 10)
+    .map(formatCaughtCodexEntry);
+  const missingRows = visibleEntries
+    .filter((entry) => !entry.caught)
+    .slice(0, Math.max(4, 12 - caughtRows.length))
+    .map(formatMissingCodexEntry);
+  const viewLabel = normalizedFilter === 'all' ? '전체' : getRarityLabel(normalizedFilter);
+
+  return [
+    `📘 **낚시 도감** — ${formatUserMention(user, user.username)}`,
+    `진행도: **${caughtTotal}/${catalog.length}종 (${progressPercent}%)** / 총 낚시 **${profile.stats.totalCatches.toLocaleString()}회**`,
+    `희귀도별: ${rarityProgress}`,
+    `현재 보기: **${viewLabel}**`,
+    '',
+    `발견한 물고기:\n${caughtRows.length > 0 ? caughtRows.join('\n') : '- 아직 발견한 물고기가 없습니다.'}`,
+    '',
+    `미발견 물고기:\n${missingRows.length > 0 ? missingRows.join('\n') : '- 이 보기에서는 전부 발견했습니다.'}`,
+    '',
+    '팁: `/낚시도감 희귀도:전설`처럼 희귀도별로 좁혀볼 수 있습니다.'
+  ].join('\n');
+}
+
+function createFishingCodexEntry(fish, profile) {
+  const count = profile.inventory[fish.id] ?? 0;
+  const firstCaughtAt = profile.collection[fish.id] ?? profile.bestFish[fish.id]?.caughtAt ?? 0;
+  const bestSize = profile.bestFish[fish.id]?.size ?? null;
+
+  return {
+    fish,
+    count,
+    firstCaughtAt,
+    bestSize,
+    caught: count > 0 || firstCaughtAt > 0
+  };
+}
+
+function formatCaughtCodexEntry(entry) {
+  const bestText = entry.bestSize ? ` · 최고 ${entry.bestSize.toLocaleString()}cm` : '';
+  return `✅ **${entry.fish.label}** (${getRarityLabel(entry.fish.rarity)} / ${entry.fish.type}) ×${entry.count.toLocaleString()}${bestText}`;
+}
+
+function formatMissingCodexEntry(entry) {
+  const label = entry.fish.hidden ? '???' : entry.fish.label;
+  return `⬜ **${label}** (${getRarityLabel(entry.fish.rarity)} / ${entry.fish.type})`;
+}
+
+function normalizeFishingCodexRarity(rarity) {
+  const normalized = String(rarity ?? 'all').trim().toLocaleLowerCase('ko-KR');
+  return ['common', 'uncommon', 'rare', 'epic', 'legendary', 'hidden'].includes(normalized)
+    ? normalized
+    : 'all';
+}
+
 function formatBattleResult(user, opponent, result) {
   const playerMention = formatUserMention(user);
   const opponentMention = opponent
@@ -380,6 +484,13 @@ function createRodCardPayload(content, rodLevel, userId = null) {
   });
 }
 
+function createFishingCodexPayload(user, profile, rarity = 'all', userId = null) {
+  return createFishingCardPayload(formatFishingCodex(user, profile, rarity), {
+    color: 0x0ea5e9,
+    components: createFishingQuickRows(userId)
+  });
+}
+
 function createFishingCardPayload(content, { imagePath = null, color = 0x38bdf8, components = [] } = {}) {
   const [rawTitle, ...bodyLines] = String(content).split('\n');
   const title = rawTitle.replace(/\*\*/g, '').slice(0, 256);
@@ -410,6 +521,10 @@ function createFishingQuickRows(userId) {
       new ButtonBuilder()
         .setCustomId(`fishing_quick:enhance:${userId}`)
         .setLabel('낚싯대 강화')
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId(`fishing_quick:codex:${userId}`)
+        .setLabel('도감')
         .setStyle(ButtonStyle.Success)
     )
   ];
