@@ -1,0 +1,12 @@
+{
+  "id": "item_demonbone_axe_icon",
+  "label": "악마뼈 도끼 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

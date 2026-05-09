@@ -1,3 +1,4 @@
+import { MessageFlags } from 'discord.js';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -639,7 +640,7 @@ test('희진 다마고치 슬래시 명령과 버튼은 상태 메시지를 보�
     assert.equal(button.updates.length, 1);
     assert.match(button.updates[0].content, /먹었어요/);
     assert.equal(handledStranger, true);
-    assert.equal(stranger.replies[0].ephemeral, true);
+    assert.equal(stranger.replies[0].flags, MessageFlags.Ephemeral);
     assert.match(stranger.replies[0].content, /주인만/);
   } finally {
     fixture.cleanup();

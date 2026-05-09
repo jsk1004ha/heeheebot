@@ -1,4 +1,5 @@
 import {
+  MessageFlags,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
@@ -259,7 +260,7 @@ export async function handleCasinoCommand(interaction, economy, logger = console
   if (!interaction.inGuild()) {
     await interaction.reply({
       content: '서버에서만 사용할 수 있는 명령어입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -270,7 +271,7 @@ export async function handleCasinoCommand(interaction, economy, logger = console
     logger.error(error);
     await interaction.reply({
       content: `게임 실패: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 
@@ -626,7 +627,7 @@ async function handleCasinoQuickButton(interaction, economy, logger) {
   if (ownerId && interaction.user.id !== ownerId) {
     await interaction.reply({
       content: '이 카지노 버튼은 명령어를 실행한 유저만 사용할 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -639,7 +640,7 @@ async function handleCasinoQuickButton(interaction, economy, logger) {
   if (!interaction.inGuild()) {
     await interaction.reply({
       content: '서버에서만 사용할 수 있는 명령어입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -648,7 +649,7 @@ async function handleCasinoQuickButton(interaction, economy, logger) {
   if (!Number.isSafeInteger(bet) || bet <= 0) {
     await interaction.reply({
       content: '버튼 베팅금이 올바르지 않습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -696,13 +697,13 @@ async function handleCasinoQuickButton(interaction, economy, logger) {
 
     await interaction.reply({
       content: '알 수 없는 카지노 빠른 버튼입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   } catch (error) {
     logger.error(error);
     await interaction.reply({
       content: `게임 실패: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 
@@ -716,7 +717,7 @@ async function handleBlackjackChallengeButton(interaction, economy, logger) {
   if (!challenge) {
     await interaction.reply({
       content: '이미 만료되었거나 처리된 대결입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -724,7 +725,7 @@ async function handleBlackjackChallengeButton(interaction, economy, logger) {
   if (interaction.user.id !== challenge.opponent.userId) {
     await interaction.reply({
       content: '이 대결의 상대만 버튼을 누를 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -801,7 +802,7 @@ async function handleAiBlackjackButton(interaction, economy, logger) {
   if (!pending) {
     await interaction.reply({
       content: '이미 만료되었거나 처리된 블랙잭입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -809,7 +810,7 @@ async function handleAiBlackjackButton(interaction, economy, logger) {
   if (interaction.user.id !== pending.userId) {
     await interaction.reply({
       content: '이 블랙잭을 시작한 유저만 버튼을 누를 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -884,7 +885,7 @@ async function handlePlayerBlackjackButton(interaction, economy, logger) {
   if (!pending) {
     await interaction.reply({
       content: '이미 만료되었거나 처리된 블랙잭 대결입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -893,7 +894,7 @@ async function handlePlayerBlackjackButton(interaction, economy, logger) {
   if (!participant) {
     await interaction.reply({
       content: '이 블랙잭 대결의 참여자만 버튼을 누를 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -901,7 +902,7 @@ async function handlePlayerBlackjackButton(interaction, economy, logger) {
   if (pending.game.currentTurn !== participant) {
     await interaction.reply({
       content: '아직 내 차례가 아닙니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -1187,11 +1188,14 @@ function formatSettlement(success, settlement) {
   const profitText = profit >= 0
     ? `+${profit.toLocaleString()}골드`
     : `${profit.toLocaleString()}골드`;
+  const modifier = settlement.rpgCasinoModifier
+    ? `\n타짜 정산 효과: **${settlement.rpgCasinoModifier.label}** (확률 변화 없음, 정산 금액만 적용)`
+    : '';
 
   return [
     success ? '✅ 성공' : '❌ 실패',
     `베팅: ${settlement.bet.toLocaleString()}골드 / 지급: ${settlement.payout.toLocaleString()}골드 / 손익: **${profitText}**`,
-    `현재 골드: **${getCasinoChips(settlement.profile).toLocaleString()}골드**`
+    `현재 골드: **${getCasinoChips(settlement.profile).toLocaleString()}골드**${modifier}`
   ].join('\n');
 }
 

@@ -1,0 +1,13 @@
+{
+  "id": "item_black_dragon_scaleplate_icon",
+  "label": "검은 용비늘 갑옷 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ],
+  "prompt": "Use $generate2dsprite to create a clean HD transparent medieval fantasy 검은 용비늘 갑옷 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text."
+}

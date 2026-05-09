@@ -1,0 +1,12 @@
+{
+  "id": "item_oak_shortbow_icon",
+  "label": "참나무 단궁 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

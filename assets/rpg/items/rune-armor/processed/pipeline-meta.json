@@ -1,0 +1,12 @@
+{
+  "id": "item_rune_armor_icon",
+  "label": "룬 갑옷 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

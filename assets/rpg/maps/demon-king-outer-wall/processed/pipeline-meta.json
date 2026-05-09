@@ -1,0 +1,11 @@
+{
+  "id": "map_demon_king_outer_wall",
+  "label": "마왕성 외곽 배경",
+  "category": "map",
+  "kind": "map",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    1024,
+    576
+  ]
+}

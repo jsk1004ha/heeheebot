@@ -1,0 +1,11 @@
+{
+  "id": "map_goblin_forest",
+  "label": "고블린 숲 배경",
+  "category": "map",
+  "kind": "map",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    1024,
+    576
+  ]
+}

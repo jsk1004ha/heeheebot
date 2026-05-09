@@ -1,3 +1,4 @@
+import { MessageFlags } from 'discord.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
@@ -64,7 +65,7 @@ test('도움말 버튼은 실행한 유저만 분류를 바꿀 수 있다', asyn
   assert.equal(await handleHelpCommand(otherButton), true);
 
   assert.match(updates[0].embeds[0].data.title, /RPG/);
-  assert.equal(replies[0].ephemeral, true);
+  assert.equal(replies[0].flags, MessageFlags.Ephemeral);
   assert.match(replies[0].content, /실행한 유저만/);
 });
 

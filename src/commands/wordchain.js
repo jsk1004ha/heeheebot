@@ -1,4 +1,5 @@
 import {
+  MessageFlags,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
@@ -89,7 +90,7 @@ export async function handleWordChainCommand(interaction, economy, logger = cons
   if (!interaction.inGuild()) {
     await interaction.reply({
       content: '서버에서만 사용할 수 있는 명령어입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -156,7 +157,7 @@ async function createWordChainLobby(interaction, economy, logger, options) {
   if (activeGamesByChannel.has(key)) {
     await interaction.reply({
       content: '이 채널에서 이미 끝말잇기 모집 또는 게임이 진행 중입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return;
   }
@@ -213,7 +214,7 @@ async function handleWordChainButton(interaction, economy, logger, options) {
   if (!state || state.guildId !== interaction.guildId || state.channelId !== interaction.channelId) {
     await interaction.reply({
       content: '이미 종료되었거나 다른 채널의 끝말잇기 모집입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -221,7 +222,7 @@ async function handleWordChainButton(interaction, economy, logger, options) {
   if (state.status !== 'collecting') {
     await interaction.reply({
       content: '이미 게임이 시작되어 참가자 목록을 바꿀 수 없습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -229,7 +230,7 @@ async function handleWordChainButton(interaction, economy, logger, options) {
   if (interaction.user.bot) {
     await interaction.reply({
       content: '봇 계정은 참가할 수 없습니다. 희희봇은 자동으로 참가합니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -247,7 +248,7 @@ async function handleWordChainButton(interaction, economy, logger, options) {
     if (interaction.user.id !== state.hostUserId) {
       await interaction.reply({
         content: '방장만 모집 시간을 건너뛰고 바로 시작할 수 있습니다.',
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
       return true;
     }
@@ -264,7 +265,7 @@ async function handleWordChainButton(interaction, economy, logger, options) {
     if (interaction.user.id === state.hostUserId) {
       await interaction.reply({
         content: '방장은 모집 중 나갈 수 없습니다. 게임이 끝난 뒤 다시 시작해주세요.',
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
       return true;
     }

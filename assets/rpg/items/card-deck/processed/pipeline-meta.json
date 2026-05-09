@@ -1,0 +1,12 @@
+{
+  "id": "item_card_deck_icon",
+  "label": "타짜 카드덱 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "id": "item_card_deck_icon",
+  "label": "타짜 카드덱 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ],
+  "prompt": "Use $generate2dsprite to create a clean HD transparent medieval fantasy card deck icon, single asset, centered parchment cards with red wax seal, solid #FF00FF background, no text."
+}

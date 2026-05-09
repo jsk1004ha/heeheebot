@@ -73,7 +73,7 @@ function getRpgEmbedColor(title, description) {
   if (/완료|승리|보상|학습|장착|전직|구매/.test(text)) return 0x22c55e;
   if (/상점|가챠|골드/.test(text)) return 0xf59e0b;
   if (/월드맵|탐험|지역|스토리/.test(text)) return 0x38bdf8;
-  if (/전투|보스|레이드|대결|PvP/.test(text)) return 0xa855f7;
+  if (/전투|보스|레이드/.test(text)) return 0xa855f7;
 
   return 0x7c3aed;
 }

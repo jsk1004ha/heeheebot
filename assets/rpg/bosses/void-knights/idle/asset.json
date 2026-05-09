@@ -1,6 +1,6 @@
 {
   "id": "boss_void_knights_idle",
-  "label": "공허 기사단 대기 모션",
+  "label": "마왕의 사도 대기 모션",
   "category": "monster",
   "kind": "sprite",
   "sheet": "3x3",

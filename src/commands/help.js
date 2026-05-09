@@ -1,4 +1,5 @@
 import {
+  MessageFlags,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
@@ -134,7 +135,7 @@ async function handleHelpButton(interaction) {
   if (ownerId && interaction.user.id !== ownerId) {
     await interaction.reply({
       content: '이 도움말 버튼은 명령어를 실행한 유저만 사용할 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }

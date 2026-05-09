@@ -1,0 +1,13 @@
+{
+  "id": "item_iron_ore_icon",
+  "label": "철광석 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ],
+  "prompt": "Use $generate2dsprite to create a clean HD transparent medieval fantasy iron ore icon, single asset, centered dark ore cluster with silver flecks, solid #FF00FF background, no text."
+}

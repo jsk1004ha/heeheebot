@@ -1,0 +1,11 @@
+{
+  "id": "map_red_canyon",
+  "label": "붉은 협곡 배경",
+  "category": "map",
+  "kind": "map",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    1024,
+    576
+  ]
+}

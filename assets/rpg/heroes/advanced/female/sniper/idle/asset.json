@@ -12,7 +12,7 @@
   "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
   "advancedClass": "sniper",
   "gender": "female",
-  "label": "여성 저격수",
+  "label": "여성 명사수 전직 이미지",
   "rosterFrame": 6,
   "clean": "assets/rpg/heroes/advanced/female/sniper/idle/processed/clean.png"
 }

@@ -1,0 +1,12 @@
+{
+  "id": "item_blessed_plate_icon",
+  "label": "축복받은 판금갑옷 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

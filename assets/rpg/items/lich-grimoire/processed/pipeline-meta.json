@@ -1,0 +1,12 @@
+{
+  "id": "item_lich_grimoire_icon",
+  "label": "리치의 마도서 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

@@ -12,7 +12,7 @@
   "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
   "advancedClass": "crusader",
   "gender": "male",
-  "label": "크루세이더",
+  "label": "성전사 전직 이미지",
   "rosterFrame": 7,
   "clean": "assets/rpg/heroes/advanced/crusader/idle/processed/clean.png"
 }

@@ -1,4 +1,4 @@
-import { Client, Events, GatewayIntentBits } from 'discord.js';
+import { MessageFlags, Client, Events, GatewayIntentBits } from 'discord.js';
 import { handleCasinoCommand } from './commands/casino.js';
 import { handleCommunityCommand } from './commands/community.js';
 import { handleEconomyCommand } from './commands/economy.js';
@@ -24,6 +24,13 @@ import {
   handleStockAutocomplete,
   handleStockCommand
 } from './commands/stocks.js';
+import {
+  isUnknownInteractionError,
+  isUserFacingInteractionError,
+  logUnexpectedInteractionError,
+  safeAutocompleteRespond,
+  safeReplyToInteraction
+} from './commands/interactions.js';
 import { handleTimetableCommand } from './commands/timetable.js';
 import { handleTodayCommand } from './commands/today.js';
 import {
@@ -96,15 +103,25 @@ export function createBot({
     });
   });
 
+  client.on(Events.Error, (error) => {
+    logger.error('Discord client error:', error);
+  });
+
   client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.isAutocomplete?.()) {
       try {
         const handled = await handleTamagotchiAutocomplete(interaction)
           || await handleStockAutocomplete(interaction, stocks);
-        if (!handled) await interaction.respond([]);
+        if (!handled) await safeAutocompleteRespond(interaction, []);
       } catch (error) {
-        logger.error('Failed to handle autocomplete interaction:', error);
-        await interaction.respond([]).catch(() => {});
+        if (!isUnknownInteractionError(error)) {
+          logger.error('Failed to handle autocomplete interaction:', error);
+          await safeAutocompleteRespond(interaction, []).catch((fallbackError) => {
+            if (!isUnknownInteractionError(fallbackError)) {
+              logger.error('Failed to send empty autocomplete fallback:', fallbackError);
+            }
+          });
+        }
       }
       return;
     }
@@ -143,23 +160,30 @@ export function createBot({
         || await handleEconomyCommand(interaction, economy, { stocks });
 
       if (!handled) {
-        await interaction.reply({
-          content: '알 수 없는 명령어입니다.',
-          ephemeral: true
+        await safeReplyToInteraction(interaction, '알 수 없는 명령어입니다.', {
+          flags: MessageFlags.Ephemeral
         });
       }
     } catch (error) {
-      logger.error(error);
+      if (isUnknownInteractionError(error)) {
+        logger.warn?.('Interaction expired before command response could be sent.');
+        return;
+      }
 
-      const payload = {
-        content: '명령어 처리 중 오류가 발생했습니다.',
-        ephemeral: true
-      };
+      logUnexpectedInteractionError(logger, error, 'Command handling failed');
 
-      if (interaction.deferred || interaction.replied) {
-        await interaction.followUp(payload);
-      } else {
-        await interaction.reply(payload);
+      const content = isUserFacingInteractionError(error)
+        ? `처리 실패: ${error.message}`
+        : '명령어 처리 중 오류가 발생했습니다.';
+      try {
+        const sent = await safeReplyToInteraction(interaction, content, {
+          flags: MessageFlags.Ephemeral
+        });
+        if (!sent) {
+          logger.warn?.('Interaction expired before error response could be sent.');
+        }
+      } catch (replyError) {
+        logger.error('Failed to send command error response:', replyError);
       }
     }
   });

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { MessageFlags, SlashCommandBuilder } from 'discord.js';
 
 export const fortuneCommands = [
   new SlashCommandBuilder()
@@ -33,7 +33,7 @@ export async function handleFortuneCommand(interaction, fortune, economy) {
   if (!interaction.inGuild()) {
     await interaction.reply({
       content: '서버에서만 사용할 수 있는 명령어입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }

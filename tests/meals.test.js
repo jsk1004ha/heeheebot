@@ -1,3 +1,4 @@
+import { MessageFlags } from 'discord.js';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -142,7 +143,7 @@ test('자동급식 명령은 서버별 알림 채널을 설정, 확인, 해제�
     ]);
 
     await handleMealCommand(statusInteraction, fixture.meals);
-    assert.equal(statusInteraction.replies[0].ephemeral, true);
+    assert.equal(statusInteraction.replies[0].flags, MessageFlags.Ephemeral);
     assert.match(statusInteraction.replies[0].content, /<#channel-1>/);
 
     await handleMealCommand(unsetInteraction, fixture.meals);

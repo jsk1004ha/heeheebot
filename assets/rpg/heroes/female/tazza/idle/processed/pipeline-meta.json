@@ -1,0 +1,12 @@
+{
+  "id": "hero_female_tazza_idle",
+  "label": "여성 타짜 대기 모션",
+  "category": "hero",
+  "kind": "sprite",
+  "sheet": "2x2",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    512,
+    512
+  ]
+}

@@ -15,7 +15,8 @@
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/adventurer/idle/processed",
       "meta": "assets/rpg/heroes/adventurer/idle/processed/pipeline-meta.json",
       "transparentSheet": "assets/rpg/heroes/adventurer/idle/processed/sheet-transparent.png",
-      "animation": "assets/rpg/heroes/adventurer/idle/processed/animation.gif"
+      "animation": "assets/rpg/heroes/adventurer/idle/processed/animation.gif",
+      "label": "초보 모험가 대기 모션"
     },
     {
       "id": "hero_warrior_idle",
@@ -30,7 +31,8 @@
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/warrior/idle/processed",
       "meta": "assets/rpg/heroes/warrior/idle/processed/pipeline-meta.json",
       "transparentSheet": "assets/rpg/heroes/warrior/idle/processed/sheet-transparent.png",
-      "animation": "assets/rpg/heroes/warrior/idle/processed/animation.gif"
+      "animation": "assets/rpg/heroes/warrior/idle/processed/animation.gif",
+      "label": "검사 대기 모션"
     },
     {
       "id": "hero_mage_idle",
@@ -45,7 +47,8 @@
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/mage/idle/processed",
       "meta": "assets/rpg/heroes/mage/idle/processed/pipeline-meta.json",
       "transparentSheet": "assets/rpg/heroes/mage/idle/processed/sheet-transparent.png",
-      "animation": "assets/rpg/heroes/mage/idle/processed/animation.gif"
+      "animation": "assets/rpg/heroes/mage/idle/processed/animation.gif",
+      "label": "마법사 대기 모션"
     },
     {
       "id": "hero_ranger_idle",
@@ -60,7 +63,8 @@
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/ranger/idle/processed",
       "meta": "assets/rpg/heroes/ranger/idle/processed/pipeline-meta.json",
       "transparentSheet": "assets/rpg/heroes/ranger/idle/processed/sheet-transparent.png",
-      "animation": "assets/rpg/heroes/ranger/idle/processed/animation.gif"
+      "animation": "assets/rpg/heroes/ranger/idle/processed/animation.gif",
+      "label": "궁수 대기 모션"
     },
     {
       "id": "hero_paladin_idle",
@@ -75,7 +79,8 @@
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/paladin/idle/processed",
       "meta": "assets/rpg/heroes/paladin/idle/processed/pipeline-meta.json",
       "transparentSheet": "assets/rpg/heroes/paladin/idle/processed/sheet-transparent.png",
-      "animation": "assets/rpg/heroes/paladin/idle/processed/animation.gif"
+      "animation": "assets/rpg/heroes/paladin/idle/processed/animation.gif",
+      "label": "성기사 대기 모션"
     },
     {
       "id": "hero_rogue_idle",
@@ -90,7 +95,8 @@
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/rogue/idle/processed",
       "meta": "assets/rpg/heroes/rogue/idle/processed/pipeline-meta.json",
       "transparentSheet": "assets/rpg/heroes/rogue/idle/processed/sheet-transparent.png",
-      "animation": "assets/rpg/heroes/rogue/idle/processed/animation.gif"
+      "animation": "assets/rpg/heroes/rogue/idle/processed/animation.gif",
+      "label": "도적 대기 모션"
     },
     {
       "id": "hero_priest_idle",
@@ -105,7 +111,8 @@
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/priest/idle/processed",
       "meta": "assets/rpg/heroes/priest/idle/processed/pipeline-meta.json",
       "transparentSheet": "assets/rpg/heroes/priest/idle/processed/sheet-transparent.png",
-      "animation": "assets/rpg/heroes/priest/idle/processed/animation.gif"
+      "animation": "assets/rpg/heroes/priest/idle/processed/animation.gif",
+      "label": "사제 대기 모션"
     },
     {
       "id": "monster_slime_idle",
@@ -120,7 +127,8 @@
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/monsters/slime/idle/processed",
       "meta": "assets/rpg/monsters/slime/idle/processed/pipeline-meta.json",
       "transparentSheet": "assets/rpg/monsters/slime/idle/processed/sheet-transparent.png",
-      "animation": "assets/rpg/monsters/slime/idle/processed/animation.gif"
+      "animation": "assets/rpg/monsters/slime/idle/processed/animation.gif",
+      "label": "슬라임 대기 모션"
     },
     {
       "id": "monster_goblin_idle",
@@ -135,7 +143,8 @@
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/monsters/goblin/idle/processed",
       "meta": "assets/rpg/monsters/goblin/idle/processed/pipeline-meta.json",
       "transparentSheet": "assets/rpg/monsters/goblin/idle/processed/sheet-transparent.png",
-      "animation": "assets/rpg/monsters/goblin/idle/processed/animation.gif"
+      "animation": "assets/rpg/monsters/goblin/idle/processed/animation.gif",
+      "label": "고블린 대기 모션"
     },
     {
       "id": "monster_forest_wolf_idle",
@@ -150,7 +159,8 @@
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/monsters/forest-wolf/idle/processed",
       "meta": "assets/rpg/monsters/forest-wolf/idle/processed/pipeline-meta.json",
       "transparentSheet": "assets/rpg/monsters/forest-wolf/idle/processed/sheet-transparent.png",
-      "animation": "assets/rpg/monsters/forest-wolf/idle/processed/animation.gif"
+      "animation": "assets/rpg/monsters/forest-wolf/idle/processed/animation.gif",
+      "label": "숲 늑대 대기 모션"
     },
     {
       "id": "monster_orc_warrior_idle",
@@ -165,7 +175,8 @@
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/monsters/orc-warrior/idle/processed",
       "meta": "assets/rpg/monsters/orc-warrior/idle/processed/pipeline-meta.json",
       "transparentSheet": "assets/rpg/monsters/orc-warrior/idle/processed/sheet-transparent.png",
-      "animation": "assets/rpg/monsters/orc-warrior/idle/processed/animation.gif"
+      "animation": "assets/rpg/monsters/orc-warrior/idle/processed/animation.gif",
+      "label": "오크 전사 대기 모션"
     },
     {
       "id": "monster_skeleton_soldier_idle",
@@ -180,7 +191,8 @@
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/monsters/skeleton-soldier/idle/processed",
       "meta": "assets/rpg/monsters/skeleton-soldier/idle/processed/pipeline-meta.json",
       "transparentSheet": "assets/rpg/monsters/skeleton-soldier/idle/processed/sheet-transparent.png",
-      "animation": "assets/rpg/monsters/skeleton-soldier/idle/processed/animation.gif"
+      "animation": "assets/rpg/monsters/skeleton-soldier/idle/processed/animation.gif",
+      "label": "해골 병사 대기 모션"
     },
     {
       "id": "monster_cave_bat_idle",
@@ -195,7 +207,8 @@
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/monsters/cave-bat/idle/processed",
       "meta": "assets/rpg/monsters/cave-bat/idle/processed/pipeline-meta.json",
       "transparentSheet": "assets/rpg/monsters/cave-bat/idle/processed/sheet-transparent.png",
-      "animation": "assets/rpg/monsters/cave-bat/idle/processed/animation.gif"
+      "animation": "assets/rpg/monsters/cave-bat/idle/processed/animation.gif",
+      "label": "동굴 박쥐 대기 모션"
     },
     {
       "id": "monster_troll_idle",
@@ -216,7 +229,8 @@
         "reason": "raw generated grid touched a cell edge; preserved generated art and added deterministic magenta safe padding before forge processing",
         "scale": 0.9,
         "originalRaw": "assets/rpg/monsters/troll/idle/raw/raw-sheet-original-edge-touch.png"
-      }
+      },
+      "label": "트롤 대기 모션"
     },
     {
       "id": "monster_dark_knight_idle",
@@ -231,7 +245,8 @@
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/monsters/dark-knight/idle/processed",
       "meta": "assets/rpg/monsters/dark-knight/idle/processed/pipeline-meta.json",
       "transparentSheet": "assets/rpg/monsters/dark-knight/idle/processed/sheet-transparent.png",
-      "animation": "assets/rpg/monsters/dark-knight/idle/processed/animation.gif"
+      "animation": "assets/rpg/monsters/dark-knight/idle/processed/animation.gif",
+      "label": "암흑 기사 대기 모션"
     },
     {
       "id": "monster_mini_dragon_idle",
@@ -246,7 +261,8 @@
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/monsters/mini-dragon/idle/processed",
       "meta": "assets/rpg/monsters/mini-dragon/idle/processed/pipeline-meta.json",
       "transparentSheet": "assets/rpg/monsters/mini-dragon/idle/processed/sheet-transparent.png",
-      "animation": "assets/rpg/monsters/mini-dragon/idle/processed/animation.gif"
+      "animation": "assets/rpg/monsters/mini-dragon/idle/processed/animation.gif",
+      "label": "새끼 용 대기 모션"
     },
     {
       "id": "boss_slime_king_idle",
@@ -267,7 +283,8 @@
         "reason": "raw generated grid touched a cell edge; preserved generated art and added deterministic magenta safe padding before forge processing",
         "scale": 0.9,
         "originalRaw": "assets/rpg/bosses/slime-king/idle/raw/raw-sheet-original-edge-touch.png"
-      }
+      },
+      "label": "슬라임 킹 대기 모션"
     },
     {
       "id": "boss_ancient_dragon_idle",
@@ -288,7 +305,8 @@
         "reason": "raw generated grid touched a cell edge; preserved generated art and added deterministic magenta safe padding before forge processing",
         "scale": 0.9,
         "originalRaw": "assets/rpg/bosses/ancient-dragon/idle/raw/raw-sheet-original-edge-touch.png"
-      }
+      },
+      "label": "고대 용 대기 모션"
     },
     {
       "id": "map_forest_glade",
@@ -298,7 +316,7 @@
       "raw": "assets/rpg/maps/forest-glade/raw/background.png",
       "prompt": "assets/rpg/maps/forest-glade/prompt-used.txt",
       "status": "generated",
-      "label": "초록 숲 전투 배경",
+      "label": "왕도 남쪽 초원 전투 배경",
       "generatedWith": "agent-sprite-forge:$generate2dmap",
       "meta": "assets/rpg/maps/forest-glade/processed/pipeline-meta.json",
       "outputSize": [
@@ -314,7 +332,7 @@
       "raw": "assets/rpg/maps/crystal-cave/raw/background.png",
       "prompt": "assets/rpg/maps/crystal-cave/prompt-used.txt",
       "status": "generated",
-      "label": "수정 동굴 전투 배경",
+      "label": "버려진 은광 전투 배경",
       "generatedWith": "agent-sprite-forge:$generate2dmap",
       "meta": "assets/rpg/maps/crystal-cave/processed/pipeline-meta.json",
       "outputSize": [
@@ -413,7 +431,8 @@
       "processedDir": "assets/rpg/items/potion/processed",
       "status": "processed",
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/potion/processed",
-      "meta": "assets/rpg/items/potion/processed/pipeline-meta.json"
+      "meta": "assets/rpg/items/potion/processed/pipeline-meta.json",
+      "label": "회복 포션 아이콘"
     },
     {
       "id": "item_mana_potion_icon",
@@ -426,7 +445,8 @@
       "processedDir": "assets/rpg/items/mana-potion/processed",
       "status": "processed",
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/mana-potion/processed",
-      "meta": "assets/rpg/items/mana-potion/processed/pipeline-meta.json"
+      "meta": "assets/rpg/items/mana-potion/processed/pipeline-meta.json",
+      "label": "마나 포션 아이콘"
     },
     {
       "id": "item_treasure_chest_icon",
@@ -439,7 +459,8 @@
       "processedDir": "assets/rpg/items/treasure-chest/processed",
       "status": "processed",
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/treasure-chest/processed",
-      "meta": "assets/rpg/items/treasure-chest/processed/pipeline-meta.json"
+      "meta": "assets/rpg/items/treasure-chest/processed/pipeline-meta.json",
+      "label": "보물상자 아이콘"
     },
     {
       "id": "item_iron_sword_icon",
@@ -452,7 +473,8 @@
       "processedDir": "assets/rpg/items/iron-sword/processed",
       "status": "processed",
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/iron-sword/processed",
-      "meta": "assets/rpg/items/iron-sword/processed/pipeline-meta.json"
+      "meta": "assets/rpg/items/iron-sword/processed/pipeline-meta.json",
+      "label": "철검 아이콘"
     },
     {
       "id": "item_leather_armor_icon",
@@ -465,7 +487,8 @@
       "processedDir": "assets/rpg/items/leather-armor/processed",
       "status": "processed",
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/leather-armor/processed",
-      "meta": "assets/rpg/items/leather-armor/processed/pipeline-meta.json"
+      "meta": "assets/rpg/items/leather-armor/processed/pipeline-meta.json",
+      "label": "가죽 갑옷 아이콘"
     },
     {
       "id": "item_mystic_ring_icon",
@@ -478,7 +501,8 @@
       "processedDir": "assets/rpg/items/mystic-ring/processed",
       "status": "processed",
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/mystic-ring/processed",
-      "meta": "assets/rpg/items/mystic-ring/processed/pipeline-meta.json"
+      "meta": "assets/rpg/items/mystic-ring/processed/pipeline-meta.json",
+      "label": "신비한 반지 아이콘"
     },
     {
       "id": "item_dragon_blade_icon",
@@ -491,7 +515,8 @@
       "processedDir": "assets/rpg/items/dragon-blade/processed",
       "status": "processed",
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/dragon-blade/processed",
-      "meta": "assets/rpg/items/dragon-blade/processed/pipeline-meta.json"
+      "meta": "assets/rpg/items/dragon-blade/processed/pipeline-meta.json",
+      "label": "용비늘 대검 아이콘"
     },
     {
       "id": "item_archmage_staff_icon",
@@ -504,7 +529,8 @@
       "processedDir": "assets/rpg/items/archmage-staff/processed",
       "status": "processed",
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/archmage-staff/processed",
-      "meta": "assets/rpg/items/archmage-staff/processed/pipeline-meta.json"
+      "meta": "assets/rpg/items/archmage-staff/processed/pipeline-meta.json",
+      "label": "대마도사의 지팡이 아이콘"
     },
     {
       "id": "item_guardian_plate_icon",
@@ -517,7 +543,8 @@
       "processedDir": "assets/rpg/items/guardian-plate/processed",
       "status": "processed",
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/guardian-plate/processed",
-      "meta": "assets/rpg/items/guardian-plate/processed/pipeline-meta.json"
+      "meta": "assets/rpg/items/guardian-plate/processed/pipeline-meta.json",
+      "label": "수호자의 판금갑옷 아이콘"
     },
     {
       "id": "hero_female_adventurer_idle",
@@ -532,7 +559,8 @@
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/female/adventurer/idle/processed",
       "meta": "assets/rpg/heroes/female/adventurer/idle/processed/pipeline-meta.json",
       "transparentSheet": "assets/rpg/heroes/female/adventurer/idle/processed/sheet-transparent.png",
-      "animation": "assets/rpg/heroes/female/adventurer/idle/processed/animation.gif"
+      "animation": "assets/rpg/heroes/female/adventurer/idle/processed/animation.gif",
+      "label": "여성 초보 모험가 대기 모션"
     },
     {
       "id": "hero_female_warrior_idle",
@@ -547,7 +575,8 @@
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/female/warrior/idle/processed",
       "meta": "assets/rpg/heroes/female/warrior/idle/processed/pipeline-meta.json",
       "transparentSheet": "assets/rpg/heroes/female/warrior/idle/processed/sheet-transparent.png",
-      "animation": "assets/rpg/heroes/female/warrior/idle/processed/animation.gif"
+      "animation": "assets/rpg/heroes/female/warrior/idle/processed/animation.gif",
+      "label": "여성 검사 대기 모션"
     },
     {
       "id": "hero_female_mage_idle",
@@ -562,7 +591,8 @@
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/female/mage/idle/processed",
       "meta": "assets/rpg/heroes/female/mage/idle/processed/pipeline-meta.json",
       "transparentSheet": "assets/rpg/heroes/female/mage/idle/processed/sheet-transparent.png",
-      "animation": "assets/rpg/heroes/female/mage/idle/processed/animation.gif"
+      "animation": "assets/rpg/heroes/female/mage/idle/processed/animation.gif",
+      "label": "여성 마법사 대기 모션"
     },
     {
       "id": "hero_female_ranger_idle",
@@ -577,7 +607,8 @@
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/female/ranger/idle/processed",
       "meta": "assets/rpg/heroes/female/ranger/idle/processed/pipeline-meta.json",
       "transparentSheet": "assets/rpg/heroes/female/ranger/idle/processed/sheet-transparent.png",
-      "animation": "assets/rpg/heroes/female/ranger/idle/processed/animation.gif"
+      "animation": "assets/rpg/heroes/female/ranger/idle/processed/animation.gif",
+      "label": "여성 궁수 대기 모션"
     },
     {
       "id": "hero_female_paladin_idle",
@@ -592,7 +623,8 @@
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/female/paladin/idle/processed",
       "meta": "assets/rpg/heroes/female/paladin/idle/processed/pipeline-meta.json",
       "transparentSheet": "assets/rpg/heroes/female/paladin/idle/processed/sheet-transparent.png",
-      "animation": "assets/rpg/heroes/female/paladin/idle/processed/animation.gif"
+      "animation": "assets/rpg/heroes/female/paladin/idle/processed/animation.gif",
+      "label": "여성 성기사 대기 모션"
     },
     {
       "id": "hero_female_rogue_idle",
@@ -607,7 +639,8 @@
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/female/rogue/idle/processed",
       "meta": "assets/rpg/heroes/female/rogue/idle/processed/pipeline-meta.json",
       "transparentSheet": "assets/rpg/heroes/female/rogue/idle/processed/sheet-transparent.png",
-      "animation": "assets/rpg/heroes/female/rogue/idle/processed/animation.gif"
+      "animation": "assets/rpg/heroes/female/rogue/idle/processed/animation.gif",
+      "label": "여성 도적 대기 모션"
     },
     {
       "id": "hero_female_priest_idle",
@@ -622,7 +655,8 @@
       "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/female/priest/idle/processed",
       "meta": "assets/rpg/heroes/female/priest/idle/processed/pipeline-meta.json",
       "transparentSheet": "assets/rpg/heroes/female/priest/idle/processed/sheet-transparent.png",
-      "animation": "assets/rpg/heroes/female/priest/idle/processed/animation.gif"
+      "animation": "assets/rpg/heroes/female/priest/idle/processed/animation.gif",
+      "label": "여성 사제 대기 모션"
     },
     {
       "id": "boss_goblin_warband_idle",
@@ -630,7 +664,7 @@
       "category": "monster",
       "kind": "sprite",
       "sheet": "3x3",
-      "prompt": "Generated local fallback raid boss sprite for 고블린 전투부대 대기 모션; clean HD RPG boss, 3x3 transparent idle sheet, no text.",
+      "prompt": "assets/rpg/bosses/goblin-warband/idle/prompt-used.txt",
       "source": "/home/jio/.codex/generated_images/019dffb5-dcb4-7ab3-a969-b44a2c3e55d2/ig_094151999effdb840169fc4b2f71b48191a4fe8f2961a86991.png",
       "status": "processed",
       "processorStdout": "assets/rpg/bosses/goblin-warband/idle/processed",
@@ -640,7 +674,7 @@
     },
     {
       "id": "boss_crystal_hydra_idle",
-      "label": "수정 히드라 대기 모션",
+      "label": "늪지 히드라 대기 모션",
       "category": "monster",
       "kind": "sprite",
       "sheet": "3x3",
@@ -736,7 +770,7 @@
     },
     {
       "id": "boss_void_knights_idle",
-      "label": "공허 기사단 대기 모션",
+      "label": "마왕의 사도 대기 모션",
       "category": "monster",
       "kind": "sprite",
       "sheet": "3x3",
@@ -752,7 +786,7 @@
     },
     {
       "id": "boss_sky_golem_idle",
-      "label": "천공 골렘 대기 모션",
+      "label": "왕국 수호 골렘 대기 모션",
       "category": "monster",
       "kind": "sprite",
       "sheet": "3x3",
@@ -806,7 +840,7 @@
       "raw": "assets/rpg/maps/crystal-nest/raw/background.png",
       "prompt": "assets/rpg/maps/crystal-nest/prompt-used.txt",
       "status": "generated",
-      "label": "수정 둥지 전투 배경",
+      "label": "늪지 히드라 둥지 전투 배경",
       "generatedWith": "agent-sprite-forge:$generate2dmap",
       "meta": "assets/rpg/maps/crystal-nest/processed/pipeline-meta.json",
       "outputSize": [
@@ -902,7 +936,7 @@
       "raw": "assets/rpg/maps/void-bastion/raw/background.png",
       "prompt": "assets/rpg/maps/void-bastion/prompt-used.txt",
       "status": "generated",
-      "label": "공허 요새 전투 배경",
+      "label": "마왕성 외곽 요새 전투 배경",
       "generatedWith": "agent-sprite-forge:$generate2dmap",
       "meta": "assets/rpg/maps/void-bastion/processed/pipeline-meta.json",
       "outputSize": [
@@ -918,7 +952,7 @@
       "raw": "assets/rpg/maps/sky-foundry/raw/background.png",
       "prompt": "assets/rpg/maps/sky-foundry/prompt-used.txt",
       "status": "generated",
-      "label": "천공 주조소 전투 배경",
+      "label": "왕국 대장간 전투 배경",
       "generatedWith": "agent-sprite-forge:$generate2dmap",
       "meta": "assets/rpg/maps/sky-foundry/processed/pipeline-meta.json",
       "outputSize": [
@@ -968,7 +1002,7 @@
           576
         ]
       },
-      "label": "들꽃 평원 전투 배경",
+      "label": "고블린 숲 입구 전투 배경",
       "meta": "assets/rpg/maps/wildflower-plains/processed/pipeline-meta.json",
       "outputSize": [
         1024,
@@ -1001,7 +1035,7 @@
           576
         ]
       },
-      "label": "달빛 언덕 전투 배경",
+      "label": "안개 늪지 언덕 전투 배경",
       "meta": "assets/rpg/maps/moonlit-hill/processed/pipeline-meta.json",
       "outputSize": [
         1024,
@@ -1034,7 +1068,7 @@
           576
         ]
       },
-      "label": "버섯 숲 전투 배경",
+      "label": "저주받은 수도원 정원 전투 배경",
       "meta": "assets/rpg/maps/mushroom-grove/processed/pipeline-meta.json",
       "outputSize": [
         1024,
@@ -1100,7 +1134,7 @@
           576
         ]
       },
-      "label": "붉은 사막 전투 배경",
+      "label": "붉은 협곡 전투 배경",
       "meta": "assets/rpg/maps/red-desert/processed/pipeline-meta.json",
       "outputSize": [
         1024,
@@ -1133,7 +1167,7 @@
           576
         ]
       },
-      "label": "천둥 고원 전투 배경",
+      "label": "마탑 지하서고 전투 배경",
       "meta": "assets/rpg/maps/thunder-plateau/processed/pipeline-meta.json",
       "outputSize": [
         1024,
@@ -1166,7 +1200,7 @@
           576
         ]
       },
-      "label": "수정 호수 전투 배경",
+      "label": "성지 아르덴 전투 배경",
       "meta": "assets/rpg/maps/crystal-lake/processed/pipeline-meta.json",
       "outputSize": [
         1024,
@@ -1199,7 +1233,7 @@
           576
         ]
       },
-      "label": "환영 숲 전투 배경",
+      "label": "왕국 대장간 거리 전투 배경",
       "meta": "assets/rpg/maps/phantom-forest/processed/pipeline-meta.json",
       "outputSize": [
         1024,
@@ -1232,7 +1266,7 @@
           576
         ]
       },
-      "label": "심연 광산 전투 배경",
+      "label": "왕국 비밀 광산 전투 배경",
       "meta": "assets/rpg/maps/abyss-mine/processed/pipeline-meta.json",
       "outputSize": [
         1024,
@@ -1265,7 +1299,7 @@
           576
         ]
       },
-      "label": "별무리 분화구 전투 배경",
+      "label": "길드 훈련장 전투 배경",
       "meta": "assets/rpg/maps/starfall-crater/processed/pipeline-meta.json",
       "outputSize": [
         1024,
@@ -1331,7 +1365,7 @@
           576
         ]
       },
-      "label": "공허 관문 전투 배경",
+      "label": "마왕성 내부 전투 배경",
       "meta": "assets/rpg/maps/void-gate/processed/pipeline-meta.json",
       "outputSize": [
         1024,
@@ -1352,7 +1386,7 @@
       "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
       "advancedClass": "berserker",
       "gender": "male",
-      "label": "광전사",
+      "label": "광전사 전직 이미지",
       "rosterFrame": 1,
       "clean": "assets/rpg/heroes/advanced/berserker/idle/processed/clean.png"
     },
@@ -1370,7 +1404,7 @@
       "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
       "advancedClass": "berserker",
       "gender": "female",
-      "label": "여성 광전사",
+      "label": "여성 광전사 전직 이미지",
       "rosterFrame": 2,
       "clean": "assets/rpg/heroes/advanced/female/berserker/idle/processed/clean.png"
     },
@@ -1388,7 +1422,7 @@
       "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
       "advancedClass": "archmage",
       "gender": "male",
-      "label": "대마법사",
+      "label": "대마도사 전직 이미지",
       "rosterFrame": 3,
       "clean": "assets/rpg/heroes/advanced/archmage/idle/processed/clean.png"
     },
@@ -1406,7 +1440,7 @@
       "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
       "advancedClass": "archmage",
       "gender": "female",
-      "label": "여성 대마법사",
+      "label": "여성 대마도사 전직 이미지",
       "rosterFrame": 4,
       "clean": "assets/rpg/heroes/advanced/female/archmage/idle/processed/clean.png"
     },
@@ -1424,7 +1458,7 @@
       "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
       "advancedClass": "sniper",
       "gender": "male",
-      "label": "저격수",
+      "label": "명사수 전직 이미지",
       "rosterFrame": 5,
       "clean": "assets/rpg/heroes/advanced/sniper/idle/processed/clean.png"
     },
@@ -1442,7 +1476,7 @@
       "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
       "advancedClass": "sniper",
       "gender": "female",
-      "label": "여성 저격수",
+      "label": "여성 명사수 전직 이미지",
       "rosterFrame": 6,
       "clean": "assets/rpg/heroes/advanced/female/sniper/idle/processed/clean.png"
     },
@@ -1460,7 +1494,7 @@
       "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
       "advancedClass": "crusader",
       "gender": "male",
-      "label": "크루세이더",
+      "label": "성전사 전직 이미지",
       "rosterFrame": 7,
       "clean": "assets/rpg/heroes/advanced/crusader/idle/processed/clean.png"
     },
@@ -1478,7 +1512,7 @@
       "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
       "advancedClass": "crusader",
       "gender": "female",
-      "label": "여성 크루세이더",
+      "label": "여성 성전사 전직 이미지",
       "rosterFrame": 8,
       "clean": "assets/rpg/heroes/advanced/female/crusader/idle/processed/clean.png"
     },
@@ -1496,7 +1530,7 @@
       "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
       "advancedClass": "shadow",
       "gender": "male",
-      "label": "섀도우",
+      "label": "그림자 살수 전직 이미지",
       "rosterFrame": 9,
       "clean": "assets/rpg/heroes/advanced/shadow/idle/processed/clean.png"
     },
@@ -1514,7 +1548,7 @@
       "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
       "advancedClass": "shadow",
       "gender": "female",
-      "label": "여성 섀도우",
+      "label": "여성 그림자 살수 전직 이미지",
       "rosterFrame": 10,
       "clean": "assets/rpg/heroes/advanced/female/shadow/idle/processed/clean.png"
     },
@@ -1532,7 +1566,7 @@
       "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
       "advancedClass": "saint",
       "gender": "male",
-      "label": "성자",
+      "label": "성자 전직 이미지",
       "rosterFrame": 11,
       "clean": "assets/rpg/heroes/advanced/saint/idle/processed/clean.png"
     },
@@ -1550,9 +1584,1235 @@
       "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
       "advancedClass": "saint",
       "gender": "female",
-      "label": "여성 성자",
+      "label": "여성 성자 전직 이미지",
       "rosterFrame": 12,
       "clean": "assets/rpg/heroes/advanced/female/saint/idle/processed/clean.png"
+    },
+    {
+      "id": "hero_tazza_idle",
+      "category": "hero",
+      "kind": "sprite",
+      "raw": "assets/rpg/heroes/tazza/idle/raw/raw-sheet.png",
+      "status": "processed",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "meta": "assets/rpg/heroes/tazza/idle/processed/pipeline-meta.json",
+      "sheet": "2x2",
+      "label": "타짜 대기 모션",
+      "prompt": "assets/rpg/heroes/tazza/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/heroes/tazza/idle/processed",
+      "processorStdout": "assets/rpg/heroes/tazza/idle/processed",
+      "transparentSheet": "assets/rpg/heroes/tazza/idle/processed/sheet-transparent.png"
+    },
+    {
+      "id": "hero_female_tazza_idle",
+      "category": "hero",
+      "kind": "sprite",
+      "raw": "assets/rpg/heroes/female/tazza/idle/raw/raw-sheet.png",
+      "status": "processed",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "meta": "assets/rpg/heroes/female/tazza/idle/processed/pipeline-meta.json",
+      "sheet": "2x2",
+      "label": "여성 타짜 대기 모션",
+      "prompt": "assets/rpg/heroes/female/tazza/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/heroes/female/tazza/idle/processed",
+      "processorStdout": "assets/rpg/heroes/female/tazza/idle/processed",
+      "transparentSheet": "assets/rpg/heroes/female/tazza/idle/processed/sheet-transparent.png"
+    },
+    {
+      "id": "hero_blacksmith_idle",
+      "category": "hero",
+      "kind": "sprite",
+      "raw": "assets/rpg/heroes/blacksmith/idle/raw/raw-sheet.png",
+      "status": "processed",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "meta": "assets/rpg/heroes/blacksmith/idle/processed/pipeline-meta.json",
+      "sheet": "2x2",
+      "label": "대장장이 대기 모션",
+      "prompt": "assets/rpg/heroes/blacksmith/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/heroes/blacksmith/idle/processed",
+      "processorStdout": "assets/rpg/heroes/blacksmith/idle/processed",
+      "transparentSheet": "assets/rpg/heroes/blacksmith/idle/processed/sheet-transparent.png"
+    },
+    {
+      "id": "hero_female_blacksmith_idle",
+      "category": "hero",
+      "kind": "sprite",
+      "raw": "assets/rpg/heroes/female/blacksmith/idle/raw/raw-sheet.png",
+      "status": "processed",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "meta": "assets/rpg/heroes/female/blacksmith/idle/processed/pipeline-meta.json",
+      "sheet": "2x2",
+      "label": "여성 대장장이 대기 모션",
+      "prompt": "assets/rpg/heroes/female/blacksmith/idle/prompt-used.txt",
+      "processedDir": "assets/rpg/heroes/female/blacksmith/idle/processed",
+      "processorStdout": "assets/rpg/heroes/female/blacksmith/idle/processed",
+      "transparentSheet": "assets/rpg/heroes/female/blacksmith/idle/processed/sheet-transparent.png"
+    },
+    {
+      "id": "map_royal_south_plains",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/royal-south-plains/raw/background.png",
+      "status": "generated",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "meta": "assets/rpg/maps/royal-south-plains/processed/pipeline-meta.json",
+      "label": "왕도 남쪽 초원 배경",
+      "prompt": "assets/rpg/maps/royal-south-plains/prompt-used.txt",
+      "outputSize": [
+        1024,
+        576
+      ]
+    },
+    {
+      "id": "map_goblin_forest",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/goblin-forest/raw/background.png",
+      "status": "generated",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "meta": "assets/rpg/maps/goblin-forest/processed/pipeline-meta.json",
+      "label": "고블린 숲 배경",
+      "prompt": "assets/rpg/maps/goblin-forest/prompt-used.txt",
+      "outputSize": [
+        1024,
+        576
+      ]
+    },
+    {
+      "id": "map_abandoned_silver_mine",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/abandoned-silver-mine/raw/background.png",
+      "status": "generated",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "meta": "assets/rpg/maps/abandoned-silver-mine/processed/pipeline-meta.json",
+      "label": "버려진 은광 배경",
+      "prompt": "assets/rpg/maps/abandoned-silver-mine/prompt-used.txt",
+      "outputSize": [
+        1024,
+        576
+      ]
+    },
+    {
+      "id": "map_mist_marsh",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/mist-marsh/raw/background.png",
+      "status": "generated",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "meta": "assets/rpg/maps/mist-marsh/processed/pipeline-meta.json",
+      "label": "안개 늪지 배경",
+      "prompt": "assets/rpg/maps/mist-marsh/prompt-used.txt",
+      "outputSize": [
+        1024,
+        576
+      ]
+    },
+    {
+      "id": "map_bandit_fortress",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/bandit-fortress/raw/background.png",
+      "status": "generated",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "meta": "assets/rpg/maps/bandit-fortress/processed/pipeline-meta.json",
+      "label": "도적단 요새 배경",
+      "prompt": "assets/rpg/maps/bandit-fortress/prompt-used.txt",
+      "outputSize": [
+        1024,
+        576
+      ]
+    },
+    {
+      "id": "map_cursed_monastery",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/cursed-monastery/raw/background.png",
+      "status": "generated",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "meta": "assets/rpg/maps/cursed-monastery/processed/pipeline-meta.json",
+      "label": "저주받은 수도원 배경",
+      "prompt": "assets/rpg/maps/cursed-monastery/prompt-used.txt",
+      "outputSize": [
+        1024,
+        576
+      ]
+    },
+    {
+      "id": "map_red_canyon",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/red-canyon/raw/background.png",
+      "status": "generated",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "meta": "assets/rpg/maps/red-canyon/processed/pipeline-meta.json",
+      "label": "붉은 협곡 배경",
+      "prompt": "assets/rpg/maps/red-canyon/prompt-used.txt",
+      "outputSize": [
+        1024,
+        576
+      ]
+    },
+    {
+      "id": "map_frozen_mountains",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/frozen-mountains/raw/background.png",
+      "status": "generated",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "meta": "assets/rpg/maps/frozen-mountains/processed/pipeline-meta.json",
+      "label": "얼어붙은 산맥 배경",
+      "prompt": "assets/rpg/maps/frozen-mountains/prompt-used.txt",
+      "outputSize": [
+        1024,
+        576
+      ]
+    },
+    {
+      "id": "map_ancient_elf_ruins",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/ancient-elf-ruins/raw/background.png",
+      "status": "generated",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "meta": "assets/rpg/maps/ancient-elf-ruins/processed/pipeline-meta.json",
+      "label": "고대 엘프 유적 배경",
+      "prompt": "assets/rpg/maps/ancient-elf-ruins/prompt-used.txt",
+      "outputSize": [
+        1024,
+        576
+      ]
+    },
+    {
+      "id": "map_black_dragon_lair",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/black-dragon-lair/raw/background.png",
+      "status": "generated",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "meta": "assets/rpg/maps/black-dragon-lair/processed/pipeline-meta.json",
+      "label": "검은 용의 둥지 배경",
+      "prompt": "assets/rpg/maps/black-dragon-lair/prompt-used.txt",
+      "outputSize": [
+        1024,
+        576
+      ]
+    },
+    {
+      "id": "map_wizard_tower_archive",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/wizard-tower-archive/raw/background.png",
+      "status": "generated",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "meta": "assets/rpg/maps/wizard-tower-archive/processed/pipeline-meta.json",
+      "label": "마탑 지하서고 배경",
+      "prompt": "assets/rpg/maps/wizard-tower-archive/prompt-used.txt",
+      "outputSize": [
+        1024,
+        576
+      ]
+    },
+    {
+      "id": "map_demon_king_outer_wall",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/demon-king-outer-wall/raw/background.png",
+      "status": "generated",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "meta": "assets/rpg/maps/demon-king-outer-wall/processed/pipeline-meta.json",
+      "label": "마왕성 외곽 배경",
+      "prompt": "assets/rpg/maps/demon-king-outer-wall/prompt-used.txt",
+      "outputSize": [
+        1024,
+        576
+      ]
+    },
+    {
+      "id": "map_sacred_arden",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/sacred-arden/raw/background.png",
+      "status": "generated",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "meta": "assets/rpg/maps/sacred-arden/processed/pipeline-meta.json",
+      "label": "성지 아르덴 배경",
+      "prompt": "assets/rpg/maps/sacred-arden/prompt-used.txt",
+      "outputSize": [
+        1024,
+        576
+      ]
+    },
+    {
+      "id": "map_royal_capital_wall",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/royal-capital-wall/raw/background.png",
+      "status": "generated",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "meta": "assets/rpg/maps/royal-capital-wall/processed/pipeline-meta.json",
+      "label": "왕국 수도 성벽 배경",
+      "prompt": "assets/rpg/maps/royal-capital-wall/prompt-used.txt",
+      "outputSize": [
+        1024,
+        576
+      ]
+    },
+    {
+      "id": "map_blacksmith_district",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/blacksmith-district/raw/background.png",
+      "status": "generated",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "meta": "assets/rpg/maps/blacksmith-district/processed/pipeline-meta.json",
+      "label": "왕국 대장간 거리 배경",
+      "prompt": "assets/rpg/maps/blacksmith-district/prompt-used.txt",
+      "outputSize": [
+        1024,
+        576
+      ]
+    },
+    {
+      "id": "map_royal_secret_mine",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/royal-secret-mine/raw/background.png",
+      "status": "generated",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "meta": "assets/rpg/maps/royal-secret-mine/processed/pipeline-meta.json",
+      "label": "왕국 비밀 광산 배경",
+      "prompt": "assets/rpg/maps/royal-secret-mine/prompt-used.txt",
+      "outputSize": [
+        1024,
+        576
+      ]
+    },
+    {
+      "id": "map_guild_training_ground",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/guild-training-ground/raw/background.png",
+      "status": "generated",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "meta": "assets/rpg/maps/guild-training-ground/processed/pipeline-meta.json",
+      "label": "길드 훈련장 배경",
+      "prompt": "assets/rpg/maps/guild-training-ground/prompt-used.txt",
+      "outputSize": [
+        1024,
+        576
+      ]
+    },
+    {
+      "id": "map_demon_king_castle",
+      "category": "map",
+      "kind": "map",
+      "raw": "assets/rpg/maps/demon-king-castle/raw/background.png",
+      "status": "generated",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "meta": "assets/rpg/maps/demon-king-castle/processed/pipeline-meta.json",
+      "label": "마왕성 내부 배경",
+      "prompt": "assets/rpg/maps/demon-king-castle/prompt-used.txt",
+      "outputSize": [
+        1024,
+        576
+      ]
+    },
+    {
+      "id": "item_card_deck_icon",
+      "label": "타짜 카드덱 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/card-deck/prompt-used.txt",
+      "meta": "assets/rpg/items/card-deck/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/card-deck/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/card-deck/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/card-deck/processed"
+    },
+    {
+      "id": "item_lucky_dice_icon",
+      "label": "행운의 주사위 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/lucky-dice/prompt-used.txt",
+      "meta": "assets/rpg/items/lucky-dice/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/lucky-dice/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/lucky-dice/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/lucky-dice/processed"
+    },
+    {
+      "id": "item_blacksmith_hammer_icon",
+      "label": "대장장이 망치 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/blacksmith-hammer/prompt-used.txt",
+      "meta": "assets/rpg/items/blacksmith-hammer/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/blacksmith-hammer/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/blacksmith-hammer/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/blacksmith-hammer/processed"
+    },
+    {
+      "id": "item_rune_stone_icon",
+      "label": "룬석 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/rune-stone/prompt-used.txt",
+      "meta": "assets/rpg/items/rune-stone/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/rune-stone/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/rune-stone/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/rune-stone/processed"
+    },
+    {
+      "id": "item_iron_ore_icon",
+      "label": "철광석 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/iron-ore/prompt-used.txt",
+      "meta": "assets/rpg/items/iron-ore/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/iron-ore/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/iron-ore/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/iron-ore/processed"
+    },
+    {
+      "id": "item_dragon_scale_icon",
+      "label": "용비늘 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/dragon-scale/prompt-used.txt",
+      "meta": "assets/rpg/items/dragon-scale/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/dragon-scale/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/dragon-scale/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/dragon-scale/processed"
+    },
+    {
+      "id": "item_holy_relic_icon",
+      "label": "성유물 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/holy-relic/prompt-used.txt",
+      "meta": "assets/rpg/items/holy-relic/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/holy-relic/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/holy-relic/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/holy-relic/processed"
+    },
+    {
+      "id": "item_crossbow_icon",
+      "label": "석궁 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/crossbow/prompt-used.txt",
+      "meta": "assets/rpg/items/crossbow/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/crossbow/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/crossbow/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/crossbow/processed"
+    },
+    {
+      "id": "item_slime_charm_icon",
+      "label": "슬라임 부적 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/slime-charm/prompt-used.txt",
+      "meta": "assets/rpg/items/slime-charm/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/slime-charm/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/slime-charm/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/slime-charm/processed"
+    },
+    {
+      "id": "item_wolfhide_vest_icon",
+      "label": "늑대가죽 조끼 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/wolfhide-vest/prompt-used.txt",
+      "meta": "assets/rpg/items/wolfhide-vest/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/wolfhide-vest/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/wolfhide-vest/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/wolfhide-vest/processed"
+    },
+    {
+      "id": "item_goblin_spear_icon",
+      "label": "고블린 창 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/goblin-spear/prompt-used.txt",
+      "meta": "assets/rpg/items/goblin-spear/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/goblin-spear/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/goblin-spear/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/goblin-spear/processed"
+    },
+    {
+      "id": "item_spider_silk_cloak_icon",
+      "label": "거미줄 망토 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/spider-silk-cloak/prompt-used.txt",
+      "meta": "assets/rpg/items/spider-silk-cloak/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/spider-silk-cloak/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/spider-silk-cloak/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/spider-silk-cloak/processed"
+    },
+    {
+      "id": "item_miner_pickaxe_icon",
+      "label": "광부의 곡괭이 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/miner-pickaxe/prompt-used.txt",
+      "meta": "assets/rpg/items/miner-pickaxe/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/miner-pickaxe/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/miner-pickaxe/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/miner-pickaxe/processed"
+    },
+    {
+      "id": "item_batwing_earring_icon",
+      "label": "박쥐날개 귀걸이 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/batwing-earring/prompt-used.txt",
+      "meta": "assets/rpg/items/batwing-earring/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/batwing-earring/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/batwing-earring/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/batwing-earring/processed"
+    },
+    {
+      "id": "item_marshbone_talisman_icon",
+      "label": "늪뼈 부적 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/marshbone-talisman/prompt-used.txt",
+      "meta": "assets/rpg/items/marshbone-talisman/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/marshbone-talisman/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/marshbone-talisman/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/marshbone-talisman/processed"
+    },
+    {
+      "id": "item_bandit_cutlass_icon",
+      "label": "도적단 곡도 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/bandit-cutlass/prompt-used.txt",
+      "meta": "assets/rpg/items/bandit-cutlass/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/bandit-cutlass/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/bandit-cutlass/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/bandit-cutlass/processed"
+    },
+    {
+      "id": "item_monastery_censer_icon",
+      "label": "수도원 향로 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/monastery-censer/prompt-used.txt",
+      "meta": "assets/rpg/items/monastery-censer/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/monastery-censer/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/monastery-censer/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/monastery-censer/processed"
+    },
+    {
+      "id": "item_orc_war_axe_icon",
+      "label": "오크 전투도끼 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/orc-war-axe/prompt-used.txt",
+      "meta": "assets/rpg/items/orc-war-axe/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/orc-war-axe/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/orc-war-axe/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/orc-war-axe/processed"
+    },
+    {
+      "id": "item_frost_guard_armor_icon",
+      "label": "서리수호 갑옷 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/frost-guard-armor/prompt-used.txt",
+      "meta": "assets/rpg/items/frost-guard-armor/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/frost-guard-armor/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/frost-guard-armor/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/frost-guard-armor/processed"
+    },
+    {
+      "id": "item_elf_rune_ring_icon",
+      "label": "엘프 룬 반지 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/elf-rune-ring/prompt-used.txt",
+      "meta": "assets/rpg/items/elf-rune-ring/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/elf-rune-ring/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/elf-rune-ring/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/elf-rune-ring/processed"
+    },
+    {
+      "id": "item_wyvern_scale_mail_icon",
+      "label": "와이번 비늘갑옷 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/wyvern-scale-mail/prompt-used.txt",
+      "meta": "assets/rpg/items/wyvern-scale-mail/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/wyvern-scale-mail/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/wyvern-scale-mail/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/wyvern-scale-mail/processed"
+    },
+    {
+      "id": "item_demon_knight_blade_icon",
+      "label": "마왕군 흑검 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/demon-knight-blade/prompt-used.txt",
+      "meta": "assets/rpg/items/demon-knight-blade/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/demon-knight-blade/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/demon-knight-blade/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/demon-knight-blade/processed"
+    },
+    {
+      "id": "item_arden_prayer_beads_icon",
+      "label": "아르덴 묵주 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/arden-prayer-beads/prompt-used.txt",
+      "meta": "assets/rpg/items/arden-prayer-beads/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/arden-prayer-beads/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/arden-prayer-beads/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/arden-prayer-beads/processed"
+    },
+    {
+      "id": "item_black_dragon_scaleplate_icon",
+      "label": "검은 용비늘 갑옷 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/black-dragon-scaleplate/prompt-used.txt",
+      "meta": "assets/rpg/items/black-dragon-scaleplate/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/black-dragon-scaleplate/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/black-dragon-scaleplate/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/black-dragon-scaleplate/processed"
+    },
+    {
+      "id": "item_iron_longsword_icon",
+      "label": "철 장검 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/iron-longsword/prompt-used.txt",
+      "meta": "assets/rpg/items/iron-longsword/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/iron-longsword/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/iron-longsword/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/iron-longsword/processed"
+    },
+    {
+      "id": "item_oak_shortbow_icon",
+      "label": "참나무 단궁 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/oak-shortbow/prompt-used.txt",
+      "meta": "assets/rpg/items/oak-shortbow/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/oak-shortbow/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/oak-shortbow/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/oak-shortbow/processed"
+    },
+    {
+      "id": "item_iron_dagger_icon",
+      "label": "철 단검 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/iron-dagger/prompt-used.txt",
+      "meta": "assets/rpg/items/iron-dagger/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/iron-dagger/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/iron-dagger/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/iron-dagger/processed"
+    },
+    {
+      "id": "item_iron_spear_icon",
+      "label": "철창 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/iron-spear/prompt-used.txt",
+      "meta": "assets/rpg/items/iron-spear/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/iron-spear/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/iron-spear/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/iron-spear/processed"
+    },
+    {
+      "id": "item_reinforced_leather_armor_icon",
+      "label": "보강 가죽갑옷 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/reinforced-leather-armor/prompt-used.txt",
+      "meta": "assets/rpg/items/reinforced-leather-armor/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/reinforced-leather-armor/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/reinforced-leather-armor/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/reinforced-leather-armor/processed"
+    },
+    {
+      "id": "item_silver_ring_icon",
+      "label": "은 반지 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/silver-ring/prompt-used.txt",
+      "meta": "assets/rpg/items/silver-ring/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/silver-ring/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/silver-ring/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/silver-ring/processed"
+    },
+    {
+      "id": "item_hunter_bow_icon",
+      "label": "사냥꾼의 활 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/hunter-bow/prompt-used.txt",
+      "meta": "assets/rpg/items/hunter-bow/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/hunter-bow/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/hunter-bow/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/hunter-bow/processed"
+    },
+    {
+      "id": "item_apprentice_staff_icon",
+      "label": "수습 마법사의 지팡이 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/apprentice-staff/prompt-used.txt",
+      "meta": "assets/rpg/items/apprentice-staff/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/apprentice-staff/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/apprentice-staff/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/apprentice-staff/processed"
+    },
+    {
+      "id": "item_holy_mace_icon",
+      "label": "신성한 철퇴 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/holy-mace/prompt-used.txt",
+      "meta": "assets/rpg/items/holy-mace/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/holy-mace/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/holy-mace/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/holy-mace/processed"
+    },
+    {
+      "id": "item_rogue_dagger_icon",
+      "label": "도적의 단검 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/rogue-dagger/prompt-used.txt",
+      "meta": "assets/rpg/items/rogue-dagger/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/rogue-dagger/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/rogue-dagger/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/rogue-dagger/processed"
+    },
+    {
+      "id": "item_healer_charm_icon",
+      "label": "치유사의 부적 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/healer-charm/prompt-used.txt",
+      "meta": "assets/rpg/items/healer-charm/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/healer-charm/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/healer-charm/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/healer-charm/processed"
+    },
+    {
+      "id": "item_silver_longsword_icon",
+      "label": "은빛 장검 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/silver-longsword/prompt-used.txt",
+      "meta": "assets/rpg/items/silver-longsword/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/silver-longsword/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/silver-longsword/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/silver-longsword/processed"
+    },
+    {
+      "id": "item_steel_halberd_icon",
+      "label": "강철 할버드 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/steel-halberd/prompt-used.txt",
+      "meta": "assets/rpg/items/steel-halberd/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/steel-halberd/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/steel-halberd/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/steel-halberd/processed"
+    },
+    {
+      "id": "item_steel_crossbow_icon",
+      "label": "강철 석궁 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/steel-crossbow/prompt-used.txt",
+      "meta": "assets/rpg/items/steel-crossbow/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/steel-crossbow/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/steel-crossbow/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/steel-crossbow/processed"
+    },
+    {
+      "id": "item_battle_axe_icon",
+      "label": "전투도끼 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/battle-axe/prompt-used.txt",
+      "meta": "assets/rpg/items/battle-axe/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/battle-axe/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/battle-axe/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/battle-axe/processed"
+    },
+    {
+      "id": "item_priest_codex_icon",
+      "label": "사제의 성서 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/priest-codex/prompt-used.txt",
+      "meta": "assets/rpg/items/priest-codex/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/priest-codex/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/priest-codex/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/priest-codex/processed"
+    },
+    {
+      "id": "item_assassin_twinblades_icon",
+      "label": "암살자의 쌍검 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/assassin-twinblades/prompt-used.txt",
+      "meta": "assets/rpg/items/assassin-twinblades/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/assassin-twinblades/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/assassin-twinblades/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/assassin-twinblades/processed"
+    },
+    {
+      "id": "item_poison_dagger_icon",
+      "label": "맹독 단검 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/poison-dagger/prompt-used.txt",
+      "meta": "assets/rpg/items/poison-dagger/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/poison-dagger/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/poison-dagger/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/poison-dagger/processed"
+    },
+    {
+      "id": "item_rune_armor_icon",
+      "label": "룬 갑옷 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/rune-armor/prompt-used.txt",
+      "meta": "assets/rpg/items/rune-armor/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/rune-armor/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/rune-armor/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/rune-armor/processed"
+    },
+    {
+      "id": "item_shadow_hood_icon",
+      "label": "그림자 두건 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/shadow-hood/prompt-used.txt",
+      "meta": "assets/rpg/items/shadow-hood/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/shadow-hood/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/shadow-hood/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/shadow-hood/processed"
+    },
+    {
+      "id": "item_fire_rune_blade_icon",
+      "label": "화염 룬검 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/fire-rune-blade/prompt-used.txt",
+      "meta": "assets/rpg/items/fire-rune-blade/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/fire-rune-blade/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/fire-rune-blade/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/fire-rune-blade/processed"
+    },
+    {
+      "id": "item_ice_guard_plate_icon",
+      "label": "냉기 수호갑옷 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/ice-guard-plate/prompt-used.txt",
+      "meta": "assets/rpg/items/ice-guard-plate/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/ice-guard-plate/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/ice-guard-plate/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/ice-guard-plate/processed"
+    },
+    {
+      "id": "item_lightning_wand_icon",
+      "label": "번개 완드 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/lightning-wand/prompt-used.txt",
+      "meta": "assets/rpg/items/lightning-wand/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/lightning-wand/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/lightning-wand/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/lightning-wand/processed"
+    },
+    {
+      "id": "item_storm_staff_icon",
+      "label": "폭풍 지팡이 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/storm-staff/prompt-used.txt",
+      "meta": "assets/rpg/items/storm-staff/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/storm-staff/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/storm-staff/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/storm-staff/processed"
+    },
+    {
+      "id": "item_blessed_plate_icon",
+      "label": "축복받은 판금갑옷 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/blessed-plate/prompt-used.txt",
+      "meta": "assets/rpg/items/blessed-plate/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/blessed-plate/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/blessed-plate/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/blessed-plate/processed"
+    },
+    {
+      "id": "item_sacred_silver_staff_icon",
+      "label": "성은 지팡이 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/sacred-silver-staff/prompt-used.txt",
+      "meta": "assets/rpg/items/sacred-silver-staff/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/sacred-silver-staff/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/sacred-silver-staff/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/sacred-silver-staff/processed"
+    },
+    {
+      "id": "item_ancient_elf_bow_icon",
+      "label": "고대 엘프 장궁 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/ancient-elf-bow/prompt-used.txt",
+      "meta": "assets/rpg/items/ancient-elf-bow/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/ancient-elf-bow/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/ancient-elf-bow/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/ancient-elf-bow/processed"
+    },
+    {
+      "id": "item_demonbone_axe_icon",
+      "label": "악마뼈 도끼 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/demonbone-axe/prompt-used.txt",
+      "meta": "assets/rpg/items/demonbone-axe/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/demonbone-axe/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/demonbone-axe/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/demonbone-axe/processed"
+    },
+    {
+      "id": "item_dragon_scale_shield_icon",
+      "label": "용비늘 방패 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/dragon-scale-shield/prompt-used.txt",
+      "meta": "assets/rpg/items/dragon-scale-shield/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/dragon-scale-shield/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/dragon-scale-shield/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/dragon-scale-shield/processed"
+    },
+    {
+      "id": "item_dragon_scale_greatsword_icon",
+      "label": "용비늘 대검 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/dragon-scale-greatsword/prompt-used.txt",
+      "meta": "assets/rpg/items/dragon-scale-greatsword/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/dragon-scale-greatsword/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/dragon-scale-greatsword/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/dragon-scale-greatsword/processed"
+    },
+    {
+      "id": "item_black_dragon_spear_icon",
+      "label": "검은 용창 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/black-dragon-spear/prompt-used.txt",
+      "meta": "assets/rpg/items/black-dragon-spear/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/black-dragon-spear/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/black-dragon-spear/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/black-dragon-spear/processed"
+    },
+    {
+      "id": "item_lich_grimoire_icon",
+      "label": "리치의 마도서 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/lich-grimoire/prompt-used.txt",
+      "meta": "assets/rpg/items/lich-grimoire/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/lich-grimoire/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/lich-grimoire/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/lich-grimoire/processed"
+    },
+    {
+      "id": "item_sanctuary_armor_icon",
+      "label": "성역의 갑옷 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/sanctuary-armor/prompt-used.txt",
+      "meta": "assets/rpg/items/sanctuary-armor/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/sanctuary-armor/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/sanctuary-armor/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/sanctuary-armor/processed"
+    },
+    {
+      "id": "item_shadow_cloak_icon",
+      "label": "그림자 망토 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/shadow-cloak/prompt-used.txt",
+      "meta": "assets/rpg/items/shadow-cloak/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/shadow-cloak/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/shadow-cloak/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/shadow-cloak/processed"
+    },
+    {
+      "id": "item_nidhogg_plate_icon",
+      "label": "니드호그 갑옷 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/nidhogg-plate/prompt-used.txt",
+      "meta": "assets/rpg/items/nidhogg-plate/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/nidhogg-plate/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/nidhogg-plate/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/nidhogg-plate/processed"
+    },
+    {
+      "id": "item_kings_crown_icon",
+      "label": "왕국의 왕관 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/kings-crown/prompt-used.txt",
+      "meta": "assets/rpg/items/kings-crown/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/kings-crown/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/kings-crown/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/kings-crown/processed"
+    },
+    {
+      "id": "item_hidden_moonfang_blade_icon",
+      "label": "월아의 비밀검 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/hidden-moonfang-blade/prompt-used.txt",
+      "meta": "assets/rpg/items/hidden-moonfang-blade/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/hidden-moonfang-blade/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/hidden-moonfang-blade/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/hidden-moonfang-blade/processed"
+    },
+    {
+      "id": "item_hidden_arden_halo_icon",
+      "label": "아르덴 성광륜 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/hidden-arden-halo/prompt-used.txt",
+      "meta": "assets/rpg/items/hidden-arden-halo/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/hidden-arden-halo/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/hidden-arden-halo/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/hidden-arden-halo/processed"
+    },
+    {
+      "id": "item_hidden_dragonheart_hammer_icon",
+      "label": "용의심장 대장장이 망치 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/hidden-dragonheart-hammer/prompt-used.txt",
+      "meta": "assets/rpg/items/hidden-dragonheart-hammer/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/hidden-dragonheart-hammer/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/hidden-dragonheart-hammer/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/hidden-dragonheart-hammer/processed"
+    },
+    {
+      "id": "item_hidden_forest_king_bow_icon",
+      "label": "숲왕의 장궁 아이콘",
+      "category": "item",
+      "kind": "sprite",
+      "generatedWith": "codex:procedural-medieval-rpg",
+      "prompt": "assets/rpg/items/hidden-forest-king-bow/prompt-used.txt",
+      "meta": "assets/rpg/items/hidden-forest-king-bow/processed/pipeline-meta.json",
+      "sheet": "single",
+      "raw": "assets/rpg/items/hidden-forest-king-bow/raw/raw-sheet.png",
+      "processedDir": "assets/rpg/items/hidden-forest-king-bow/processed",
+      "status": "processed",
+      "processorStdout": "assets/rpg/items/hidden-forest-king-bow/processed"
     }
   ],
   "failures": [],
@@ -1560,5 +2820,6 @@
   "notes": [
     "Added 12 advanced-class hero single-sprite assets from agent-sprite-forge roster for RPG 전직 visuals.",
     "Regenerated local-procedural RPG raid boss sprites with agent-sprite-forge/image_gen and generate2dsprite processor; boss manifest sources now point to generated image files."
-  ]
+  ],
+  "medievalRpgGeneratedAt": "2026-05-09T17:23:46.178Z"
 }

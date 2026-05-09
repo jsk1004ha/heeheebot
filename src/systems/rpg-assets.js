@@ -15,7 +15,7 @@ const RPG_ASSETS = Object.freeze([
   }),
   spriteAsset({
     id: 'hero_warrior_idle',
-    label: '전사 대기 모션',
+    label: '검사 대기 모션',
     category: 'hero',
     sheet: '2x2',
     outputDir: 'assets/rpg/heroes/warrior/idle',
@@ -39,7 +39,7 @@ const RPG_ASSETS = Object.freeze([
   }),
   spriteAsset({
     id: 'hero_paladin_idle',
-    label: '팔라딘 대기 모션',
+    label: '성기사 대기 모션',
     category: 'hero',
     sheet: '2x2',
     outputDir: 'assets/rpg/heroes/paladin/idle',
@@ -71,7 +71,7 @@ const RPG_ASSETS = Object.freeze([
   }),
   spriteAsset({
     id: 'hero_female_warrior_idle',
-    label: '여성 전사 대기 모션',
+    label: '여성 검사 대기 모션',
     category: 'hero',
     sheet: '2x2',
     outputDir: 'assets/rpg/heroes/female/warrior/idle',
@@ -95,7 +95,7 @@ const RPG_ASSETS = Object.freeze([
   }),
   spriteAsset({
     id: 'hero_female_paladin_idle',
-    label: '여성 팔라딘 대기 모션',
+    label: '여성 성기사 대기 모션',
     category: 'hero',
     sheet: '2x2',
     outputDir: 'assets/rpg/heroes/female/paladin/idle',
@@ -135,23 +135,23 @@ const RPG_ASSETS = Object.freeze([
   }),
   spriteAsset({
     id: 'hero_archmage_idle',
-    label: '대마법사 전직 이미지',
+    label: '대마도사 전직 이미지',
     category: 'hero',
     sheet: 'single',
     outputDir: 'assets/rpg/heroes/advanced/archmage/idle',
-    prompt: 'Use $generate2dsprite to create a clean HD 2D RPG male archmage advanced class hero, single full-body sprite centered, ornate blue-violet robe, crystal staff kept close, compact arcane halo, solid #FF00FF background, no text.'
+    prompt: 'Use $generate2dsprite to create a clean HD 2D RPG male archmage advanced class hero, single full-body sprite centered, ornate blue-violet robe, jeweled staff kept close, compact arcane halo, solid #FF00FF background, no text.'
   }),
   spriteAsset({
     id: 'hero_female_archmage_idle',
-    label: '여성 대마법사 전직 이미지',
+    label: '여성 대마도사 전직 이미지',
     category: 'hero',
     sheet: 'single',
     outputDir: 'assets/rpg/heroes/advanced/female/archmage/idle',
-    prompt: 'Use $generate2dsprite to create a clean HD 2D RPG female archmage advanced class hero, single full-body sprite centered, elegant blue-violet robe, crystal staff kept close, compact arcane glow, solid #FF00FF background, no text.'
+    prompt: 'Use $generate2dsprite to create a clean HD 2D RPG female archmage advanced class hero, single full-body sprite centered, elegant blue-violet robe, jeweled staff kept close, compact arcane glow, solid #FF00FF background, no text.'
   }),
   spriteAsset({
     id: 'hero_sniper_idle',
-    label: '저격수 전직 이미지',
+    label: '명사수 전직 이미지',
     category: 'hero',
     sheet: 'single',
     outputDir: 'assets/rpg/heroes/advanced/sniper/idle',
@@ -159,7 +159,7 @@ const RPG_ASSETS = Object.freeze([
   }),
   spriteAsset({
     id: 'hero_female_sniper_idle',
-    label: '여성 저격수 전직 이미지',
+    label: '여성 명사수 전직 이미지',
     category: 'hero',
     sheet: 'single',
     outputDir: 'assets/rpg/heroes/advanced/female/sniper/idle',
@@ -167,7 +167,7 @@ const RPG_ASSETS = Object.freeze([
   }),
   spriteAsset({
     id: 'hero_crusader_idle',
-    label: '크루세이더 전직 이미지',
+    label: '성전사 전직 이미지',
     category: 'hero',
     sheet: 'single',
     outputDir: 'assets/rpg/heroes/advanced/crusader/idle',
@@ -175,7 +175,7 @@ const RPG_ASSETS = Object.freeze([
   }),
   spriteAsset({
     id: 'hero_female_crusader_idle',
-    label: '여성 크루세이더 전직 이미지',
+    label: '여성 성전사 전직 이미지',
     category: 'hero',
     sheet: 'single',
     outputDir: 'assets/rpg/heroes/advanced/female/crusader/idle',
@@ -183,7 +183,7 @@ const RPG_ASSETS = Object.freeze([
   }),
   spriteAsset({
     id: 'hero_shadow_idle',
-    label: '섀도우 전직 이미지',
+    label: '그림자 살수 전직 이미지',
     category: 'hero',
     sheet: 'single',
     outputDir: 'assets/rpg/heroes/advanced/shadow/idle',
@@ -191,7 +191,7 @@ const RPG_ASSETS = Object.freeze([
   }),
   spriteAsset({
     id: 'hero_female_shadow_idle',
-    label: '여성 섀도우 전직 이미지',
+    label: '여성 그림자 살수 전직 이미지',
     category: 'hero',
     sheet: 'single',
     outputDir: 'assets/rpg/heroes/advanced/female/shadow/idle',
@@ -279,7 +279,7 @@ const RPG_ASSETS = Object.freeze([
   }),
   spriteAsset({
     id: 'monster_mini_dragon_idle',
-    label: '미니 드래곤 대기 모션',
+    label: '새끼 용 대기 모션',
     category: 'monster',
     sheet: '3x3',
     outputDir: 'assets/rpg/monsters/mini-dragon/idle',
@@ -295,7 +295,7 @@ const RPG_ASSETS = Object.freeze([
   }),
   spriteAsset({
     id: 'boss_ancient_dragon_idle',
-    label: '고대 드래곤 대기 모션',
+    label: '고대 용 대기 모션',
     category: 'monster',
     sheet: '3x3',
     outputDir: 'assets/rpg/bosses/ancient-dragon/idle',
@@ -311,11 +311,11 @@ const RPG_ASSETS = Object.freeze([
   }),
   spriteAsset({
     id: 'boss_crystal_hydra_idle',
-    label: '수정 히드라 대기 모션',
+    label: '늪지 히드라 대기 모션',
     category: 'monster',
     sheet: '3x3',
     outputDir: 'assets/rpg/bosses/crystal-hydra/idle',
-    prompt: 'Use $generate2dsprite to create a clean HD crystal hydra raid boss idle animation, 3x3 grid, three compact crystal serpent heads, glowing blue facets, full body centered, same scale, solid #FF00FF background, no text.'
+    prompt: 'Use $generate2dsprite to create a clean HD swamp hydra raid boss idle animation, 3x3 grid, three compact poisonous serpent heads, mossy green scales, full body centered, same scale, solid #FF00FF background, no text.'
   }),
   spriteAsset({
     id: 'boss_marsh_behemoth_idle',
@@ -359,19 +359,19 @@ const RPG_ASSETS = Object.freeze([
   }),
   spriteAsset({
     id: 'boss_void_knights_idle',
-    label: '공허 기사단 대기 모션',
+    label: '마왕의 사도 대기 모션',
     category: 'monster',
     sheet: '3x3',
     outputDir: 'assets/rpg/bosses/void-knights/idle',
-    prompt: 'Use $generate2dsprite to create a clean HD void knights raid boss idle animation, 3x3 grid, one merged silhouette of two dark armored knights back-to-back, purple void glow, centered, same scale, solid #FF00FF background, no text.'
+    prompt: 'Use $generate2dsprite to create a clean HD demon king apostles raid boss idle animation, 3x3 grid, one merged silhouette of two dark armored knights back-to-back, dark curse glow, centered, same scale, solid #FF00FF background, no text.'
   }),
   spriteAsset({
     id: 'boss_sky_golem_idle',
-    label: '천공 골렘 대기 모션',
+    label: '왕국 수호 골렘 대기 모션',
     category: 'monster',
     sheet: '3x3',
     outputDir: 'assets/rpg/bosses/sky-golem/idle',
-    prompt: 'Use $generate2dsprite to create a clean HD sky golem raid boss idle animation, 3x3 grid, floating gold-white stone golem with cloud crystals, centered, same scale, solid #FF00FF background, no text.'
+    prompt: 'Use $generate2dsprite to create a clean HD royal guardian golem raid boss idle animation, 3x3 grid, gold-white stone golem with royal crest armor, centered, same scale, solid #FF00FF background, no text.'
   }),
   spriteAsset({
     id: 'boss_apocalypse_dragon_idle',
@@ -383,17 +383,17 @@ const RPG_ASSETS = Object.freeze([
   }),
   mapAsset({
     id: 'map_forest_glade',
-    label: '초록 숲 전투 배경',
+    label: '왕도 남쪽 초원 전투 배경',
     category: 'map',
     outputDir: 'assets/rpg/maps/forest-glade',
-    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: peaceful green forest glade, readable grass clearing, trees around the edges, open center for hero and monster sprites, no characters, no UI, no text.'
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: kingdom south meadow and forest edge, readable grass clearing, trees around the edges, open center for hero and monster sprites, no characters, no UI, no text.'
   }),
   mapAsset({
     id: 'map_crystal_cave',
-    label: '수정 동굴 전투 배경',
+    label: '버려진 은광 전투 배경',
     category: 'map',
     outputDir: 'assets/rpg/maps/crystal-cave',
-    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: blue crystal cave, glowing crystals on sides, open flat center floor for battle sprites, no characters, no UI, no text.'
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: abandoned silver mine, ore veins and timber supports at sides, open flat center floor for battle sprites, no characters, no UI, no text.'
   }),
   mapAsset({
     id: 'map_ancient_ruins',
@@ -432,24 +432,24 @@ const RPG_ASSETS = Object.freeze([
   }),
   mapAsset({
     id: 'map_wildflower_plains',
-    label: '들꽃 평원 전투 배경',
+    label: '고블린 숲 입구 전투 배경',
     category: 'map',
     outputDir: 'assets/rpg/maps/wildflower-plains',
-    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: bright wildflower plains, green meadow, flowers at edges, open grass center, no characters, no UI, no text.'
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: goblin forest entrance, green meadow with crude goblin markers at edges, open grass center, no characters, no UI, no text.'
   }),
   mapAsset({
     id: 'map_moonlit_hill',
-    label: '달빛 언덕 전투 배경',
+    label: '안개 늪지 언덕 전투 배경',
     category: 'map',
     outputDir: 'assets/rpg/maps/moonlit-hill',
-    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: moonlit hill, blue night sky, soft moonlight, open stone path center, no characters, no UI, no text.'
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: mist marsh hill, blue night sky, low fog, open stone path center, no characters, no UI, no text.'
   }),
   mapAsset({
     id: 'map_mushroom_grove',
-    label: '버섯 숲 전투 배경',
+    label: '저주받은 수도원 정원 전투 배경',
     category: 'map',
     outputDir: 'assets/rpg/maps/mushroom-grove',
-    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: giant mushroom grove, violet spores, glowing fungi at edges, open forest floor center, no characters, no UI, no text.'
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: cursed monastery garden, dead trees and broken chapel stones at edges, open forest floor center, no characters, no UI, no text.'
   }),
   mapAsset({
     id: 'map_bandit_outpost',
@@ -460,45 +460,45 @@ const RPG_ASSETS = Object.freeze([
   }),
   mapAsset({
     id: 'map_red_desert',
-    label: '붉은 사막 전투 배경',
+    label: '붉은 협곡 전투 배경',
     category: 'map',
     outputDir: 'assets/rpg/maps/red-desert',
-    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: red desert canyon, warm sandstorm, cracked dry arena center, no characters, no UI, no text.'
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: red canyon battlefield, warm dust storm, cracked dry arena center, no characters, no UI, no text.'
   }),
   mapAsset({
     id: 'map_thunder_plateau',
-    label: '천둥 고원 전투 배경',
+    label: '마탑 지하서고 전투 배경',
     category: 'map',
     outputDir: 'assets/rpg/maps/thunder-plateau',
-    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: stormy thunder plateau, distant lightning, open stone platform center, no characters, no UI, no text.'
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: wizard tower underground archive, shelves and rune stones at edges, open stone platform center, no characters, no UI, no text.'
   }),
   mapAsset({
     id: 'map_crystal_lake',
-    label: '수정 호수 전투 배경',
+    label: '성지 아르덴 전투 배경',
     category: 'map',
     outputDir: 'assets/rpg/maps/crystal-lake',
-    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: icy crystal lake, blue crystals, reflective frozen arena center, no characters, no UI, no text.'
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: sacred sanctuary Arden, white stone pool, chapel garden arena center, no characters, no UI, no text.'
   }),
   mapAsset({
     id: 'map_phantom_forest',
-    label: '환영 숲 전투 배경',
+    label: '왕국 대장간 거리 전투 배경',
     category: 'map',
     outputDir: 'assets/rpg/maps/phantom-forest',
-    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: phantom forest, ghostly mist, twisted trees, open haunted path center, no characters, no UI, no text.'
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: medieval blacksmith district, forges and anvils at sides, open cobblestone center, no characters, no UI, no text.'
   }),
   mapAsset({
     id: 'map_abyss_mine',
-    label: '심연 광산 전투 배경',
+    label: '왕국 비밀 광산 전투 배경',
     category: 'map',
     outputDir: 'assets/rpg/maps/abyss-mine',
-    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: dark abyss mine, glowing ore, mine rails at edges, open cavern floor center, no characters, no UI, no text.'
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: royal secret mine, hidden ore, mine rails at edges, open cavern floor center, no characters, no UI, no text.'
   }),
   mapAsset({
     id: 'map_starfall_crater',
-    label: '별무리 분화구 전투 배경',
+    label: '길드 훈련장 전투 배경',
     category: 'map',
     outputDir: 'assets/rpg/maps/starfall-crater',
-    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: starfall crater, meteor fragments, lava cracks, open impact arena center, no characters, no UI, no text.'
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: guild training ground, wooden dummies, banners, open packed-earth arena center, no characters, no UI, no text.'
   }),
   mapAsset({
     id: 'map_dragon_nest',
@@ -509,10 +509,10 @@ const RPG_ASSETS = Object.freeze([
   }),
   mapAsset({
     id: 'map_void_gate',
-    label: '공허 관문 전투 배경',
+    label: '마왕성 내부 전투 배경',
     category: 'map',
     outputDir: 'assets/rpg/maps/void-gate',
-    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: void gate, cosmic purple portal far back, floating stones, open dark arena center, no characters, no UI, no text.'
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: demon king castle interior, black stone gate far back, cursed braziers, open dark arena center, no characters, no UI, no text.'
   }),
   mapAsset({
     id: 'map_goblin_war_camp',
@@ -523,10 +523,10 @@ const RPG_ASSETS = Object.freeze([
   }),
   mapAsset({
     id: 'map_crystal_nest',
-    label: '수정 둥지 전투 배경',
+    label: '늪지 히드라 둥지 전투 배경',
     category: 'map',
     outputDir: 'assets/rpg/maps/crystal-nest',
-    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: deep crystal hydra nest, jagged blue crystals framing sides, shallow reflective floor, open center arena, no characters, no UI, no text.'
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: swamp hydra nest, tangled roots and poisoned pools framing sides, shallow muddy floor, open center arena, no characters, no UI, no text.'
   }),
   mapAsset({
     id: 'map_marsh_depths',
@@ -565,24 +565,24 @@ const RPG_ASSETS = Object.freeze([
   }),
   mapAsset({
     id: 'map_void_bastion',
-    label: '공허 요새 전투 배경',
+    label: '마왕성 외곽 요새 전투 배경',
     category: 'map',
     outputDir: 'assets/rpg/maps/void-bastion',
-    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: void bastion, black stone walls, purple portals at edges, open center arena with violet glow, no characters, no UI, no text.'
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: demon king outer fortress, black stone walls, cursed torches at edges, open center arena with violet glow, no characters, no UI, no text.'
   }),
   mapAsset({
     id: 'map_sky_foundry',
-    label: '천공 주조소 전투 배경',
+    label: '왕국 대장간 전투 배경',
     category: 'map',
     outputDir: 'assets/rpg/maps/sky-foundry',
-    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: floating sky foundry, gold gears and cloud furnaces, open metal platform center, no characters, no UI, no text.'
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: royal blacksmith forge, bellows and anvils, open metal platform center, no characters, no UI, no text.'
   }),
   mapAsset({
     id: 'map_eclipse_throne',
     label: '일식 왕좌 전투 배경',
     category: 'map',
     outputDir: 'assets/rpg/maps/eclipse-throne',
-    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG final raid background: eclipse throne at the edge of the sky, black-red celestial light, ruined royal platform center, no characters, no UI, no text.'
+    prompt: 'Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG final raid background: eclipse throne at the heart of the demon king castle, black-red cursed torchlight, ruined royal platform center, no characters, no UI, no text.'
   }),
   spriteAsset({
     id: 'item_potion_icon',
@@ -606,7 +606,7 @@ const RPG_ASSETS = Object.freeze([
     category: 'item',
     sheet: 'single',
     outputDir: 'assets/rpg/items/enhancement-stone',
-    prompt: 'Use $generate2dsprite to create a clean HD transparent RPG enhancement stone icon, single asset, glowing blue-purple crystal shard with gold flecks, centered, solid #FF00FF background, no text.'
+    prompt: 'Use $generate2dsprite to create a clean HD transparent RPG enhancement stone icon, single asset, glowing blue-purple rune shard with gold flecks, centered, solid #FF00FF background, no text.'
   }),
   spriteAsset({
     id: 'item_treasure_chest_icon',
@@ -642,7 +642,7 @@ const RPG_ASSETS = Object.freeze([
   }),
   spriteAsset({
     id: 'item_dragon_blade_icon',
-    label: '드래곤 블레이드 아이콘',
+    label: '용비늘 대검 아이콘',
     category: 'item',
     sheet: 'single',
     outputDir: 'assets/rpg/items/dragon-blade',
@@ -654,7 +654,7 @@ const RPG_ASSETS = Object.freeze([
     category: 'item',
     sheet: 'single',
     outputDir: 'assets/rpg/items/archmage-staff',
-    prompt: 'Use $generate2dsprite to create a clean HD transparent RPG archmage staff icon, single asset, centered wooden staff with floating blue crystal, solid #FF00FF background, no text.'
+    prompt: 'Use $generate2dsprite to create a clean HD transparent RPG archmage staff icon, single asset, centered wooden staff with floating blue gem, solid #FF00FF background, no text.'
   }),
   spriteAsset({
     id: 'item_guardian_plate_icon',
@@ -663,7 +663,570 @@ const RPG_ASSETS = Object.freeze([
     sheet: 'single',
     outputDir: 'assets/rpg/items/guardian-plate',
     prompt: 'Use $generate2dsprite to create a clean HD transparent RPG guardian plate armor icon, single asset, centered silver-blue chest armor, solid #FF00FF background, no text.'
-  })
+  }),
+  spriteAsset({
+    id: 'item_card_deck_icon',
+    label: '타짜 카드덱 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/card-deck',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy card deck icon, single asset, centered parchment cards with red wax seal, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_lucky_dice_icon',
+    label: '행운의 주사위 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/lucky-dice',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy bone dice icon, single asset, centered two ivory dice with gold pips, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_blacksmith_hammer_icon',
+    label: '대장장이 망치 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/blacksmith-hammer',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy blacksmith hammer icon, single asset, centered iron hammer with leather grip, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_rune_stone_icon',
+    label: '룬석 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/rune-stone',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy rune stone icon, single asset, centered carved gray stone with gold rune lines, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_iron_ore_icon',
+    label: '철광석 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/iron-ore',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy iron ore icon, single asset, centered dark ore cluster with silver flecks, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_dragon_scale_icon',
+    label: '용비늘 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/dragon-scale',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy dragon scale icon, single asset, centered red-black scale with gold edge, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_holy_relic_icon',
+    label: '성유물 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/holy-relic',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy holy relic icon, single asset, centered small golden reliquary with white cloth, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_crossbow_icon',
+    label: '석궁 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/crossbow',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy crossbow icon, single asset, centered compact wooden crossbow with steel limbs, solid #FF00FF background, no text.'
+  }),
+
+  spriteAsset({
+    id: 'item_slime_charm_icon',
+    label: '슬라임 부적 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/slime-charm',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 슬라임 부적 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_wolfhide_vest_icon',
+    label: '늑대가죽 조끼 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/wolfhide-vest',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 늑대가죽 조끼 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_goblin_spear_icon',
+    label: '고블린 창 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/goblin-spear',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 고블린 창 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_spider_silk_cloak_icon',
+    label: '거미줄 망토 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/spider-silk-cloak',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 거미줄 망토 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_miner_pickaxe_icon',
+    label: '광부의 곡괭이 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/miner-pickaxe',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 광부의 곡괭이 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_batwing_earring_icon',
+    label: '박쥐날개 귀걸이 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/batwing-earring',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 박쥐날개 귀걸이 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_marshbone_talisman_icon',
+    label: '늪뼈 부적 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/marshbone-talisman',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 늪뼈 부적 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_bandit_cutlass_icon',
+    label: '도적단 곡도 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/bandit-cutlass',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 도적단 곡도 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_monastery_censer_icon',
+    label: '수도원 향로 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/monastery-censer',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 수도원 향로 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_orc_war_axe_icon',
+    label: '오크 전투도끼 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/orc-war-axe',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 오크 전투도끼 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_frost_guard_armor_icon',
+    label: '서리수호 갑옷 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/frost-guard-armor',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 서리수호 갑옷 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_elf_rune_ring_icon',
+    label: '엘프 룬 반지 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/elf-rune-ring',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 엘프 룬 반지 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_wyvern_scale_mail_icon',
+    label: '와이번 비늘갑옷 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/wyvern-scale-mail',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 와이번 비늘갑옷 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_demon_knight_blade_icon',
+    label: '마왕군 흑검 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/demon-knight-blade',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 마왕군 흑검 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_arden_prayer_beads_icon',
+    label: '아르덴 묵주 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/arden-prayer-beads',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 아르덴 묵주 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_black_dragon_scaleplate_icon',
+    label: '검은 용비늘 갑옷 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/black-dragon-scaleplate',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 검은 용비늘 갑옷 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_iron_longsword_icon',
+    label: '철 장검 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/iron-longsword',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 철 장검 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_oak_shortbow_icon',
+    label: '참나무 단궁 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/oak-shortbow',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 참나무 단궁 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_iron_dagger_icon',
+    label: '철 단검 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/iron-dagger',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 철 단검 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_iron_spear_icon',
+    label: '철창 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/iron-spear',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 철창 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_reinforced_leather_armor_icon',
+    label: '보강 가죽갑옷 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/reinforced-leather-armor',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 보강 가죽갑옷 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_silver_ring_icon',
+    label: '은 반지 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/silver-ring',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 은 반지 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_hunter_bow_icon',
+    label: '사냥꾼의 활 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/hunter-bow',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 사냥꾼의 활 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_apprentice_staff_icon',
+    label: '수습 마법사의 지팡이 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/apprentice-staff',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 수습 마법사의 지팡이 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_holy_mace_icon',
+    label: '신성한 철퇴 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/holy-mace',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 신성한 철퇴 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_rogue_dagger_icon',
+    label: '도적의 단검 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/rogue-dagger',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 도적의 단검 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_healer_charm_icon',
+    label: '치유사의 부적 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/healer-charm',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 치유사의 부적 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_silver_longsword_icon',
+    label: '은빛 장검 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/silver-longsword',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 은빛 장검 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_steel_halberd_icon',
+    label: '강철 할버드 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/steel-halberd',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 강철 할버드 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_steel_crossbow_icon',
+    label: '강철 석궁 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/steel-crossbow',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 강철 석궁 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_battle_axe_icon',
+    label: '전투도끼 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/battle-axe',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 전투도끼 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_priest_codex_icon',
+    label: '사제의 성서 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/priest-codex',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 사제의 성서 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_assassin_twinblades_icon',
+    label: '암살자의 쌍검 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/assassin-twinblades',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 암살자의 쌍검 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_poison_dagger_icon',
+    label: '맹독 단검 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/poison-dagger',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 맹독 단검 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_rune_armor_icon',
+    label: '룬 갑옷 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/rune-armor',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 룬 갑옷 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_shadow_hood_icon',
+    label: '그림자 두건 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/shadow-hood',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 그림자 두건 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_fire_rune_blade_icon',
+    label: '화염 룬검 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/fire-rune-blade',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 화염 룬검 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_ice_guard_plate_icon',
+    label: '냉기 수호갑옷 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/ice-guard-plate',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 냉기 수호갑옷 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_lightning_wand_icon',
+    label: '번개 완드 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/lightning-wand',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 번개 완드 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_storm_staff_icon',
+    label: '폭풍 지팡이 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/storm-staff',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 폭풍 지팡이 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_blessed_plate_icon',
+    label: '축복받은 판금갑옷 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/blessed-plate',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 축복받은 판금갑옷 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_sacred_silver_staff_icon',
+    label: '성은 지팡이 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/sacred-silver-staff',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 성은 지팡이 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_ancient_elf_bow_icon',
+    label: '고대 엘프 장궁 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/ancient-elf-bow',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 고대 엘프 장궁 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_demonbone_axe_icon',
+    label: '악마뼈 도끼 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/demonbone-axe',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 악마뼈 도끼 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_dragon_scale_shield_icon',
+    label: '용비늘 방패 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/dragon-scale-shield',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 용비늘 방패 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_dragon_scale_greatsword_icon',
+    label: '용비늘 대검 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/dragon-scale-greatsword',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 용비늘 대검 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_black_dragon_spear_icon',
+    label: '검은 용창 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/black-dragon-spear',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 검은 용창 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_lich_grimoire_icon',
+    label: '리치의 마도서 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/lich-grimoire',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 리치의 마도서 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_sanctuary_armor_icon',
+    label: '성역의 갑옷 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/sanctuary-armor',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 성역의 갑옷 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_shadow_cloak_icon',
+    label: '그림자 망토 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/shadow-cloak',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 그림자 망토 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_nidhogg_plate_icon',
+    label: '니드호그 갑옷 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/nidhogg-plate',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 니드호그 갑옷 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_kings_crown_icon',
+    label: '왕국의 왕관 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/kings-crown',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 왕국의 왕관 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_hidden_moonfang_blade_icon',
+    label: '월아의 비밀검 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/hidden-moonfang-blade',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 월아의 비밀검 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_hidden_arden_halo_icon',
+    label: '아르덴 성광륜 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/hidden-arden-halo',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 아르덴 성광륜 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_hidden_dragonheart_hammer_icon',
+    label: '용의심장 대장장이 망치 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/hidden-dragonheart-hammer',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 용의심장 대장장이 망치 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'item_hidden_forest_king_bow_icon',
+    label: '숲왕의 장궁 아이콘',
+    category: 'item',
+    sheet: 'single',
+    outputDir: 'assets/rpg/items/hidden-forest-king-bow',
+    prompt: 'Use $generate2dsprite to create a clean HD transparent medieval fantasy 숲왕의 장궁 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'hero_tazza_idle',
+    label: '타짜 대기 모션',
+    category: 'hero',
+    sheet: '2x2',
+    outputDir: 'assets/rpg/heroes/tazza/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD medieval fantasy tazza card-and-dice trickster hero idle animation, 2x2 grid, full-body sprite centered in each cell, deck pouch, bone dice, cloak, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'hero_female_tazza_idle',
+    label: '여성 타짜 대기 모션',
+    category: 'hero',
+    sheet: '2x2',
+    outputDir: 'assets/rpg/heroes/female/tazza/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD medieval fantasy female tazza card-and-dice trickster hero idle animation, 2x2 grid, full-body sprite centered in each cell, deck pouch, bone dice, cloak, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'hero_blacksmith_idle',
+    label: '대장장이 대기 모션',
+    category: 'hero',
+    sheet: '2x2',
+    outputDir: 'assets/rpg/heroes/blacksmith/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD medieval fantasy combat blacksmith hero idle animation, 2x2 grid, full-body sprite centered in each cell, hammer and leather apron armor, solid #FF00FF background, no text.'
+  }),
+  spriteAsset({
+    id: 'hero_female_blacksmith_idle',
+    label: '여성 대장장이 대기 모션',
+    category: 'hero',
+    sheet: '2x2',
+    outputDir: 'assets/rpg/heroes/female/blacksmith/idle',
+    prompt: 'Use $generate2dsprite to create a clean HD medieval fantasy female combat blacksmith hero idle animation, 2x2 grid, full-body sprite centered in each cell, hammer and leather apron armor, solid #FF00FF background, no text.'
+  }),
+  mapAsset({ id: 'map_royal_south_plains', label: '왕도 남쪽 초원 배경', category: 'map', outputDir: 'assets/rpg/maps/royal-south-plains', prompt: 'Medieval kingdom south plains hunting ground, 16:9 game background, no text.' }),
+  mapAsset({ id: 'map_goblin_forest', label: '고블린 숲 배경', category: 'map', outputDir: 'assets/rpg/maps/goblin-forest', prompt: 'Medieval goblin forest hunting ground, 16:9 game background, no text.' }),
+  mapAsset({ id: 'map_abandoned_silver_mine', label: '버려진 은광 배경', category: 'map', outputDir: 'assets/rpg/maps/abandoned-silver-mine', prompt: 'Abandoned silver mine dungeon, 16:9 game background, no text.' }),
+  mapAsset({ id: 'map_mist_marsh', label: '안개 늪지 배경', category: 'map', outputDir: 'assets/rpg/maps/mist-marsh', prompt: 'Poison mist marsh medieval fantasy, 16:9 game background, no text.' }),
+  mapAsset({ id: 'map_bandit_fortress', label: '도적단 요새 배경', category: 'map', outputDir: 'assets/rpg/maps/bandit-fortress', prompt: 'Bandit fortress medieval fantasy, 16:9 game background, no text.' }),
+  mapAsset({ id: 'map_cursed_monastery', label: '저주받은 수도원 배경', category: 'map', outputDir: 'assets/rpg/maps/cursed-monastery', prompt: 'Cursed monastery undead dungeon, 16:9 game background, no text.' }),
+  mapAsset({ id: 'map_red_canyon', label: '붉은 협곡 배경', category: 'map', outputDir: 'assets/rpg/maps/red-canyon', prompt: 'Red canyon orc and wyvern battlefield, 16:9 game background, no text.' }),
+  mapAsset({ id: 'map_frozen_mountains', label: '얼어붙은 산맥 배경', category: 'map', outputDir: 'assets/rpg/maps/frozen-mountains', prompt: 'Frozen mountains medieval fantasy, 16:9 game background, no text.' }),
+  mapAsset({ id: 'map_ancient_elf_ruins', label: '고대 엘프 유적 배경', category: 'map', outputDir: 'assets/rpg/maps/ancient-elf-ruins', prompt: 'Ancient elf ruins with runes, 16:9 game background, no text.' }),
+  mapAsset({ id: 'map_black_dragon_lair', label: '검은 용의 둥지 배경', category: 'map', outputDir: 'assets/rpg/maps/black-dragon-lair', prompt: 'Black dragon lair with lava and treasure, 16:9 game background, no text.' }),
+  mapAsset({ id: 'map_wizard_tower_archive', label: '마탑 지하서고 배경', category: 'map', outputDir: 'assets/rpg/maps/wizard-tower-archive', prompt: 'Wizard tower underground archive, 16:9 game background, no text.' }),
+  mapAsset({ id: 'map_demon_king_outer_wall', label: '마왕성 외곽 배경', category: 'map', outputDir: 'assets/rpg/maps/demon-king-outer-wall', prompt: 'Demon king castle outer wall battlefield, 16:9 game background, no text.' }),
+  mapAsset({ id: 'map_sacred_arden', label: '성지 아르덴 배경', category: 'map', outputDir: 'assets/rpg/maps/sacred-arden', prompt: 'Sacred sanctuary Arden holy site, 16:9 game background, no text.' }),
+  mapAsset({ id: 'map_royal_capital_wall', label: '왕국 수도 성벽 배경', category: 'map', outputDir: 'assets/rpg/maps/royal-capital-wall', prompt: 'Royal capital defensive wall, 16:9 game background, no text.' }),
+  mapAsset({ id: 'map_blacksmith_district', label: '왕국 대장간 거리 배경', category: 'map', outputDir: 'assets/rpg/maps/blacksmith-district', prompt: 'Medieval blacksmith district, 16:9 game background, no text.' }),
+  mapAsset({ id: 'map_royal_secret_mine', label: '왕국 비밀 광산 배경', category: 'map', outputDir: 'assets/rpg/maps/royal-secret-mine', prompt: 'Royal secret mine with hidden weapon ore, 16:9 game background, no text.' }),
+  mapAsset({ id: 'map_guild_training_ground', label: '길드 훈련장 배경', category: 'map', outputDir: 'assets/rpg/maps/guild-training-ground', prompt: 'Guild training ground with dummies and banners, 16:9 game background, no text.' }),
+  mapAsset({ id: 'map_demon_king_castle', label: '마왕성 내부 배경', category: 'map', outputDir: 'assets/rpg/maps/demon-king-castle', prompt: 'Demon king castle interior final dungeon, 16:9 game background, no text.' })
 ]);
 
 export function getRpgAssetById(id) {

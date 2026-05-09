@@ -1,0 +1,12 @@
+{
+  "id": "item_black_dragon_scaleplate_icon",
+  "label": "검은 용비늘 갑옷 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

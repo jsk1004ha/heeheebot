@@ -1,0 +1,12 @@
+{
+  "id": "item_elf_rune_ring_icon",
+  "label": "엘프 룬 반지 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

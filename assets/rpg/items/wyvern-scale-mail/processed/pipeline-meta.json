@@ -1,0 +1,12 @@
+{
+  "id": "item_wyvern_scale_mail_icon",
+  "label": "와이번 비늘갑옷 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

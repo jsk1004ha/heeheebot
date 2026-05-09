@@ -1,0 +1,12 @@
+{
+  "id": "item_miner_pickaxe_icon",
+  "label": "광부의 곡괭이 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

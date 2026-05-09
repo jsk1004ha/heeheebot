@@ -1,0 +1,12 @@
+{
+  "id": "item_assassin_twinblades_icon",
+  "label": "암살자의 쌍검 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

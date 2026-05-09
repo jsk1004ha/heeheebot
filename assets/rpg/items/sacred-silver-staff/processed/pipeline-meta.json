@@ -1,0 +1,12 @@
+{
+  "id": "item_sacred_silver_staff_icon",
+  "label": "성은 지팡이 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

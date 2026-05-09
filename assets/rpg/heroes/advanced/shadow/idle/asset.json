@@ -12,7 +12,7 @@
   "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
   "advancedClass": "shadow",
   "gender": "male",
-  "label": "섀도우",
+  "label": "그림자 살수 전직 이미지",
   "rosterFrame": 9,
   "clean": "assets/rpg/heroes/advanced/shadow/idle/processed/clean.png"
 }

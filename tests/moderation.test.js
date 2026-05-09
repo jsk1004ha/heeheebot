@@ -166,6 +166,46 @@ test('슬로우모드풀기 명령은 대상 유저의 타임아웃을 해제한
   }
 });
 
+test('청소 명령은 캐시된 채널이 없으면 channelId로 채널을 조회한다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    const replies = [];
+    const fetchCalls = [];
+    const bulkDeleteCalls = [];
+    const interaction = createModerationInteraction({
+      commandName: '청소',
+      timeoutCalls: [],
+      replies,
+      integerOptions: { 개수: 3 },
+      channel: null,
+      channelId: 'channel-1',
+      client: {
+        channels: {
+          async fetch(channelId) {
+            fetchCalls.push(channelId);
+            return {
+              async bulkDelete(count, filterOld) {
+                bulkDeleteCalls.push({ count, filterOld });
+                return { size: 2 };
+              }
+            };
+          }
+        }
+      }
+    });
+
+    const handled = await handleModerationCommand(interaction, fixture.moderation);
+
+    assert.equal(handled, true);
+    assert.deepEqual(fetchCalls, ['channel-1']);
+    assert.deepEqual(bulkDeleteCalls, [{ count: 3, filterOld: true }]);
+    assert.equal(replies[0].content, '🧹 메시지 2개를 삭제했습니다.');
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 test('언밴 명령은 원시 유저 ID도 멘션 형식으로 응답한다', async () => {
   const fixture = await createFixture();
 
@@ -289,7 +329,11 @@ function createModerationInteraction({
   timeoutCalls,
   replies,
   stringOptions = {},
-  guild = createGuild({ timeoutCalls })
+  integerOptions = {},
+  guild = createGuild({ timeoutCalls }),
+  channel = {},
+  channelId = 'channel-1',
+  client = { channels: { async fetch() { return null; } } }
 }) {
   return {
     isChatInputCommand: () => true,
@@ -297,8 +341,15 @@ function createModerationInteraction({
     inGuild: () => true,
     guildId: 'guild-1',
     guild,
+    channel,
+    channelId,
+    client,
     user: createUser('mod-1'),
     options: {
+      getInteger(name, required) {
+        assert.equal(required, true);
+        return integerOptions[name] ?? null;
+      },
       getUser(name, required) {
         assert.equal(name, '유저');
         assert.equal(required, true);

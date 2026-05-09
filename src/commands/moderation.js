@@ -1,4 +1,5 @@
 import {
+  MessageFlags,
   ChannelType,
   PermissionFlagsBits,
   SlashCommandBuilder
@@ -8,6 +9,10 @@ import {
   formatDurationMs,
   parseDuration
 } from '../systems/moderation.js';
+import {
+  logUnexpectedInteractionError,
+  safeReplyToInteraction
+} from './interactions.js';
 import { formatUserMention } from './ui.js';
 
 export const moderationCommands = [
@@ -213,7 +218,7 @@ export async function handleModerationCommand(interaction, moderation, logger = 
   if (!interaction.inGuild()) {
     await interaction.reply({
       content: '서버에서만 사용할 수 있는 명령어입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -221,7 +226,7 @@ export async function handleModerationCommand(interaction, moderation, logger = 
   try {
     await routeModerationCommand(interaction, moderation, logger);
   } catch (error) {
-    logger.error(error);
+    logUnexpectedInteractionError(logger, error, 'Moderation command rejected');
     await safeReply(interaction, `처리 실패: ${error.message}`, true);
   }
 
@@ -301,7 +306,8 @@ async function routeModerationCommand(interaction, moderation, logger) {
 
   if (commandName === '청소') {
     const count = interaction.options.getInteger('개수', true);
-    const deleted = await interaction.channel.bulkDelete(count, true);
+    const channel = await resolveBulkDeleteChannel(interaction);
+    const deleted = await channel.bulkDelete(count, true);
     await safeReply(interaction, `🧹 메시지 ${deleted.size}개를 삭제했습니다.`, true);
     await sendModerationLog(interaction.guild, moderation, `🧹 ${formatUserMention(interaction.user, interaction.user.username)}님이 <#${interaction.channelId}>에서 메시지 ${deleted.size}개를 삭제했습니다.`);
     return;
@@ -508,13 +514,18 @@ async function sendModerationLog(guild, moderation, content) {
 }
 
 async function safeReply(interaction, content, ephemeral = false) {
-  const payload = { content, ephemeral };
+  await safeReplyToInteraction(interaction, content, { ephemeral });
+}
 
-  if (interaction.deferred || interaction.replied) {
-    await interaction.followUp(payload);
-  } else {
-    await interaction.reply(payload);
+async function resolveBulkDeleteChannel(interaction) {
+  const channel = interaction.channel
+    ?? await interaction.client?.channels?.fetch?.(interaction.channelId).catch(() => null);
+
+  if (!channel || typeof channel.bulkDelete !== 'function') {
+    throw new Error('메시지를 삭제할 수 있는 텍스트 채널을 찾지 못했습니다.');
   }
+
+  return channel;
 }
 
 function assertNotBotTarget(user) {

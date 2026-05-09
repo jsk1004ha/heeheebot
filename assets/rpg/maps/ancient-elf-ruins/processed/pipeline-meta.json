@@ -1,0 +1,11 @@
+{
+  "id": "map_ancient_elf_ruins",
+  "label": "고대 엘프 유적 배경",
+  "category": "map",
+  "kind": "map",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    1024,
+    576
+  ]
+}

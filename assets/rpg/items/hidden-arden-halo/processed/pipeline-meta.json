@@ -1,0 +1,12 @@
+{
+  "id": "item_hidden_arden_halo_icon",
+  "label": "아르덴 성광륜 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

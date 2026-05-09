@@ -1,3 +1,4 @@
+import { MessageFlags } from 'discord.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
@@ -110,7 +111,7 @@ test('다른 유저는 오늘할일 버튼을 누를 수 없다', async () => {
   const handled = await handleTodayCommand(interaction, createServices());
 
   assert.equal(handled, true);
-  assert.equal(interaction.replies[0].ephemeral, true);
+  assert.equal(interaction.replies[0].flags, MessageFlags.Ephemeral);
   assert.match(interaction.replies[0].content, /명령어를 실행한 유저/);
 });
 

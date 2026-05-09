@@ -1,3 +1,4 @@
+import { MessageFlags } from 'discord.js';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -171,7 +172,7 @@ test('단순 도박 결과만 같은 베팅 재시도 버튼을 제공하고 카
     userId: 'user-2'
   });
   assert.equal(await handleCasinoCommand(otherUserButton, fakeEconomy, quietLogger), true);
-  assert.equal(otherUserButton.replied.ephemeral, true);
+  assert.equal(otherUserButton.replied.flags, MessageFlags.Ephemeral);
   assert.match(otherUserButton.replied.content, /명령어를 실행한 유저만/);
 });
 

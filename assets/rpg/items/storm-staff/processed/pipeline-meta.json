@@ -1,0 +1,12 @@
+{
+  "id": "item_storm_staff_icon",
+  "label": "폭풍 지팡이 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

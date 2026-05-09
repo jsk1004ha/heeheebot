@@ -1,0 +1,12 @@
+{
+  "id": "item_fire_rune_blade_icon",
+  "label": "화염 룬검 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

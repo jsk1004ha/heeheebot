@@ -1,6 +1,6 @@
 {
   "id": "map_void_bastion",
-  "label": "공허 요새 전투 배경",
+  "label": "마왕성 외곽 요새 전투 배경",
   "category": "map",
   "kind": "map",
   "prompt": "assets/rpg/maps/void-bastion/prompt-used.txt",

@@ -12,7 +12,7 @@
   "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
   "advancedClass": "archmage",
   "gender": "female",
-  "label": "여성 대마법사",
+  "label": "여성 대마도사 전직 이미지",
   "rosterFrame": 4,
   "clean": "assets/rpg/heroes/advanced/female/archmage/idle/processed/clean.png"
 }

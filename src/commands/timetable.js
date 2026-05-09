@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { MessageFlags, SlashCommandBuilder } from 'discord.js';
 import { WEEK_DAYS } from '../systems/timetable.js';
 
 const KOREA_TIME_OFFSET_MS = 9 * 60 * 60 * 1000;
@@ -97,7 +97,7 @@ export async function handleTimetableCommand(interaction, timetable, { now = () 
   } catch (error) {
     await respondToTimetableInteraction(interaction, {
       content: `시간표 정보를 불러오지 못했습니다: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 
@@ -288,6 +288,6 @@ function toEditablePayload(payload) {
     return payload;
   }
 
-  const { ephemeral: _ephemeral, ...editablePayload } = payload;
+  const { ephemeral: _ephemeral, flags: _flags, ...editablePayload } = payload;
   return editablePayload;
 }

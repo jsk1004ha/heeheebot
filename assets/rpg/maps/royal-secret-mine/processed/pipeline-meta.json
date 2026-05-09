@@ -1,0 +1,11 @@
+{
+  "id": "map_royal_secret_mine",
+  "label": "왕국 비밀 광산 배경",
+  "category": "map",
+  "kind": "map",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    1024,
+    576
+  ]
+}

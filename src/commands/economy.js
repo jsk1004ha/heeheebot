@@ -1,4 +1,4 @@
-import { EmbedBuilder, SlashCommandBuilder } from 'discord.js';
+import { MessageFlags, EmbedBuilder, SlashCommandBuilder } from 'discord.js';
 import { formatCurrencyAmount } from '../systems/currencies.js';
 import {
   getCurrentProfileLevelBadge,
@@ -75,7 +75,7 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
   if (!interaction.inGuild()) {
     await interaction.reply({
       content: '서버에서만 사용할 수 있는 명령어입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -88,7 +88,7 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
     if (target.bot) {
       await interaction.reply({
         content: '봇 프로필은 표시하지 않습니다.',
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
       return true;
     }
@@ -113,7 +113,7 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
     if (!result.claimed) {
       await interaction.reply({
         content: `이미 출석 보상을 받았습니다. 남은 시간: ${formatDuration(result.remainingMs)}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
       return true;
     }
@@ -141,7 +141,7 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
     if (target.bot) {
       await interaction.reply({
         content: '봇에게는 송금할 수 없습니다.',
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
       return true;
     }
@@ -163,7 +163,7 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
     } catch (error) {
       await interaction.reply({
         content: `송금 실패: ${error.message}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
 

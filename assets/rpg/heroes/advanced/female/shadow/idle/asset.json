@@ -12,7 +12,7 @@
   "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
   "advancedClass": "shadow",
   "gender": "female",
-  "label": "여성 섀도우",
+  "label": "여성 그림자 살수 전직 이미지",
   "rosterFrame": 10,
   "clean": "assets/rpg/heroes/advanced/female/shadow/idle/processed/clean.png"
 }

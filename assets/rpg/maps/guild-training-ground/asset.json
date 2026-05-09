@@ -1,0 +1,12 @@
+{
+  "id": "map_guild_training_ground",
+  "label": "길드 훈련장 배경",
+  "category": "map",
+  "kind": "map",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    1024,
+    576
+  ],
+  "prompt": "Guild training ground with dummies and banners, 16:9 game background, no text."
+}

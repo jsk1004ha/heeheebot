@@ -1,4 +1,5 @@
 import {
+  MessageFlags,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
@@ -8,7 +9,6 @@ import {
 } from 'discord.js';
 import {
   getRpgAdvancedClassConfig,
-  getRpgAdvancedClassOptions,
   getRpgAdventureGuide,
   getRpgAreaConfig,
   getRpgAreaOptions,
@@ -16,13 +16,19 @@ import {
   getRpgBossPattern,
   getRpgClassConfig,
   getRpgClassOptions,
+  getRpgCraftingCategoryOptions,
+  getRpgCraftingRecipeOptions,
   getRpgDailyMissionOptions,
   getRpgDifficultyOptions,
+  getRpgDungeonConfig,
+  getRpgDungeonOptions,
   getRpgDerivedStats,
   getRpgEquipmentItemOptions,
   getRpgGachaBannerOptions,
   getRpgGenderConfig,
   getRpgGenderOptions,
+  getRpgFirstJobOptions,
+  getRpgStartClassOptions,
   getRpgItemConfig,
   getRpgQuestOptions,
   getRpgRaidConfig,
@@ -31,12 +37,19 @@ import {
   getRpgSkillConfig,
   getRpgSkillTreeOptions,
   getRpgSkillOptions,
-  getRpgStoryChapterOptions,
   getRpgTutorialStepOptions,
+  getRpgFirstJobClassIds,
+  normalizeNullableRpgCraftingCategory,
+  normalizeRpgClass,
   normalizeRpgSkillId
 } from '../systems/rpg.js';
 import { SEASON_POINT_SOURCES } from '../systems/seasons.js';
 import { formatDuration } from './economy.js';
+import {
+  safeDeferUpdate,
+  safeReplyToInteraction,
+  sendInteractionUpdate
+} from './interactions.js';
 import { formatSeasonAwardLine } from './seasons.js';
 import {
   createButtonRows as createDiscordButtonRows,
@@ -54,17 +67,13 @@ import {
 } from './rpg/formatters.js';
 import { createRpgVisualPayload } from './rpg/visual.js';
 
-const RPG_PVP_CHALLENGE_TTL_MS = 60_000;
-const RPG_PVP_SESSION_TTL_MS = 10 * 60_000;
 const RPG_BOSS_SESSION_TTL_MS = 10 * 60_000;
 const RPG_RAID_LOBBY_TTL_MS = 10 * 60_000;
 const RPG_RAID_LOBBY_MAX_MEMBERS = 4;
 const RPG_SELECT_OPTION_LIMIT = 25;
-const pendingRpgPvpChallenges = new Map();
-const activeRpgPvpSessions = new Map();
 const activeRpgBossSessions = new Map();
 // Discord button sessions are intentionally ephemeral; a bot restart invalidates
-// in-flight raid lobbies the same way it invalidates pending PvP/boss buttons.
+// in-flight boss and raid buttons.
 const activeRpgRaidLobbies = new Map();
 
 export const rpgCommands = [
@@ -79,7 +88,7 @@ export const rpgCommands = [
           option
             .setName('직업')
             .setDescription('시작 직업. 비우면 직업/성별 선택 메뉴를 봅니다.')
-            .addChoices(...getRpgClassOptions())
+            .addChoices(...getRpgStartClassOptions())
         )
         .addStringOption((option) =>
           option
@@ -106,8 +115,8 @@ export const rpgCommands = [
     )
     .addSubcommand((subcommand) =>
       subcommand
-        .setName('전투')
-        .setDescription('몬스터와 전투합니다.')
+        .setName('사냥')
+        .setDescription('몬스터를 사냥합니다.')
         .addStringOption((option) =>
           option
             .setName('난이도')
@@ -129,19 +138,20 @@ export const rpgCommands = [
     )
     .addSubcommand((subcommand) =>
       subcommand
-        .setName('대결')
-        .setDescription('다른 유저에게 RPG PvP 대결을 신청합니다.')
-        .addUserOption((option) =>
+        .setName('직업변경')
+        .setDescription('전투 전 주/보조 직업을 전환합니다.')
+        .addStringOption((option) =>
           option
-            .setName('상대')
-            .setDescription('대결을 신청할 상대')
+            .setName('직업')
+            .setDescription('변경할 보유 직업')
             .setRequired(true)
+            .addChoices(...getRpgFirstJobOptions())
         )
     )
     .addSubcommand((subcommand) =>
       subcommand
-        .setName('탐험')
-        .setDescription('지역을 탐험해서 이벤트, 보물, 함정을 만납니다.')
+        .setName('탐사')
+        .setDescription('지역을 탐사해서 이벤트, 보물, 함정을 만납니다.')
         .addStringOption((option) =>
           option
             .setName('지역')
@@ -153,6 +163,12 @@ export const rpgCommands = [
       subcommand
         .setName('던전')
         .setDescription('여러 층을 연속 탐험하고 전리품을 노립니다.')
+        .addStringOption((option) =>
+          option
+            .setName('던전')
+            .setDescription('입장할 던전')
+            .addChoices(...getRpgDungeonOptions())
+        )
         .addStringOption((option) =>
           option
             .setName('지역')
@@ -181,8 +197,8 @@ export const rpgCommands = [
     )
     .addSubcommand((subcommand) =>
       subcommand
-        .setName('상태')
-        .setDescription('내 RPG 전투 기록을 확인합니다.')
+        .setName('프로필')
+        .setDescription('내 희희봇 RPG 프로필과 전투 기록을 확인합니다.')
     )
     .addSubcommand((subcommand) =>
       subcommand
@@ -230,7 +246,7 @@ export const rpgCommands = [
     )
     .addSubcommand((subcommand) =>
       subcommand
-        .setName('장비강화')
+        .setName('강화')
         .setDescription('전리품 장비를 골드로 강화합니다.')
         .addStringOption((option) =>
           option
@@ -267,20 +283,14 @@ export const rpgCommands = [
     )
     .addSubcommand((subcommand) =>
       subcommand
-        .setName('가챠')
-        .setDescription('가챠로 장비와 고급 직업을 획득합니다.')
+        .setName('듀얼직업')
+        .setDescription('Lv.15부터 두 번째 1차 직업을 선택합니다.')
         .addStringOption((option) =>
           option
-            .setName('배너')
-            .setDescription('가챠 배너')
-            .addChoices(...getRpgGachaBannerOptions())
-        )
-        .addIntegerOption((option) =>
-          option
-            .setName('횟수')
-            .setDescription('가챠 횟수')
-            .setMinValue(1)
-            .setMaxValue(10)
+            .setName('직업')
+            .setDescription('선택할 보조 직업')
+            .setRequired(true)
+            .addChoices(...getRpgFirstJobOptions())
         )
     )
     .addSubcommand((subcommand) =>
@@ -301,29 +311,66 @@ export const rpgCommands = [
         .addStringOption((option) =>
           option
             .setName('전직')
-            .setDescription('선택할 상위 직업. 비우면 전직 트리를 봅니다.')
-            .addChoices(...getRpgAdvancedClassOptions())
+            .setDescription('1차/상위 직업 이름. 비우면 전직 트리를 봅니다.')
         )
     )
     .addSubcommand((subcommand) =>
       subcommand
-        .setName('스토리')
-        .setDescription('스토리 챕터를 확인하거나 진행합니다.')
+        .setName('제작')
+        .setDescription('재료로 장비/소모품/룬을 제작합니다.')
         .addStringOption((option) =>
           option
-            .setName('챕터')
-            .setDescription('진행할 스토리 챕터')
-            .addChoices(...getRpgStoryChapterOptions())
+            .setName('종류')
+            .setDescription('제작 카테고리. 비우면 전체 제작 메뉴를 봅니다.')
+            .addChoices(...getRpgCraftingCategoryOptions())
+        )
+        .addStringOption((option) =>
+          option
+            .setName('레시피')
+            .setDescription('제작할 레시피. 비우면 제작 가능한 목록을 봅니다.')
+            .addChoices(...getRpgCraftingRecipeOptions())
+        )
+        .addIntegerOption((option) =>
+          option
+            .setName('수량')
+            .setDescription('소모품/재료 가공 수량')
+            .setMinValue(1)
+            .setMaxValue(10)
         )
     )
     .addSubcommand((subcommand) =>
       subcommand
-        .setName('도감')
-        .setDescription('몬스터 도감을 확인하거나 발견 보상을 받습니다.')
+        .setName('거래소')
+        .setDescription('RPG 재료와 제작품을 판매/구매합니다.')
         .addStringOption((option) =>
           option
-            .setName('몬스터')
-            .setDescription('보상을 받을 몬스터 이름')
+            .setName('작업')
+            .setDescription('비우면 거래소 목록을 봅니다.')
+            .addChoices(
+              { name: '보기', value: 'view' },
+              { name: '검색', value: 'search' },
+              { name: '판매', value: 'sell' },
+              { name: '구매', value: 'buy' },
+              { name: '취소', value: 'cancel' }
+            )
+        )
+        .addStringOption((option) =>
+          option
+            .setName('품목')
+            .setDescription('판매할 아이템/전리품 또는 구매·취소할 매물 ID')
+        )
+        .addIntegerOption((option) =>
+          option
+            .setName('가격')
+            .setDescription('판매 가격')
+            .setMinValue(1)
+        )
+        .addIntegerOption((option) =>
+          option
+            .setName('수량')
+            .setDescription('판매 수량')
+            .setMinValue(1)
+            .setMaxValue(99)
         )
     )
     .addSubcommand((subcommand) =>
@@ -432,7 +479,7 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
     if (interaction.customId.startsWith('rpg_raid_lobby:')) {
       return handleRpgRaidLobbyButton(interaction, economy);
     }
-    return handleRpgPvpButton(interaction, economy);
+    return false;
   }
 
   if (interaction.isStringSelectMenu?.() && interaction.customId?.startsWith('rpg_select:')) {
@@ -446,7 +493,7 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
   if (!interaction.inGuild()) {
     await interaction.reply({
       content: '서버에서만 사용할 수 있는 명령어입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -528,14 +575,14 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
     } catch (error) {
       await interaction.reply({
         content: `튜토리얼 보상 수령 실패: ${error.message}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
 
     return true;
   }
 
-  if (subcommand === '전투') {
+  if (subcommand === '전투' || subcommand === '사냥') {
     const difficulty = interaction.options.getString('난이도') ?? 'normal';
     const area = interaction.options.getString('지역');
     const skill = interaction.options.getString('스킬') ?? 'basic';
@@ -553,7 +600,7 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
       if (!result.battled) {
         await interaction.reply({
           content: `⏳ 아직 다시 전투할 수 없습니다. 남은 시간: ${formatDuration(result.remainingMs)}`,
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         return true;
       }
@@ -569,30 +616,37 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
     } catch (error) {
       await interaction.reply({
         content: `RPG 전투 실패: ${error.message}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
 
     return true;
   }
 
-  if (subcommand === '대결') {
-    const target = interaction.options.getUser('상대', true);
+  if (subcommand === '직업변경') {
+    const characterClass = interaction.options.getString('직업', true);
 
     try {
-      assertValidRpgPvpTarget(user, target);
-      await createRpgPvpChallenge(interaction, target);
+      const result = await economy.switchRpgClass({
+        guildId,
+        userId: user.id,
+        username: user.username,
+        characterClass
+      });
+      await replyWithRpgAssets(interaction, formatRpgJobChange(result), [result.heroAssetId], {
+        components: createRpgActionLoopRows(user.id)
+      });
     } catch (error) {
       await interaction.reply({
-        content: `RPG 대결 신청 실패: ${error.message}`,
-        ephemeral: true
+        content: `직업 변경 실패: ${error.message}`,
+        flags: MessageFlags.Ephemeral
       });
     }
 
     return true;
   }
 
-  if (subcommand === '탐험') {
+  if (subcommand === '탐험' || subcommand === '탐사') {
     const area = interaction.options.getString('지역');
 
     try {
@@ -608,7 +662,7 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
     } catch (error) {
       await interaction.reply({
         content: `탐험 실패: ${error.message}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
 
@@ -616,14 +670,17 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
   }
 
   if (subcommand === '던전') {
-    const area = interaction.options.getString('지역');
-    const depth = interaction.options.getInteger('깊이') ?? 3;
+    const dungeonId = interaction.options.getString('던전');
+    const dungeon = dungeonId ? getRpgDungeonConfig(dungeonId) : null;
+    const area = dungeon?.area ?? interaction.options.getString('지역');
+    const depth = interaction.options.getInteger('깊이');
 
     try {
       const result = await economy.runRpgDungeon({
         guildId,
         userId: user.id,
         username: user.username,
+        dungeonId,
         area,
         depth
       });
@@ -633,7 +690,7 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
     } catch (error) {
       await interaction.reply({
         content: `던전 실패: ${error.message}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
 
@@ -654,7 +711,7 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
       if (!result.battled) {
         await interaction.reply({
           content: `⏳ 아직 다시 전투할 수 없습니다. 남은 시간: ${formatDuration(result.remainingMs)}`,
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         return true;
       }
@@ -672,14 +729,14 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
     } catch (error) {
       await interaction.reply({
         content: `보스전 실패: ${error.message}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
 
     return true;
   }
 
-  if (subcommand === '상태') {
+  if (subcommand === '상태' || subcommand === '프로필' || subcommand === '스탯') {
     const status = await economy.getRpgStatus({
       guildId,
       userId: user.id,
@@ -719,7 +776,129 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
     } catch (error) {
       await interaction.reply({
         content: `구매 실패: ${error.message}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
+      });
+    }
+
+    return true;
+  }
+
+  if (subcommand === '제작') {
+    const category = interaction.options.getString('종류');
+    const recipeId = interaction.options.getString('레시피');
+    const quantity = interaction.options.getInteger('수량') ?? 1;
+
+    if (!recipeId) {
+      const status = await economy.getRpgStatus({
+        guildId,
+        userId: user.id,
+        username: user.username
+      });
+      await replyWithRpgAssets(interaction, formatRpgCraftingMenu(status, category), [status.heroAssetId], {
+        components: createRpgCraftingRows(status, user.id, category)
+      });
+      return true;
+    }
+
+    try {
+      const result = await economy.craftRpgRecipe({
+        guildId,
+        userId: user.id,
+        username: user.username,
+        recipeId,
+        quantity
+      });
+      const assetIds = result.createdGear.map((gear) => gear.assetId).filter(Boolean);
+      await replyWithRpgAssets(interaction, formatRpgCraftingResult(result), assetIds.length > 0 ? assetIds : [getRpgItemConfig(result.recipe.resultItemId).assetId], {
+        components: createRpgActionLoopRows(user.id)
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: `제작 실패: ${error.message}`,
+        flags: MessageFlags.Ephemeral
+      });
+    }
+
+    return true;
+  }
+
+  if (subcommand === '거래소') {
+    const action = interaction.options.getString('작업') ?? 'view';
+    const item = interaction.options.getString('품목');
+    const price = interaction.options.getInteger('가격');
+    const quantity = interaction.options.getInteger('수량') ?? 1;
+
+    try {
+      if (action === 'sell') {
+        if (!item || !price) throw new Error('판매할 품목과 가격을 입력하세요.');
+        const result = await economy.createRpgMarketListing({
+          guildId,
+          userId: user.id,
+          username: user.username,
+          item,
+          price,
+          quantity
+        });
+        await replyWithRpgCard(interaction, formatRpgMarketListingCreated(result), {
+          components: createRpgActionLoopRows(user.id)
+        });
+        return true;
+      }
+
+      if (action === 'buy') {
+        if (!item) throw new Error('구매할 매물 ID를 입력하세요.');
+        const result = await economy.buyRpgMarketListing({
+          guildId,
+          userId: user.id,
+          username: user.username,
+          listingId: item
+        });
+        await replyWithRpgCard(interaction, formatRpgMarketPurchase(result), {
+          components: createRpgActionLoopRows(user.id)
+        });
+        return true;
+      }
+
+      if (action === 'cancel') {
+        if (!item) throw new Error('취소할 매물 ID를 입력하세요.');
+        const result = await economy.cancelRpgMarketListing({
+          guildId,
+          userId: user.id,
+          username: user.username,
+          listingId: item
+        });
+        await replyWithRpgCard(interaction, formatRpgMarketCancel(result), {
+          components: createRpgActionLoopRows(user.id)
+        });
+        return true;
+      }
+
+      const result = await economy.getRpgMarketplace({ guildId });
+      if (action === 'search') {
+        if (!item) throw new Error('검색할 품목 이름이나 매물 ID를 입력하세요.');
+        const normalizedQuery = item.toLocaleLowerCase('ko-KR');
+        const compactQuery = normalizedQuery.replace(/\s+/g, '');
+        result.query = item;
+        result.marketListings = result.marketListings.filter((listing) => {
+          const haystack = [
+            listing.id,
+            listing.label,
+            listing.itemId,
+            listing.gear?.baseItemId
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLocaleLowerCase('ko-KR');
+          return haystack.includes(normalizedQuery) || haystack.replace(/\s+/g, '').includes(compactQuery);
+        });
+      }
+      await replyWithRpgCard(interaction, formatRpgMarketplace(result), {
+        components: createRpgActionLoopRows(user.id)
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: `거래소 처리 실패: ${error.message}`,
+        flags: MessageFlags.Ephemeral
       });
     }
 
@@ -752,7 +931,7 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
     } catch (error) {
       await interaction.reply({
         content: `아이템 사용 실패: ${error.message}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
 
@@ -787,7 +966,7 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
     } catch (error) {
       await interaction.reply({
         content: `장비 장착 실패: ${error.message}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
 
@@ -822,14 +1001,14 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
     } catch (error) {
       await interaction.reply({
         content: `전리품 장착 실패: ${error.message}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
 
     return true;
   }
 
-  if (subcommand === '장비강화') {
+  if (subcommand === '장비강화' || subcommand === '강화') {
     const gearId = interaction.options.getString('장비');
 
     if (!gearId) {
@@ -855,7 +1034,7 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
     } catch (error) {
       await interaction.reply({
         content: `장비 강화 실패: ${error.message}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
 
@@ -890,7 +1069,7 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
     } catch (error) {
       await interaction.reply({
         content: `퀘스트 보상 실패: ${error.message}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
 
@@ -925,7 +1104,7 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
     } catch (error) {
       await interaction.reply({
         content: `일일 의뢰 보상 실패: ${error.message}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
 
@@ -945,32 +1124,40 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
     } catch (error) {
       await interaction.reply({
         content: `휴식 실패: ${error.message}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
     return true;
   }
 
-  if (subcommand === '가챠') {
-    const bannerId = interaction.options.getString('배너') ?? 'standard';
-    const count = interaction.options.getInteger('횟수') ?? 1;
+  if (subcommand === '듀얼직업') {
+    const characterClass = interaction.options.getString('직업', true);
 
     try {
-      const result = await economy.pullRpgGacha({
+      const result = await economy.chooseRpgDualClass({
         guildId,
         userId: user.id,
         username: user.username,
-        bannerId,
-        count
+        characterClass
       });
-      await replyWithRpgAssets(interaction, formatRpgGacha(result), getGachaAssetIds(result));
+      await replyWithRpgAssets(interaction, formatRpgDualJob(result), [result.heroAssetId], {
+        components: createRpgActionLoopRows(user.id)
+      });
     } catch (error) {
       await interaction.reply({
-        content: `가챠 실패: ${error.message}`,
-        ephemeral: true
+        content: `듀얼 직업 선택 실패: ${error.message}`,
+        flags: MessageFlags.Ephemeral
       });
     }
 
+    return true;
+  }
+
+  if (subcommand === '가챠') {
+    await interaction.reply({
+      content: '희희봇 RPG에서는 RPG 전용 가챠를 사용하지 않습니다. 장비는 사냥·탐사·던전·레이드·제작/강화 흐름에서 얻어주세요.',
+      flags: MessageFlags.Ephemeral
+    });
     return true;
   }
 
@@ -1002,7 +1189,7 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
     } catch (error) {
       await interaction.reply({
         content: `스킬트리 학습 실패: ${error.message}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
 
@@ -1025,19 +1212,35 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
     }
 
     try {
-      const result = await economy.advanceRpgClass({
-        guildId,
-        userId: user.id,
-        username: user.username,
-        advancedClass
-      });
+      let result;
+      let normalizedClass = null;
+      try {
+        normalizedClass = normalizeRpgClass(advancedClass);
+      } catch {
+        normalizedClass = null;
+      }
+      if (getRpgFirstJobClassIds().includes(normalizedClass)) {
+        result = await economy.chooseRpgFirstJob({
+          guildId,
+          userId: user.id,
+          username: user.username,
+          characterClass: advancedClass
+        });
+      } else {
+        result = await economy.advanceRpgClass({
+          guildId,
+          userId: user.id,
+          username: user.username,
+          advancedClass
+        });
+      }
       await replyWithRpgAssets(interaction, formatRpgAdvanceClass(result), [result.heroAssetId], {
         components: createRpgActionLoopRows(user.id)
       });
     } catch (error) {
       await interaction.reply({
         content: `전직 실패: ${error.message}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
 
@@ -1071,8 +1274,8 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
       });
     } catch (error) {
       await interaction.reply({
-        content: `스토리 진행 실패: ${error.message}`,
-        ephemeral: true
+        content: `메인 퀘스트 진행 실패: ${error.message}`,
+        flags: MessageFlags.Ephemeral
       });
     }
 
@@ -1107,7 +1310,7 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
     } catch (error) {
       await interaction.reply({
         content: `도감 보상 실패: ${error.message}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
 
@@ -1132,7 +1335,7 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
     } catch (error) {
       await interaction.reply({
         content: `레이드 실패: ${error.message}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
 
@@ -1165,7 +1368,7 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
         interaction,
         `🐉 **RPG 길드 레이드 모집 실패** — ${formatDiscordUserMention(user)}\n${error.message}`,
         [raid.backgroundAssetId],
-        { ephemeral: true }
+        { flags: MessageFlags.Ephemeral }
       );
     }
 
@@ -1189,7 +1392,7 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
       } catch (error) {
         await interaction.reply({
           content: `지역 이동 실패: ${error.message}`,
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
       return true;
@@ -1209,181 +1412,13 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
   return false;
 }
 
-async function createRpgPvpChallenge(interaction, target) {
-  const challengeId = createRpgPvpChallengeId();
-  const challenge = {
-    id: challengeId,
-    guildId: interaction.guildId,
-    channelId: interaction.channelId,
-    challenger: {
-      userId: interaction.user.id,
-      username: interaction.user.username,
-      mention: formatDiscordUserMention(interaction.user)
-    },
-    opponent: {
-      userId: target.id,
-      username: target.username,
-      mention: formatDiscordUserMention(target)
-    },
-    createdAt: Date.now()
-  };
-
-  pendingRpgPvpChallenges.set(challengeId, challenge);
-
-  await replyWithRpgCard(interaction, formatRpgPvpChallenge(challenge), {
-    ...createRpgMentionNotification(
-      [challenge.opponent.userId],
-      `⚔️ <@${challenge.opponent.userId}>님, RPG 대결 신청이 도착했습니다.`
-    ),
-    components: [createRpgPvpChallengeRow(challengeId)]
-  });
-}
-
-async function handleRpgPvpButton(interaction, economy) {
-  if (!interaction.customId.startsWith('rpg_pvp_')) return false;
-
-  if (interaction.customId.startsWith('rpg_pvp_action:')) {
-    return handleRpgPvpActionButton(interaction, economy);
-  }
-
-  const [action, challengeId] = interaction.customId.split(':');
-  const challenge = pendingRpgPvpChallenges.get(challengeId);
-
-  if (!challenge || Date.now() - challenge.createdAt > RPG_PVP_CHALLENGE_TTL_MS) {
-    pendingRpgPvpChallenges.delete(challengeId);
-    await interaction.reply({
-      content: '이미 만료되었거나 처리된 RPG 대결입니다.',
-      ephemeral: true
-    });
-    return true;
-  }
-
-  if (interaction.user.id !== challenge.opponent.userId) {
-    await interaction.reply({
-      content: 'RPG 대결을 신청받은 유저만 누를 수 있습니다.',
-      ephemeral: true
-    });
-    return true;
-  }
-
-  if (action === 'rpg_pvp_decline') {
-    pendingRpgPvpChallenges.delete(challengeId);
-    await updateWithRpgCard(interaction, `🛡️ **RPG 대결 거절**\n${challenge.opponent.mention}님이 RPG 대결을 거절했습니다.`, {
-      ...createRpgMentionNotification(
-        [challenge.challenger.userId],
-        `🛡️ <@${challenge.challenger.userId}>님, RPG 대결이 거절됐습니다.`
-      ),
-      components: []
-    });
-    return true;
-  }
-
-  if (action !== 'rpg_pvp_accept') {
-    await interaction.reply({
-      content: '알 수 없는 RPG 대결 버튼입니다.',
-      ephemeral: true
-    });
-    return true;
-  }
-
-  pendingRpgPvpChallenges.delete(challengeId);
-
-  try {
-    const result = await economy.startRpgPvpDuel({
-      guildId: challenge.guildId,
-      challenger: challenge.challenger,
-      opponent: challenge.opponent
-    });
-
-    if (!result.started) {
-      await updateWithRpgCard(interaction, formatRpgPvpBlocked(challenge, result), {
-        ...createRpgMentionNotification(
-          [result.blockedUserId],
-          `⏳ <@${result.blockedUserId}>님, RPG 대결 대기 시간이 남아 있습니다.`
-        ),
-        components: []
-      });
-      return true;
-    }
-
-    activeRpgPvpSessions.set(result.session.id, result.session);
-    await updateWithRpgCard(interaction, formatRpgPvpTurnBoard(challenge, result), {
-      ...createRpgPvpTurnNotification(result.session),
-      components: [createRpgPvpActionRow(result.session)]
-    });
-  } catch (error) {
-    await updateWithRpgCard(interaction, `⚠️ **RPG 대결 실패**\n${error.message}`, {
-      components: []
-    });
-  }
-
-  return true;
-}
-
-async function handleRpgPvpActionButton(interaction, economy) {
-  const [, sessionId, skillId] = interaction.customId.split(':');
-  const session = activeRpgPvpSessions.get(sessionId);
-
-  if (!session || Date.now() - session.updatedAt > RPG_PVP_SESSION_TTL_MS) {
-    activeRpgPvpSessions.delete(sessionId);
-    await interaction.reply({
-      content: '이미 만료되었거나 종료된 RPG 턴제 대결입니다.',
-      ephemeral: true
-    });
-    return true;
-  }
-
-  const activeFighter = session.fighters[session.turnSide];
-  if (interaction.user.id !== activeFighter.userId) {
-    await interaction.reply({
-      content: `${activeFighter.mention}님의 차례입니다.`,
-      ephemeral: true
-    });
-    return true;
-  }
-
-  try {
-    const result = await economy.playRpgPvpTurn({
-      guildId: session.guildId,
-      session,
-      actorUserId: interaction.user.id,
-      skillId
-    });
-
-    if (result.completed) {
-      activeRpgPvpSessions.delete(sessionId);
-      await updateWithRpgCard(interaction, formatRpgPvpResult(result), {
-        ...createRpgMentionNotification(
-          [result.winnerUserId],
-          `🏆 <@${result.winnerUserId}>님, RPG PvP에서 승리했습니다.`
-        ),
-        components: []
-      });
-      return true;
-    }
-
-    activeRpgPvpSessions.set(sessionId, result.session);
-    await updateWithRpgCard(interaction, formatRpgPvpTurnBoard(null, result), {
-      ...createRpgPvpTurnNotification(result.session),
-      components: [createRpgPvpActionRow(result.session)]
-    });
-  } catch (error) {
-    await interaction.reply({
-      content: `RPG 턴 처리 실패: ${error.message}`,
-      ephemeral: true
-    });
-  }
-
-  return true;
-}
-
 async function handleRpgStartButton(interaction, economy) {
   const [, userId, characterClass, characterGender] = interaction.customId.split(':');
 
   if (interaction.user.id !== userId) {
     await interaction.reply({
       content: '이 캐릭터 생성 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -1402,7 +1437,7 @@ async function handleRpgStartButton(interaction, economy) {
   } catch (error) {
     await interaction.reply({
       content: `RPG 시작 실패: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 
@@ -1415,7 +1450,7 @@ async function handleRpgAdvanceButton(interaction, economy) {
   if (interaction.user.id !== userId) {
     await interaction.reply({
       content: '이 전직 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -1433,7 +1468,7 @@ async function handleRpgAdvanceButton(interaction, economy) {
   } catch (error) {
     await interaction.reply({
       content: `전직 실패: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 
@@ -1446,7 +1481,7 @@ async function handleRpgAreaButton(interaction, economy) {
   if (interaction.user.id !== userId) {
     await interaction.reply({
       content: '이 지역 이동 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -1464,7 +1499,7 @@ async function handleRpgAreaButton(interaction, economy) {
   } catch (error) {
     await interaction.reply({
       content: `지역 이동 실패: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 
@@ -1477,7 +1512,7 @@ async function handleRpgShopBuyButton(interaction, economy) {
   if (interaction.user.id !== userId) {
     await interaction.reply({
       content: '이 상점 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -1496,7 +1531,7 @@ async function handleRpgShopBuyButton(interaction, economy) {
   } catch (error) {
     await interaction.reply({
       content: `구매 실패: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 
@@ -1509,7 +1544,7 @@ async function handleRpgItemEquipButton(interaction, economy) {
   if (interaction.user.id !== userId) {
     await interaction.reply({
       content: '이 장비 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -1527,7 +1562,7 @@ async function handleRpgItemEquipButton(interaction, economy) {
   } catch (error) {
     await interaction.reply({
       content: `장비 장착 실패: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 
@@ -1540,7 +1575,7 @@ async function handleRpgItemUseButton(interaction, economy) {
   if (interaction.user.id !== userId) {
     await interaction.reply({
       content: '이 아이템 사용 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -1558,7 +1593,7 @@ async function handleRpgItemUseButton(interaction, economy) {
   } catch (error) {
     await interaction.reply({
       content: `아이템 사용 실패: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 
@@ -1571,7 +1606,7 @@ async function handleRpgItemSellButton(interaction, economy) {
   if (interaction.user.id !== userId) {
     await interaction.reply({
       content: '이 아이템 판매 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -1590,7 +1625,7 @@ async function handleRpgItemSellButton(interaction, economy) {
   } catch (error) {
     await interaction.reply({
       content: `아이템 판매 실패: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 
@@ -1603,7 +1638,7 @@ async function handleRpgGearEquipButton(interaction, economy) {
   if (interaction.user.id !== userId) {
     await interaction.reply({
       content: '이 전리품 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -1621,7 +1656,7 @@ async function handleRpgGearEquipButton(interaction, economy) {
   } catch (error) {
     await interaction.reply({
       content: `전리품 장착 실패: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 
@@ -1634,7 +1669,7 @@ async function handleRpgGearDisassembleButton(interaction, economy) {
   if (interaction.user.id !== userId) {
     await interaction.reply({
       content: '이 전리품 분해 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -1652,7 +1687,7 @@ async function handleRpgGearDisassembleButton(interaction, economy) {
   } catch (error) {
     await interaction.reply({
       content: `전리품 분해 실패: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 
@@ -1665,7 +1700,7 @@ async function handleRpgGearEnhanceButton(interaction, economy) {
   if (interaction.user.id !== userId) {
     await interaction.reply({
       content: '이 장비 강화 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -1683,7 +1718,7 @@ async function handleRpgGearEnhanceButton(interaction, economy) {
   } catch (error) {
     await interaction.reply({
       content: `장비 강화 실패: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 
@@ -1696,7 +1731,7 @@ async function handleRpgDailyMissionButton(interaction, economy) {
   if (interaction.user.id !== userId) {
     await interaction.reply({
       content: '이 일일 의뢰 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -1714,7 +1749,7 @@ async function handleRpgDailyMissionButton(interaction, economy) {
   } catch (error) {
     await interaction.reply({
       content: `일일 의뢰 보상 실패: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 
@@ -1727,7 +1762,7 @@ async function handleRpgQuestButton(interaction, economy) {
   if (interaction.user.id !== userId) {
     await interaction.reply({
       content: '이 퀘스트 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -1745,7 +1780,7 @@ async function handleRpgQuestButton(interaction, economy) {
   } catch (error) {
     await interaction.reply({
       content: `퀘스트 보상 실패: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 
@@ -1758,7 +1793,7 @@ async function handleRpgSkillButton(interaction, economy) {
   if (interaction.user.id !== userId) {
     await interaction.reply({
       content: '이 스킬트리 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -1776,7 +1811,7 @@ async function handleRpgSkillButton(interaction, economy) {
   } catch (error) {
     await interaction.reply({
       content: `스킬트리 학습 실패: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 
@@ -1788,8 +1823,8 @@ async function handleRpgStoryButton(interaction, economy) {
 
   if (interaction.user.id !== userId) {
     await interaction.reply({
-      content: '이 스토리 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
-      ephemeral: true
+      content: '이 메인 퀘스트 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -1806,8 +1841,8 @@ async function handleRpgStoryButton(interaction, economy) {
     });
   } catch (error) {
     await interaction.reply({
-      content: `스토리 진행 실패: ${error.message}`,
-      ephemeral: true
+      content: `메인 퀘스트 진행 실패: ${error.message}`,
+      flags: MessageFlags.Ephemeral
     });
   }
 
@@ -1821,7 +1856,7 @@ async function handleRpgSelectMenu(interaction, economy) {
   if (interaction.user.id !== userId) {
     await interaction.reply({
       content: '이 RPG 선택 메뉴는 명령어를 실행한 유저만 사용할 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -1829,7 +1864,7 @@ async function handleRpgSelectMenu(interaction, economy) {
   if (!selected) {
     await interaction.reply({
       content: '선택한 RPG 항목이 없습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -1886,6 +1921,21 @@ async function handleRpgSelectMenu(interaction, economy) {
       });
       await updateWithRpgAssets(interaction, formatRpgPurchase(result), [result.item.assetId], {
         components: createRpgPostPurchaseRows(result, interaction.user.id)
+      });
+      return true;
+    }
+
+    if (action === 'craft') {
+      const result = await economy.craftRpgRecipe({
+        guildId: interaction.guildId,
+        userId: interaction.user.id,
+        username: interaction.user.username,
+        recipeId: selected,
+        quantity: 1
+      });
+      const assetIds = result.createdGear.map((gear) => gear.assetId).filter(Boolean);
+      await updateWithRpgAssets(interaction, formatRpgCraftingResult(result), assetIds.length > 0 ? assetIds : [getRpgItemConfig(result.recipe.resultItemId).assetId], {
+        components: createRpgActionLoopRows(interaction.user.id)
       });
       return true;
     }
@@ -2049,12 +2099,12 @@ async function handleRpgSelectMenu(interaction, economy) {
 
     await interaction.reply({
       content: '알 수 없는 RPG 선택 메뉴입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   } catch (error) {
     await interaction.reply({
       content: `RPG 선택 처리 실패: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 
@@ -2083,7 +2133,7 @@ async function createRpgRaidLobby({
   if (status.profile.rpg.startedAt <= 0) {
     throw new Error('먼저 `/rpg 시작`으로 캐릭터를 만들어야 합니다.');
   }
-  if (status.profile.level < raid.unlockLevel) {
+  if ((status.profile.rpg?.level ?? 1) < raid.unlockLevel) {
     throw new Error(`${raid.label} 길드 레이드는 Lv.${raid.unlockLevel}부터 모집할 수 있습니다.`);
   }
   if (!status.availableSkillIds.includes(normalizedSkillId)) {
@@ -2121,7 +2171,7 @@ async function handleRpgRaidLobbyButton(interaction, economy) {
     activeRpgRaidLobbies.delete(lobbyId);
     await interaction.reply({
       content: '만료되었거나 종료된 RPG 길드 레이드 모집입니다. `/rpg 길드레이드`로 다시 모집하세요.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -2186,7 +2236,7 @@ async function handleRpgRaidLobbyButton(interaction, economy) {
   } catch (error) {
     await interaction.reply({
       content: `RPG 길드 레이드 모집 처리 실패: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -2210,7 +2260,7 @@ async function joinRpgRaidLobby({ lobby, interaction, economy, now }) {
   if (status.profile.rpg.startedAt <= 0) {
     throw new Error('먼저 `/rpg 시작`으로 캐릭터를 만들어야 참가할 수 있습니다.');
   }
-  if (status.profile.level < lobby.raid.unlockLevel) {
+  if ((status.profile.rpg?.level ?? 1) < lobby.raid.unlockLevel) {
     throw new Error(`${lobby.raid.label} 참가 조건은 Lv.${lobby.raid.unlockLevel}+입니다.`);
   }
   if (status.profile.rpg.hp <= 1) {
@@ -2235,7 +2285,7 @@ function createRpgRaidLobbyMember(user, status) {
     userId: user.id,
     username: user.username,
     mention: formatDiscordUserMention(user),
-    level: status.profile.level,
+    level: status.profile.rpg?.level ?? 1,
     classLabel: status.classConfig.label,
     powerScore: status.adventureGuide.powerScore,
     hp: status.profile.rpg.hp,
@@ -2251,12 +2301,14 @@ async function handleRpgQuickButton(interaction, economy, services = {}) {
   const [, userId, action] = interaction.customId.split(':');
 
   if (interaction.user.id !== userId) {
-    await interaction.reply({
-      content: '이 RPG 메뉴 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
-      ephemeral: true
+    await safeReplyToInteraction(interaction, '이 RPG 메뉴 버튼은 명령어를 실행한 유저만 누를 수 있습니다.', {
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
+
+  const acknowledged = await safeDeferUpdate(interaction);
+  if (!acknowledged) return true;
 
   try {
     if (action === 'menu') {
@@ -2298,9 +2350,8 @@ async function handleRpgQuickButton(interaction, economy, services = {}) {
       });
 
       if (!result.battled) {
-        await interaction.reply({
-          content: `⏳ 아직 다시 전투할 수 없습니다. 남은 시간: ${formatDuration(result.remainingMs)}`,
-          ephemeral: true
+        await safeReplyToInteraction(interaction, `⏳ 아직 다시 전투할 수 없습니다. 남은 시간: ${formatDuration(result.remainingMs)}`, {
+          flags: MessageFlags.Ephemeral
         });
         return true;
       }
@@ -2512,16 +2563,14 @@ async function handleRpgQuickButton(interaction, economy, services = {}) {
       return true;
     }
   } catch (error) {
-    await interaction.reply({
-      content: `RPG 빠른 실행 실패: ${error.message}`,
-      ephemeral: true
+    await safeReplyToInteraction(interaction, `RPG 빠른 실행 실패: ${error.message}`, {
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
 
-  await interaction.reply({
-    content: '알 수 없는 RPG 메뉴 버튼입니다.',
-    ephemeral: true
+  await safeReplyToInteraction(interaction, '알 수 없는 RPG 메뉴 버튼입니다.', {
+    flags: MessageFlags.Ephemeral
   });
   return true;
 }
@@ -2534,7 +2583,7 @@ async function handleRpgBossActionButton(interaction, economy) {
     activeRpgBossSessions.delete(sessionId);
     await interaction.reply({
       content: '만료된 RPG 보스전입니다. `/rpg 보스`로 다시 도전하세요.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -2542,7 +2591,7 @@ async function handleRpgBossActionButton(interaction, economy) {
   if (entry.session.userId !== interaction.user.id) {
     await interaction.reply({
       content: '이 RPG 보스전은 시작한 유저만 조작할 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -2576,7 +2625,7 @@ async function handleRpgBossActionButton(interaction, economy) {
   } catch (error) {
     await interaction.reply({
       content: `RPG 보스 행동 실패: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 
@@ -2585,24 +2634,17 @@ async function handleRpgBossActionButton(interaction, economy) {
 
 function formatRpgCharacterCreation(user, status) {
   const { profile, classConfig, genderConfig, currentArea } = status;
-  const classRows = profile.rpg.unlockedClasses
-    .map((classId) => getRpgClassConfig(classId))
-    .map((config) => `- **${config.label}** — ${config.description}`);
-  const lockedRows = getRpgClassOptions()
-    .filter((option) => !profile.rpg.unlockedClasses.includes(option.value))
-    .map((option) => option.name);
-  const lockedText = lockedRows.length > 0
-    ? `\n가챠 해금 직업: ${lockedRows.join(', ')}`
-    : '';
+  const firstJobs = getRpgFirstJobOptions()
+    .map((option) => option.name)
+    .join(', ');
 
   return [
-    `🎭 **캐릭터 생성 / 직업 변경** — ${formatDiscordUserMention(user)}`,
-    `현재 캐릭터: **${genderConfig.label} ${classConfig.label}** / 현재 지역: **${currentArea.label}**`,
-    '아래 선택 메뉴에서 **성별 + 직업**을 한 번에 고르면 바로 적용됩니다.',
+    `🎭 **희희봇 RPG 모험가 등록** — ${formatDiscordUserMention(user)}`,
+    `현재 캐릭터: **${genderConfig.label} ${classConfig.label}** · 지역 **${currentArea.label}**`,
+    '모든 유저는 **모험가**로 시작합니다. 아래에서 외형만 고르면 등록됩니다.',
     '',
-    `선택 가능 직업:\n${classRows.join('\n')}${lockedText}`,
-    '',
-    '직업을 바꿔도 레벨/아이템은 유지됩니다. 다른 계열로 바꾸면 기존 전직은 해제됩니다.'
+    `Lv.10 1차 전직: ${firstJobs}`,
+    'Lv.15 듀얼 직업으로 두 번째 1차 직업을 선택할 수 있습니다.'
   ].join('\n');
 }
 
@@ -2613,7 +2655,7 @@ function formatRpgStart(user, result) {
     `🧭 **모험가 등록 완료** — ${formatDiscordUserMention(user)}`,
     `캐릭터: **${genderConfig.label} ${classConfig.label}**`,
     classConfig.description,
-    `현재 레벨: **Lv.${profile.level}** / 경험치: **${profile.totalXp.toLocaleString()} XP**`,
+    `현재 레벨: **Lv.${profile.rpg.level}** / 경험치: **${profile.rpg.totalXp.toLocaleString()} XP**`,
     `스탯: 공격력 **${derivedStats.attack}** / 방어력 **${derivedStats.defense}** / HP **${profile.rpg.hp.toLocaleString()}/${derivedStats.maxHp.toLocaleString()}** / MP **${profile.rpg.mp.toLocaleString()}/${derivedStats.maxMp.toLocaleString()}**`,
     `시작 지역: **${currentArea.label}**`,
     '',
@@ -2637,10 +2679,11 @@ function formatBattleResult(user, result) {
     : '';
   const lootRows = [
     result.drop ? `🎁 드랍 **${result.drop.label}** × ${result.drop.quantity}` : null,
+    formatRpgMaterialDrops(result.materialDrops),
     result.gearDrop ? `🧰 전리품 **${formatGearLabel(result.gearDrop)}**` : null,
     battle.ultimate ? `🌟 궁극기 **${battle.skillLabel}**${result.ultimateCharge?.spent ? ' · 게이지 소비' : ''}` : null,
     ultimateChargeText,
-    result.leveledUp ? `🎉 레벨업 Lv.${profile.level} / 보너스 +${formatRpgGoldReward(result.levelReward, result.levelRewardRequested)}` : null,
+    result.leveledUp ? `🎉 레벨업 Lv.${profile.rpg.level} / 보너스 +${formatRpgGoldReward(result.levelReward, result.levelRewardRequested)}` : null,
     formatRpgRewardCapHint(result)
   ].filter(Boolean);
 
@@ -2745,7 +2788,7 @@ function formatRpgBossFinish(user, result) {
   const rewardRows = [
     result.gearDrop ? `🧰 보스 전리품 **${formatGearLabel(result.gearDrop)}**` : null,
     ultimateChargeText,
-    result.leveledUp ? `🎉 레벨업 Lv.${profile.level} / 보너스 +${formatRpgGoldReward(result.levelReward, result.levelRewardRequested)}` : null,
+    result.leveledUp ? `🎉 레벨업 Lv.${profile.rpg.level} / 보너스 +${formatRpgGoldReward(result.levelReward, result.levelRewardRequested)}` : null,
     formatRpgRewardCapHint(result)
   ].filter(Boolean);
 
@@ -2763,88 +2806,6 @@ function formatRpgBossFinish(user, result) {
     `보스 처치: **${profile.rpg.bossKills[battle.bossId] ?? 0}회**`,
     formatRpgNextAction(profile, result)
   ].filter(Boolean).join('\n');
-}
-
-function formatRpgPvpChallenge(challenge) {
-  return [
-    `⚔️ **RPG PvP 대결 신청**`,
-    `${challenge.opponent.mention}, ${challenge.challenger.mention}님이 RPG 대결을 신청했습니다!`,
-    '60초 안에 수락하면 포켓몬 배틀처럼 번갈아 스킬 버튼을 눌러 직접 싸웁니다.',
-    '패배해도 골드는 잃지 않고, 승자만 보상을 받습니다.'
-  ].join('\n');
-}
-
-function formatRpgPvpTurnBoard(challenge, result) {
-  const { session } = result;
-  const active = session.fighters[session.turnSide];
-  const challenger = session.fighters.challenger;
-  const opponent = session.fighters.opponent;
-  const lastTurnText = result.turn
-    ? `\n최근 행동: ${formatRpgPvpTurnSummary(result.turn)}`
-    : '';
-  const introText = challenge
-    ? `\n${challenge.opponent.mention}님이 수락했습니다.`
-    : '';
-
-  return [
-    `⚔️ **RPG 턴제 PvP**${introText}`,
-    `🧭 전장 상태: **${session.turn}턴** · 현재 차례 **${formatRpgFighterName(active)}**`,
-    '',
-    `🔴 **신청자 · ${formatRpgFighterName(challenger)}**`,
-    formatRpgCombatantVitals(challenger),
-    `🔵 **상대 · ${formatRpgFighterName(opponent)}**`,
-    formatRpgCombatantVitals(opponent),
-    `🎒 현재 차례 소모품: 포션 **${active.inventory?.potion ?? 0}개**`,
-    `${formatRpgFighterName(active)}님이 스킬 또는 포션을 선택하세요.${lastTurnText}`
-  ].join('\n');
-}
-
-function formatRpgPvpResult(result) {
-  const { session, turn } = result;
-  const challenger = session.fighters.challenger;
-  const opponent = session.fighters.opponent;
-  const winnerFighter = result.winnerUserId === challenger.userId
-    ? challenger
-    : opponent;
-  const winnerProfile = result.winnerUserId === challenger.userId
-    ? result.challenger
-    : result.opponent;
-  const levelText = result.leveledUp
-    ? `\n🎉 승자 레벨업! Lv.${winnerProfile.level} / 레벨 보너스 +${formatRpgGoldReward(result.levelReward, result.levelRewardRequested)}`
-    : '';
-
-  const rows = [
-    `⚔️ **RPG 턴제 PvP 결과**`,
-    `마지막 행동: **${turn.attacker.characterClassLabel}**의 **${turn.skillLabel}** / 주사위 ${turn.roll} / 피해 **-${turn.damage} HP**`,
-    `${challenger.mention}: HP **${challenger.hp}/${challenger.maxHp}** / MP **${challenger.mp}/${challenger.maxMp}**`,
-    `${opponent.mention}: HP **${opponent.hp}/${opponent.maxHp}** / MP **${opponent.mp}/${opponent.maxMp}**`,
-    `승자: **${winnerFighter.mention}**`,
-    `승리 보상: +${result.rewards.xp.toLocaleString()} XP, +${formatRpgGoldReward(result.coinReward, result.requestedCoinReward ?? result.rewards.coins)}`,
-    `PvP 전적: 신청자 **${result.challenger.rpg.pvpWins}승 ${result.challenger.rpg.pvpLosses}패**, 상대 **${result.opponent.rpg.pvpWins}승 ${result.opponent.rpg.pvpLosses}패**`
-  ];
-
-  if (levelText) rows.push(levelText.trim());
-
-  return rows.join('\n');
-}
-
-function formatRpgPvpTurnSummary(turn) {
-  if (turn.action === 'potion' || turn.skillId === 'potion') {
-    return `**${formatRpgFighterName(turn.attacker)}**의 **회복 포션** · HP +${turn.healed}`;
-  }
-
-  const effectText = formatRpgStatusEffect(turn.statusEffect);
-  return `**${formatRpgFighterName(turn.attacker)}**의 **${turn.skillLabel}** · 주사위 ${turn.roll} · 피해 **-${turn.damage} HP**${effectText ? ` · ${effectText}` : ''}`;
-}
-
-function formatRpgFighterName(fighter = {}) {
-  const mention = String(fighter.mention ?? '').trim();
-  if (fighter.username && mention && mention !== '[object Object]') return `${fighter.username} ${mention}`;
-  if (fighter.username && fighter.userId) return `${fighter.username} <@${fighter.userId}>`;
-  if (fighter.username) return fighter.username;
-  if (mention && mention !== '[object Object]') return mention;
-  if (fighter.userId) return `<@${fighter.userId}>`;
-  return '전투원';
 }
 
 function formatRpgCombatantVitals({
@@ -2885,7 +2846,7 @@ function formatRpgMeter(current, max, width = 8) {
 
 function getRpgProfileDerivedStats(profile) {
   return getRpgDerivedStats({
-    level: profile.level,
+    level: profile.rpg.level,
     characterClass: profile.rpg?.characterClass,
     equipment: profile.rpg?.equipment,
     advancedClass: profile.rpg?.advancedClass,
@@ -2931,6 +2892,11 @@ function formatRpgRewardCapHint(result) {
   return `⚠️ 일일 상한 적용: 오늘 RPG 골드 ${earned.toLocaleString()}/${cap.toLocaleString()}`;
 }
 
+function formatRpgMaterialDrops(drops = []) {
+  if (!Array.isArray(drops) || drops.length <= 0) return null;
+  return `⛏️ 재료 ${drops.map((drop) => `**${drop.label}** × ${drop.quantity}`).join(', ')}`;
+}
+
 function formatRpgAreaTierLabel(unlockLevel) {
   if (unlockLevel <= 1) return 'Lv.1 입문';
   if (unlockLevel <= 3) return 'Lv.2~3 성장';
@@ -2943,36 +2909,6 @@ function formatDiscordUserMention(user = {}) {
   const rendered = String(user ?? '').trim();
   if (rendered && rendered !== '[object Object]') return rendered;
   return user.id ? `<@${user.id}>` : user.username ?? '상대';
-}
-
-function createRpgPvpTurnNotification(session) {
-  const activeFighter = session?.fighters?.[session.turnSide] ?? {};
-  if (!activeFighter.userId) return {};
-
-  return createRpgMentionNotification(
-    [activeFighter.userId],
-    `🎮 현재 RPG PvP 차례: <@${activeFighter.userId}>`
-  );
-}
-
-function createRpgMentionNotification(userIds, mentionContent) {
-  return {
-    mentionUserIds: userIds,
-    mentionContent
-  };
-}
-
-function formatRpgPvpBlocked(challenge, result) {
-  const blockedMention = result.blockedUserId === challenge.challenger.userId
-    ? challenge.challenger.mention
-    : challenge.opponent.mention;
-
-  return [
-    `⏳ **RPG PvP 대결 불가**`,
-    `${blockedMention}님은 아직 전투 대기 중입니다.`,
-    `남은 시간: **${formatDuration(result.remainingMs)}**`,
-    '잠시 후 다시 대결을 신청하세요.'
-  ].join('\n');
 }
 
 function formatRpgMainMenu(user, status) {
@@ -2996,7 +2932,7 @@ function formatRpgMainMenu(user, status) {
 
   return [
     `🎮 **RPG 메인 허브** — ${user.username}`,
-    `Lv.${profile.level} **${classConfig.label}${advancedText}** · 지역 **${currentArea.label}** · 전투력 **${adventureGuide.powerScore}** · 골드 **${getRpgGold(profile).toLocaleString()}**`,
+    `Lv.${profile.rpg.level} **${classConfig.label}${advancedText}** · 지역 **${currentArea.label}** · 전투력 **${adventureGuide.powerScore}** · 골드 **${getRpgGold(profile).toLocaleString()}**`,
     `HP **${profile.rpg.hp}/${derivedStats.maxHp}** · MP **${profile.rpg.mp}/${derivedStats.maxMp}** · XP ${adventureGuide.levelProgress.current}/${adventureGuide.levelProgress.required} (${adventureGuide.levelProgress.percent}%)`,
     `목표: **${adventureGuide.mainObjective.label}** — ${adventureGuide.mainObjective.progressText}`,
     `다음 행동: **${adventureGuide.recommendedAction.label}** · \`${adventureGuide.recommendedAction.command}\``,
@@ -3015,7 +2951,7 @@ function formatRpgSectionMenu(user, status, section) {
 
   return [
     `${sectionConfig.emoji} **RPG ${sectionConfig.label} 메뉴** — ${user.username}`,
-    `현재 지역 **${currentArea.label}** · Lv.${profile.level} · 전투력 **${adventureGuide.powerScore}** · HP **${hpText}** · MP **${mpText}**`,
+    `현재 지역 **${currentArea.label}** · Lv.${profile.rpg.level} · 전투력 **${adventureGuide.powerScore}** · HP **${hpText}** · MP **${mpText}**`,
     `다음 추천: **${adventureGuide.recommendedAction.label}** — ${adventureGuide.recommendedAction.reason}`,
     '',
     sectionConfig.description,
@@ -3067,7 +3003,7 @@ function formatRpgTutorialClaim(result) {
   const itemRewards = formatRewardItems(result.rewards.items);
   const nextActionStep = getRpgTutorialNextActionStep(result.tutorial);
   const levelText = result.leveledUp
-    ? `\n🎉 레벨업! Lv.${result.profile.level} / 레벨 보너스 +${result.levelReward.toLocaleString()}골드`
+    ? `\n🎉 레벨업! Lv.${result.profile.rpg.level} / 레벨 보너스 +${result.levelReward.toLocaleString()}골드`
     : '';
 
   return [
@@ -3078,7 +3014,7 @@ function formatRpgTutorialClaim(result) {
     nextActionStep
       ? `다음 목표: **${nextActionStep.label}** · \`${nextActionStep.command}\``
       : '다음 목표: 초보자 여정을 모두 완료했습니다.',
-    `현재 경험치: **${result.profile.totalXp.toLocaleString()} XP** / 골드: **${getRpgGold(result.profile).toLocaleString()}골드**${levelText}`
+    `현재 경험치: **${result.profile.rpg.totalXp.toLocaleString()} XP** / 골드: **${getRpgGold(result.profile).toLocaleString()}골드**${levelText}`
   ].join('\n');
 }
 
@@ -3135,9 +3071,6 @@ function formatRpgStatus(user, status) {
   const winRate = profile.rpg.battles === 0
     ? 0
     : Math.round((profile.rpg.wins / profile.rpg.battles) * 100);
-  const pvpWinRate = profile.rpg.pvpBattles === 0
-    ? 0
-    : Math.round((profile.rpg.pvpWins / profile.rpg.pvpBattles) * 100);
   const cooldownText = cooldownRemainingMs > 0
     ? `전투 대기: **${formatDuration(cooldownRemainingMs)}**`
     : '전투 가능: **지금 가능**';
@@ -3148,7 +3081,7 @@ function formatRpgStatus(user, status) {
 
   return [
     `📜 **${user.username}님의 RPG 상태**`,
-    `레벨: **Lv.${profile.level}** / 경험치: **${profile.totalXp.toLocaleString()} XP**`,
+    `레벨: **Lv.${profile.rpg.level}** / 경험치: **${profile.rpg.totalXp.toLocaleString()} XP**`,
     `레벨 진행: ${adventureGuide.levelProgress.bar} **${adventureGuide.levelProgress.current}/${adventureGuide.levelProgress.required} XP** (${adventureGuide.levelProgress.percent}%)`,
     `HP: **${profile.rpg.hp.toLocaleString()} / ${derivedStats.maxHp.toLocaleString()}**`,
     `MP: **${profile.rpg.mp.toLocaleString()} / ${derivedStats.maxMp.toLocaleString()}**`,
@@ -3163,9 +3096,7 @@ function formatRpgStatus(user, status) {
     `해금 직업: **${profile.rpg.unlockedClasses.length}개** / 사용 가능 스킬: **${availableSkillIds.length}개**`,
     `해금 지역: **${unlockedAreas.map((area) => area.label).join(', ')}**`,
     `전적: **${profile.rpg.wins}승 ${profile.rpg.losses}패 / ${profile.rpg.battles}전**`,
-    `PvP: **${profile.rpg.pvpWins}승 ${profile.rpg.pvpLosses}패 / ${profile.rpg.pvpBattles}전** (승률 ${pvpWinRate}%)`,
     `승률: **${winRate}%** / 발견 몬스터: **${discoveredCount}종**`,
-    `가챠: **${profile.rpg.gacha.totalPulls.toLocaleString()}회** / 천장 카운트: **${profile.rpg.gacha.pity.toLocaleString()}**`,
     `오늘 RPG 반복 보상: ${dailyGoldText}`,
     `행동 가능: ${actionAvailabilityText}`,
     cooldownText,
@@ -3193,7 +3124,7 @@ function formatRpgDailyMissions(status) {
 function formatRpgDailyClaim(result) {
   const itemRewards = formatRewardItems(result.rewards.items);
   const levelText = result.leveledUp
-    ? `\n🎉 레벨업! Lv.${result.profile.level} / 레벨 보너스 +${result.levelReward.toLocaleString()}골드`
+    ? `\n🎉 레벨업! Lv.${result.profile.rpg.level} / 레벨 보너스 +${result.levelReward.toLocaleString()}골드`
     : '';
 
   return [
@@ -3201,7 +3132,7 @@ function formatRpgDailyClaim(result) {
     `의뢰: **${result.mission.label}**`,
     `보상: +${result.rewards.xp.toLocaleString()} XP, +${result.rewards.coins.toLocaleString()}골드${itemRewards ? `, ${itemRewards}` : ''}`,
     `오늘 완료한 의뢰: **${Object.keys(result.profile.rpg.daily.claimedMissions).length.toLocaleString()}개**`,
-    `현재 경험치: **${result.profile.totalXp.toLocaleString()} XP** / 골드: **${getRpgGold(result.profile).toLocaleString()}골드**${levelText}`
+    `현재 경험치: **${result.profile.rpg.totalXp.toLocaleString()} XP** / 골드: **${getRpgGold(result.profile).toLocaleString()}골드**${levelText}`
   ].join('\n');
 }
 
@@ -3232,6 +3163,107 @@ function formatRpgPurchase(result) {
     `아이템: **${result.item.label}** × ${result.quantity.toLocaleString()}`,
     `사용 금액: **${result.totalPrice.toLocaleString()}골드**`,
     `현재 골드: **${getRpgGold(result.profile).toLocaleString()}골드**`
+  ].join('\n');
+}
+
+function formatRpgCraftingMenu(status, category = null) {
+  const normalizedCategory = normalizeNullableRpgCraftingCategory(category);
+  const recipes = status.craftingRecipes
+    .filter((recipe) => !normalizedCategory || recipe.category === normalizedCategory)
+    .slice(0, 8);
+  const masteryRows = status.craftingMastery
+    .slice(0, 4)
+    .map((mastery) => `- ${mastery.label} Lv.${mastery.level} ${mastery.progressBar}`);
+  const recipeRows = recipes.map((recipe) => {
+    const resultItem = getRpgItemConfig(recipe.resultItemId);
+    const materialText = recipe.materialRows
+      .slice(0, 3)
+      .map((row) => `${row.ready ? '✅' : '❌'} ${row.label} ${row.owned}/${row.required}`)
+      .join(', ');
+    const lockText = recipe.canCraft
+      ? '제작 가능'
+      : [
+        recipe.levelReady ? null : `Lv.${recipe.requiredLevel}`,
+        recipe.masteryReady ? null : `${recipe.mastery.label} Lv.${recipe.requiredMasteryLevel}`,
+        recipe.classReady ? null : '대장장이 전용',
+        recipe.materialsReady ? null : '재료 부족'
+      ].filter(Boolean).join(' · ');
+    return `- **${recipe.hidden ? '히든 ' : ''}${recipe.label}** → ${resultItem.label} · ${recipe.gold.toLocaleString()}골드 · ${lockText}\n  ${materialText || '재료 없음'}`;
+  });
+
+  return [
+    '⚒️ **RPG 제작소**',
+    `보유 골드: **${getRpgGold(status.profile).toLocaleString()}골드** · 제작 축복 **${status.craftingBlessing}%**`,
+    masteryRows.length > 0 ? `숙련도\n${masteryRows.join('\n')}` : null,
+    recipes.length > 0 ? `레시피\n${recipeRows.join('\n')}` : '표시할 레시피가 없습니다.',
+    '',
+    '명령어 예시: `/rpg 제작 레시피:철 장검` · 거래는 `/rpg 거래소`에서 합니다.'
+  ].filter(Boolean).join('\n');
+}
+
+function formatRpgCraftingResult(result) {
+  const resultRows = result.results.map((craft, index) => {
+    if (!craft.success) {
+      return `${index + 1}. ❌ 실패 · 판정 ${craft.roll}/${craft.successRate} · 축복 증가`;
+    }
+    const product = craft.gear
+      ? `**${formatGearLabel(craft.gear)}**`
+      : `**${craft.rewardItem.label}** × ${craft.rewardItem.quantity}`;
+    return `${index + 1}. ✅ 성공 · ${craft.quality?.label ?? '보통'} · ${product}`;
+  });
+
+  return [
+    `⚒️ **제작 결과: ${result.recipe.label}**`,
+    `성공 **${result.successCount}회** / 실패 **${result.failureCount}회**`,
+    resultRows.join('\n'),
+    `숙련도: **${result.mastery.label} Lv.${result.mastery.level}** ${result.mastery.progressBar}`,
+    `제작 축복: **${result.blessingBefore}% → ${result.blessingAfter}%**`,
+    `현재 골드: **${getRpgGold(result.profile).toLocaleString()}골드**`
+  ].join('\n');
+}
+
+function formatRpgMarketplace(result) {
+  const listings = result.marketListings ?? [];
+  const rows = listings.slice(0, 10).map((listing) =>
+    `- \`${listing.id}\` **${listing.label}**${listing.kind === 'item' ? ` × ${listing.quantity}` : ''} · ${listing.price.toLocaleString()}골드 · 판매자 ${listing.sellerUsername}`
+  );
+
+  return [
+    `🏦 **RPG 거래소${result.query ? ` 검색: ${result.query}` : ''}**`,
+    rows.length > 0 ? rows.join('\n') : '등록된 매물이 없습니다.',
+    '',
+    '검색: `/rpg 거래소 작업:검색 품목:용비늘`',
+    '판매: `/rpg 거래소 작업:판매 품목:철괴 가격:100 수량:1`',
+    '구매/취소: `품목`에 매물 ID를 넣으세요.'
+  ].join('\n');
+}
+
+function formatRpgMarketListingCreated(result) {
+  const { listing } = result;
+  return [
+    '🏦 **거래소 등록 완료**',
+    `매물 ID: \`${listing.id}\``,
+    `품목: **${listing.label}**${listing.kind === 'item' ? ` × ${listing.quantity}` : ''}`,
+    `가격: **${listing.price.toLocaleString()}골드**`
+  ].join('\n');
+}
+
+function formatRpgMarketPurchase(result) {
+  const { listing } = result;
+  return [
+    '🏦 **거래소 구매 완료**',
+    `품목: **${listing.label}**${listing.kind === 'item' ? ` × ${listing.quantity}` : ''}`,
+    `가격: **${listing.price.toLocaleString()}골드**`,
+    `현재 골드: **${getRpgGold(result.buyer).toLocaleString()}골드**`
+  ].join('\n');
+}
+
+function formatRpgMarketCancel(result) {
+  const { listing } = result;
+  return [
+    '🏦 **거래소 등록 취소**',
+    `품목: **${listing.label}**${listing.kind === 'item' ? ` × ${listing.quantity}` : ''}`,
+    '아이템이 인벤토리로 반환되었습니다.'
   ].join('\n');
 }
 
@@ -3445,8 +3477,9 @@ function formatRpgRest(result) {
 
 function formatRpgExplore(user, result) {
   const rewardRows = [
+    formatRpgMaterialDrops(result.materialDrops),
     result.gearDrop ? `🧰 획득 전리품 **${formatGearLabel(result.gearDrop)}**` : null,
-    result.leveledUp ? `🎉 레벨업 Lv.${result.profile.level} / 보너스 +${formatRpgGoldReward(result.levelReward, result.levelRewardRequested)}` : null,
+    result.leveledUp ? `🎉 레벨업 Lv.${result.profile.rpg.level} / 보너스 +${formatRpgGoldReward(result.levelReward, result.levelRewardRequested)}` : null,
     formatRpgRewardCapHint(result)
   ].filter(Boolean);
 
@@ -3468,14 +3501,16 @@ function formatRpgDungeon(user, result) {
     `${floor.floor}층 ${floor.eventLabel}: +${floor.rewards.xp} XP, +${floor.rewards.coins}골드${floor.damageTaken ? `, 피해 ${floor.damageTaken}` : ''}`
   );
   const rewardRows = [
+    formatRpgMaterialDrops(result.materialDrops),
     result.gearDrop ? `🧰 클리어 전리품 **${formatGearLabel(result.gearDrop)}**` : null,
-    result.leveledUp ? `🎉 레벨업 Lv.${result.profile.level} / 보너스 +${formatRpgGoldReward(result.levelReward, result.levelRewardRequested)}` : null,
+    result.leveledUp ? `🎉 레벨업 Lv.${result.profile.rpg.level} / 보너스 +${formatRpgGoldReward(result.levelReward, result.levelRewardRequested)}` : null,
     formatRpgRewardCapHint(result)
   ].filter(Boolean);
 
   return [
     `🏰 **RPG 던전 결과** — ${formatDiscordUserMention(user)}`,
-    `📍 지역: **${result.areaConfig.label}** · 깊이 **${result.depth}층**`,
+    `📍 던전: **${result.dungeonConfig?.label ?? result.areaConfig.label}** · 지역 **${result.areaConfig.label}** · 깊이 **${result.depth}층**`,
+    result.dungeonConfig?.hidden ? '🗝️ 히든 던전 탐사를 완료했습니다.' : null,
     rows.join('\n'),
     `🎁 합계: +${result.totalXp.toLocaleString()} XP, +${formatRpgGoldReward(result.totalCoins, result.requestedTotalCoins)} · 피해 **${result.totalDamage.toLocaleString()}**`,
     rewardRows.length > 0 ? rewardRows.join('\n') : null,
@@ -3568,7 +3603,7 @@ function formatRpgClassPath(status) {
     '🧬 **RPG 전직 트리**',
     `현재 계열: **${classConfig.label}**${currentAdvanced}`,
     `직업 숙련: **Lv.${status.classMastery.level}** ${status.classMastery.progressBar} ${status.classMastery.progress}/${status.classMastery.required}`,
-    `현재 레벨: **Lv.${profile.level}** / 스탯 공격력 **${derivedStats.attack}** · 방어력 **${derivedStats.defense}** · HP **${derivedStats.maxHp}** · MP **${derivedStats.maxMp}**`,
+    `현재 레벨: **Lv.${profile.rpg.level}** / 스탯 공격력 **${derivedStats.attack}** · 방어력 **${derivedStats.defense}** · HP **${derivedStats.maxHp}** · MP **${derivedStats.maxMp}**`,
     rows.join('\n'),
     '',
     '전직 가능한 항목은 아래 선택 메뉴로 바로 진행할 수 있습니다.'
@@ -3576,11 +3611,37 @@ function formatRpgClassPath(status) {
 }
 
 function formatRpgAdvanceClass(result) {
+  if (result.classConfig && !result.advancedClassConfig) {
+    return [
+      '🛡️ **1차 전직 완료**',
+      `직업: **${result.classConfig.label}**`,
+      result.classConfig.description,
+      `공격력: **${result.derivedStats.attack}** / 방어력: **${result.derivedStats.defense}** / 최대 HP: **${result.derivedStats.maxHp}** / 최대 MP: **${result.derivedStats.maxMp}**`
+    ].join('\n');
+  }
+
   return [
     `🛡️ **전직 완료**`,
     `전직: **${result.advancedClassConfig.label}**`,
     result.advancedClassConfig.description,
     `공격력: **${result.derivedStats.attack}** / 방어력: **${result.derivedStats.defense}** / 최대 HP: **${result.derivedStats.maxHp}** / 최대 MP: **${result.derivedStats.maxMp}**`
+  ].join('\n');
+}
+
+function formatRpgDualJob(result) {
+  return [
+    '🧩 **듀얼 직업 등록 완료**',
+    `보조 직업: **${result.classConfig.label}**`,
+    result.classConfig.description,
+    '전투 전 `/rpg 직업변경`으로 주/보조 직업을 전환할 수 있습니다.'
+  ].join('\n');
+}
+
+function formatRpgJobChange(result) {
+  return [
+    '🔁 **직업 변경 완료**',
+    `활성 직업: **${result.classConfig.label}** (${result.jobSlot === 'secondary' ? '보조' : '주'} 슬롯)`,
+    `공격력 **${result.derivedStats.attack}** · 방어력 **${result.derivedStats.defense}** · HP **${result.derivedStats.maxHp}** · MP **${result.derivedStats.maxMp}**`
   ].join('\n');
 }
 
@@ -3601,7 +3662,7 @@ function formatRpgAreaEnter(result) {
     `현재 지역: **${areaConfig.label}**`,
     areaConfig.description,
     `보상 배율: XP ×${areaConfig.xpMultiplier} / 골드 ×${areaConfig.coinMultiplier}`,
-    `현재 레벨: **Lv.${profile.level}**`,
+    `현재 레벨: **Lv.${profile.rpg.level}**`,
     nextText,
     '',
     '이제 지역 옵션을 비우고 `/rpg 탐험`, `/rpg 전투`, `/rpg 던전`을 실행하면 현재 지역에서 진행됩니다.'
@@ -3615,10 +3676,10 @@ function formatRpgStory(status) {
   });
 
   return [
-    '📖 **RPG 스토리 로그**',
+    '📖 **RPG 메인 퀘스트**',
     rows.join('\n'),
     '',
-    '진행 가능한 챕터는 선택 메뉴로 바로 완료할 수 있습니다. 명령어를 쓸 때도 한글 챕터 이름을 선택하세요.'
+    '진행 가능한 메인 퀘스트는 선택 메뉴로 바로 완료할 수 있습니다.'
   ].join('\n');
 }
 
@@ -3626,14 +3687,14 @@ function formatRpgStoryProgress(result) {
   const itemRewards = Object.entries(result.rewards.items)
     .map(([itemId, count]) => `${getRpgItemConfig(itemId).label} × ${count}`)
     .join(', ');
-  const levelText = result.leveledUp ? `\n🎉 레벨업! Lv.${result.profile.level}` : '';
+  const levelText = result.leveledUp ? `\n🎉 레벨업! Lv.${result.profile.rpg.level}` : '';
 
   return [
-    `📖 **스토리 완료**`,
-    `챕터: **${result.chapter.label}**`,
+    `📖 **메인 퀘스트 완료**`,
+    `퀘스트: **${result.chapter.label}**`,
     result.chapter.description,
     `보상: +${result.rewards.xp.toLocaleString()} XP, +${result.rewards.coins.toLocaleString()}골드${itemRewards ? `, ${itemRewards}` : ''}`,
-    `현재 경험치: **${result.profile.totalXp.toLocaleString()} XP** / 골드: **${getRpgGold(result.profile).toLocaleString()}골드**${levelText}`
+    `현재 경험치: **${result.profile.rpg.totalXp.toLocaleString()} XP** / 골드: **${getRpgGold(result.profile).toLocaleString()}골드**${levelText}`
   ].join('\n');
 }
 
@@ -3655,13 +3716,13 @@ function formatRpgCodex(status) {
 }
 
 function formatRpgCodexClaim(result) {
-  const levelText = result.leveledUp ? `\n🎉 레벨업! Lv.${result.profile.level}` : '';
+  const levelText = result.leveledUp ? `\n🎉 레벨업! Lv.${result.profile.rpg.level}` : '';
 
   return [
     `📚 **도감 보상 수령**`,
     `몬스터: **${result.codex.monster}**`,
     `보상: +${result.rewards.xp.toLocaleString()} XP, +${result.rewards.coins.toLocaleString()}골드`,
-    `현재 경험치: **${result.profile.totalXp.toLocaleString()} XP** / 골드: **${getRpgGold(result.profile).toLocaleString()}골드**${levelText}`
+    `현재 경험치: **${result.profile.rpg.totalXp.toLocaleString()} XP** / 골드: **${getRpgGold(result.profile).toLocaleString()}골드**${levelText}`
   ].join('\n');
 }
 
@@ -3673,9 +3734,10 @@ function formatRpgRaid(user, result) {
     ? `🌟 궁극기 게이지 ${formatRpgMeter(result.ultimateCharge.after, result.ultimateCharge.max)} **${result.ultimateCharge.after}/${result.ultimateCharge.max}**`
     : '';
   const rewardRows = [
+    formatRpgMaterialDrops(result.materialDrops),
     result.gearDrop ? `🧰 레이드 전리품 **${formatGearLabel(result.gearDrop)}**` : null,
     ultimateChargeText,
-    result.leveledUp ? `🎉 레벨업 Lv.${profile.level} / 보너스 +${formatRpgGoldReward(result.levelReward, result.levelRewardRequested)}` : null,
+    result.leveledUp ? `🎉 레벨업 Lv.${profile.rpg.level} / 보너스 +${formatRpgGoldReward(result.levelReward, result.levelRewardRequested)}` : null,
     formatRpgRewardCapHint(result)
   ].filter(Boolean);
 
@@ -3731,9 +3793,10 @@ function formatRpgGuildRaid(user, result) {
     ? `🌟 궁극기 게이지 ${formatRpgMeter(result.ultimateCharge.after, result.ultimateCharge.max)} **${result.ultimateCharge.after}/${result.ultimateCharge.max}**`
     : '';
   const rewardRows = [
+    formatRpgMaterialDrops(result.materialDrops),
     result.gearDrop ? `🧰 길드 레이드 전리품 **${formatGearLabel(result.gearDrop)}**` : null,
     ultimateChargeText,
-    result.leveledUp ? `🎉 레벨업 Lv.${profile.level} / 보너스 +${formatRpgGoldReward(result.levelReward, result.levelRewardRequested)}` : null,
+    result.leveledUp ? `🎉 레벨업 Lv.${profile.rpg.level} / 보너스 +${formatRpgGoldReward(result.levelReward, result.levelRewardRequested)}` : null,
     formatRpgRewardCapHint(result)
   ].filter(Boolean);
 
@@ -3778,14 +3841,14 @@ function formatRpgQuestClaim(result) {
     .map(([itemId, count]) => `${getRpgItemConfig(itemId).label} × ${count}`)
     .join(', ');
   const levelText = result.leveledUp
-    ? `\n🎉 레벨업! Lv.${result.profile.level} / 레벨 보너스 +${result.levelReward.toLocaleString()}골드`
+    ? `\n🎉 레벨업! Lv.${result.profile.rpg.level} / 레벨 보너스 +${result.levelReward.toLocaleString()}골드`
     : '';
 
   return [
     `✅ **퀘스트 보상 수령**`,
     `퀘스트: **${result.quest.label}**`,
     `보상: +${result.rewards.xp.toLocaleString()} XP, +${result.rewards.coins.toLocaleString()}골드${itemRewards ? `, ${itemRewards}` : ''}`,
-    `현재 경험치: **${result.profile.totalXp.toLocaleString()} XP** / 골드: **${getRpgGold(result.profile).toLocaleString()}골드**${levelText}`
+    `현재 경험치: **${result.profile.rpg.totalXp.toLocaleString()} XP** / 골드: **${getRpgGold(result.profile).toLocaleString()}골드**${levelText}`
   ].join('\n');
 }
 
@@ -3834,15 +3897,21 @@ async function updateWithRpgAssets(interaction, content, assetIds = [], extraPay
 }
 
 async function replyWithRpgCard(interaction, content, extraPayload = {}) {
-  await interaction.reply(createRpgVisualPayload(content, [], extraPayload));
+  await safeReplyToInteraction(interaction, createRpgVisualPayload(content, [], extraPayload));
 }
 
 async function updateWithRpgCard(interaction, content, extraPayload = {}) {
-  await interaction.update(createRpgVisualPayload(content, [], extraPayload));
+  await sendInteractionUpdate(interaction, createRpgVisualPayload(content, [], extraPayload));
 }
 
 async function sendRpgAssets(interaction, method, content, assetIds = [], extraPayload = {}) {
-  await interaction[method](createRpgVisualPayload(content, assetIds, extraPayload));
+  const payload = createRpgVisualPayload(content, assetIds, extraPayload);
+  if (method === 'update') {
+    await sendInteractionUpdate(interaction, payload);
+    return;
+  }
+
+  await safeReplyToInteraction(interaction, payload);
 }
 
 function getBattleAssetIds(result) {
@@ -3885,43 +3954,6 @@ function getGachaAssetIds(result) {
     .filter(Boolean);
 }
 
-function createRpgPvpChallengeRow(challengeId) {
-  return new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`rpg_pvp_accept:${challengeId}`)
-      .setLabel('RPG 대결 수락')
-      .setStyle(ButtonStyle.Success),
-    new ButtonBuilder()
-      .setCustomId(`rpg_pvp_decline:${challengeId}`)
-      .setLabel('거절')
-      .setStyle(ButtonStyle.Secondary)
-  );
-}
-
-function createRpgPvpActionRow(session) {
-  const active = session.fighters[session.turnSide];
-  const buttons = active.availableSkillIds.slice(0, 4).map((skillId) => {
-    const skill = getRpgSkillConfig(skillId);
-    const costText = skill.mpCost > 0 ? ` (${skill.mpCost}MP)` : '';
-
-    return new ButtonBuilder()
-      .setCustomId(`rpg_pvp_action:${session.id}:${skillId}`)
-      .setLabel(`${skill.label}${costText}`)
-      .setStyle(skillId === 'basic' ? ButtonStyle.Primary : ButtonStyle.Success)
-      .setDisabled(active.mp < skill.mpCost);
-  });
-
-  buttons.push(
-    new ButtonBuilder()
-      .setCustomId(`rpg_pvp_action:${session.id}:potion`)
-      .setLabel(`포션 (${active.inventory?.potion ?? 0})`)
-      .setStyle(ButtonStyle.Danger)
-      .setDisabled((active.inventory?.potion ?? 0) <= 0 || active.hp >= active.maxHp)
-  );
-
-  return new ActionRowBuilder().addComponents(...buttons.slice(0, 5));
-}
-
 function createRpgBossActionRow(session) {
   const buttons = session.player.availableSkillIds.map((skillId) => {
     const skill = getRpgSkillConfig(skillId);
@@ -3946,22 +3978,23 @@ function createRpgBossActionRow(session) {
       .setDisabled((session.player.inventory.potion ?? 0) <= 0)
   );
 
-  return new ActionRowBuilder().addComponents(...buttons.slice(0, 5));
+  return new ActionRowBuilder().addComponents(...buttons.slice(0, 3));
 }
 
 function createRpgStartRows(status, userId) {
   const genderOptions = getRpgGenderOptions();
-  const options = status.profile.rpg.unlockedClasses
+  const options = getRpgStartClassOptions()
+    .map((option) => option.value)
     .flatMap((classId) => genderOptions.map((gender) => {
       const classConfig = getRpgClassConfig(classId);
       return createRpgSelectOption(
         `${gender.name} ${classConfig.label}`,
         `${classId}|${gender.value}`,
-        `${classConfig.description} · 공격 ${classConfig.attackBonus >= 0 ? '+' : ''}${classConfig.attackBonus}`
+        `${classConfig.description} · 공격 ${classConfig.powerBonus >= 0 ? '+' : ''}${classConfig.powerBonus}`
       );
     }));
 
-  return createRpgSelectRows(userId, 'start', '성별과 직업을 한 번에 선택하세요', options);
+  return createRpgSelectRows(userId, 'start', '모험가 외형을 선택하세요', options);
 }
 
 function createRpgPostStartRows(_profile, userId) {
@@ -4126,6 +4159,26 @@ function createRpgShopViewRows(userId) {
   return createRpgCompactViewRows(createRpgShopRows(userId), userId);
 }
 
+function createRpgCraftingRows(status, userId, category = null) {
+  const normalizedCategory = normalizeNullableRpgCraftingCategory(category);
+  const options = status.craftingRecipes
+    .filter((recipe) => !normalizedCategory || recipe.category === normalizedCategory)
+    .slice(0, 10)
+    .map((recipe) => {
+      const resultItem = getRpgItemConfig(recipe.resultItemId);
+      return createRpgSelectOption(
+        `${recipe.hidden ? '히든 ' : ''}${recipe.label}`,
+        recipe.id,
+        `${resultItem.label} · ${recipe.canCraft ? '제작 가능' : '조건/재료 확인 필요'}`
+      );
+    });
+
+  return createRpgCompactViewRows(
+    createRpgSelectRows(userId, 'craft', '제작할 레시피를 선택하세요', options),
+    userId
+  );
+}
+
 function createRpgPostPurchaseRows(result, userId) {
   const buttons = [];
   if (result.item.type === 'equipment') {
@@ -4262,11 +4315,7 @@ function createRpgRaidLobbyRows(lobby) {
       new ButtonBuilder()
         .setCustomId(`rpg_raid_lobby:start:${lobby.id}`)
         .setLabel('출발')
-        .setStyle(ButtonStyle.Danger),
-      new ButtonBuilder()
-        .setCustomId(`rpg_raid_lobby:cancel:${lobby.id}`)
-        .setLabel('취소')
-        .setStyle(ButtonStyle.Secondary)
+        .setStyle(ButtonStyle.Danger)
     )
   ];
 }
@@ -4332,7 +4381,7 @@ function createRpgStoryRows(status, userId) {
       )
     );
 
-  return createRpgSelectRows(userId, 'story', '진행할 스토리 챕터를 선택하세요', options);
+  return createRpgSelectRows(userId, 'story', '진행할 메인 퀘스트를 선택하세요', options);
 }
 
 function createRpgStoryViewRows(status, userId) {
@@ -4369,7 +4418,7 @@ const RPG_MENU_SECTION_CONFIGS = Object.freeze({
   adventure: Object.freeze({
     label: '모험',
     emoji: '🌍',
-    description: '탐험, 월드맵 이동, 스토리, 도감처럼 지역 진행과 기록을 이어가는 메뉴입니다.'
+    description: '탐험, 월드맵 이동, 메인 퀘스트, 도감처럼 지역 진행과 기록을 이어가는 메뉴입니다.'
   }),
   growth: Object.freeze({
     label: '성장',
@@ -4384,7 +4433,7 @@ const RPG_MENU_SECTION_CONFIGS = Object.freeze({
   today: Object.freeze({
     label: '오늘 할 일',
     emoji: '✅',
-    description: '일일 의뢰, 퀘스트, 스토리, 도감 보상처럼 오늘 먼저 챙길 보상을 모았습니다.'
+    description: '일일 의뢰, 퀘스트, 메인 퀘스트, 도감 보상처럼 오늘 먼저 챙길 보상을 모았습니다.'
   })
 });
 
@@ -4460,7 +4509,7 @@ function getRpgSmartRecommendations(status) {
     add('gear', `🛡️ 전리품 ${gearCount}개 확인`, ButtonStyle.Primary);
   }
   if (progressableStoryCount > 0) {
-    add('story', `📖 스토리 진행 ${progressableStoryCount}개`, ButtonStyle.Primary);
+    add('story', `📖 메인 퀘스트 ${progressableStoryCount}개`, ButtonStyle.Primary);
   }
   if (claimableCodexCount > 0) {
     add('codex', `📚 도감 보상 ${claimableCodexCount}개`, ButtonStyle.Success);
@@ -4503,7 +4552,7 @@ function createRpgSmartRecommendationRows(status, userId) {
 }
 
 function createRpgSectionRows(status, userId, section) {
-  const raidLocked = status.profile.level < getRpgRaidConfig('slime_horde').unlockLevel;
+  const raidLocked = (status.profile.rpg?.level ?? 1) < getRpgRaidConfig('slime_horde').unlockLevel;
   const hasGear = Object.keys(status.profile.rpg.gearInventory ?? {}).length > 0;
   const hasSkillPoints = (status.skillPoints?.available ?? 0) > 0;
   const hasAdvance = status.classPaths.some((advanced) => advanced.canAdvance);
@@ -4526,7 +4575,7 @@ function createRpgSectionRows(status, userId, section) {
     return createButtonRows([
       createRpgQuickButton(userId, 'explore', '🧭 탐험', ButtonStyle.Primary),
       createRpgQuickButton(userId, 'area', '🗺️ 월드맵', ButtonStyle.Secondary),
-      createRpgQuickButton(userId, 'story', hasStoryProgress ? '📖 스토리 진행' : '📖 스토리', ButtonStyle.Primary),
+      createRpgQuickButton(userId, 'story', hasStoryProgress ? '📖 메인 퀘스트' : '📖 메인', ButtonStyle.Primary),
       createRpgQuickButton(userId, 'codex', hasCodexClaim ? '📚 도감 보상' : '📚 도감', ButtonStyle.Success),
       createRpgQuickButton(userId, 'menu', '🎮 허브', ButtonStyle.Secondary)
     ]);
@@ -4555,7 +4604,7 @@ function createRpgSectionRows(status, userId, section) {
   return createButtonRows([
     createRpgQuickButton(userId, 'daily', hasDailyClaim ? '🎁 일일 보상 받기' : '📋 일일 의뢰', ButtonStyle.Success),
     createRpgQuickButton(userId, 'quest', hasQuestClaim ? '✅ 퀘스트 보상' : '🧾 퀘스트', ButtonStyle.Success),
-    createRpgQuickButton(userId, 'story', hasStoryProgress ? '📖 스토리 진행' : '📖 스토리', ButtonStyle.Primary),
+    createRpgQuickButton(userId, 'story', hasStoryProgress ? '📖 메인 퀘스트' : '📖 메인', ButtonStyle.Primary),
     createRpgQuickButton(userId, 'codex', hasCodexClaim ? '📚 도감 보상' : '📚 도감', ButtonStyle.Primary),
     createRpgQuickButton(userId, 'menu', '🎮 허브', ButtonStyle.Secondary)
   ]);
@@ -4567,7 +4616,9 @@ function createRpgMainMenuRows(status, userId) {
     new ActionRowBuilder().addComponents(
       createRpgQuickButton(userId, 'combat', '⚔️ 전투', ButtonStyle.Danger),
       createRpgQuickButton(userId, 'adventure', '🌍 모험', ButtonStyle.Primary),
-      createRpgQuickButton(userId, 'growth', '📈 성장', ButtonStyle.Primary),
+      createRpgQuickButton(userId, 'growth', '📈 성장', ButtonStyle.Primary)
+    ),
+    new ActionRowBuilder().addComponents(
       createRpgQuickButton(userId, 'manage', '🎒 관리', ButtonStyle.Secondary),
       createRpgQuickButton(userId, 'today', '✅ 오늘 할 일', ButtonStyle.Success)
     )
@@ -4585,7 +4636,7 @@ function createRpgActionLoopRows(userId) {
 }
 
 function createButtonRows(buttons) {
-  return createDiscordButtonRows(buttons);
+  return createDiscordButtonRows(buttons, { maxPerRow: 3, maxRows: 3 });
 }
 
 function getOwnedRpgEquipmentItems(status) {
@@ -4659,20 +4710,6 @@ function getRpgGearDisassemblePreview(gear = {}) {
     enhancementStones: Math.max(1, rarityBonus + Math.floor(enhanceLevel / 2)),
     coins: Math.max(40, power * 60 + enhanceLevel * 40)
   };
-}
-
-function assertValidRpgPvpTarget(user, target) {
-  if (target.bot) {
-    throw new Error('봇과는 RPG 대결을 할 수 없습니다.');
-  }
-
-  if (target.id === user.id) {
-    throw new Error('자기 자신과는 RPG 대결을 할 수 없습니다.');
-  }
-}
-
-function createRpgPvpChallengeId() {
-  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function formatGearLabel(gear) {

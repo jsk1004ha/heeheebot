@@ -1,0 +1,12 @@
+{
+  "id": "item_bandit_cutlass_icon",
+  "label": "도적단 곡도 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

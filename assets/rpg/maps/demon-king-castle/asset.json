@@ -1,0 +1,12 @@
+{
+  "id": "map_demon_king_castle",
+  "label": "마왕성 내부 배경",
+  "category": "map",
+  "kind": "map",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    1024,
+    576
+  ],
+  "prompt": "Demon king castle interior final dungeon, 16:9 game background, no text."
+}

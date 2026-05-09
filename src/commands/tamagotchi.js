@@ -1,4 +1,5 @@
 import {
+  MessageFlags,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
@@ -20,6 +21,10 @@ import {
 import {
   formatUserMention
 } from './ui.js';
+import {
+  logUnexpectedInteractionError,
+  safeReplyToInteraction
+} from './interactions.js';
 
 const BUTTON_PREFIX = 'heejin_pet';
 const STATUS_COLOR = 0xff9fca;
@@ -173,7 +178,7 @@ export async function handleTamagotchiCommand(interaction, tamagotchi, logger = 
   if (!interaction.inGuild?.()) {
     await interaction.reply({
       content: '희진 다마고치는 서버에서만 사용할 수 있어요.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -181,7 +186,7 @@ export async function handleTamagotchiCommand(interaction, tamagotchi, logger = 
   try {
     await routeTamagotchiCommand(interaction, tamagotchi);
   } catch (error) {
-    logger.error(error);
+    logUnexpectedInteractionError(logger, error, 'Tamagotchi command rejected');
     await safeReply(interaction, `희진 다마고치 처리 실패: ${error.message}`, true);
   }
 
@@ -298,14 +303,14 @@ async function handleTamagotchiButton(interaction, tamagotchi, logger) {
   if (!parsed) return false;
 
   if (!interaction.inGuild?.()) {
-    await interaction.reply({ content: '서버에서만 사용할 수 있는 버튼입니다.', ephemeral: true });
+    await interaction.reply({ content: '서버에서만 사용할 수 있는 버튼입니다.', flags: MessageFlags.Ephemeral });
     return true;
   }
 
   if (parsed.userId !== interaction.user.id) {
     await interaction.reply({
       content: '이 희진 다마고치 버튼은 주인만 누를 수 있어요. `/희진다마고치`로 내 희진을 불러와 주세요.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -315,7 +320,7 @@ async function handleTamagotchiButton(interaction, tamagotchi, logger) {
     const result = await resolveButtonAction(parsed.action, tamagotchi, context);
     await interaction.update(createTamagotchiReplyPayload(interaction.user, result));
   } catch (error) {
-    logger.error(error);
+    logUnexpectedInteractionError(logger, error, 'Tamagotchi button rejected');
     await safeReply(interaction, `희진 버튼 처리 실패: ${error.message}`, true);
   }
 
@@ -661,10 +666,5 @@ function isTamagotchiCommand(commandName) {
 }
 
 async function safeReply(interaction, content, ephemeral = false) {
-  const payload = { content, ephemeral };
-  if (interaction.deferred || interaction.replied) {
-    await interaction.followUp(payload);
-  } else {
-    await interaction.reply(payload);
-  }
+  await safeReplyToInteraction(interaction, content, { ephemeral });
 }

@@ -1,0 +1,12 @@
+{
+  "id": "item_holy_relic_icon",
+  "label": "성유물 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

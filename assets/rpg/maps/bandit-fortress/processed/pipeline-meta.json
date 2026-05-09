@@ -1,0 +1,11 @@
+{
+  "id": "map_bandit_fortress",
+  "label": "도적단 요새 배경",
+  "category": "map",
+  "kind": "map",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    1024,
+    576
+  ]
+}

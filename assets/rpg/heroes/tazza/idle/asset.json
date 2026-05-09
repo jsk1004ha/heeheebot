@@ -1,0 +1,13 @@
+{
+  "id": "hero_tazza_idle",
+  "label": "타짜 대기 모션",
+  "category": "hero",
+  "kind": "sprite",
+  "sheet": "2x2",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    512,
+    512
+  ],
+  "prompt": "Use $generate2dsprite to create a clean HD medieval fantasy tazza card-and-dice trickster hero idle animation, 2x2 grid, full-body sprite centered in each cell, deck pouch, bone dice, cloak, solid #FF00FF background, no text."
+}

@@ -1,0 +1,1 @@
+Use $generate2dsprite to create a clean HD medieval fantasy tazza card-and-dice trickster hero idle animation, 2x2 grid, full-body sprite centered in each cell, deck pouch, bone dice, cloak, solid #FF00FF background, no text.

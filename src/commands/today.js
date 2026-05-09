@@ -1,4 +1,5 @@
 import {
+  MessageFlags,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
@@ -32,7 +33,7 @@ export async function handleTodayCommand(interaction, services = {}) {
   if (!interaction.inGuild()) {
     await interaction.reply({
       content: '서버에서만 사용할 수 있는 명령어입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -48,7 +49,7 @@ async function handleTodayButton(interaction, services) {
   if (interaction.user.id !== ownerUserId) {
     await interaction.reply({
       content: '이 오늘 할 일 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -56,7 +57,7 @@ async function handleTodayButton(interaction, services) {
   if (!interaction.inGuild()) {
     await interaction.reply({
       content: '서버에서만 사용할 수 있는 버튼입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -87,7 +88,7 @@ async function handleTodayButton(interaction, services) {
 
   await interaction.reply({
     content: '알 수 없는 오늘 할 일 버튼입니다.',
-    ephemeral: true
+    flags: MessageFlags.Ephemeral
   });
   return true;
 }

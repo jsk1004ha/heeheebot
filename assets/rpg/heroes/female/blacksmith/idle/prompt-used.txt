@@ -1,0 +1,1 @@
+Use $generate2dsprite to create a clean HD medieval fantasy female combat blacksmith hero idle animation, 2x2 grid, full-body sprite centered in each cell, hammer and leather apron armor, solid #FF00FF background, no text.

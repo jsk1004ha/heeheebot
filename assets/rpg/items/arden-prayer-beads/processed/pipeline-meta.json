@@ -1,0 +1,12 @@
+{
+  "id": "item_arden_prayer_beads_icon",
+  "label": "아르덴 묵주 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

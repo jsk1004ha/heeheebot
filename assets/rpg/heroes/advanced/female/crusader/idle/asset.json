@@ -12,7 +12,7 @@
   "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
   "advancedClass": "crusader",
   "gender": "female",
-  "label": "여성 크루세이더",
+  "label": "여성 성전사 전직 이미지",
   "rosterFrame": 8,
   "clean": "assets/rpg/heroes/advanced/female/crusader/idle/processed/clean.png"
 }

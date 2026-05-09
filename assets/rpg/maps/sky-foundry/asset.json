@@ -1,6 +1,6 @@
 {
   "id": "map_sky_foundry",
-  "label": "천공 주조소 전투 배경",
+  "label": "왕국 대장간 전투 배경",
   "category": "map",
   "kind": "map",
   "prompt": "assets/rpg/maps/sky-foundry/prompt-used.txt",

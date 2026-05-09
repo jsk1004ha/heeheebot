@@ -1,0 +1,12 @@
+{
+  "id": "item_iron_spear_icon",
+  "label": "철창 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

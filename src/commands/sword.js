@@ -1,4 +1,5 @@
 import {
+  MessageFlags,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
@@ -17,6 +18,10 @@ import {
 } from '../systems/sword-blacksmith.js';
 import { SEASON_POINT_SOURCES } from '../systems/seasons.js';
 import { formatDuration } from './economy.js';
+import {
+  logUnexpectedInteractionError,
+  safeReplyToInteraction
+} from './interactions.js';
 import { formatSeasonAwardLine } from './seasons.js';
 import {
   createAllowedMentionsForUsers,
@@ -116,7 +121,7 @@ export async function handleSwordCommand(interaction, economy, logger = console,
   if (!interaction.inGuild()) {
     await interaction.reply({
       content: '서버에서만 사용할 수 있는 명령어입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -124,7 +129,7 @@ export async function handleSwordCommand(interaction, economy, logger = console,
   try {
     await routeSwordCommand(interaction, economy, services);
   } catch (error) {
-    logger.error(error);
+    logUnexpectedInteractionError(logger, error, 'Sword command rejected');
     await safeReply(interaction, `검 시스템 처리 실패: ${error.message}`, true);
   }
 
@@ -238,7 +243,7 @@ async function routeSwordCommand(interaction, economy, services = {}) {
     if (!result.claimed) {
       await interaction.reply({
         content: `🎁 오늘의 제련석 선물은 이미 받았습니다. 남은 시간: ${formatDuration(result.remainingMs)}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
       return;
     }
@@ -261,7 +266,7 @@ async function routeSwordCommand(interaction, economy, services = {}) {
     if (result.saleValue <= 0) {
       await interaction.reply({
         content: '판매할 검이 없습니다. +1 이상 강화된 검만 판매할 수 있습니다.',
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
       return;
     }
@@ -302,7 +307,7 @@ async function routeSwordCommand(interaction, economy, services = {}) {
       if (!result.battled) {
         await interaction.reply({
           content: '오늘의 검배틀 10회를 모두 사용했습니다. 내일 다시 도전하세요.',
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         return;
       }
@@ -355,7 +360,7 @@ async function handleSwordButton(interaction, economy, logger = console, service
   if (interaction.user.id !== userId) {
     await interaction.reply({
       content: '이 검 판매 확인 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -371,7 +376,7 @@ async function handleSwordButton(interaction, economy, logger = console, service
   if (action !== 'sword_sell_confirm') {
     await interaction.reply({
       content: '알 수 없는 검 판매 버튼입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -405,7 +410,7 @@ async function handleSwordQuickButton(interaction, economy, logger = console, se
   if (interaction.user.id !== userId) {
     await interaction.reply({
       content: '이 검 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -451,7 +456,7 @@ async function handleSwordQuickButton(interaction, economy, logger = console, se
       if (result.saleValue <= 0) {
         await interaction.reply({
           content: '판매할 검이 없습니다. +1 이상 강화된 검만 판매할 수 있습니다.',
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         return true;
       }
@@ -467,14 +472,14 @@ async function handleSwordQuickButton(interaction, economy, logger = console, se
 
     await interaction.reply({
       content: '알 수 없는 검 버튼입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   } catch (error) {
     logger.error(error);
     await interaction.reply({
       content: `검 시스템 처리 실패: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -917,13 +922,7 @@ function getSwordCoins(profile) {
 }
 
 async function safeReply(interaction, content, ephemeral = false) {
-  const payload = { content, ephemeral };
-
-  if (interaction.deferred || interaction.replied) {
-    await interaction.followUp(payload);
-  } else {
-    await interaction.reply(payload);
-  }
+  await safeReplyToInteraction(interaction, content, { ephemeral });
 }
 
 function isSwordCommand(commandName) {

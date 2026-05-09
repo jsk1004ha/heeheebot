@@ -12,7 +12,7 @@
   "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
   "advancedClass": "sniper",
   "gender": "male",
-  "label": "저격수",
+  "label": "명사수 전직 이미지",
   "rosterFrame": 5,
   "clean": "assets/rpg/heroes/advanced/sniper/idle/processed/clean.png"
 }

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { MessageFlags, SlashCommandBuilder } from 'discord.js';
 
 export const seasonCommands = [
   new SlashCommandBuilder()
@@ -43,7 +43,7 @@ export async function handleSeasonCommand(interaction, seasons, logger = console
   if (!interaction.inGuild()) {
     await interaction.reply({
       content: '서버에서만 사용할 수 있는 명령어입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -86,14 +86,14 @@ export async function handleSeasonCommand(interaction, seasons, logger = console
 
     await interaction.reply({
       content: '알 수 없는 시즌 명령입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   } catch (error) {
     logger.error(error);
     await interaction.reply({
       content: `시즌 처리 실패: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }

@@ -154,15 +154,10 @@ test('기존/마이그레이션 프로필의 누락된 레벨 필드를 안전�
     assert.equal(profile.dailyStreak, 0);
     assert.equal(profile.rpg.characterClass, 'novice');
     assert.equal(profile.rpg.characterGender, 'male');
+    assert.equal(profile.rpg.level, 1);
+    assert.equal(profile.rpg.totalXp, 0);
     assert.equal(profile.rpg.currentArea, 'forest');
-    assert.deepEqual(profile.rpg.unlockedAreas, [
-      'forest',
-      'wildflower_plains',
-      'cave',
-      'moonlit_hill',
-      'marsh',
-      'mushroom_grove'
-    ]);
+    assert.deepEqual(profile.rpg.unlockedAreas, ['forest', 'starfall_crater']);
     assert.deepEqual(profile.rpg.discoveredMonsters, {});
     assert.equal(profile.rpg.battles, 0);
     assert.equal(profile.rpg.wins, 0);
@@ -404,7 +399,8 @@ test('끝말잇기와 RPG 승리 경험치를 지급한다', async () => {
 
     assert.equal(wordChain.xpGained, 80);
     assert.equal(rpg.xpGained, 150);
-    assert.equal(rpg.profile.totalXp, 230);
+    assert.equal(rpg.profile.totalXp, 80);
+    assert.equal(rpg.profile.rpg.totalXp, 150);
   } finally {
     await fixture.cleanup();
   }

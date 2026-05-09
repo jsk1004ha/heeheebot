@@ -1,0 +1,13 @@
+{
+  "id": "item_healer_charm_icon",
+  "label": "치유사의 부적 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ],
+  "prompt": "Use $generate2dsprite to create a clean HD transparent medieval fantasy 치유사의 부적 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text."
+}

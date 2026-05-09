@@ -231,8 +231,13 @@ test('프로필은 대상 유저와 RPG/검/주식/커뮤니티 통합 요약을
           }
         },
         rpg: {
+          schemaVersion: 'heehee-rpg-v1',
+          level: 25,
+          xp: 0,
+          totalXp: 0,
           startedAt: 1000,
           characterClass: 'warrior',
+          primaryClass: 'warrior',
           characterGender: 'female',
           advancedClass: 'berserker',
           currentArea: 'cave',
@@ -281,8 +286,8 @@ test('프로필은 대상 유저와 RPG/검/주식/커뮤니티 통합 요약을
 
   const content = getReplyContent(interaction.replies[0]);
   assert.match(content, /\*\*대상유저님의 프로필\*\*/);
-  assert.match(content, /RPG: \*\*여캐 전사 → 광전사\*\*/);
-  assert.match(content, /지역 \*\*수정 동굴\*\*/);
+  assert.match(content, /RPG: \*\*여캐 검사 → 광전사\*\*/);
+  assert.match(content, /지역 \*\*버려진 은광\*\*/);
   assert.match(content, /검: \*\*\+37 /);
   assert.match(content, /최고 \*\*\+42강\*\*/);
   assert.match(content, /커뮤니티: 칭호 \*\*VIP\*\* \/ 꾸미기 배지 \*\*2개\*\* \/ 보유 칭호 \*\*2개\*\* \/ 완료 미션 \*\*4개\*\*/);

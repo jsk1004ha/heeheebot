@@ -1,3 +1,4 @@
+import { MessageFlags } from 'discord.js';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -60,7 +61,7 @@ test('묵념 명령은 검을 잃은 분위기와 랜덤 대장장이 사진을 
 
   assert.equal(handled, true);
   assert.equal(replies.length, 1);
-  assert.equal(replies[0].ephemeral, undefined);
+  assert.equal(replies[0].flags, undefined);
   assert.match(replies[0].content, /묵념/);
   assert.match(replies[0].content, /<@user-1>/);
   assert.doesNotMatch(replies[0].content, /방금 터졌거나|언젠가 터질|모든 검과 제련석/);

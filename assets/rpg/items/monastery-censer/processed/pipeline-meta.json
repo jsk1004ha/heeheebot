@@ -1,0 +1,12 @@
+{
+  "id": "item_monastery_censer_icon",
+  "label": "수도원 향로 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

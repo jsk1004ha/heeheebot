@@ -1,4 +1,5 @@
 import {
+  MessageFlags,
   ChannelType,
   PermissionFlagsBits,
   SlashCommandBuilder
@@ -82,7 +83,7 @@ export async function handleMealCommand(interaction, meals) {
   } catch (error) {
     await interaction.reply({
       content: `급식 정보를 불러오지 못했습니다: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 
@@ -93,7 +94,7 @@ async function handleAutoMealCommand(interaction, meals) {
   if (!interaction.inGuild()) {
     await interaction.reply({
       content: '서버에서만 사용할 수 있는 명령어입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return;
   }
@@ -122,7 +123,7 @@ async function handleAutoMealCommand(interaction, meals) {
       : '🍱 급식 자동 알림이 설정되어 있지 않습니다.';
     await interaction.reply({
       content,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 }

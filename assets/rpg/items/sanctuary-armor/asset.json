@@ -1,0 +1,13 @@
+{
+  "id": "item_sanctuary_armor_icon",
+  "label": "성역의 갑옷 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ],
+  "prompt": "Use $generate2dsprite to create a clean HD transparent medieval fantasy 성역의 갑옷 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text."
+}

@@ -1,3 +1,4 @@
+import { MessageFlags } from 'discord.js';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -104,6 +105,19 @@ test('주식 autocomplete는 서버 밖에서는 빈 후보만 반환한다', as
     const interaction = createStockAutocompleteInteraction('매수', '희진', {
       guildId: null,
       inGuild: false
+    });
+
+    const handled = await handleStockAutocomplete(interaction, stocks);
+
+    assert.equal(handled, true);
+    assert.deepEqual(interaction.choices, []);
+  });
+});
+
+test('주식 autocomplete는 만료된 상호작용이면 조용히 종료한다', async () => {
+  await withFixture(async ({ stocks }) => {
+    const interaction = createStockAutocompleteInteraction('매수', '희진', {
+      respondError: Object.assign(new Error('Unknown interaction'), { code: 10062 })
     });
 
     const handled = await handleStockAutocomplete(interaction, stocks);
@@ -774,7 +788,7 @@ test('주식 시세 빠른 버튼은 소유자만 TOP/신규상장/보유 화면
   assert.match(updates[0].content, /희진전자/);
   assert.doesNotMatch(updates[0].content, /안정주|성장주|경기민감주|급등락주|밈주식/);
   assert.equal(updates[0].components[0].components.length, 4);
-  assert.equal(replies[0].ephemeral, true);
+  assert.equal(replies[0].flags, MessageFlags.Ephemeral);
   assert.match(replies[0].content, /명령어를 실행한 유저만/);
 });
 
@@ -1019,7 +1033,7 @@ test('전체시세 응답은 실제 결과 길이와 상승/하락 색상 표시
   assert.doesNotMatch(updates[0].content, /도훈건설/);
   assert.equal(updates[0].components[0].components[0].data.disabled, false);
   assert.equal(updates[0].components[0].components[1].data.disabled, true);
-  assert.equal(replies[0].ephemeral, true);
+  assert.equal(replies[0].flags, MessageFlags.Ephemeral);
   assert.match(replies[0].content, /명령어를 실행한 유저만/);
 });
 
@@ -1538,7 +1552,8 @@ function createStockAutocompleteInteraction(subcommand, focusedValue, options = 
   const {
     guildId = 'guild-1',
     user = { id: 'user-1', username: '희희' },
-    inGuild = true
+    inGuild = true,
+    respondError = null
   } = options;
   const choices = [];
 
@@ -1554,6 +1569,7 @@ function createStockAutocompleteInteraction(subcommand, focusedValue, options = 
       getFocused: () => ({ name: '종목', value: focusedValue })
     },
     async respond(nextChoices) {
+      if (respondError) throw respondError;
       choices.push(...nextChoices);
     }
   };

@@ -1,10 +1,15 @@
 import {
+  MessageFlags,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   SlashCommandBuilder
 } from 'discord.js';
 import { getStockCatalog } from '../systems/stocks.js';
+import {
+  safeAutocompleteRespond,
+  toInteractionPayload
+} from './interactions.js';
 import { createPagedButtonRow, formatUserMention } from './ui.js';
 
 const STOCK_AUTOCOMPLETE_LIMIT = 25;
@@ -345,13 +350,13 @@ export async function handleStockAutocomplete(interaction, stocks) {
   }
 
   if (!interaction.guildId || interaction.inGuild?.() === false) {
-    await interaction.respond([]);
+    await safeAutocompleteRespond(interaction, []);
     return true;
   }
 
   const focused = interaction.options.getFocused(true);
   if (focused.name !== '종목') {
-    await interaction.respond([]);
+    await safeAutocompleteRespond(interaction, []);
     return true;
   }
 
@@ -361,7 +366,7 @@ export async function handleStockAutocomplete(interaction, stocks) {
     ? await getSellStockAutocompleteChoices(interaction, stocks, query)
     : await getTradableStockAutocompleteChoices(interaction, stocks, query);
 
-  await interaction.respond(choices.slice(0, STOCK_AUTOCOMPLETE_LIMIT));
+  await safeAutocompleteRespond(interaction, choices.slice(0, STOCK_AUTOCOMPLETE_LIMIT));
   return true;
 }
 
@@ -623,7 +628,7 @@ async function handleStockQuickButton(interaction, stocks) {
   if (ownerId && interaction.user.id !== ownerId) {
     await interaction.reply({
       content: '이 주식 시세 버튼은 명령어를 실행한 유저만 사용할 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -631,7 +636,7 @@ async function handleStockQuickButton(interaction, stocks) {
   if (!interaction.inGuild()) {
     await interaction.reply({
       content: '서버에서만 사용할 수 있는 명령어입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -663,7 +668,7 @@ async function handleStockQuickButton(interaction, stocks) {
   } else {
     await interaction.reply({
       content: '알 수 없는 주식 빠른 버튼입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -681,7 +686,7 @@ async function handleStockMarketPageButton(interaction, stocks) {
   if (ownerId && interaction.user.id !== ownerId) {
     await interaction.reply({
       content: '이 주식 전체시세 페이지는 명령어를 실행한 유저만 넘길 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -689,7 +694,7 @@ async function handleStockMarketPageButton(interaction, stocks) {
   if (!interaction.inGuild()) {
     await interaction.reply({
       content: '서버에서만 사용할 수 있는 명령어입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -1268,10 +1273,11 @@ async function replyStockContent(interaction, content, options = {}) {
 }
 
 async function sendStockPayload(interaction, payload) {
+  const responsePayload = toInteractionPayload(payload);
   if (interaction.deferred || interaction.replied) {
-    await interaction.followUp(payload);
+    await interaction.followUp(responsePayload);
   } else {
-    await interaction.reply(payload);
+    await interaction.reply(responsePayload);
   }
 }
 
@@ -1285,7 +1291,7 @@ async function handleStockPaginationButton(interaction) {
   if (interaction.user.id !== ownerId) {
     await interaction.reply({
       content: '이 주식 페이지 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -1294,7 +1300,7 @@ async function handleStockPaginationButton(interaction) {
   if (!session) {
     await interaction.reply({
       content: '주식 페이지가 만료되었습니다. `/주식 전체시세`를 다시 실행해주세요.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -1321,8 +1327,7 @@ function createStockPagePayload({
     content: formatStockPageContent(pages[pageIndex], pageIndex, pages.length),
     components: createStockPaginationRows({ sessionId, ownerId, pageIndex, pageCount: pages.length })
   };
-  if (ephemeral) payload.ephemeral = true;
-  return payload;
+  return toInteractionPayload(payload, { ephemeral });
 }
 
 function formatStockPageContent(page, pageIndex, pageCount) {

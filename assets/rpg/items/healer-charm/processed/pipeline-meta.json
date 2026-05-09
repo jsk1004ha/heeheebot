@@ -1,0 +1,12 @@
+{
+  "id": "item_healer_charm_icon",
+  "label": "치유사의 부적 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

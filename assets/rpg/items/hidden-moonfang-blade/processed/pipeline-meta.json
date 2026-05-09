@@ -1,0 +1,12 @@
+{
+  "id": "item_hidden_moonfang_blade_icon",
+  "label": "월아의 비밀검 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

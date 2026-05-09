@@ -1,0 +1,13 @@
+{
+  "id": "item_rune_stone_icon",
+  "label": "룬석 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ],
+  "prompt": "Use $generate2dsprite to create a clean HD transparent medieval fantasy rune stone icon, single asset, centered carved gray stone with gold rune lines, solid #FF00FF background, no text."
+}

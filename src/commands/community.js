@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { MessageFlags, SlashCommandBuilder } from 'discord.js';
 import {
   getCommunityTitles,
   getEventTypes,
@@ -6,6 +6,10 @@ import {
   getShopItems
 } from '../systems/community.js';
 import { formatDuration } from './economy.js';
+import {
+  logUnexpectedInteractionError,
+  safeReplyToInteraction
+} from './interactions.js';
 
 const communityCommandNames = new Set([
   '업적',
@@ -130,7 +134,7 @@ export async function handleCommunityCommand(interaction, community, logger = co
   if (!interaction.inGuild()) {
     await interaction.reply({
       content: '서버에서만 사용할 수 있는 명령어입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -138,10 +142,9 @@ export async function handleCommunityCommand(interaction, community, logger = co
   try {
     await routeCommunityCommand(interaction, community);
   } catch (error) {
-    logger.error?.(error);
-    await interaction.reply({
-      content: `처리 실패: ${error.message}`,
-      ephemeral: true
+    logUnexpectedInteractionError(logger, error, 'Community command rejected');
+    await safeReplyToInteraction(interaction, `처리 실패: ${error.message}`, {
+      flags: MessageFlags.Ephemeral
     });
   }
 

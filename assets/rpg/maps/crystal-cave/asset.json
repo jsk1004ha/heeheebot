@@ -6,7 +6,7 @@
   "raw": "assets/rpg/maps/crystal-cave/raw/background.png",
   "prompt": "assets/rpg/maps/crystal-cave/prompt-used.txt",
   "status": "generated",
-  "label": "수정 동굴 전투 배경",
+  "label": "버려진 은광 전투 배경",
   "generatedWith": "agent-sprite-forge:$generate2dmap",
   "meta": "assets/rpg/maps/crystal-cave/processed/pipeline-meta.json",
   "outputSize": [

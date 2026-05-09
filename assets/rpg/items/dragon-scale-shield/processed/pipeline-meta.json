@@ -1,0 +1,12 @@
+{
+  "id": "item_dragon_scale_shield_icon",
+  "label": "용비늘 방패 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

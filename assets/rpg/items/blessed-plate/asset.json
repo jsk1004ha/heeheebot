@@ -1,0 +1,13 @@
+{
+  "id": "item_blessed_plate_icon",
+  "label": "축복받은 판금갑옷 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ],
+  "prompt": "Use $generate2dsprite to create a clean HD transparent medieval fantasy 축복받은 판금갑옷 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text."
+}

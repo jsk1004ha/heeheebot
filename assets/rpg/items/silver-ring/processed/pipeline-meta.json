@@ -1,0 +1,12 @@
+{
+  "id": "item_silver_ring_icon",
+  "label": "은 반지 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    256,
+    256
+  ]
+}

@@ -1,25 +1,10 @@
-# RPG Generated Assets
+# RPG Assets
 
-`agent-sprite-forge`로 생성한 RPG 이미지 결과물을 이 폴더 아래에 둔다.
+이 폴더는 희희봇 RPG용 중세 판타지 에셋을 기존 구조 그대로 보관합니다.
 
-현재 기본 RPG manifest 전체 생성 완료:
+- 캐릭터: `assets/rpg/heroes/**/idle`
+- 몬스터/보스: `assets/rpg/monsters`, `assets/rpg/bosses`
+- 지역/던전 배경: `assets/rpg/maps/**`
+- 장비/재료 아이콘: `assets/rpg/items/**`
 
-- `asset-manifest.json`: 생성/후처리 결과 manifest
-- `preview/contact-sheet.png`: 전체 에셋 검수용 미리보기
-- 영웅/몬스터/보스: `raw/raw-sheet.png`, `processed/sheet-transparent.png`, `processed/animation.gif`
-- 아이템: `raw/raw-sheet.png`, `processed/clean.png`
-- 맵: `raw/background.png`
-
-권장 구조:
-
-```text
-assets/rpg/heroes/<hero>/<action>/
-assets/rpg/heroes/female/<hero>/<action>/
-assets/rpg/monsters/<monster>/<action>/
-assets/rpg/maps/<map>/
-assets/rpg/items/<item>/
-assets/rpg/fx/<effect>/
-```
-
-생성할 에셋 id와 프롬프트는 `src/systems/rpg-assets.js`를 기준으로 관리한다.
-남캐는 기존 `hero_<class>_idle`, 여캐는 `hero_female_<class>_idle` id를 사용한다.
+임시 별도 생성 폴더는 제거했습니다. 새 타짜/대장장이/왕국·숲·광산·던전·성지·마탑·마왕성 에셋도 위 표준 폴더 구조와 `asset-manifest.json`을 사용합니다.

@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { basename } from 'node:path';
 import {
+  MessageFlags,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
@@ -92,7 +93,7 @@ export async function handleFishingCommand(interaction, fishing) {
   if (!interaction.inGuild()) {
     await interaction.reply({
       content: '서버에서만 사용할 수 있는 명령어입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -102,7 +103,7 @@ export async function handleFishingCommand(interaction, fishing) {
   } catch (error) {
     await interaction.reply({
       content: `낚시 처리 실패: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 
@@ -116,7 +117,7 @@ async function handleFishingButton(interaction, fishing) {
   if (ownerId && interaction.user.id !== ownerId) {
     await interaction.reply({
       content: '이 낚시 버튼은 명령어를 실행한 유저만 사용할 수 있습니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -124,7 +125,7 @@ async function handleFishingButton(interaction, fishing) {
   if (!interaction.inGuild()) {
     await interaction.reply({
       content: '서버에서만 사용할 수 있는 명령어입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }
@@ -158,13 +159,13 @@ async function handleFishingButton(interaction, fishing) {
 
     await interaction.reply({
       content: '알 수 없는 낚시 버튼입니다.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   } catch (error) {
     await interaction.reply({
       content: `낚시 처리 실패: ${error.message}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return true;
   }

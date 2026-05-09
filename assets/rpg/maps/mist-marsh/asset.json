@@ -1,0 +1,12 @@
+{
+  "id": "map_mist_marsh",
+  "label": "안개 늪지 배경",
+  "category": "map",
+  "kind": "map",
+  "generatedWith": "codex:procedural-medieval-rpg",
+  "outputSize": [
+    1024,
+    576
+  ],
+  "prompt": "Poison mist marsh medieval fantasy, 16:9 game background, no text."
+}
