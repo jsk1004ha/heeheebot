@@ -12,32 +12,20 @@ import {
   getRpgAdventureGuide,
   getRpgAreaConfig,
   getRpgAreaOptions,
-  getRpgBossOptions,
   getRpgBossPattern,
   getRpgClassConfig,
   getRpgClassOptions,
-  getRpgCraftingCategoryOptions,
-  getRpgCraftingRecipeOptions,
-  getRpgDailyMissionOptions,
   getRpgDifficultyOptions,
   getRpgDungeonConfig,
-  getRpgDungeonOptions,
   getRpgDerivedStats,
-  getRpgEquipmentItemOptions,
-  getRpgGachaBannerOptions,
   getRpgGenderConfig,
   getRpgGenderOptions,
   getRpgFirstJobOptions,
   getRpgStartClassOptions,
   getRpgItemConfig,
-  getRpgQuestOptions,
   getRpgRaidConfig,
-  getRpgRaidOptions,
   getRpgShopItemOptions,
   getRpgSkillConfig,
-  getRpgSkillTreeOptions,
-  getRpgSkillOptions,
-  getRpgTutorialStepOptions,
   getRpgFirstJobClassIds,
   normalizeNullableRpgCraftingCategory,
   normalizeRpgClass,
@@ -88,7 +76,6 @@ export const rpgCommands = [
           option
             .setName('직업')
             .setDescription('시작 직업. 비우면 직업/성별 선택 메뉴를 봅니다.')
-            .addChoices(...getRpgStartClassOptions())
         )
         .addStringOption((option) =>
           option
@@ -110,7 +97,6 @@ export const rpgCommands = [
           option
             .setName('보상')
             .setDescription('수령할 튜토리얼 단계. 비우면 초보자 여정을 봅니다.')
-            .addChoices(...getRpgTutorialStepOptions())
         )
     )
     .addSubcommand((subcommand) =>
@@ -127,13 +113,11 @@ export const rpgCommands = [
           option
             .setName('지역')
             .setDescription('전투 지역')
-            .addChoices(...getRpgAreaOptions())
         )
         .addStringOption((option) =>
           option
             .setName('스킬')
             .setDescription('사용할 전투 스킬')
-            .addChoices(...getRpgSkillOptions())
         )
     )
     .addSubcommand((subcommand) =>
@@ -145,7 +129,6 @@ export const rpgCommands = [
             .setName('직업')
             .setDescription('변경할 보유 직업')
             .setRequired(true)
-            .addChoices(...getRpgFirstJobOptions())
         )
     )
     .addSubcommand((subcommand) =>
@@ -156,7 +139,6 @@ export const rpgCommands = [
           option
             .setName('지역')
             .setDescription('탐험 지역')
-            .addChoices(...getRpgAreaOptions())
         )
     )
     .addSubcommand((subcommand) =>
@@ -167,13 +149,11 @@ export const rpgCommands = [
           option
             .setName('던전')
             .setDescription('입장할 던전')
-            .addChoices(...getRpgDungeonOptions())
         )
         .addStringOption((option) =>
           option
             .setName('지역')
             .setDescription('던전 지역')
-            .addChoices(...getRpgAreaOptions())
         )
         .addIntegerOption((option) =>
           option
@@ -192,7 +172,6 @@ export const rpgCommands = [
             .setName('보스')
             .setDescription('도전할 보스')
             .setRequired(true)
-            .addChoices(...getRpgBossOptions())
         )
     )
     .addSubcommand((subcommand) =>
@@ -208,7 +187,6 @@ export const rpgCommands = [
           option
             .setName('아이템')
             .setDescription('구매할 아이템')
-            .addChoices(...getRpgShopItemOptions())
         )
         .addIntegerOption((option) =>
           option
@@ -231,7 +209,6 @@ export const rpgCommands = [
           option
             .setName('아이템')
             .setDescription('장착할 아이템. 비우면 보유 장비 선택 메뉴를 봅니다.')
-            .addChoices(...getRpgEquipmentItemOptions())
         )
     )
     .addSubcommand((subcommand) =>
@@ -262,7 +239,6 @@ export const rpgCommands = [
           option
             .setName('퀘스트')
             .setDescription('보상을 받을 퀘스트')
-            .addChoices(...getRpgQuestOptions())
         )
     )
     .addSubcommand((subcommand) =>
@@ -273,7 +249,6 @@ export const rpgCommands = [
           option
             .setName('임무')
             .setDescription('보상을 받을 일일 의뢰. 비우면 의뢰판을 봅니다.')
-            .addChoices(...getRpgDailyMissionOptions())
         )
     )
     .addSubcommand((subcommand) =>
@@ -290,7 +265,6 @@ export const rpgCommands = [
             .setName('직업')
             .setDescription('선택할 보조 직업')
             .setRequired(true)
-            .addChoices(...getRpgFirstJobOptions())
         )
     )
     .addSubcommand((subcommand) =>
@@ -301,7 +275,6 @@ export const rpgCommands = [
           option
             .setName('스킬')
             .setDescription('배울 스킬트리')
-            .addChoices(...getRpgSkillTreeOptions())
         )
     )
     .addSubcommand((subcommand) =>
@@ -322,13 +295,11 @@ export const rpgCommands = [
           option
             .setName('종류')
             .setDescription('제작 카테고리. 비우면 전체 제작 메뉴를 봅니다.')
-            .addChoices(...getRpgCraftingCategoryOptions())
         )
         .addStringOption((option) =>
           option
             .setName('레시피')
             .setDescription('제작할 레시피. 비우면 제작 가능한 목록을 봅니다.')
-            .addChoices(...getRpgCraftingRecipeOptions())
         )
         .addIntegerOption((option) =>
           option
@@ -382,13 +353,11 @@ export const rpgCommands = [
             .setName('레이드')
             .setDescription('도전할 레이드')
             .setRequired(true)
-            .addChoices(...getRpgRaidOptions())
         )
         .addStringOption((option) =>
           option
             .setName('스킬')
             .setDescription('사용할 전투 스킬')
-            .addChoices(...getRpgSkillOptions())
         )
     )
     .addSubcommand((subcommand) =>
@@ -400,13 +369,11 @@ export const rpgCommands = [
             .setName('레이드')
             .setDescription('도전할 길드 레이드')
             .setRequired(true)
-            .addChoices(...getRpgRaidOptions())
         )
         .addStringOption((option) =>
           option
             .setName('스킬')
             .setDescription('사용할 전투 스킬')
-            .addChoices(...getRpgSkillOptions())
         )
     )
     .addSubcommand((subcommand) =>
@@ -417,7 +384,6 @@ export const rpgCommands = [
           option
             .setName('지역')
             .setDescription('이동할 지역. 비우면 월드맵을 봅니다.')
-            .addChoices(...getRpgAreaOptions())
         )
     )
 ];
