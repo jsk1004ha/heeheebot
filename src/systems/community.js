@@ -3,12 +3,33 @@ import { getOrCreateLinkedAccountProfile } from './accounts.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
+const KOREA_TIME_OFFSET_MS = 9 * 60 * 60 * 1000;
 const FORTUNE_DAY_OFFSET_MS = 9 * 60 * 60 * 1000;
+const ACTIVITY_DAY_OFFSET_MS = 9 * 60 * 60 * 1000;
+const ACTIVITY_SUMMARY_DAYS = 7;
+const ACTIVITY_RETENTION_DAYS = 35;
 const LOTTERY_TICKET_COST = 500;
+const LOTTERY_MAX_TICKETS_PER_PURCHASE = 100;
 const DEFAULT_LOTTERY_JACKPOT = 1_000;
 const LOTTERY_BASE_JACKPOT_BPS = 8_000;
 const LOTTERY_EVENT_JACKPOT_BPS = 10_000;
+const LOTTERY_NUMBER_MIN = 1;
+const LOTTERY_NUMBER_MAX = 45;
+const LOTTERY_PICK_COUNT = 6;
+const LOTTERY_DRAW_DAYS = Object.freeze([3, 6]); // Wednesday and Saturday in Korea Standard Time.
+const LOTTERY_DRAW_HOUR = 21;
+const LOTTERY_DRAW_MINUTE = 0;
+const LOTTERY_AUTO_DRAW_CHECK_INTERVAL_MS = 60_000;
+const LOTTERY_FIRST_ROLLOVER_BPS = 5_000;
 const MISSION_EVENT_REWARD_BPS = 15_000;
+
+const LOTTERY_PRIZE_TIERS = Object.freeze([
+  Object.freeze({ id: 'first', label: '1등', matchCount: 6, requiresBonus: false, jackpotBps: 7_000, fixedPrize: null, description: '6개 번호 일치' }),
+  Object.freeze({ id: 'second', label: '2등', matchCount: 5, requiresBonus: true, jackpotBps: 1_500, fixedPrize: null, description: '5개 번호 + 보너스 일치' }),
+  Object.freeze({ id: 'third', label: '3등', matchCount: 5, requiresBonus: false, jackpotBps: 1_000, fixedPrize: null, description: '5개 번호 일치' }),
+  Object.freeze({ id: 'fourth', label: '4등', matchCount: 4, requiresBonus: false, jackpotBps: null, fixedPrize: 5_000, description: '4개 번호 일치' }),
+  Object.freeze({ id: 'fifth', label: '5등', matchCount: 3, requiresBonus: false, jackpotBps: null, fixedPrize: LOTTERY_TICKET_COST, description: '3개 번호 일치' })
+]);
 
 export const COMMUNITY_TITLES = Object.freeze([
   title('steady', '🌅 성실한 출석러', '출석 업적으로 획득'),
@@ -160,7 +181,7 @@ export class CommunityService {
   async getOverview({ guildId, userId, username, now = Date.now() }) {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, now);
-      const guildCommunity = getOrCreateGuildCommunity(data, guildId);
+      const guildCommunity = getOrCreateGuildCommunity(data, guildId, now);
       const community = normalizeCommunityProfile(profile, now);
 
       return {
@@ -172,6 +193,59 @@ export class CommunityService {
         missions: getMissionStatuses(profile, community, now),
         lottery: getLotteryStatus(guildCommunity.lottery),
         event: cloneActiveEvent(getActiveEvent(guildCommunity, now))
+      };
+    });
+  }
+
+  async getWeeklyActivitySummary({ guildId, userId, username, now = Date.now() }) {
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, now);
+      const community = normalizeCommunityProfile(profile, now);
+      const today = getDayIndex(now, ACTIVITY_DAY_OFFSET_MS);
+      const dayKeys = Array.from(
+        { length: ACTIVITY_SUMMARY_DAYS },
+        (_, index) => today - (ACTIVITY_SUMMARY_DAYS - 1 - index)
+      );
+      const days = dayKeys.map((day) => cloneActivityDay(community.activity.days[String(day)], day));
+      const totals = days.reduce((summary, day) => {
+        summary.messages += day.messages;
+        summary.commands += day.commands;
+        summary.xp += day.xp;
+        summary.chatXp += day.chatXp;
+        summary.commandXp += day.commandXp;
+        if (day.messages + day.commands > 0) summary.activeDays += 1;
+
+        for (const [commandName, count] of Object.entries(day.commandCounts)) {
+          summary.commandCounts[commandName] = (summary.commandCounts[commandName] ?? 0) + count;
+        }
+
+        return summary;
+      }, {
+        messages: 0,
+        commands: 0,
+        xp: 0,
+        chatXp: 0,
+        commandXp: 0,
+        activeDays: 0,
+        commandCounts: {}
+      });
+      const topCommands = Object.entries(totals.commandCounts)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+        .slice(0, 5);
+
+      return {
+        profile: cloneCommunityProfile(profile, now),
+        range: {
+          days: ACTIVITY_SUMMARY_DAYS,
+          startDay: dayKeys[0],
+          endDay: dayKeys.at(-1),
+          startDate: formatActivityDay(dayKeys[0]),
+          endDate: formatActivityDay(dayKeys.at(-1))
+        },
+        totals,
+        topCommands,
+        days
       };
     });
   }
@@ -237,7 +311,7 @@ export class CommunityService {
 
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, now);
-      const guildCommunity = getOrCreateGuildCommunity(data, guildId);
+      const guildCommunity = getOrCreateGuildCommunity(data, guildId, now);
       const community = normalizeCommunityProfile(profile, now);
       const activeEvent = getActiveEvent(guildCommunity, now);
       const allStatuses = getMissionStatuses(profile, community, now);
@@ -277,15 +351,21 @@ export class CommunityService {
   }
 
   async buyLotteryTickets({ guildId, userId, username, quantity = 1, now = Date.now() }) {
-    const normalizedQuantity = normalizeBoundedInteger(quantity, '복권 장수', 1, 50);
+    const normalizedQuantity = normalizeBoundedInteger(
+      quantity,
+      '복권 장수',
+      1,
+      LOTTERY_MAX_TICKETS_PER_PURCHASE
+    );
 
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, now);
-      const guildCommunity = getOrCreateGuildCommunity(data, guildId);
+      const guildCommunity = getOrCreateGuildCommunity(data, guildId, now);
       const community = normalizeCommunityProfile(profile, now);
-      const lottery = normalizeLottery(guildCommunity.lottery);
+      const lottery = normalizeLottery(guildCommunity.lottery, now);
       const activeEvent = getActiveEvent(guildCommunity, now);
       const totalCost = normalizedQuantity * LOTTERY_TICKET_COST;
+      const entries = [];
 
       debitBalance(profile, totalCost);
       const jackpotBps = activeEvent?.type === 'lottery_bonus'
@@ -296,10 +376,19 @@ export class CommunityService {
       lottery.tickets[userId] ??= {
         userId,
         username: profile.username,
-        count: 0
+        count: 0,
+        entries: [],
+        legacyCount: 0
       };
       lottery.tickets[userId].username = profile.username;
-      lottery.tickets[userId].count += normalizedQuantity;
+      lottery.tickets[userId].entries ??= [];
+      lottery.tickets[userId].legacyCount = normalizeStoredNonNegativeInteger(lottery.tickets[userId].legacyCount);
+      for (let index = 0; index < normalizedQuantity; index += 1) {
+        const entry = createLotteryEntry(lottery, this.randomInt, now);
+        lottery.tickets[userId].entries.push(entry);
+        entries.push({ ...entry, numbers: [...entry.numbers] });
+      }
+      lottery.tickets[userId].count = lottery.tickets[userId].entries.length + lottery.tickets[userId].legacyCount;
       lottery.totalTickets += normalizedQuantity;
       community.stats.lotteryTickets += normalizedQuantity;
       community.daily.lotteryTickets += normalizedQuantity;
@@ -309,58 +398,82 @@ export class CommunityService {
         totalCost,
         jackpotAdded,
         eventBonus: jackpotBps > LOTTERY_BASE_JACKPOT_BPS,
+        entries,
         profile: cloneCommunityProfile(profile, now),
         lottery: getLotteryStatus(lottery)
       };
     });
   }
 
-  async drawLottery({ guildId, now = Date.now() }) {
+  async drawLottery({ guildId, now = Date.now(), automatic = false } = {}) {
     return this.store.update((data) => {
-      const guildCommunity = getOrCreateGuildCommunity(data, guildId);
-      const lottery = normalizeLottery(guildCommunity.lottery);
+      const guildCommunity = getOrCreateGuildCommunity(data, guildId, now);
+      const lottery = normalizeLottery(guildCommunity.lottery, now);
 
       if (lottery.totalTickets <= 0) {
         throw new Error('추첨할 복권이 없습니다. 먼저 `/복권 구매`로 복권을 구매하세요.');
       }
 
-      const winningIndex = this.randomInt(1, lottery.totalTickets);
-      let cursor = 0;
-      let winnerTicket = null;
+      return drawLotteryRound({
+        data,
+        guildId,
+        lottery,
+        randomInt: this.randomInt,
+        now,
+        automatic
+      });
+    });
+  }
 
-      for (const ticket of Object.values(lottery.tickets)) {
-        cursor += ticket.count;
-        if (winningIndex <= cursor) {
-          winnerTicket = ticket;
-          break;
-        }
+  async configureLotteryAutoDraw({
+    guildId,
+    enabled = true,
+    channelId = null,
+    now = Date.now()
+  }) {
+    return this.store.update((data) => {
+      const guildCommunity = getOrCreateGuildCommunity(data, guildId, now);
+      const lottery = normalizeLottery(guildCommunity.lottery, now);
+      lottery.settings.autoDrawEnabled = Boolean(enabled);
+      lottery.settings.autoDrawChannelId = lottery.settings.autoDrawEnabled && channelId
+        ? String(channelId)
+        : null;
+      if (!Number.isSafeInteger(lottery.nextDrawAt) || lottery.nextDrawAt <= now) {
+        lottery.nextDrawAt = getNextLotteryDrawAt(now);
       }
-
-      if (!winnerTicket) {
-        throw new Error('복권 추첨 중 오류가 발생했습니다.');
-      }
-
-      const winnerProfile = getOrCreateProfile(data, guildId, winnerTicket.userId, winnerTicket.username, now);
-      const payout = lottery.jackpot;
-      winnerProfile.balance += payout;
-
-      lottery.lastWinner = {
-        userId: winnerProfile.userId,
-        username: winnerProfile.username,
-        payout,
-        drawnAt: now
-      };
-      lottery.lastDrawAt = now;
-      lottery.jackpot = DEFAULT_LOTTERY_JACKPOT;
-      lottery.tickets = {};
-      lottery.totalTickets = 0;
 
       return {
-        winner: cloneCommunityProfile(winnerProfile, now),
-        payout,
-        winningIndex,
         lottery: getLotteryStatus(lottery)
       };
+    });
+  }
+
+  async drawDueLotteries({ now = Date.now() } = {}) {
+    return this.store.update((data) => {
+      const guildIds = Object.keys(data.guilds ?? {});
+      const results = [];
+
+      for (const guildId of guildIds) {
+        const guildCommunity = getOrCreateGuildCommunity(data, guildId, now);
+        const lottery = normalizeLottery(guildCommunity.lottery, now);
+        if (!lottery.settings.autoDrawEnabled || lottery.nextDrawAt > now) continue;
+
+        if (lottery.totalTickets <= 0) {
+          lottery.nextDrawAt = getNextLotteryDrawAt(now);
+          continue;
+        }
+
+        results.push(drawLotteryRound({
+          data,
+          guildId,
+          lottery,
+          randomInt: this.randomInt,
+          now,
+          automatic: true
+        }));
+      }
+
+      return results;
     });
   }
 
@@ -400,7 +513,7 @@ export class CommunityService {
 
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, now);
-      const guildCommunity = getOrCreateGuildCommunity(data, guildId);
+      const guildCommunity = getOrCreateGuildCommunity(data, guildId, now);
       const activeEvent = getActiveEvent(guildCommunity, now);
 
       if (activeEvent) {
@@ -426,7 +539,7 @@ export class CommunityService {
 
   async getEventStatus({ guildId, now = Date.now() }) {
     return this.store.update((data) => {
-      const guildCommunity = getOrCreateGuildCommunity(data, guildId);
+      const guildCommunity = getOrCreateGuildCommunity(data, guildId, now);
       return {
         event: cloneActiveEvent(getActiveEvent(guildCommunity, now))
       };
@@ -438,7 +551,7 @@ export class CommunityService {
     if (normalizedBaseXp <= 0) return null;
 
     return this.store.update((data) => {
-      const guildCommunity = getOrCreateGuildCommunity(data, guildId);
+      const guildCommunity = getOrCreateGuildCommunity(data, guildId, now);
       const activeEvent = getActiveEvent(guildCommunity, now);
       if (activeEvent?.type !== 'chat_xp') return null;
 
@@ -454,20 +567,47 @@ export class CommunityService {
     });
   }
 
-  async recordActivity({ guildId, userId, username, activity, amount = 1, now = Date.now() }) {
+  async recordActivity({
+    guildId,
+    userId,
+    username,
+    activity,
+    amount = 1,
+    xpGained = 0,
+    commandName = null,
+    now = Date.now()
+  }) {
     const normalizedAmount = normalizeBoundedInteger(amount, '기록 수량', 1, 1_000);
+    const normalizedXp = normalizeNonNegativeInteger(xpGained, '활동 XP');
 
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, now);
       const community = normalizeCommunityProfile(profile, now);
+      const activityDay = getOrCreateActivityDay(community, now);
 
       if (activity === 'casino') community.stats.casinoPlays += normalizedAmount;
       if (activity === 'wordchain_win') community.stats.wordChainWins += normalizedAmount;
       if (activity === 'transfer') community.stats.transfers += normalizedAmount;
+      if (activity === 'chat') {
+        community.stats.chatMessages += normalizedAmount;
+        activityDay.messages += normalizedAmount;
+        activityDay.xp += normalizedXp;
+        activityDay.chatXp += normalizedXp;
+      }
+      if (activity === 'command') {
+        const safeCommandName = normalizeCommandName(commandName);
+        community.stats.commandsUsed += normalizedAmount;
+        activityDay.commands += normalizedAmount;
+        activityDay.xp += normalizedXp;
+        activityDay.commandXp += normalizedXp;
+        activityDay.commandCounts[safeCommandName] = (activityDay.commandCounts[safeCommandName] ?? 0) + normalizedAmount;
+      }
+      community.activity.lastActiveAt = now;
 
       return {
         activity,
         amount: normalizedAmount,
+        xpGained: normalizedXp,
         community: cloneCommunityState(community)
       };
     });
@@ -492,6 +632,325 @@ export function getEventTypes() {
 
 export function getLotteryTicketCost() {
   return LOTTERY_TICKET_COST;
+}
+
+export function getLotteryMaxTicketsPerPurchase() {
+  return LOTTERY_MAX_TICKETS_PER_PURCHASE;
+}
+
+export function getNextLotteryDrawAt(now = Date.now()) {
+  const timestamp = now instanceof Date ? now.getTime() : Number(now);
+  const koreaDate = new Date(timestamp + KOREA_TIME_OFFSET_MS);
+  const year = koreaDate.getUTCFullYear();
+  const month = koreaDate.getUTCMonth();
+  const date = koreaDate.getUTCDate();
+  const day = koreaDate.getUTCDay();
+  const drawTimestamps = LOTTERY_DRAW_DAYS.map((drawDay) => {
+    const daysUntilDraw = (drawDay - day + 7) % 7;
+    const drawKoreaTimestamp = Date.UTC(
+      year,
+      month,
+      date + daysUntilDraw,
+      LOTTERY_DRAW_HOUR,
+      LOTTERY_DRAW_MINUTE,
+      0,
+      0
+    );
+    const drawTimestamp = drawKoreaTimestamp - KOREA_TIME_OFFSET_MS;
+
+    return drawTimestamp <= timestamp
+      ? drawTimestamp + WEEK_MS
+      : drawTimestamp;
+  });
+
+  return Math.min(...drawTimestamps);
+}
+
+export function getLotteryDrawScheduleText() {
+  return '매주 수요일·토요일 21:00 KST';
+}
+
+export function formatLotteryDrawTime(timestamp) {
+  const koreaDate = new Date(Number(timestamp) + KOREA_TIME_OFFSET_MS);
+  const year = koreaDate.getUTCFullYear();
+  const month = String(koreaDate.getUTCMonth() + 1).padStart(2, '0');
+  const date = String(koreaDate.getUTCDate()).padStart(2, '0');
+  const hours = String(koreaDate.getUTCHours()).padStart(2, '0');
+  const minutes = String(koreaDate.getUTCMinutes()).padStart(2, '0');
+
+  return `${year}-${month}-${date} ${hours}:${minutes} KST`;
+}
+
+export function scheduleLotteryDrawAnnouncements({
+  sendAnnouncements,
+  intervalMs = LOTTERY_AUTO_DRAW_CHECK_INTERVAL_MS,
+  setTimeoutFn = setTimeout,
+  clearTimeoutFn = clearTimeout,
+  logger = console
+}) {
+  let timer = null;
+  let stopped = false;
+  const safeIntervalMs = Math.max(10_000, Number(intervalMs) || LOTTERY_AUTO_DRAW_CHECK_INTERVAL_MS);
+
+  const scheduleNext = () => {
+    timer = setTimeoutFn(async () => {
+      if (stopped) return;
+
+      try {
+        await sendAnnouncements();
+      } catch (error) {
+        logger.error('Failed to send lottery draw announcements:', error);
+      }
+
+      if (!stopped) {
+        scheduleNext();
+      }
+    }, safeIntervalMs);
+
+    if (timer && typeof timer.unref === 'function') {
+      timer.unref();
+    }
+  };
+
+  scheduleNext();
+
+  return () => {
+    stopped = true;
+    if (timer) {
+      clearTimeoutFn(timer);
+    }
+  };
+}
+
+function drawLotteryRound({
+  data,
+  guildId,
+  lottery,
+  randomInt,
+  now,
+  automatic
+}) {
+  const entries = collectLotteryEntries(lottery, randomInt, now);
+  if (entries.length <= 0) {
+    throw new Error('추첨할 복권이 없습니다. 먼저 `/복권 구매`로 복권을 구매하세요.');
+  }
+
+  const { numbers: winningNumbers, bonusNumber } = drawLotteryNumbers(randomInt);
+  const tierEntries = Object.fromEntries(LOTTERY_PRIZE_TIERS.map((tier) => [tier.id, []]));
+
+  for (const entry of entries) {
+    const result = evaluateLotteryEntry(entry, winningNumbers, bonusNumber);
+    if (result.tier) {
+      tierEntries[result.tier.id].push({
+        ...entry,
+        matchedNumbers: result.matchedNumbers,
+        matchedBonus: result.matchedBonus
+      });
+    }
+  }
+
+  const jackpotBefore = lottery.jackpot;
+  const payoutLedger = new Map();
+  const tierSummaries = [];
+  let totalPaid = 0;
+
+  for (const tier of LOTTERY_PRIZE_TIERS) {
+    const winners = tierEntries[tier.id];
+    const prizePool = tier.fixedPrize
+      ? tier.fixedPrize * winners.length
+      : winners.length > 0
+      ? applyBps(jackpotBefore, tier.jackpotBps)
+      : 0;
+    const prizePerTicket = winners.length > 0
+      ? tier.fixedPrize ?? Math.floor(prizePool / winners.length)
+      : 0;
+    let tierPayout = 0;
+
+    for (const winner of winners) {
+      if (prizePerTicket <= 0) continue;
+      payLotteryWinner(data, guildId, winner, tier, prizePerTicket, payoutLedger, now);
+      tierPayout += prizePerTicket;
+      totalPaid += prizePerTicket;
+    }
+
+    tierSummaries.push({
+      id: tier.id,
+      label: tier.label,
+      description: tier.description,
+      winnerCount: winners.length,
+      prizePerTicket,
+      totalPayout: tierPayout
+    });
+  }
+
+  const firstTierWinners = tierEntries.first.length;
+  const hasAnyWinner = totalPaid > 0;
+  const rollover = !hasAnyWinner
+    ? jackpotBefore
+    : firstTierWinners <= 0
+    ? applyBps(jackpotBefore, LOTTERY_FIRST_ROLLOVER_BPS)
+    : 0;
+  const topWinners = [...payoutLedger.values()]
+    .map((winner) => ({
+      ...winner,
+      payout: winner.totalPayout,
+      tiers: { ...winner.tiers }
+    }))
+    .sort((a, b) => b.totalPayout - a.totalPayout || a.username.localeCompare(b.username));
+  const headlineWinner = topWinners[0] ?? null;
+  const headlineProfile = headlineWinner
+    ? getOrCreateProfile(data, guildId, headlineWinner.userId, headlineWinner.username, now)
+    : null;
+
+  lottery.lastWinner = headlineWinner
+    ? {
+        userId: headlineWinner.userId,
+        username: headlineWinner.username,
+        payout: headlineWinner.totalPayout,
+        drawnAt: now
+      }
+    : null;
+  lottery.lastDrawAt = now;
+  lottery.lastDraw = {
+    drawnAt: now,
+    automatic: Boolean(automatic),
+    winningNumbers,
+    bonusNumber,
+    jackpotBefore,
+    totalTickets: entries.length,
+    totalPaid,
+    rollover,
+    tierSummaries,
+    topWinners: topWinners.slice(0, 5),
+    luckyWinner: null
+  };
+  lottery.jackpot = DEFAULT_LOTTERY_JACKPOT + rollover;
+  lottery.nextDrawAt = getNextLotteryDrawAt(now);
+  lottery.tickets = {};
+  lottery.totalTickets = 0;
+  lottery.nextTicketSeq = 0;
+
+  return {
+    guildId,
+    automatic: Boolean(automatic),
+    channelId: lottery.settings.autoDrawChannelId,
+    winner: headlineProfile ? cloneCommunityProfile(headlineProfile, now) : null,
+    headlineWinner,
+    payout: headlineWinner?.totalPayout ?? 0,
+    totalPaid,
+    rollover,
+    winningNumbers: [...winningNumbers],
+    bonusNumber,
+    jackpotBefore,
+    totalTickets: entries.length,
+    tierSummaries: tierSummaries.map((summary) => ({ ...summary })),
+    topWinners,
+    luckyWinner: null,
+    lottery: getLotteryStatus(lottery)
+  };
+}
+
+function collectLotteryEntries(lottery, randomInt, now) {
+  const entries = [];
+
+  for (const ticket of Object.values(lottery.tickets)) {
+    ticket.entries ??= [];
+    const legacyCount = normalizeStoredNonNegativeInteger(ticket.legacyCount);
+    for (let index = 0; index < legacyCount; index += 1) {
+      ticket.entries.push(createLotteryEntry(lottery, randomInt, now));
+    }
+    ticket.legacyCount = 0;
+    ticket.count = ticket.entries.length;
+
+    for (const entry of ticket.entries) {
+      entries.push({
+        id: entry.id,
+        userId: ticket.userId,
+        username: ticket.username,
+        numbers: [...entry.numbers],
+        purchasedAt: entry.purchasedAt
+      });
+    }
+  }
+
+  lottery.totalTickets = entries.length;
+  return entries;
+}
+
+function createLotteryEntry(lottery, randomInt, purchasedAt) {
+  lottery.nextTicketSeq = normalizeStoredNonNegativeInteger(lottery.nextTicketSeq) + 1;
+  return {
+    id: `L${String(lottery.nextTicketSeq).padStart(6, '0')}`,
+    numbers: drawLotteryPick(randomInt),
+    purchasedAt
+  };
+}
+
+function drawLotteryNumbers(randomInt) {
+  const pool = createLotteryNumberPool();
+  const numbers = drawLotteryPickFromPool(pool, randomInt, LOTTERY_PICK_COUNT);
+  const bonusNumber = drawLotteryPickFromPool(pool, randomInt, 1)[0];
+
+  return {
+    numbers,
+    bonusNumber
+  };
+}
+
+function drawLotteryPick(randomInt) {
+  return drawLotteryPickFromPool(createLotteryNumberPool(), randomInt, LOTTERY_PICK_COUNT);
+}
+
+function drawLotteryPickFromPool(pool, randomInt, count) {
+  const picks = [];
+  while (picks.length < count) {
+    const rolledIndex = normalizeBoundedInteger(randomInt(1, pool.length), '복권 번호 위치', 1, pool.length);
+    const index = rolledIndex - 1;
+    picks.push(pool.splice(index, 1)[0]);
+  }
+
+  return picks.sort((a, b) => a - b);
+}
+
+function createLotteryNumberPool() {
+  return Array.from(
+    { length: LOTTERY_NUMBER_MAX - LOTTERY_NUMBER_MIN + 1 },
+    (_, index) => LOTTERY_NUMBER_MIN + index
+  );
+}
+
+function evaluateLotteryEntry(entry, winningNumbers, bonusNumber) {
+  const winningSet = new Set(winningNumbers);
+  const matchedNumbers = entry.numbers.filter((number) => winningSet.has(number));
+  const matchedBonus = entry.numbers.includes(bonusNumber);
+  const tier = LOTTERY_PRIZE_TIERS.find((candidate) => {
+    if (candidate.matchCount !== matchedNumbers.length) return false;
+    return candidate.requiresBonus ? matchedBonus : true;
+  }) ?? null;
+
+  return {
+    tier,
+    matchedNumbers,
+    matchedBonus
+  };
+}
+
+function payLotteryWinner(data, guildId, entry, tier, amount, payoutLedger, now) {
+  const winnerProfile = getOrCreateProfile(data, guildId, entry.userId, entry.username, now);
+  winnerProfile.balance += amount;
+
+  const summary = payoutLedger.get(entry.userId) ?? {
+    userId: winnerProfile.userId,
+    username: winnerProfile.username,
+    totalPayout: 0,
+    winningTickets: 0,
+    tiers: {}
+  };
+  summary.username = winnerProfile.username;
+  summary.totalPayout += amount;
+  summary.winningTickets += 1;
+  summary.tiers[tier.label] = (summary.tiers[tier.label] ?? 0) + 1;
+  payoutLedger.set(entry.userId, summary);
 }
 
 function title(id, label, description) {
@@ -535,12 +994,12 @@ function mission(id, titleText, description, isComplete, getProgressText, reward
   });
 }
 
-function getOrCreateGuildCommunity(data, guildId) {
+function getOrCreateGuildCommunity(data, guildId, now = Date.now()) {
   data.guilds ??= {};
   data.guilds[guildId] ??= {};
   const guild = data.guilds[guildId];
   guild.community ??= {};
-  guild.community.lottery = normalizeLottery(guild.community.lottery);
+  guild.community.lottery = normalizeLottery(guild.community.lottery, now);
   guild.community.event ??= null;
   return guild.community;
 }
@@ -601,7 +1060,9 @@ function normalizeCommunityProfile(profile, now = Date.now()) {
     lotteryTickets: normalizeStoredNonNegativeInteger(community.stats?.lotteryTickets),
     missionsCompleted: normalizeStoredNonNegativeInteger(community.stats?.missionsCompleted),
     eventsHosted: normalizeStoredNonNegativeInteger(community.stats?.eventsHosted),
-    shopPurchases: normalizeStoredNonNegativeInteger(community.stats?.shopPurchases)
+    shopPurchases: normalizeStoredNonNegativeInteger(community.stats?.shopPurchases),
+    chatMessages: normalizeStoredNonNegativeInteger(community.stats?.chatMessages),
+    commandsUsed: normalizeStoredNonNegativeInteger(community.stats?.commandsUsed)
   };
   community.claimedAchievements = normalizeBooleanMap(community.claimedAchievements);
   community.ownedTitles = normalizeStringArray(community.ownedTitles).filter((titleId) => TITLE_BY_ID.has(titleId));
@@ -615,7 +1076,39 @@ function normalizeCommunityProfile(profile, now = Date.now()) {
   community.missions.daily = normalizeMissionPeriodState(community.missions.daily, getDayIndex(now));
   community.missions.weekly = normalizeMissionPeriodState(community.missions.weekly, getWeekIndex(now));
   community.daily = normalizeDailyCommunityStats(community.daily, now);
+  community.activity = normalizeActivityLog(community.activity, now);
   return community;
+}
+
+function normalizeActivityLog(activity, now) {
+  const safeActivity = activity && typeof activity === 'object' ? activity : {};
+  const today = getDayIndex(now, ACTIVITY_DAY_OFFSET_MS);
+  const oldestDay = today - ACTIVITY_RETENTION_DAYS + 1;
+  const days = {};
+
+  for (const [dayKey, rawDay] of Object.entries(safeActivity.days ?? {})) {
+    const day = Number(dayKey);
+    if (!Number.isSafeInteger(day) || day < oldestDay) continue;
+    days[String(day)] = normalizeActivityDay(rawDay, day);
+  }
+
+  return {
+    days,
+    lastActiveAt: normalizeStoredNonNegativeInteger(safeActivity.lastActiveAt)
+  };
+}
+
+function normalizeActivityDay(rawDay, day) {
+  const safeDay = rawDay && typeof rawDay === 'object' ? rawDay : {};
+  return {
+    day,
+    messages: normalizeStoredNonNegativeInteger(safeDay.messages),
+    commands: normalizeStoredNonNegativeInteger(safeDay.commands),
+    xp: normalizeStoredNonNegativeInteger(safeDay.xp),
+    chatXp: normalizeStoredNonNegativeInteger(safeDay.chatXp),
+    commandXp: normalizeStoredNonNegativeInteger(safeDay.commandXp),
+    commandCounts: normalizeCountsMap(safeDay.commandCounts)
+  };
 }
 
 function normalizeDailyCommunityStats(daily, now) {
@@ -649,18 +1142,23 @@ function normalizeMissionPeriodState(state, period) {
   };
 }
 
-function normalizeLottery(lottery) {
+function normalizeLottery(lottery, now = Date.now()) {
   const safeLottery = lottery && typeof lottery === 'object' ? lottery : {};
   const tickets = {};
   let totalTickets = 0;
 
   for (const [userId, ticket] of Object.entries(safeLottery.tickets ?? {})) {
-    const count = normalizeStoredNonNegativeInteger(ticket?.count);
+    const entries = normalizeLotteryEntries(ticket?.entries);
+    const storedCount = normalizeStoredNonNegativeInteger(ticket?.count);
+    const legacyCount = Math.max(0, storedCount - entries.length);
+    const count = entries.length + legacyCount;
     if (count <= 0) continue;
     tickets[userId] = {
       userId,
       username: ticket?.username || 'Unknown',
-      count
+      count,
+      entries,
+      legacyCount
     };
     totalTickets += count;
   }
@@ -668,7 +1166,10 @@ function normalizeLottery(lottery) {
   safeLottery.jackpot = Math.max(DEFAULT_LOTTERY_JACKPOT, normalizeStoredNonNegativeInteger(safeLottery.jackpot, DEFAULT_LOTTERY_JACKPOT));
   safeLottery.tickets = tickets;
   safeLottery.totalTickets = totalTickets;
+  safeLottery.nextTicketSeq = normalizeStoredNonNegativeInteger(safeLottery.nextTicketSeq);
   safeLottery.lastDrawAt = normalizeStoredNonNegativeInteger(safeLottery.lastDrawAt);
+  safeLottery.nextDrawAt = normalizeLotteryNextDrawAt(safeLottery.nextDrawAt, now);
+  safeLottery.settings = normalizeLotterySettings(safeLottery.settings);
   safeLottery.lastWinner = safeLottery.lastWinner && typeof safeLottery.lastWinner === 'object'
     ? {
         userId: String(safeLottery.lastWinner.userId ?? ''),
@@ -677,7 +1178,121 @@ function normalizeLottery(lottery) {
         drawnAt: normalizeStoredNonNegativeInteger(safeLottery.lastWinner.drawnAt)
       }
     : null;
+  safeLottery.lastDraw = normalizeLotteryLastDraw(safeLottery.lastDraw);
   return safeLottery;
+}
+
+function normalizeLotteryNextDrawAt(nextDrawAt, now) {
+  const storedNextDrawAt = normalizeStoredNonNegativeInteger(nextDrawAt);
+  const currentScheduleNextDrawAt = getNextLotteryDrawAt(now);
+
+  if (storedNextDrawAt <= 0) return currentScheduleNextDrawAt;
+  if (storedNextDrawAt <= now) return storedNextDrawAt;
+  if (!isLotteryScheduledDrawAt(storedNextDrawAt)) return currentScheduleNextDrawAt;
+
+  return Math.min(storedNextDrawAt, currentScheduleNextDrawAt);
+}
+
+function isLotteryScheduledDrawAt(timestamp) {
+  const koreaDate = new Date(Number(timestamp) + KOREA_TIME_OFFSET_MS);
+
+  return LOTTERY_DRAW_DAYS.includes(koreaDate.getUTCDay())
+    && koreaDate.getUTCHours() === LOTTERY_DRAW_HOUR
+    && koreaDate.getUTCMinutes() === LOTTERY_DRAW_MINUTE
+    && koreaDate.getUTCSeconds() === 0
+    && koreaDate.getUTCMilliseconds() === 0;
+}
+
+function normalizeLotteryEntries(entries) {
+  if (!Array.isArray(entries)) return [];
+
+  return entries
+    .map((entry, index) => {
+      const safeEntry = entry && typeof entry === 'object' ? entry : {};
+      const numbers = normalizeLotteryNumbers(safeEntry.numbers);
+      if (!numbers) return null;
+
+      return {
+        id: String(safeEntry.id || `legacy-${index + 1}`),
+        numbers,
+        purchasedAt: normalizeStoredNonNegativeInteger(safeEntry.purchasedAt)
+      };
+    })
+    .filter(Boolean);
+}
+
+function normalizeLotteryNumbers(numbers) {
+  if (!Array.isArray(numbers)) return null;
+  const normalized = numbers.map((number) => Number(number));
+  const unique = [...new Set(normalized)];
+
+  if (unique.length !== LOTTERY_PICK_COUNT) return null;
+  if (!unique.every((number) => Number.isSafeInteger(number)
+    && number >= LOTTERY_NUMBER_MIN
+    && number <= LOTTERY_NUMBER_MAX)) {
+    return null;
+  }
+
+  return unique.sort((a, b) => a - b);
+}
+
+function normalizeLotterySettings(settings) {
+  const safeSettings = settings && typeof settings === 'object' ? settings : {};
+  return {
+    autoDrawEnabled: safeSettings.autoDrawEnabled !== false,
+    autoDrawChannelId: safeSettings.autoDrawChannelId ? String(safeSettings.autoDrawChannelId) : null
+  };
+}
+
+function normalizeLotteryLastDraw(lastDraw) {
+  if (!lastDraw || typeof lastDraw !== 'object') return null;
+
+  return {
+    drawnAt: normalizeStoredNonNegativeInteger(lastDraw.drawnAt),
+    automatic: Boolean(lastDraw.automatic),
+    winningNumbers: normalizeLotteryNumbers(lastDraw.winningNumbers) ?? [],
+    bonusNumber: normalizeStoredNonNegativeInteger(lastDraw.bonusNumber),
+    jackpotBefore: normalizeStoredNonNegativeInteger(lastDraw.jackpotBefore),
+    totalTickets: normalizeStoredNonNegativeInteger(lastDraw.totalTickets),
+    totalPaid: normalizeStoredNonNegativeInteger(lastDraw.totalPaid),
+    rollover: normalizeStoredNonNegativeInteger(lastDraw.rollover),
+    tierSummaries: Array.isArray(lastDraw.tierSummaries)
+      ? lastDraw.tierSummaries.map(normalizeLotteryTierSummary)
+      : [],
+    topWinners: Array.isArray(lastDraw.topWinners)
+      ? lastDraw.topWinners.map(normalizeLotteryWinnerSummary)
+      : [],
+    luckyWinner: lastDraw.luckyWinner ? normalizeLotteryWinnerSummary(lastDraw.luckyWinner) : null
+  };
+}
+
+function normalizeLotteryTierSummary(summary) {
+  const safeSummary = summary && typeof summary === 'object' ? summary : {};
+  return {
+    id: String(safeSummary.id ?? ''),
+    label: String(safeSummary.label ?? ''),
+    description: String(safeSummary.description ?? ''),
+    winnerCount: normalizeStoredNonNegativeInteger(safeSummary.winnerCount),
+    prizePerTicket: normalizeStoredNonNegativeInteger(safeSummary.prizePerTicket),
+    totalPayout: normalizeStoredNonNegativeInteger(safeSummary.totalPayout)
+  };
+}
+
+function normalizeLotteryWinnerSummary(winner) {
+  const safeWinner = winner && typeof winner === 'object' ? winner : {};
+  return {
+    userId: String(safeWinner.userId ?? ''),
+    username: safeWinner.username || 'Unknown',
+    payout: normalizeStoredNonNegativeInteger(safeWinner.payout ?? safeWinner.totalPayout),
+    totalPayout: normalizeStoredNonNegativeInteger(safeWinner.totalPayout ?? safeWinner.payout),
+    winningTickets: normalizeStoredNonNegativeInteger(safeWinner.winningTickets),
+    tiers: safeWinner.tiers && typeof safeWinner.tiers === 'object'
+      ? Object.fromEntries(Object.entries(safeWinner.tiers).map(([tier, count]) => [
+          String(tier),
+          normalizeStoredNonNegativeInteger(count)
+        ]))
+      : {}
+  };
 }
 
 function getAchievementStatuses(profile, community) {
@@ -752,8 +1367,35 @@ function getLotteryStatus(lottery) {
   return {
     jackpot: lottery.jackpot,
     totalTickets: lottery.totalTickets,
-    participants: Object.values(lottery.tickets).map((ticket) => ({ ...ticket })),
-    lastWinner: lottery.lastWinner ? { ...lottery.lastWinner } : null
+    nextDrawAt: lottery.nextDrawAt,
+    autoDrawEnabled: lottery.settings.autoDrawEnabled,
+    autoDrawChannelId: lottery.settings.autoDrawChannelId,
+    participants: Object.values(lottery.tickets).map((ticket) => ({
+      userId: ticket.userId,
+      username: ticket.username,
+      count: ticket.count,
+      entries: ticket.entries.map((entry) => ({
+        ...entry,
+        numbers: [...entry.numbers]
+      }))
+    })),
+    lastWinner: lottery.lastWinner ? { ...lottery.lastWinner } : null,
+    lastDraw: lottery.lastDraw ? cloneLotteryLastDraw(lottery.lastDraw) : null
+  };
+}
+
+function cloneLotteryLastDraw(lastDraw) {
+  return {
+    ...lastDraw,
+    winningNumbers: [...lastDraw.winningNumbers],
+    tierSummaries: lastDraw.tierSummaries.map((summary) => ({ ...summary })),
+    topWinners: lastDraw.topWinners.map((winner) => ({
+      ...winner,
+      tiers: { ...winner.tiers }
+    })),
+    luckyWinner: lastDraw.luckyWinner
+      ? { ...lastDraw.luckyWinner, tiers: { ...lastDraw.luckyWinner.tiers } }
+      : null
   };
 }
 
@@ -820,8 +1462,51 @@ function cloneCommunityState(community) {
         claimed: { ...community.missions.weekly.claimed }
       }
     },
-    daily: { ...community.daily }
+    daily: { ...community.daily },
+    activity: {
+      lastActiveAt: community.activity.lastActiveAt,
+      days: Object.fromEntries(
+        Object.entries(community.activity.days).map(([day, value]) => [day, cloneActivityDay(value, Number(day))])
+      )
+    }
   };
+}
+
+function getOrCreateActivityDay(community, now) {
+  const day = getDayIndex(now, ACTIVITY_DAY_OFFSET_MS);
+  community.activity = normalizeActivityLog(community.activity, now);
+  community.activity.days[String(day)] ??= normalizeActivityDay(null, day);
+  return community.activity.days[String(day)];
+}
+
+function cloneActivityDay(day, fallbackDay) {
+  const normalized = normalizeActivityDay(day, fallbackDay);
+  return {
+    ...normalized,
+    date: formatActivityDay(normalized.day),
+    commandCounts: { ...normalized.commandCounts }
+  };
+}
+
+function normalizeCountsMap(map) {
+  const safeMap = map && typeof map === 'object' ? map : {};
+  const result = {};
+
+  for (const [key, value] of Object.entries(safeMap)) {
+    const count = normalizeStoredNonNegativeInteger(value);
+    if (count > 0) result[String(key)] = count;
+  }
+
+  return result;
+}
+
+function normalizeCommandName(commandName) {
+  const normalized = String(commandName || '명령어').trim().replace(/^\//, '');
+  return normalized || '명령어';
+}
+
+function formatActivityDay(day) {
+  return new Date(day * DAY_MS).toISOString().slice(0, 10);
 }
 
 function addOwnedTitle(community, titleId) {

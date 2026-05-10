@@ -329,7 +329,7 @@ test('레벨 필요 경험치는 100 × 레벨^1.5 공식을 따른다', async (
 
 test('메시지 보상은 일반 채팅 XP와 하루 첫 채팅 보너스를 지급한다', async () => {
   const fixture = await createFixture({
-    randomInt: () => 10
+    randomInt: () => 9
   });
 
   try {
@@ -347,16 +347,44 @@ test('메시지 보상은 일반 채팅 XP와 하루 첫 채팅 보너스를 지
     });
 
     assert.equal(first.awarded, true);
-    assert.equal(first.xpGained, 10);
-    assert.equal(first.firstMessageBonusXp, 50);
-    assert.equal(first.totalXpGained, 60);
+    assert.equal(first.xpGained, 9);
+    assert.equal(first.firstMessageBonusXp, 80);
+    assert.equal(first.totalXpGained, 89);
     assert.equal(first.moneyGained, 0);
-    assert.equal(first.profile.xp, 60);
+    assert.equal(first.profile.xp, 89);
     assert.equal(first.profile.balance, 0);
 
-    assert.equal(second.awarded, false);
-    assert.equal(second.profile.xp, 60);
+    assert.equal(second.awarded, true);
+    assert.equal(second.firstMessageBonusXp, 0);
+    assert.equal(second.totalXpGained, 9);
+    assert.equal(second.profile.xp, 98);
     assert.equal(second.profile.balance, 0);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('명령어 사용도 메인 프로필 XP를 조금 지급한다', async () => {
+  const fixture = await createFixture({
+    commandXpMin: 4,
+    commandXpMax: 4,
+    randomInt: (min) => min
+  });
+
+  try {
+    const result = await fixture.economy.rewardCommand({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '테스터',
+      commandName: '프로필',
+      now: 100_000
+    });
+
+    assert.equal(result.awarded, true);
+    assert.equal(result.commandName, '프로필');
+    assert.equal(result.xpGained, 4);
+    assert.equal(result.totalXpGained, 4);
+    assert.equal(result.profile.totalXp, 4);
   } finally {
     await fixture.cleanup();
   }
@@ -505,6 +533,50 @@ test('끝말잇기와 RPG 승리 경험치를 지급한다', async () => {
     assert.equal(rpg.xpGained, 150);
     assert.equal(rpg.profile.totalXp, 80);
     assert.equal(rpg.profile.rpg.totalXp, 150);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('라이어게임 결과 보상은 승리 진영에 따라 시민과 라이어를 다르게 지급한다', async () => {
+  const fixture = await createFixture({
+    liarGameCitizenWinXp: 90,
+    liarGameCitizenWinMoney: 700,
+    liarGameLiarWinXp: 220,
+    liarGameLiarWinMoney: 2000,
+    liarGameCitizenLoseXp: 15,
+    liarGameLiarLoseXp: 40,
+    levelBaseXp: 1000
+  });
+  const participants = [
+    { userId: 'citizen-1', username: '시민1' },
+    { userId: 'citizen-2', username: '시민2' },
+    { userId: 'liar-1', username: '라이어' }
+  ];
+
+  try {
+    const citizenWin = await fixture.economy.awardLiarGameResults({
+      guildId: 'guild-1',
+      participants,
+      liarUserId: 'liar-1',
+      winner: 'citizens'
+    });
+
+    assert.equal(citizenWin.winner, 'citizens');
+    assert.deepEqual(citizenWin.participants.map((result) => result.xpGained), [90, 90, 40]);
+    assert.deepEqual(citizenWin.participants.map((result) => result.moneyGained), [700, 700, 0]);
+
+    const liarWin = await fixture.economy.awardLiarGameResults({
+      guildId: 'guild-1',
+      participants,
+      liarUserId: 'liar-1',
+      winner: 'liar'
+    });
+
+    assert.equal(liarWin.winner, 'liar');
+    assert.deepEqual(liarWin.participants.map((result) => result.xpGained), [15, 15, 220]);
+    assert.deepEqual(liarWin.participants.map((result) => result.moneyGained), [0, 0, 2000]);
+    assert.equal(liarWin.liar.profile.balance, 2000);
   } finally {
     await fixture.cleanup();
   }

@@ -1,6 +1,15 @@
-import { MessageFlags, Client, Events, GatewayIntentBits } from 'discord.js';
+import { MessageFlags, Client, Events, GatewayIntentBits, Partials } from 'discord.js';
 import { handleCasinoCommand } from './commands/casino.js';
-import { handleCommunityCommand } from './commands/community.js';
+import {
+  handleChoseongCommand,
+  handleChoseongMessage
+} from './commands/choseong.js';
+import { handleChoiceCommand } from './commands/choice.js';
+import { handleCompatibilityCommand } from './commands/compatibility.js';
+import {
+  formatLotteryDraw,
+  handleCommunityCommand
+} from './commands/community.js';
 import {
   handleAccountLinkComponent,
   handleEconomyCommand,
@@ -14,9 +23,15 @@ import {
 } from './commands/meals.js';
 import { handleHelpCommand } from './commands/help.js';
 import {
+  handleLiarGameCommand,
+  handleLiarGameMessage
+} from './commands/liar-game.js';
+import {
   handleModerationCommand,
   inspectMessageForModeration
 } from './commands/moderation.js';
+import { handleNumberBaseballCommand } from './commands/number-baseball.js';
+import { handlePollCommand, PollManager } from './commands/poll.js';
 import { handleRpgCommand } from './commands/rpg.js';
 import { handleSeasonCommand } from './commands/seasons.js';
 import { handleSwordCommand } from './commands/sword.js';
@@ -41,10 +56,15 @@ import {
   handleWordChainCommand,
   handleWordChainMessage
 } from './commands/wordchain.js';
+import { handleWordleCommand } from './commands/wordle.js';
 import { ModerationService } from './systems/moderation.js';
+import { NumberBaseballService } from './systems/number-baseball.js';
 import { createSqliteStore } from './storage/sqlite-store.js';
 import { isAccountSelectionRequiredError } from './systems/accounts.js';
-import { CommunityService } from './systems/community.js';
+import {
+  CommunityService,
+  scheduleLotteryDrawAnnouncements
+} from './systems/community.js';
 import { EconomyService } from './systems/economy.js';
 import { FishingService } from './systems/fishing.js';
 import { FortuneService } from './systems/fortune.js';
@@ -59,6 +79,7 @@ import {
 import { SeasonService } from './systems/seasons.js';
 import { TamagotchiService } from './systems/tamagotchi.js';
 import { TimetableService } from './systems/timetable.js';
+import { WordleService } from './systems/wordle.js';
 
 export function createBot({
   databasePath = 'data/profiles.sqlite',
@@ -70,7 +91,14 @@ export function createBot({
     intents: [
       GatewayIntentBits.Guilds,
       GatewayIntentBits.GuildMessages,
-      GatewayIntentBits.MessageContent
+      GatewayIntentBits.MessageContent,
+      GatewayIntentBits.GuildMessageReactions
+    ],
+    partials: [
+      Partials.Message,
+      Partials.Channel,
+      Partials.Reaction,
+      Partials.User
     ]
   });
 
@@ -87,8 +115,12 @@ export function createBot({
   const tamagotchi = new TamagotchiService(store);
   const timetable = new TimetableService();
   const moderation = new ModerationService(store);
+  const wordle = new WordleService(store);
+  const numberBaseball = new NumberBaseballService(store);
+  const polls = new PollManager({ logger });
   let stopMealAnnouncementScheduler = () => {};
   let stopStockAlertScheduler = () => {};
+  let stopLotteryDrawScheduler = () => {};
 
   client.once(Events.ClientReady, (readyClient) => {
     logger.log(`Logged in as ${readyClient.user.tag}`);
@@ -104,6 +136,13 @@ export function createBot({
       logger,
       async sendAnnouncements() {
         await sendStockAlertAnnouncements(readyClient, stocks, logger);
+      }
+    });
+
+    stopLotteryDrawScheduler = scheduleLotteryDrawAnnouncements({
+      logger,
+      async sendAnnouncements() {
+        await sendLotteryDrawAnnouncements(readyClient, community, logger);
       }
     });
   });
@@ -151,13 +190,21 @@ export function createBot({
             activity: 'casino'
           }).catch((error) => logger.error('Failed to record casino activity:', error));
         }
+        await recordCommandActivity(interaction, economy, community, logger);
         return;
       }
 
       const handled = await handleCommunityCommand(interaction, community, logger)
+        || await handleChoiceCommand(interaction)
+        || await handleCompatibilityCommand(interaction)
         || await handleHelpCommand(interaction)
+        || await handlePollCommand(interaction, polls, logger)
         || await handleModerationCommand(interaction, moderation, logger)
         || await handleWordChainCommand(interaction, economy, logger)
+        || await handleChoseongCommand(interaction, economy, logger)
+        || await handleLiarGameCommand(interaction, economy, logger)
+        || await handleWordleCommand(interaction, wordle, economy)
+        || await handleNumberBaseballCommand(interaction, numberBaseball, economy)
         || await handleFortuneCommand(interaction, fortune, economy)
         || await handleTodayCommand(interaction, { economy, community, seasons })
         || await handleMealCommand(interaction, meals)
@@ -174,6 +221,8 @@ export function createBot({
         await safeReplyToInteraction(interaction, '알 수 없는 명령어입니다.', {
           flags: MessageFlags.Ephemeral
         });
+      } else {
+        await recordCommandActivity(interaction, economy, community, logger);
       }
     } catch (error) {
       if (isUnknownInteractionError(error)) {
@@ -208,9 +257,6 @@ export function createBot({
       const moderationResult = await inspectMessageForModeration(message, moderation, logger);
       if (moderationResult.blocked) return;
 
-      const handledWordChain = await handleWordChainMessage(message, economy, logger);
-      if (handledWordChain) return;
-
       const accountSummary = await economy.getAccountLinkSummary({
         guildId: message.guild.id,
         userId: message.author.id,
@@ -218,32 +264,33 @@ export function createBot({
       });
       if (accountSummary.required) return;
 
-      const result = await economy.rewardMessage({
-        guildId: message.guild.id,
-        userId: message.author.id,
-        username: message.author.username
-      });
-      const eventBonus = result.awarded
-        ? await community.awardChatEventBonus({
-            guildId: message.guild.id,
-            userId: message.author.id,
-            username: message.author.username,
-            baseXp: result.totalXpGained
-          })
-        : null;
-
-      if (result.leveledUp) {
-        await message.channel.send(
-          `🎉 ${message.author}님 레벨업! Lv.${result.profile.level} 달성, 보너스 ${result.levelReward.toLocaleString()}골드 지급!`
-        );
-      }
-      if (eventBonus?.leveledUp) {
-        await message.channel.send(
-          `📣 서버 이벤트 보너스로 ${message.author}님 레벨업! Lv.${eventBonus.profile.level} 달성, 보너스 ${eventBonus.levelReward.toLocaleString()}골드 지급!`
-        );
-      }
+      const handledWordChain = await handleWordChainMessage(message, economy, logger);
+      const handledLiarGame = handledWordChain
+        ? false
+        : await handleLiarGameMessage(message, economy, logger);
+      const handledChoseong = handledWordChain || handledLiarGame
+        ? false
+        : await handleChoseongMessage(message, economy, logger);
+      await rewardChatActivity(message, economy, community, logger);
+      if (handledWordChain || handledLiarGame || handledChoseong) return;
     } catch (error) {
       logger.error('Failed to reward message activity:', error);
+    }
+  });
+
+  client.on(Events.MessageReactionAdd, async (reaction, user) => {
+    try {
+      await polls.handleReactionAdd(reaction, user);
+    } catch (error) {
+      logger.error('Failed to handle poll reaction add:', error);
+    }
+  });
+
+  client.on(Events.MessageReactionRemove, async (reaction, user) => {
+    try {
+      await polls.handleReactionRemove(reaction, user);
+    } catch (error) {
+      logger.error('Failed to handle poll reaction remove:', error);
     }
   });
 
@@ -258,11 +305,17 @@ export function createBot({
     tamagotchi,
     timetable,
     moderation,
+    wordle,
+    numberBaseball,
+    polls,
     stopMealAnnouncements() {
       stopMealAnnouncementScheduler();
     },
     stopStockAlerts() {
       stopStockAlertScheduler();
+    },
+    stopLotteryDraws() {
+      stopLotteryDrawScheduler();
     },
     async start(token) {
       await client.login(token);
@@ -274,8 +327,86 @@ export function isSupportedCommandInteraction(interaction) {
   return Boolean(
     interaction?.isChatInputCommand?.()
     || interaction?.isButton?.()
+    || interaction?.isModalSubmit?.()
     || interaction?.isStringSelectMenu?.()
   );
+}
+
+async function recordCommandActivity(interaction, economy, community, logger) {
+  if (!interaction.isChatInputCommand?.() || !interaction.inGuild?.()) return null;
+  if (interaction.commandName === '계정연동') return null;
+
+  try {
+    const result = await economy.rewardCommand({
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username,
+      commandName: interaction.commandName
+    });
+
+    await community.recordActivity({
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username,
+      activity: 'command',
+      commandName: interaction.commandName,
+      xpGained: result.totalXpGained
+    });
+
+    if (result.leveledUp && typeof interaction.followUp === 'function') {
+      await interaction.followUp({
+        content: `🎉 명령어 활동으로 레벨업! Lv.${result.profile.level} 달성, 보너스 ${result.levelReward.toLocaleString()}골드 지급!`,
+        flags: MessageFlags.Ephemeral
+      }).catch((error) => logger.debug?.('Failed to send command level-up notice:', error));
+    }
+
+    return result;
+  } catch (error) {
+    logger.error('Failed to reward command activity:', error);
+    return null;
+  }
+}
+
+async function rewardChatActivity(message, economy, community, logger) {
+  const result = await economy.rewardMessage({
+    guildId: message.guild.id,
+    userId: message.author.id,
+    username: message.author.username
+  });
+  const eventBonus = result.awarded
+    ? await community.awardChatEventBonus({
+        guildId: message.guild.id,
+        userId: message.author.id,
+        username: message.author.username,
+        baseXp: result.totalXpGained
+      })
+    : null;
+
+  if (result.awarded) {
+    await community.recordActivity({
+      guildId: message.guild.id,
+      userId: message.author.id,
+      username: message.author.username,
+      activity: 'chat',
+      xpGained: result.totalXpGained + (eventBonus?.bonusXp ?? 0)
+    });
+  }
+
+  if (result.leveledUp) {
+    await message.channel.send(
+      `🎉 ${message.author}님 레벨업! Lv.${result.profile.level} 달성, 보너스 ${result.levelReward.toLocaleString()}골드 지급!`
+    );
+  }
+  if (eventBonus?.leveledUp) {
+    await message.channel.send(
+      `📣 서버 이벤트 보너스로 ${message.author}님 레벨업! Lv.${eventBonus.profile.level} 달성, 보너스 ${eventBonus.levelReward.toLocaleString()}골드 지급!`
+    );
+  }
+
+  return {
+    result,
+    eventBonus
+  };
 }
 
 async function sendStockAlertAnnouncements(client, stocks, logger) {
@@ -321,6 +452,48 @@ function formatStockAlertAnnouncement(alert) {
     `현재가: **${alert.triggeredPrice.toLocaleString()}골드** / 목표: ${alert.targetPrice.toLocaleString()}골드 ${conditionLabel}`,
     '`/주식 알림`에서 최근 트리거 기록을 확인할 수 있습니다.'
   ].join('\n');
+}
+
+async function sendLotteryDrawAnnouncements(client, community, logger) {
+  const results = await community.drawDueLotteries();
+
+  for (const result of results) {
+    try {
+      const channel = await resolveLotteryAnnouncementChannel(client, result);
+
+      if (!channel || typeof channel.send !== 'function') {
+        throw new Error(`복권 자동 추첨 알림 채널을 찾을 수 없습니다: ${result.guildId}`);
+      }
+
+      await channel.send(formatLotteryDraw(result));
+    } catch (error) {
+      logger.error(`Failed to send lottery draw announcement for guild ${result.guildId}:`, error);
+    }
+  }
+}
+
+async function resolveLotteryAnnouncementChannel(client, result) {
+  if (result.channelId) {
+    const configuredChannel = await client.channels.fetch(result.channelId).catch(() => null);
+    if (configuredChannel && typeof configuredChannel.send === 'function') {
+      return configuredChannel;
+    }
+  }
+
+  const guild = client.guilds?.cache?.get?.(result.guildId) ?? null;
+  if (guild?.systemChannel && typeof guild.systemChannel.send === 'function') {
+    return guild.systemChannel;
+  }
+
+  if (guild?.systemChannelId) {
+    const systemChannel = await client.channels.fetch(guild.systemChannelId).catch(() => null);
+    if (systemChannel && typeof systemChannel.send === 'function') {
+      return systemChannel;
+    }
+  }
+
+  return [...(guild?.channels?.cache?.values?.() ?? [])]
+    .find((channel) => typeof channel.send === 'function') ?? null;
 }
 
 async function sendDailyMealAnnouncements(client, meals, logger) {

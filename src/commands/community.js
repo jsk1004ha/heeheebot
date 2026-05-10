@@ -1,7 +1,10 @@
 import { MessageFlags, SlashCommandBuilder } from 'discord.js';
 import {
+  formatLotteryDrawTime,
   getCommunityTitles,
   getEventTypes,
+  getLotteryDrawScheduleText,
+  getLotteryMaxTicketsPerPurchase,
   getLotteryTicketCost,
   getShopItems
 } from '../systems/community.js';
@@ -17,7 +20,8 @@ const communityCommandNames = new Set([
   '미션',
   '복권',
   '상점',
-  '서버이벤트'
+  '서버이벤트',
+  '활동요약'
 ]);
 
 export const communityCommands = [
@@ -65,7 +69,20 @@ export const communityCommands = [
             .setName('장수')
             .setDescription('구매할 복권 장수')
             .setMinValue(1)
-            .setMaxValue(50)
+            .setMaxValue(getLotteryMaxTicketsPerPurchase())
+            .setRequired(true)
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('대량구매')
+        .setDescription(`복권을 한 번에 여러 장 구매합니다. 최대 ${getLotteryMaxTicketsPerPurchase()}장.`)
+        .addIntegerOption((option) =>
+          option
+            .setName('장수')
+            .setDescription(`구매할 복권 장수(2~${getLotteryMaxTicketsPerPurchase()}장)`)
+            .setMinValue(2)
+            .setMaxValue(getLotteryMaxTicketsPerPurchase())
             .setRequired(true)
         )
     )
@@ -73,6 +90,22 @@ export const communityCommands = [
       subcommand
         .setName('추첨')
         .setDescription('현재 판매된 복권 중 당첨자를 추첨합니다.')
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('자동추첨')
+        .setDescription('매주 수요일·토요일 21:00 자동 추첨 알림을 설정합니다.')
+        .addBooleanOption((option) =>
+          option
+            .setName('사용')
+            .setDescription('자동 추첨을 사용할지 여부')
+            .setRequired(true)
+        )
+        .addChannelOption((option) =>
+          option
+            .setName('채널')
+            .setDescription('자동 추첨 결과를 보낼 채널(켜기일 때 비우면 현재 채널)')
+        )
     ),
   new SlashCommandBuilder()
     .setName('상점')
@@ -120,6 +153,14 @@ export const communityCommands = [
             .setMinValue(1)
             .setMaxValue(60)
         )
+    ),
+  new SlashCommandBuilder()
+    .setName('활동요약')
+    .setDescription('최근 7일간 채팅/명령어 활동과 획득한 메인 프로필 XP를 요약합니다.')
+    .addUserOption((option) =>
+      option
+        .setName('대상')
+        .setDescription('활동 요약을 확인할 유저')
     )
 ];
 
@@ -200,7 +241,7 @@ async function routeCommunityCommand(interaction, community) {
       return;
     }
 
-    if (subcommand === '구매') {
+    if (subcommand === '구매' || subcommand === '대량구매') {
       const result = await community.buyLotteryTickets({
         ...base,
         quantity: interaction.options.getInteger('장수', true)
@@ -212,6 +253,18 @@ async function routeCommunityCommand(interaction, community) {
     if (subcommand === '추첨') {
       const result = await community.drawLottery({ guildId });
       await interaction.reply(formatLotteryDraw(result));
+      return;
+    }
+
+    if (subcommand === '자동추첨') {
+      const enabled = interaction.options.getBoolean('사용', true);
+      const channel = interaction.options.getChannel('채널') ?? null;
+      const result = await community.configureLotteryAutoDraw({
+        guildId,
+        enabled,
+        channelId: enabled ? channel?.id ?? interaction.channelId : null
+      });
+      await interaction.reply(formatLotteryAutoDraw(result.lottery));
       return;
     }
   }
@@ -251,6 +304,25 @@ async function routeCommunityCommand(interaction, community) {
       await interaction.reply(formatEventStart(result.event));
       return;
     }
+  }
+
+  if (interaction.commandName === '활동요약') {
+    const target = interaction.options.getUser?.('대상') ?? user;
+    if (target.bot) {
+      await interaction.reply({
+        content: '봇 활동 요약은 표시하지 않습니다.',
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
+
+    const result = await community.getWeeklyActivitySummary({
+      guildId,
+      userId: target.id,
+      username: target.username
+    });
+    await interaction.reply(formatWeeklyActivitySummary(result));
+    return;
   }
 }
 
@@ -306,26 +378,101 @@ function formatMissions(result) {
 
 function formatLotteryStatus(lottery) {
   const participants = lottery.participants.length > 0
-    ? lottery.participants.map((ticket) => `- ${ticket.username}: ${ticket.count.toLocaleString()}장`).join('\n')
+    ? lottery.participants.map((ticket) => {
+        const preview = formatLotteryEntries(ticket.entries, 2);
+        return `- ${ticket.username}: ${ticket.count.toLocaleString()}장${preview ? ` (${preview})` : ''}`;
+      }).join('\n')
     : '아직 구매된 복권이 없습니다.';
   const lastWinner = lottery.lastWinner
-    ? `\n최근 당첨: ${lottery.lastWinner.username} / ${lottery.lastWinner.payout.toLocaleString()}골드`
-    : '';
+    ? `최근 당첨: ${lottery.lastWinner.username} / ${lottery.lastWinner.payout.toLocaleString()}골드`
+    : null;
+  const lastDraw = lottery.lastDraw
+    ? `최근 번호: ${formatLotteryNumbers(lottery.lastDraw.winningNumbers)} + 보너스 ${formatLotteryNumber(lottery.lastDraw.bonusNumber)}`
+    : null;
+  const autoDraw = lottery.autoDrawEnabled
+    ? `켜짐${lottery.autoDrawChannelId ? ` (<#${lottery.autoDrawChannelId}>)` : ' (기본 알림 채널)'}`
+    : '꺼짐';
 
-  return `🎟️ **서버 복권**\n장당 가격: ${getLotteryTicketCost().toLocaleString()}골드\n현재 잭팟: **${lottery.jackpot.toLocaleString()}골드**\n판매된 복권: ${lottery.totalTickets.toLocaleString()}장\n${participants}${lastWinner}`;
+  return [
+    '🎟️ **서버 복권 6/45**',
+    `장당 가격: ${getLotteryTicketCost().toLocaleString()}골드`,
+    `현재 잭팟: **${lottery.jackpot.toLocaleString()}골드**`,
+    `판매된 복권: ${lottery.totalTickets.toLocaleString()}장`,
+    `다음 자동 추첨: ${formatLotteryDrawTime(lottery.nextDrawAt)}`,
+    `자동 추첨: ${autoDraw}`,
+    '당첨 방식: 1~45 중 6개 번호 + 보너스 번호',
+    '무당첨 회차는 잭팟 전액이 다음 추첨으로 이월됩니다.',
+    participants,
+    lastWinner,
+    lastDraw
+  ].filter(Boolean).join('\n');
 }
 
 function formatLotteryBuy(result) {
+  const entries = formatLotteryEntries(result.entries, 5);
+  const hiddenCount = Math.max(0, result.entries.length - 5);
   return [
     '🎟️ **복권 구매 완료**',
     `${result.quantity.toLocaleString()}장 구매 / 지출 ${result.totalCost.toLocaleString()}골드`,
+    entries ? `내 번호: ${entries}${hiddenCount > 0 ? ` 외 ${hiddenCount.toLocaleString()}장` : ''}` : null,
     `잭팟 누적 +${result.jackpotAdded.toLocaleString()}골드${result.eventBonus ? ' (이벤트 보너스)' : ''}`,
-    `현재 잭팟: ${result.lottery.jackpot.toLocaleString()}골드 / 내 골드: ${result.profile.balance.toLocaleString()}골드`
+    `현재 잭팟: ${result.lottery.jackpot.toLocaleString()}골드 / 내 골드: ${result.profile.balance.toLocaleString()}골드`,
+    `다음 추첨: ${formatLotteryDrawTime(result.lottery.nextDrawAt)}`
+  ].filter(Boolean).join('\n');
+}
+
+export function formatLotteryDraw(result) {
+  const tierLines = result.tierSummaries
+    .map((tier) => {
+      const prizeText = tier.prizePerTicket > 0
+        ? ` / 장당 ${tier.prizePerTicket.toLocaleString()}골드`
+        : '';
+      return `- ${tier.label}(${tier.description}): ${tier.winnerCount.toLocaleString()}장${prizeText}`;
+    })
+    .join('\n');
+  const topWinner = result.headlineWinner
+    ? `대표 당첨: **${result.headlineWinner.username}** / ${result.headlineWinner.totalPayout.toLocaleString()}골드`
+    : '대표 당첨: 없음';
+
+  return [
+    `🎊 **복권 ${result.automatic ? '자동 ' : ''}추첨 완료**`,
+    `당첨 번호: ${formatLotteryNumbers(result.winningNumbers)} + 보너스 ${formatLotteryNumber(result.bonusNumber)}`,
+    `판매 ${result.totalTickets.toLocaleString()}장 / 추첨 전 잭팟 ${result.jackpotBefore.toLocaleString()}골드`,
+    tierLines,
+    topWinner,
+    `총 지급: ${result.totalPaid.toLocaleString()}골드 / 이월: ${result.rollover.toLocaleString()}골드`,
+    `다음 잭팟: ${result.lottery.jackpot.toLocaleString()}골드`,
+    `다음 추첨: ${formatLotteryDrawTime(result.lottery.nextDrawAt)}`
+  ].filter(Boolean).join('\n');
+}
+
+function formatLotteryAutoDraw(lottery) {
+  const status = lottery.autoDrawEnabled
+    ? `켜짐${lottery.autoDrawChannelId ? ` (<#${lottery.autoDrawChannelId}>)` : ' (기본 알림 채널)'}`
+    : '꺼짐';
+
+  return [
+    '⏱️ **복권 자동 추첨 설정 완료**',
+    `자동 추첨: ${status}`,
+    `추첨 시각: ${getLotteryDrawScheduleText()}`,
+    `다음 추첨: ${formatLotteryDrawTime(lottery.nextDrawAt)}`
   ].join('\n');
 }
 
-function formatLotteryDraw(result) {
-  return `🎊 **복권 추첨 완료**\n당첨자: **${result.winner.username}**\n당첨금: **${result.payout.toLocaleString()}골드**\n다음 기본 잭팟: ${result.lottery.jackpot.toLocaleString()}골드`;
+function formatLotteryEntries(entries, limit) {
+  if (!Array.isArray(entries) || entries.length <= 0) return '';
+  return entries
+    .slice(0, limit)
+    .map((entry) => `[${formatLotteryNumbers(entry.numbers)}]`)
+    .join(', ');
+}
+
+function formatLotteryNumbers(numbers) {
+  return numbers.map(formatLotteryNumber).join(' ');
+}
+
+function formatLotteryNumber(number) {
+  return String(number).padStart(2, '0');
 }
 
 function formatShop(items, balance) {
@@ -346,4 +493,33 @@ function formatEventStatus(event) {
 
 function formatEventStart(event) {
   return `📣 **서버 이벤트 시작**\n${event.label}\n${event.description}\n주최: ${event.hostUsername}\n지속 시간: ${formatDuration(event.endsAt - event.startedAt)}`;
+}
+
+function formatWeeklyActivitySummary(result) {
+  const totalActions = result.totals.messages + result.totals.commands;
+  const topCommands = result.topCommands.length > 0
+    ? result.topCommands.map((command) => `/${command.name} ${command.count.toLocaleString()}회`).join(', ')
+    : '없음';
+  const dailyLines = result.days
+    .map((day) => {
+      const active = day.messages + day.commands > 0;
+      return `${active ? '•' : '▫️'} ${day.date}: 채팅 ${day.messages.toLocaleString()}회 / 명령 ${day.commands.toLocaleString()}회 / XP ${day.xp.toLocaleString()}`;
+    })
+    .join('\n');
+
+  return [
+    `📊 **최근 7일 활동 요약 — ${result.profile.username}**`,
+    `기간: **${result.range.startDate} ~ ${result.range.endDate}** (KST 기준)`,
+    '',
+    `총 활동: **${totalActions.toLocaleString()}회** / 활동일 **${result.totals.activeDays}/${result.range.days}일**`,
+    `채팅: **${result.totals.messages.toLocaleString()}회** (+${result.totals.chatXp.toLocaleString()} XP)`,
+    `명령어: **${result.totals.commands.toLocaleString()}회** (+${result.totals.commandXp.toLocaleString()} XP)`,
+    `활동 XP 합계: **${result.totals.xp.toLocaleString()} XP**`,
+    `자주 쓴 명령어: ${topCommands}`,
+    '',
+    '🗓️ **일별 내역**',
+    dailyLines,
+    '',
+    '채팅과 명령어를 꾸준히 사용할수록 메인 프로필 XP가 조금씩 누적됩니다.'
+  ].join('\n');
 }

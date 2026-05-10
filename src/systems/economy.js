@@ -111,10 +111,12 @@ import {
 const RPG_SCHEMA_VERSION = 'heehee-rpg-v1';
 
 const DEFAULT_OPTIONS = Object.freeze({
-  messageCooldownMs: 60_000,
-  messageXpMin: 5,
-  messageXpMax: 15,
-  firstMessageXpBonus: 50,
+  messageCooldownMs: 0,
+  messageXpMin: 8,
+  messageXpMax: 18,
+  firstMessageXpBonus: 80,
+  commandXpMin: 3,
+  commandXpMax: 8,
   dailyCooldownMs: 24 * 60 * 60 * 1000,
   dailyCoinRewardMin: 100,
   dailyCoinRewardMax: 1000,
@@ -129,6 +131,17 @@ const DEFAULT_OPTIONS = Object.freeze({
   wordChainParticipationXpMin: 20,
   wordChainWinXp: 80,
   wordChainWinnerMoney: 1000,
+  liarGameCitizenWinXp: 80,
+  liarGameCitizenWinMoney: 500,
+  liarGameLiarWinXp: 180,
+  liarGameLiarWinMoney: 1500,
+  liarGameCitizenLoseXp: 20,
+  liarGameLiarLoseXp: 50,
+  wordleWinXp: 120,
+  wordleWinMoney: 600,
+  numberBaseballWinXp: 120,
+  numberBaseballWinMoney: 600,
+  numberBaseballFailXp: 40,
   rpgBattleWinXpMin: 50,
   rpgBattleWinXpMax: 200,
   rpgBattleCooldownMs: 60_000,
@@ -308,6 +321,25 @@ export class EconomyService {
     });
   }
 
+  async rewardCommand({ guildId, userId, username, commandName = '명령어', now = Date.now() }) {
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, this);
+      const xpGained = this.randomInt(this.options.commandXpMin, this.options.commandXpMax);
+      const levelResult = addXp(profile, xpGained, this);
+
+      return {
+        awarded: true,
+        source: `/${String(commandName || '명령어')}`,
+        commandName: String(commandName || '명령어'),
+        xpGained,
+        totalXpGained: xpGained,
+        moneyGained: 0,
+        ...levelResult,
+        profile: cloneProfile(profile)
+      };
+    });
+  }
+
   async claimDaily({ guildId, userId, username, now = Date.now() }) {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
@@ -409,6 +441,44 @@ export class EconomyService {
     });
   }
 
+  async awardLiarGameResults({ guildId, participants, liarUserId, winner }) {
+    const normalizedParticipants = normalizeLiarGameParticipants(participants);
+    const winnerType = winner === 'liar' ? 'liar' : 'citizens';
+
+    return this.store.update((data) => {
+      const results = normalizedParticipants.map((participant) => {
+        const isLiar = participant.userId === liarUserId;
+        const xpGained = getLiarGameXp(this.options, winnerType, isLiar);
+        const moneyGained = getLiarGameMoney(this.options, winnerType, isLiar);
+        const profile = getOrCreateProfile(data, guildId, participant.userId, participant.username, this);
+        const levelResult = addXp(profile, xpGained, this);
+
+        if (moneyGained > 0) {
+          profile.balance += moneyGained;
+        }
+
+        return {
+          userId: participant.userId,
+          username: participant.username,
+          role: isLiar ? 'liar' : 'citizen',
+          xpGained,
+          moneyGained,
+          ...levelResult,
+          profile: cloneProfile(profile)
+        };
+      });
+
+      return {
+        source: '라이어게임 결과',
+        winner: winnerType,
+        liarUserId,
+        participants: results,
+        liar: results.find((result) => result.userId === liarUserId) ?? null,
+        citizens: results.filter((result) => result.userId !== liarUserId)
+      };
+    });
+  }
+
   async awardRpgBattleWin({ guildId, userId, username }) {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
@@ -443,6 +513,61 @@ export class EconomyService {
       return {
         claimed: true,
         xpGained: this.options.fortuneXpReward,
+        ...levelResult,
+        profile: cloneProfile(profile)
+      };
+    });
+  }
+
+  async awardWordleSuccess({ guildId, userId, username }) {
+    const xpGained = normalizeNonNegativeInteger(this.options.wordleWinXp, '워들 경험치');
+    const moneyGained = normalizeNonNegativeInteger(this.options.wordleWinMoney, '워들 골드');
+
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, this);
+      profile.balance += moneyGained;
+      const levelResult = addXp(profile, xpGained, this);
+
+      return {
+        source: '워들 성공',
+        xpGained,
+        moneyGained,
+        ...levelResult,
+        profile: cloneProfile(profile)
+      };
+    });
+  }
+
+  async awardNumberBaseballSuccess({ guildId, userId, username }) {
+    const xpGained = normalizeNonNegativeInteger(this.options.numberBaseballWinXp, '숫자야구 성공 경험치');
+    const moneyGained = normalizeNonNegativeInteger(this.options.numberBaseballWinMoney, '숫자야구 성공 골드');
+
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, this);
+      profile.balance += moneyGained;
+      const levelResult = addXp(profile, xpGained, this);
+
+      return {
+        source: '숫자야구 성공',
+        xpGained,
+        moneyGained,
+        ...levelResult,
+        profile: cloneProfile(profile)
+      };
+    });
+  }
+
+  async awardNumberBaseballFailure({ guildId, userId, username }) {
+    const xpGained = normalizeNonNegativeInteger(this.options.numberBaseballFailXp, '숫자야구 완주 경험치');
+
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, this);
+      const levelResult = addXp(profile, xpGained, this);
+
+      return {
+        source: '숫자야구 실패 완주',
+        xpGained,
+        moneyGained: 0,
         ...levelResult,
         profile: cloneProfile(profile)
       };
@@ -3019,6 +3144,45 @@ function normalizeWordChainParticipants(participants) {
   }
 
   return [...uniqueParticipants.values()];
+}
+
+function normalizeLiarGameParticipants(participants) {
+  if (!Array.isArray(participants)) {
+    throw new Error('라이어게임 참가자 목록이 필요합니다.');
+  }
+
+  const uniqueParticipants = new Map();
+
+  for (const participant of participants) {
+    if (!participant?.userId) {
+      throw new Error('라이어게임 참가자 userId가 필요합니다.');
+    }
+
+    if (!uniqueParticipants.has(participant.userId)) {
+      uniqueParticipants.set(participant.userId, {
+        userId: participant.userId,
+        username: participant.username || 'Unknown'
+      });
+    }
+  }
+
+  return [...uniqueParticipants.values()];
+}
+
+function getLiarGameXp(options, winner, isLiar) {
+  if (winner === 'liar') {
+    return isLiar ? options.liarGameLiarWinXp : options.liarGameCitizenLoseXp;
+  }
+
+  return isLiar ? options.liarGameLiarLoseXp : options.liarGameCitizenWinXp;
+}
+
+function getLiarGameMoney(options, winner, isLiar) {
+  if (winner === 'liar') {
+    return isLiar ? options.liarGameLiarWinMoney : 0;
+  }
+
+  return isLiar ? 0 : options.liarGameCitizenWinMoney;
 }
 
 function getOrCreateProfile(data, guildId, userId, username, economy, now = Date.now()) {

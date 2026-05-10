@@ -5,6 +5,21 @@ const KENO_MIN_NUMBER = 1;
 const KENO_MAX_NUMBER = 80;
 const KENO_DRAW_COUNT = 10;
 const KENO_MAX_PICKS = 5;
+export const DEADLINE_MAX_SAFE_PRESSES = 12;
+export const DEADLINE_ROLL_MAX = 10_000;
+const DEADLINE_BASE_BUST_CHANCE_BPS = 1_000;
+const DEADLINE_BUST_CHANCE_STEP_BPS = 750;
+const DEADLINE_MAX_BUST_CHANCE_BPS = 8_500;
+const DEADLINE_REWARD_STEP_BPS = 5_000;
+export const TIMING_TARGET_MIN_SECONDS = 5;
+export const TIMING_TARGET_MAX_SECONDS = 20;
+export const TIMING_PAYOUT_TIERS = Object.freeze([
+  Object.freeze({ maxDifferenceMs: 20, multiplier: 5, label: '0.02초 이하' }),
+  Object.freeze({ maxDifferenceMs: 50, multiplier: 3, label: '0.05초 이하' }),
+  Object.freeze({ maxDifferenceMs: 100, multiplier: 2, label: '0.1초 이하' }),
+  Object.freeze({ maxDifferenceMs: 200, multiplier: 1.8, label: '0.2초 이하' }),
+  Object.freeze({ maxDifferenceMs: 500, multiplier: 1.3, label: '0.5초 이하' })
+]);
 const KENO_MULTIPLIERS = Object.freeze({
   1: Object.freeze({ 1: 7 }),
   2: Object.freeze({ 1: 1, 2: 45 }),
@@ -12,6 +27,13 @@ const KENO_MULTIPLIERS = Object.freeze({
   4: Object.freeze({ 1: 1, 2: 3, 3: 40, 4: 1000 }),
   5: Object.freeze({ 1: 1, 2: 2, 3: 14, 4: 120, 5: 3000 })
 });
+export const EMOJI_RACE_TRACK_LENGTH = 9;
+export const EMOJI_RACE_MULTIPLIER = 2.7;
+export const EMOJI_RACE_RACERS = Object.freeze([
+  Object.freeze({ id: 'horse', number: 1, name: '말', emoji: '🐎' }),
+  Object.freeze({ id: 'dog', number: 2, name: '강아지', emoji: '🐕' }),
+  Object.freeze({ id: 'turtle', number: 3, name: '거북이', emoji: '🐢' })
+]);
 
 export function playOddEven({ choice, bet, randomInt = defaultRandomInt }) {
   const normalizedChoice = normalizeOddEvenChoice(choice);
@@ -265,6 +287,223 @@ export function playKeno({ numbers, bet, randomInt = defaultRandomInt }) {
   };
 }
 
+
+export function createDeadlineRound({ bet } = {}) {
+  const normalizedBet = normalizeDeadlineBet(bet);
+
+  return buildDeadlineRound({
+    bet: normalizedBet,
+    presses: 0,
+    reward: 0,
+    status: 'pressing',
+    lastRoll: null,
+    lastReward: 0,
+    lostReward: 0,
+    busted: false,
+    payout: 0,
+    autoCashedOut: false
+  });
+}
+
+export function pressDeadlineRound(round, { randomInt = defaultRandomInt } = {}) {
+  assertDeadlinePressingRound(round);
+
+  const bustChanceBps = getDeadlineBustChanceBps(round.presses);
+  const roll = randomInt(1, DEADLINE_ROLL_MAX);
+
+  if (roll <= bustChanceBps) {
+    return buildDeadlineRound({
+      ...round,
+      status: 'busted',
+      lastRoll: roll,
+      lastReward: 0,
+      lostReward: round.reward,
+      busted: true,
+      payout: 0
+    });
+  }
+
+  const lastReward = getDeadlineNextReward(round.bet, round.presses);
+  const presses = round.presses + 1;
+  const reward = round.reward + lastReward;
+  const autoCashedOut = presses >= DEADLINE_MAX_SAFE_PRESSES;
+  const status = autoCashedOut ? 'cashed_out' : 'pressing';
+
+  return buildDeadlineRound({
+    ...round,
+    presses,
+    reward,
+    status,
+    lastRoll: roll,
+    lastReward,
+    lostReward: 0,
+    busted: false,
+    payout: status === 'cashed_out' ? round.bet + reward : 0,
+    autoCashedOut
+  });
+}
+
+export function cashOutDeadlineRound(round) {
+  assertDeadlinePressingRound(round);
+
+  return buildDeadlineRound({
+    ...round,
+    status: 'cashed_out',
+    payout: round.bet + round.reward,
+    autoCashedOut: false
+  });
+}
+
+export function getDeadlineBustChanceBps(presses) {
+  const normalizedPresses = normalizeNonNegativeSafeInteger(presses, '누른 횟수');
+
+  return Math.min(
+    DEADLINE_MAX_BUST_CHANCE_BPS,
+    DEADLINE_BASE_BUST_CHANCE_BPS + normalizedPresses * DEADLINE_BUST_CHANCE_STEP_BPS
+  );
+}
+
+export function getDeadlineNextReward(bet, presses) {
+  const normalizedBet = normalizeDeadlineBet(bet);
+  const normalizedPresses = normalizeNonNegativeSafeInteger(presses, '누른 횟수');
+  const rewardBps = 10_000 + normalizedPresses * DEADLINE_REWARD_STEP_BPS;
+
+  return Math.max(1, Math.floor(normalizedBet * rewardBps / 10_000));
+}
+
+
+export function createTimingRound({
+  bet,
+  randomInt = defaultRandomInt,
+  nowMs = defaultNowMs
+} = {}) {
+  const normalizedBet = normalizeTimingBet(bet);
+  const targetSeconds = randomInt(TIMING_TARGET_MIN_SECONDS, TIMING_TARGET_MAX_SECONDS);
+
+  if (!Number.isSafeInteger(targetSeconds)
+    || targetSeconds < TIMING_TARGET_MIN_SECONDS
+    || targetSeconds > TIMING_TARGET_MAX_SECONDS) {
+    throw new Error(`타이밍 목표 초는 ${TIMING_TARGET_MIN_SECONDS}~${TIMING_TARGET_MAX_SECONDS}초 사이여야 합니다.`);
+  }
+
+  return buildTimingRound({
+    bet: normalizedBet,
+    targetSeconds,
+    targetMs: targetSeconds * 1000,
+    startedAtMs: normalizeTimestampMs(nowMs(), '시작 시각'),
+    status: 'waiting',
+    pressedAtMs: null,
+    elapsedMs: null,
+    elapsedSeconds: null,
+    differenceMs: null,
+    differenceSeconds: null,
+    tier: null,
+    win: false,
+    multiplier: 0,
+    payout: 0
+  });
+}
+
+export function resolveTimingRound(round, { nowMs = defaultNowMs } = {}) {
+  assertTimingWaitingRound(round);
+
+  const pressedAtMs = normalizeTimestampMs(nowMs(), '버튼 입력 시각');
+  const elapsedMs = Math.max(0, pressedAtMs - round.startedAtMs);
+  const differenceMs = Math.abs(elapsedMs - round.targetMs);
+  const tier = getTimingPayoutTier(differenceMs);
+  const multiplier = tier?.multiplier ?? 0;
+  const payout = multiplier > 0 ? Math.floor(round.bet * multiplier) : 0;
+
+  return buildTimingRound({
+    ...round,
+    status: 'settled',
+    pressedAtMs,
+    elapsedMs,
+    elapsedSeconds: elapsedMs / 1000,
+    differenceMs,
+    differenceSeconds: differenceMs / 1000,
+    tier,
+    win: payout > 0,
+    multiplier,
+    payout
+  });
+}
+
+export function getTimingPayoutTier(differenceMs) {
+  const normalizedDifferenceMs = normalizeNonNegativeFiniteNumber(differenceMs, '오차');
+
+  return TIMING_PAYOUT_TIERS.find((tier) => normalizedDifferenceMs <= tier.maxDifferenceMs) ?? null;
+}
+
+export function playEmojiRace({
+  choice,
+  bet,
+  randomInt = defaultRandomInt,
+  trackLength = EMOJI_RACE_TRACK_LENGTH
+} = {}) {
+  const normalizedChoice = normalizeEmojiRaceChoice(choice);
+  const finishLine = normalizeEmojiRaceTrackLength(trackLength);
+  const positions = Object.fromEntries(EMOJI_RACE_RACERS.map((racer) => [racer.id, 0]));
+  const frames = [
+    createEmojiRaceFrame({
+      turn: 0,
+      positions,
+      trackLength: finishLine
+    })
+  ];
+
+  for (let turn = 1; turn <= finishLine + 1; turn += 1) {
+    const rawPositions = {};
+
+    for (const racer of EMOJI_RACE_RACERS) {
+      rawPositions[racer.id] = positions[racer.id] + randomInt(1, 3);
+      positions[racer.id] = Math.min(finishLine, rawPositions[racer.id]);
+    }
+
+    const finishers = EMOJI_RACE_RACERS.filter((racer) => rawPositions[racer.id] >= finishLine);
+
+    if (finishers.length > 0) {
+      const winner = pickEmojiRaceWinner(finishers, rawPositions, randomInt);
+      frames.push(createEmojiRaceFrame({
+        turn,
+        positions,
+        trackLength: finishLine,
+        winnerId: winner.id,
+        finished: true
+      }));
+
+      return createEmojiRaceResult({
+        choice: normalizedChoice,
+        bet,
+        frames,
+        winner
+      });
+    }
+
+    frames.push(createEmojiRaceFrame({
+      turn,
+      positions,
+      trackLength: finishLine
+    }));
+  }
+
+  const winner = pickEmojiRaceWinner(EMOJI_RACE_RACERS, positions, randomInt);
+  frames.push(createEmojiRaceFrame({
+    turn: frames.length,
+    positions,
+    trackLength: finishLine,
+    winnerId: winner.id,
+    finished: true
+  }));
+
+  return createEmojiRaceResult({
+    choice: normalizedChoice,
+    bet,
+    frames,
+    winner
+  });
+}
+
 export function playBlackjackRound({ bet, randomInt = defaultRandomInt } = {}) {
   let round = createBlackjackRound({ bet, randomInt });
 
@@ -477,6 +716,31 @@ export function normalizeSicBoChoice(choice) {
   if (['트리플', 'triples', 'triple', '세쌍'].includes(normalized)) return 'triple';
 
   throw new Error('시크보 선택은 작음, 큼, 트리플 중 하나여야 합니다.');
+}
+
+export function normalizeEmojiRaceChoice(choice) {
+  const normalized = String(choice).trim().toLocaleLowerCase('ko-KR').replace(/\s+/g, '');
+
+  if (['1', '1번', '말', '경주마', 'horse', 'h', '🐎'].includes(normalized)) return 'horse';
+  if (['2', '2번', '강아지', '개', '멍멍이', 'dog', 'd', '🐕'].includes(normalized)) return 'dog';
+  if (['3', '3번', '거북이', '거북', 'turtle', 't', '🐢'].includes(normalized)) return 'turtle';
+
+  throw new Error('이모지 경마 선택은 말, 강아지, 거북이 중 하나여야 합니다.');
+}
+
+export function formatEmojiRaceChoice(choice) {
+  const racer = getEmojiRaceRacer(choice);
+  return `${racer.emoji} ${racer.name}`;
+}
+
+export function formatEmojiRaceTrack(frameOrRace) {
+  const frame = frameOrRace?.finalFrame ?? frameOrRace;
+  const trackLength = frame?.trackLength ?? EMOJI_RACE_TRACK_LENGTH;
+  const positions = frame?.positions ?? {};
+
+  return EMOJI_RACE_RACERS
+    .map((racer) => formatEmojiRaceLane(racer, positions[racer.id] ?? 0, trackLength))
+    .join('\n');
 }
 
 export function parseKenoNumbers(numbers) {
@@ -711,11 +975,216 @@ function drawKenoNumbers(randomInt) {
   return draw.sort((a, b) => a - b);
 }
 
+
+
+function buildTimingRound(round) {
+  const bet = normalizeTimingBet(round.bet);
+  const targetSeconds = Number(round.targetSeconds);
+  const targetMs = Number(round.targetMs ?? targetSeconds * 1000);
+
+  if (!Number.isSafeInteger(targetSeconds)
+    || targetSeconds < TIMING_TARGET_MIN_SECONDS
+    || targetSeconds > TIMING_TARGET_MAX_SECONDS) {
+    throw new Error(`타이밍 목표 초는 ${TIMING_TARGET_MIN_SECONDS}~${TIMING_TARGET_MAX_SECONDS}초 사이여야 합니다.`);
+  }
+
+  if (!Number.isFinite(targetMs) || targetMs <= 0) {
+    throw new Error('타이밍 목표 시간은 0보다 커야 합니다.');
+  }
+
+  const payout = normalizeNonNegativeSafeInteger(round.payout ?? 0, '지급액');
+
+  return {
+    game: '타이밍',
+    ...round,
+    bet,
+    targetSeconds,
+    targetMs,
+    startedAtMs: normalizeTimestampMs(round.startedAtMs, '시작 시각'),
+    status: round.status ?? 'waiting',
+    pressedAtMs: round.pressedAtMs ?? null,
+    elapsedMs: round.elapsedMs ?? null,
+    elapsedSeconds: round.elapsedSeconds ?? null,
+    differenceMs: round.differenceMs ?? null,
+    differenceSeconds: round.differenceSeconds ?? null,
+    tier: round.tier ?? null,
+    win: payout > 0,
+    multiplier: Number(round.multiplier ?? 0),
+    payout
+  };
+}
+
+function assertTimingWaitingRound(round) {
+  if (!round || round.status !== 'waiting') {
+    throw new Error('이미 종료된 타이밍 게임입니다.');
+  }
+}
+
+function normalizeTimingBet(bet) {
+  const normalized = Number(bet);
+
+  if (!Number.isSafeInteger(normalized) || normalized <= 0) {
+    throw new Error('타이밍 베팅액은 1 이상의 정수여야 합니다.');
+  }
+
+  return normalized;
+}
+
+function normalizeTimestampMs(value, label) {
+  const normalized = Number(value);
+
+  if (!Number.isFinite(normalized) || normalized < 0) {
+    throw new Error(`${label}은 0 이상의 숫자여야 합니다.`);
+  }
+
+  return normalized;
+}
+
+function normalizeNonNegativeFiniteNumber(value, label) {
+  const normalized = Number(value);
+
+  if (!Number.isFinite(normalized) || normalized < 0) {
+    throw new Error(`${label}는 0 이상의 숫자여야 합니다.`);
+  }
+
+  return normalized;
+}
+
+function buildDeadlineRound(round) {
+  const status = round.status ?? 'pressing';
+  const presses = normalizeNonNegativeSafeInteger(round.presses ?? 0, '누른 횟수');
+  const bet = normalizeDeadlineBet(round.bet);
+  const reward = normalizeNonNegativeSafeInteger(round.reward ?? 0, '누적 보상');
+
+  return {
+    game: '데드라인',
+    ...round,
+    bet,
+    presses,
+    reward,
+    status,
+    nextReward: status === 'pressing' ? getDeadlineNextReward(bet, presses) : 0,
+    bustChanceBps: status === 'pressing' ? getDeadlineBustChanceBps(presses) : (round.bustChanceBps ?? getDeadlineBustChanceBps(presses)),
+    payout: normalizeNonNegativeSafeInteger(round.payout ?? 0, '지급액'),
+    lastReward: normalizeNonNegativeSafeInteger(round.lastReward ?? 0, '마지막 보상'),
+    lostReward: normalizeNonNegativeSafeInteger(round.lostReward ?? 0, '잃은 보상'),
+    lastRoll: round.lastRoll ?? null,
+    busted: round.busted === true,
+    autoCashedOut: round.autoCashedOut === true
+  };
+}
+
+function assertDeadlinePressingRound(round) {
+  if (!round || round.status !== 'pressing') {
+    throw new Error('이미 종료된 데드라인입니다.');
+  }
+}
+
+function normalizeDeadlineBet(bet) {
+  const normalized = Number(bet);
+
+  if (!Number.isSafeInteger(normalized) || normalized <= 0) {
+    throw new Error('데드라인 베팅액은 1 이상의 정수여야 합니다.');
+  }
+
+  return normalized;
+}
+
+function normalizeNonNegativeSafeInteger(value, label) {
+  const normalized = Number(value);
+
+  if (!Number.isSafeInteger(normalized) || normalized < 0) {
+    throw new Error(`${label}은 0 이상의 정수여야 합니다.`);
+  }
+
+  return normalized;
+}
+
+function normalizeEmojiRaceTrackLength(trackLength) {
+  if (!Number.isSafeInteger(trackLength) || trackLength < 3 || trackLength > 20) {
+    throw new Error('이모지 경마 트랙 길이는 3~20 사이의 정수여야 합니다.');
+  }
+
+  return trackLength;
+}
+
+function createEmojiRaceFrame({
+  turn,
+  positions,
+  trackLength,
+  winnerId = null,
+  finished = false
+}) {
+  return {
+    turn,
+    positions: Object.fromEntries(
+      EMOJI_RACE_RACERS.map((racer) => [
+        racer.id,
+        Math.max(0, Math.min(trackLength, positions[racer.id] ?? 0))
+      ])
+    ),
+    trackLength,
+    winnerId,
+    finished
+  };
+}
+
+function createEmojiRaceResult({
+  choice,
+  bet,
+  frames,
+  winner
+}) {
+  const win = choice === winner.id;
+
+  return {
+    game: '이모지경마',
+    choice,
+    bet,
+    racers: EMOJI_RACE_RACERS,
+    frames,
+    finalFrame: frames.at(-1),
+    winner,
+    winnerId: winner.id,
+    win,
+    multiplier: win ? EMOJI_RACE_MULTIPLIER : 0,
+    payout: win ? Math.floor(bet * EMOJI_RACE_MULTIPLIER) : 0
+  };
+}
+
+function pickEmojiRaceWinner(candidates, positions, randomInt) {
+  const bestPosition = Math.max(...candidates.map((racer) => positions[racer.id] ?? 0));
+  const leaders = candidates.filter((racer) => (positions[racer.id] ?? 0) === bestPosition);
+
+  if (leaders.length === 1) return leaders[0];
+
+  return leaders[randomInt(0, leaders.length - 1)];
+}
+
+function getEmojiRaceRacer(choice) {
+  const racerId = normalizeEmojiRaceChoice(choice);
+  return EMOJI_RACE_RACERS.find((racer) => racer.id === racerId);
+}
+
+function formatEmojiRaceLane(racer, progress, trackLength) {
+  const position = Math.max(0, Math.min(trackLength, progress));
+  const cells = Array.from(
+    { length: trackLength + 1 },
+    (_, index) => (index === position ? racer.emoji : '.')
+  );
+
+  return `${racer.number}번 ${racer.name}: ${cells.join(' ')} 🏁`;
+}
+
 function getSlotMultiplier(reels, maxCount) {
   if (maxCount === 3 && reels[0] === '7️⃣') return 20;
   if (maxCount === 3) return 10;
   if (maxCount === 2) return 3;
   return 0;
+}
+
+function defaultNowMs() {
+  return globalThis.performance?.now?.() ?? Date.now();
 }
 
 function defaultRandomInt(min, max) {

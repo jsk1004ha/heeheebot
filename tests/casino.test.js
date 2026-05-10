@@ -11,14 +11,24 @@ import {
 import { createSqliteStore } from '../src/storage/sqlite-store.js';
 import { EconomyService } from '../src/systems/economy.js';
 import {
+  cashOutDeadlineRound,
   createBlackjackRound,
+  createDeadlineRound,
   createPlayerBlackjackRound,
+  createTimingRound,
+  formatEmojiRaceTrack,
   hitBlackjackRound,
   hitPlayerBlackjackRound,
+  getDeadlineBustChanceBps,
+  getDeadlineNextReward,
+  resolveTimingRound,
+  normalizeEmojiRaceChoice,
   parseKenoNumbers,
   playBaccarat,
   playCraps,
+  pressDeadlineRound,
   playDice,
+  playEmojiRace,
   playHighLow,
   playKeno,
   playLuckySeven,
@@ -104,6 +114,9 @@ test('카지노 명령 payload는 다양한 게임을 등록한다', () => {
     '홀짝',
     '주사위',
     '슬롯',
+    '데드라인',
+    '타이밍',
+    '이모지경마',
     '럭키세븐',
     '하이로우',
     '블랙잭',
@@ -122,6 +135,9 @@ test('카지노정보 명령은 베팅금 없이 게임 배수와 환급 규칙�
   assert.equal(handled, true);
   assert.match(interaction.replied.content, /카지노 게임 정보/);
   assert.match(interaction.replied.content, /주사위.*1\.9배/);
+  assert.match(interaction.replied.content, /데드라인.*꽝 확률/);
+  assert.match(interaction.replied.content, /타이밍.*5.*20/);
+  assert.match(interaction.replied.content, /이모지경마.*2\.7배/);
   assert.match(interaction.replied.content, /키노.*번호 1~5개/);
   assert.doesNotMatch(interaction.replied.content, /기대|지급률|RTP|%/);
   assert.match(interaction.replied.content, /실제 현금/);
@@ -174,6 +190,305 @@ test('단순 도박 결과만 같은 베팅 재시도 버튼을 제공하고 카
   assert.equal(await handleCasinoCommand(otherUserButton, fakeEconomy, quietLogger), true);
   assert.equal(otherUserButton.replied.flags, MessageFlags.Ephemeral);
   assert.match(otherUserButton.replied.content, /명령어를 실행한 유저만/);
+});
+
+
+test('데드라인은 안전 누름마다 골드 보상과 꽝 확률이 커지고 수령할 수 있다', () => {
+  const round = createDeadlineRound({ bet: 100 });
+  const firstSafe = pressDeadlineRound(round, {
+    randomInt: () => 1001
+  });
+  const secondSafe = pressDeadlineRound(firstSafe, {
+    randomInt: () => 1751
+  });
+  const cashedOut = cashOutDeadlineRound(secondSafe);
+  const busted = pressDeadlineRound(secondSafe, {
+    randomInt: () => 1
+  });
+
+  assert.equal(round.reward, 0);
+  assert.equal(round.nextReward, 100);
+  assert.equal(getDeadlineNextReward(100, 1), 150);
+  assert.equal(getDeadlineBustChanceBps(0), 1000);
+  assert.equal(getDeadlineBustChanceBps(1), 1750);
+  assert.equal(firstSafe.status, 'pressing');
+  assert.equal(firstSafe.reward, 100);
+  assert.equal(firstSafe.nextReward, 150);
+  assert.equal(firstSafe.bustChanceBps, 1750);
+  assert.equal(secondSafe.reward, 250);
+  assert.equal(cashedOut.status, 'cashed_out');
+  assert.equal(cashedOut.payout, 350);
+  assert.equal(busted.status, 'busted');
+  assert.equal(busted.lostReward, 250);
+  assert.equal(busted.payout, 0);
+});
+
+test('데드라인 명령은 골드를 예약하고 버튼 안전 누름 후 수령 정산한다', async () => {
+  const calls = [];
+  const fakeEconomy = {
+    async reserveWager(payload) {
+      calls.push(['reserve', payload]);
+      return {
+        bet: payload.bet,
+        profile: { balance: 900 }
+      };
+    },
+    async resolveReservedWager(payload) {
+      calls.push(['resolve', payload]);
+      return {
+        bet: payload.bet,
+        payout: payload.payout,
+        profit: payload.payout - payload.bet,
+        profile: { balance: 900 + payload.payout }
+      };
+    },
+    async refundReservedWager(payload) {
+      calls.push(['refund', payload]);
+      return {
+        bet: payload.bet,
+        payout: payload.bet,
+        profit: 0,
+        profile: { balance: 1000 }
+      };
+    }
+  };
+  const interaction = createChatInputInteraction('데드라인', {
+    integers: { 돈: 100 }
+  });
+
+  assert.equal(await handleCasinoCommand(interaction, fakeEconomy, quietLogger), true);
+  assert.deepEqual(calls.map(([type]) => type), ['reserve']);
+  assert.match(interaction.replied.content, /데드라인 버튼/);
+  assert.match(interaction.replied.content, /100골드/);
+
+  const pressButtonId = interaction.replied.components[0].components[0].data.custom_id;
+  const press = createCasinoButtonInteraction({ customId: pressButtonId });
+  assert.equal(await handleCasinoCommand(press, fakeEconomy, quietLogger, {
+    randomInt: () => 1001
+  }), true);
+  assert.equal(calls.length, 1);
+  assert.match(press.updated.content, /방금 안전했습니다: \*\*\+100골드\*\*/);
+  assert.equal(press.updated.components[0].components[1].data.disabled, false);
+
+  const cashOutButtonId = press.updated.components[0].components[1].data.custom_id;
+  const cashOut = createCasinoButtonInteraction({ customId: cashOutButtonId });
+  assert.equal(await handleCasinoCommand(cashOut, fakeEconomy, quietLogger), true);
+  assert.deepEqual(calls.map(([type]) => type), ['reserve', 'resolve']);
+  assert.equal(calls[1][1].payout, 200);
+  assert.match(cashOut.updated.content, /데드라인 수령/);
+  assert.match(cashOut.updated.content, /지급: 200골드/);
+});
+
+test('데드라인 버튼은 시작한 유저만 누를 수 있고 꽝이면 예약 베팅만 잃는다', async () => {
+  const calls = [];
+  const fakeEconomy = {
+    async reserveWager(payload) {
+      calls.push(['reserve', payload]);
+      return { bet: payload.bet, profile: { balance: 900 } };
+    },
+    async resolveReservedWager(payload) {
+      calls.push(['resolve', payload]);
+      return {
+        bet: payload.bet,
+        payout: payload.payout,
+        profit: payload.payout - payload.bet,
+        profile: { balance: 900 + payload.payout }
+      };
+    },
+    async refundReservedWager(payload) {
+      calls.push(['refund', payload]);
+      return { bet: payload.bet, payout: payload.bet, profit: 0, profile: { balance: 1000 } };
+    }
+  };
+  const interaction = createChatInputInteraction('데드라인', {
+    integers: { 돈: 100 }
+  });
+
+  assert.equal(await handleCasinoCommand(interaction, fakeEconomy, quietLogger), true);
+  const pressButtonId = interaction.replied.components[0].components[0].data.custom_id;
+
+  const otherUserPress = createCasinoButtonInteraction({
+    customId: pressButtonId,
+    userId: 'user-2'
+  });
+  assert.equal(await handleCasinoCommand(otherUserPress, fakeEconomy, quietLogger), true);
+  assert.equal(otherUserPress.replied.flags, MessageFlags.Ephemeral);
+  assert.match(otherUserPress.replied.content, /시작한 유저만/);
+
+  const bust = createCasinoButtonInteraction({ customId: pressButtonId });
+  assert.equal(await handleCasinoCommand(bust, fakeEconomy, quietLogger, {
+    randomInt: () => 1
+  }), true);
+  assert.deepEqual(calls.map(([type]) => type), ['reserve', 'resolve']);
+  assert.equal(calls[1][1].payout, 0);
+  assert.match(bust.updated.content, /데드라인 폭발/);
+  assert.match(bust.updated.content, /지급: 0골드/);
+});
+
+
+test('타이밍은 목표 초와 실제 기록의 오차로 배율을 결정한다', () => {
+  const round = createTimingRound({
+    bet: 100,
+    randomInt: () => 10,
+    nowMs: () => 1000
+  });
+  const nearPerfect = resolveTimingRound(round, {
+    nowMs: () => 10999.9
+  });
+  const halfSecond = resolveTimingRound(createTimingRound({
+    bet: 100,
+    randomInt: () => 10,
+    nowMs: () => 1000
+  }), {
+    nowMs: () => 11500
+  });
+  const miss = resolveTimingRound(createTimingRound({
+    bet: 100,
+    randomInt: () => 10,
+    nowMs: () => 1000
+  }), {
+    nowMs: () => 11600
+  });
+
+  assert.equal(round.targetSeconds, 10);
+  assert.equal(nearPerfect.status, 'settled');
+  assert.equal(nearPerfect.elapsedSeconds.toFixed(4), '9.9999');
+  assert.equal(nearPerfect.differenceSeconds.toFixed(4), '0.0001');
+  assert.equal(nearPerfect.multiplier, 5);
+  assert.equal(nearPerfect.payout, 500);
+  assert.equal(halfSecond.multiplier, 1.3);
+  assert.equal(halfSecond.payout, 130);
+  assert.equal(miss.multiplier, 0);
+  assert.equal(miss.payout, 0);
+});
+
+test('타이밍 명령은 골드를 예약하고 버튼 입력 기록을 4자리 초로 정산한다', async () => {
+  const calls = [];
+  const fakeEconomy = {
+    async reserveWager(payload) {
+      calls.push(['reserve', payload]);
+      return { bet: payload.bet, profile: { balance: 900 } };
+    },
+    async resolveReservedWager(payload) {
+      calls.push(['resolve', payload]);
+      return {
+        bet: payload.bet,
+        payout: payload.payout,
+        profit: payload.payout - payload.bet,
+        profile: { balance: 900 + payload.payout }
+      };
+    },
+    async refundReservedWager(payload) {
+      calls.push(['refund', payload]);
+      return { bet: payload.bet, payout: payload.bet, profit: 0, profile: { balance: 1000 } };
+    }
+  };
+  const interaction = createChatInputInteraction('타이밍', {
+    integers: { 돈: 100 }
+  });
+
+  assert.equal(await handleCasinoCommand(interaction, fakeEconomy, quietLogger, {
+    randomInt: () => 10,
+    nowMs: () => 1000
+  }), true);
+  assert.deepEqual(calls.map(([type]) => type), ['reserve']);
+  assert.match(interaction.replied.content, /타이밍 게임/);
+  assert.match(interaction.replied.content, /목표: \*\*10\.0000초\*\*/);
+  assert.match(interaction.replied.content, /0\.5초 이하 1\.3배/);
+
+  const buttonId = interaction.replied.components[0].components[0].data.custom_id;
+  const otherUserPress = createCasinoButtonInteraction({
+    customId: buttonId,
+    userId: 'user-2'
+  });
+  assert.equal(await handleCasinoCommand(otherUserPress, fakeEconomy, quietLogger), true);
+  assert.equal(otherUserPress.replied.flags, MessageFlags.Ephemeral);
+  assert.match(otherUserPress.replied.content, /시작한 유저만/);
+  assert.equal(calls.length, 1);
+
+  const press = createCasinoButtonInteraction({ customId: buttonId });
+  assert.equal(await handleCasinoCommand(press, fakeEconomy, quietLogger, {
+    nowMs: () => 10999.9
+  }), true);
+  assert.deepEqual(calls.map(([type]) => type), ['reserve', 'resolve']);
+  assert.equal(calls[1][1].payout, 500);
+  assert.match(press.updated.content, /기록: \*\*9\.9999초\*\*/);
+  assert.match(press.updated.content, /오차: \*\*0\.0001초\*\*/);
+  assert.match(press.updated.content, /배율 \*\*5배\*\*/);
+  assert.match(press.updated.content, /지급: 500골드/);
+});
+
+test('이모지 경마는 트랙 프레임으로 동물을 전진시키고 적중 시 2.7배를 지급한다', () => {
+  const race = playEmojiRace({
+    choice: '강아지',
+    bet: 100,
+    randomInt: createSequenceRandom([
+      1, 3, 1,
+      1, 3, 1,
+      1, 3, 1
+    ])
+  });
+
+  assert.equal(normalizeEmojiRaceChoice('2번'), 'dog');
+  assert.equal(race.winnerId, 'dog');
+  assert.equal(race.win, true);
+  assert.equal(race.payout, 270);
+  assert.match(formatEmojiRaceTrack(race.frames[0]), /1번 말: 🐎 \. \. \. \. \. \. \. \. \. 🏁/);
+  assert.match(formatEmojiRaceTrack(race.finalFrame), /2번 강아지: \. \. \. \. \. \. \. \. \. 🐕 🏁/);
+});
+
+test('이모지경마 명령은 임베드 트랙을 수정하며 예약 베팅을 정산한다', async () => {
+  const calls = [];
+  const fakeEconomy = {
+    async reserveWager(payload) {
+      calls.push(['reserve', payload]);
+      return {
+        bet: payload.bet,
+        profile: { balance: 9_900 }
+      };
+    },
+    async resolveReservedWager(payload) {
+      calls.push(['resolve', payload]);
+      return {
+        bet: payload.bet,
+        payout: payload.payout,
+        profit: payload.payout - payload.bet,
+        profile: { balance: 10_000 + payload.payout - payload.bet }
+      };
+    },
+    async refundReservedWager(payload) {
+      calls.push(['refund', payload]);
+      return {
+        bet: payload.bet,
+        payout: payload.bet,
+        profit: 0,
+        profile: { balance: 10_000 }
+      };
+    }
+  };
+  const interaction = createChatInputInteraction('이모지경마', {
+    integers: { 돈: 100 },
+    strings: { 선택: 'dog' }
+  });
+
+  assert.equal(await handleCasinoCommand(interaction, fakeEconomy, quietLogger, {
+    raceDelayMs: 0,
+    randomInt: createSequenceRandom([
+      1, 3, 1,
+      1, 3, 1,
+      1, 3, 1
+    ])
+  }), true);
+
+  assert.deepEqual(calls.map(([type]) => type), ['reserve', 'resolve']);
+  assert.equal(calls[0][1].bet, 100);
+  assert.equal(calls[1][1].payout, 270);
+  assert.match(interaction.replied.embeds[0].data.title, /이모지 경마 출발/);
+  assert.ok(interaction.edits.length >= 1);
+  const finalEdit = interaction.edits.at(-1);
+  assert.match(finalEdit.embeds[0].data.title, /이모지 경마 결과/);
+  assert.match(finalEdit.embeds[0].data.description, /승자: \*\*🐕 강아지\*\*/);
+  assert.match(finalEdit.embeds[0].data.description, /✅ 성공/);
 });
 
 test('유저 블랙잭 신청과 진행 안내는 상대와 현재 차례를 실제 멘션으로 제한한다', async () => {
@@ -612,10 +927,16 @@ function createChatInputInteraction(commandName, options = {}) {
     isButton: () => false,
     isChatInputCommand: () => true,
     inGuild: () => true,
+    edits: [],
     async reply(payload) {
       this.replied = typeof payload === 'string'
         ? { content: payload }
         : payload;
+    },
+    async editReply(payload) {
+      this.edits.push(typeof payload === 'string'
+        ? { content: payload }
+        : payload);
     }
   };
 }

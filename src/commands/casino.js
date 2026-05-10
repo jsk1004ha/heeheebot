@@ -3,19 +3,34 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  EmbedBuilder,
   SlashCommandBuilder
 } from 'discord.js';
 import {
+  cashOutDeadlineRound,
   createBlackjackRound,
+  createDeadlineRound,
   createPlayerBlackjackRound,
+  createTimingRound,
+  DEADLINE_MAX_SAFE_PRESSES,
+  DEADLINE_ROLL_MAX,
+  TIMING_PAYOUT_TIERS,
+  TIMING_TARGET_MAX_SECONDS,
+  TIMING_TARGET_MIN_SECONDS,
+  EMOJI_RACE_MULTIPLIER,
+  formatEmojiRaceChoice,
+  formatEmojiRaceTrack,
   formatCards,
   hitBlackjackRound,
   hitPlayerBlackjackRound,
+  normalizeEmojiRaceChoice,
   normalizeDiceChoice,
   normalizeOddEvenChoice,
   playBaccarat,
   playCraps,
+  pressDeadlineRound,
   playDice,
+  playEmojiRace,
   playHighLow,
   playKeno,
   playLuckySeven,
@@ -23,6 +38,7 @@ import {
   playRoulette,
   playSicBo,
   standBlackjackRound,
+  resolveTimingRound,
   standPlayerBlackjackRound,
   playSlots
 } from '../systems/casino.js';
@@ -30,9 +46,13 @@ import {
   createAllowedMentionsForUsers,
   formatUserMention
 } from './ui.js';
+import { safeReplyToInteraction } from './interactions.js';
 
 const CHALLENGE_TTL_MS = 60_000;
+const EMOJI_RACE_FRAME_DELAY_MS = 500;
 const pendingBlackjackChallenges = new Map();
+const pendingDeadlineGames = new Map();
+const pendingTimingGames = new Map();
 const pendingAiBlackjackGames = new Map();
 const pendingPlayerBlackjackGames = new Map();
 
@@ -89,6 +109,47 @@ export const casinoCommands = [
         .setDescription('베팅할 골드')
         .setMinValue(1)
         .setRequired(true)
+    ),
+  new SlashCommandBuilder()
+    .setName('데드라인')
+    .setDescription('누를수록 보상과 꽝 확률이 함께 커지는 버튼 게임입니다.')
+    .addIntegerOption((option) =>
+      option
+        .setName('돈')
+        .setDescription('베팅할 골드')
+        .setMinValue(1)
+        .setRequired(true)
+    ),
+  new SlashCommandBuilder()
+    .setName('타이밍')
+    .setDescription('랜덤 목표 초에 최대한 정확히 버튼을 눌러 골드 배율을 노립니다.')
+    .addIntegerOption((option) =>
+      option
+        .setName('돈')
+        .setDescription('베팅할 골드')
+        .setMinValue(1)
+        .setRequired(true)
+    ),
+  new SlashCommandBuilder()
+    .setName('이모지경마')
+    .setDescription('움직이는 이모지 트랙에서 1등 동물을 맞히면 2.7배를 받습니다.')
+    .addIntegerOption((option) =>
+      option
+        .setName('돈')
+        .setDescription('베팅할 골드')
+        .setMinValue(1)
+        .setRequired(true)
+    )
+    .addStringOption((option) =>
+      option
+        .setName('선택')
+        .setDescription('우승할 동물')
+        .setRequired(true)
+        .addChoices(
+          { name: '1번 말 🐎', value: 'horse' },
+          { name: '2번 강아지 🐕', value: 'dog' },
+          { name: '3번 거북이 🐢', value: 'turtle' }
+        )
     ),
   new SlashCommandBuilder()
     .setName('럭키세븐')
@@ -245,10 +306,16 @@ export function getCasinoCommandPayloads() {
   return casinoCommands.map((command) => command.toJSON());
 }
 
-export async function handleCasinoCommand(interaction, economy, logger = console) {
+export async function handleCasinoCommand(interaction, economy, logger = console, options = {}) {
   if (interaction.isButton()) {
     if (interaction.customId?.startsWith('casino_quick:')) {
       return handleCasinoQuickButton(interaction, economy, logger);
+    }
+    if (interaction.customId?.startsWith('deadline_')) {
+      return handleDeadlineButton(interaction, economy, logger, options);
+    }
+    if (interaction.customId?.startsWith('timing_')) {
+      return handleTimingButton(interaction, economy, logger, options);
     }
     return handleBlackjackButton(interaction, economy, logger);
   }
@@ -266,10 +333,10 @@ export async function handleCasinoCommand(interaction, economy, logger = console
   }
 
   try {
-    await routeCasinoCommand(interaction, economy);
+    await routeCasinoCommand(interaction, economy, logger, options);
   } catch (error) {
     logger.error(error);
-    await interaction.reply({
+    await safeReplyToInteraction(interaction, {
       content: `게임 실패: ${error.message}`,
       flags: MessageFlags.Ephemeral
     });
@@ -278,7 +345,7 @@ export async function handleCasinoCommand(interaction, economy, logger = console
   return true;
 }
 
-async function routeCasinoCommand(interaction, economy) {
+async function routeCasinoCommand(interaction, economy, logger = console, options = {}) {
   if (interaction.commandName === '카지노정보') {
     await interaction.reply(createCasinoInfoPayload());
     return;
@@ -344,6 +411,28 @@ async function routeCasinoCommand(interaction, economy) {
       game: 'slots',
       bet
     }));
+    return;
+  }
+
+  if (interaction.commandName === '데드라인') {
+    await playDeadline(interaction, economy, bet);
+    return;
+  }
+
+  if (interaction.commandName === '타이밍') {
+    await playTiming(interaction, economy, bet, options);
+    return;
+  }
+
+  if (interaction.commandName === '이모지경마') {
+    const choice = normalizeEmojiRaceChoice(interaction.options.getString('선택', true));
+    await runEmojiRaceCommand(interaction, economy, logger, {
+      bet,
+      choice,
+      randomInt: options.randomInt,
+      frameDelayMs: options.raceDelayMs,
+      sleep: options.sleep
+    });
     return;
   }
 
@@ -443,6 +532,9 @@ function formatCasinoInfo() {
     '- `/홀짝`: 홀/짝 적중 시 1.9배, 99~100은 하우스 승리',
     '- `/주사위`: 높음(4~6) 또는 낮음(1~3) 적중 시 1.9배',
     '- `/슬롯`: 페어 3배, 트리플 10배, 7️⃣ 트리플 20배',
+    '- `/데드라인`: 버튼을 누를수록 누적 보상과 꽝 확률이 함께 상승, 멈추면 수령',
+    `- \`/타이밍\`: ${TIMING_TARGET_MIN_SECONDS}~${TIMING_TARGET_MAX_SECONDS}초 랜덤 목표에 가깝게 누를수록 최대 ${formatMultiplier(TIMING_PAYOUT_TIERS[0].multiplier)}배`,
+    `- \`/이모지경마\`: 실시간 이모지 트랙에서 1등 동물 적중 시 ${EMOJI_RACE_MULTIPLIER}배`,
     '- `/럭키세븐`: 주사위 2개 합이 7이면 5.5배',
     '- `/하이로우`: 두 번째 카드가 높음/낮음 적중 시 1.9배, 같은 숫자는 환불',
     '- `/블랙잭`: 승리 1.5배, 내추럴 블랙잭 2배, 무승부 환불',
@@ -492,6 +584,392 @@ function getCasinoQuickGameLabel(game) {
   if (game === 'odd_even') return '홀짝';
   if (game === 'dice') return '주사위';
   return '게임';
+}
+
+async function runEmojiRaceCommand(interaction, economy, logger, {
+  bet,
+  choice,
+  randomInt,
+  frameDelayMs = EMOJI_RACE_FRAME_DELAY_MS,
+  sleep: sleepFn = sleep
+}) {
+  let reserved = false;
+  let replied = false;
+
+  try {
+    await economy.reserveWager({
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username,
+      bet
+    });
+    reserved = true;
+
+    const race = playEmojiRace({
+      choice,
+      bet,
+      ...(randomInt ? { randomInt } : {})
+    });
+
+    await interaction.reply(createEmojiRaceProgressPayload(interaction.user, race, race.frames[0]));
+    replied = true;
+
+    for (const frame of race.frames.slice(1, -1)) {
+      await waitForRaceFrame(frameDelayMs, sleepFn);
+      await interaction.editReply(createEmojiRaceProgressPayload(interaction.user, race, frame));
+    }
+
+    await waitForRaceFrame(frameDelayMs, sleepFn);
+    const settlement = await economy.resolveReservedWager({
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username,
+      bet,
+      payout: race.payout
+    });
+    reserved = false;
+
+    await interaction.editReply(createEmojiRaceResultPayload(interaction.user, race, settlement));
+  } catch (error) {
+    if (reserved) {
+      await economy.refundReservedWager({
+        guildId: interaction.guildId,
+        userId: interaction.user.id,
+        username: interaction.user.username,
+        bet
+      }).catch((refundError) => logger.error('Failed to refund emoji race wager:', refundError));
+    }
+
+    if (replied && typeof interaction.editReply === 'function') {
+      await interaction.editReply(createEmojiRaceFailurePayload(error)).catch((editError) => {
+        logger.error('Failed to update emoji race failure message:', editError);
+      });
+      return;
+    }
+
+    throw error;
+  }
+}
+
+function createEmojiRaceProgressPayload(user, race, frame) {
+  const embed = new EmbedBuilder()
+    .setTitle(frame.turn === 0 ? '🏁 이모지 경마 출발!' : `🏁 이모지 경마 진행 중 · ${frame.turn}턴`)
+    .setDescription([
+      `베팅: **${user.username}** → **${formatEmojiRaceChoice(race.choice)}**`,
+      `배수: 적중 시 **${EMOJI_RACE_MULTIPLIER}배**`,
+      '',
+      '```text',
+      formatEmojiRaceTrack(frame),
+      '```'
+    ].join('\n'))
+    .setColor(0xf59e0b)
+    .setFooter({ text: '0.5초마다 트랙이 갱신됩니다.' });
+
+  return {
+    embeds: [embed],
+    components: []
+  };
+}
+
+function createEmojiRaceResultPayload(user, race, settlement) {
+  const embed = new EmbedBuilder()
+    .setTitle('🏆 이모지 경마 결과')
+    .setDescription([
+      `베팅: **${user.username}** → **${formatEmojiRaceChoice(race.choice)}**`,
+      `승자: **${formatEmojiRaceChoice(race.winnerId)}**`,
+      '',
+      '```text',
+      formatEmojiRaceTrack(race.finalFrame),
+      '```',
+      race.win ? `배수: **${EMOJI_RACE_MULTIPLIER}배**` : '베팅한 동물이 1등하지 못했습니다.',
+      formatSettlement(race.win, settlement)
+    ].join('\n'))
+    .setColor(race.win ? 0x22c55e : 0xef4444);
+
+  return {
+    embeds: [embed],
+    components: []
+  };
+}
+
+function createEmojiRaceFailurePayload(error) {
+  const embed = new EmbedBuilder()
+    .setTitle('⚠️ 이모지 경마 중단')
+    .setDescription([
+      `경마 처리 중 문제가 발생했습니다: ${error.message}`,
+      '예약된 베팅금은 가능한 경우 자동 환불했습니다.'
+    ].join('\n'))
+    .setColor(0xef4444);
+
+  return {
+    embeds: [embed],
+    components: []
+  };
+}
+
+
+
+async function playTiming(interaction, economy, bet, options = {}) {
+  let reserved = false;
+  let gameId = null;
+
+  try {
+    await economy.reserveWager({
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username,
+      bet
+    });
+    reserved = true;
+
+    const game = createTimingRound({
+      bet,
+      randomInt: options.randomInt,
+      nowMs: getNowMsProvider(options)
+    });
+    gameId = createChallengeId();
+    pendingTimingGames.set(gameId, {
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username,
+      bet,
+      game,
+      reserved: true,
+      expiresAt: Date.now() + game.targetMs + CHALLENGE_TTL_MS
+    });
+
+    await interaction.reply(createTimingProgressPayload(interaction.user, game, gameId));
+  } catch (error) {
+    if (gameId) pendingTimingGames.delete(gameId);
+    if (reserved) {
+      await economy.refundReservedWager({
+        guildId: interaction.guildId,
+        userId: interaction.user.id,
+        username: interaction.user.username,
+        bet
+      });
+    }
+    throw error;
+  }
+}
+
+async function handleTimingButton(interaction, economy, logger, options = {}) {
+  const [action, gameId] = interaction.customId.split(':');
+  const pending = pendingTimingGames.get(gameId);
+
+  if (!pending) {
+    await interaction.reply({
+      content: '이미 만료되었거나 처리된 타이밍 게임입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (interaction.user.id !== pending.userId) {
+    await interaction.reply({
+      content: '이 타이밍 버튼은 게임을 시작한 유저만 누를 수 있습니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (action !== 'timing_press') {
+    await interaction.reply({
+      content: '알 수 없는 타이밍 버튼입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  try {
+    const game = resolveTimingRound(pending.game, {
+      nowMs: getNowMsProvider(options)
+    });
+    pendingTimingGames.delete(gameId);
+    const settlement = await economy.resolveReservedWager({
+      guildId: pending.guildId,
+      userId: pending.userId,
+      username: pending.username,
+      bet: pending.bet,
+      payout: game.payout
+    });
+    pending.reserved = false;
+
+    await interaction.update({
+      content: formatTimingResult(interaction.user, game, settlement),
+      allowedMentions: createAllowedMentionsForUsers([pending.userId]),
+      components: []
+    });
+  } catch (error) {
+    pendingTimingGames.delete(gameId);
+    if (pending.reserved) {
+      await economy.refundReservedWager({
+        guildId: pending.guildId,
+        userId: pending.userId,
+        username: pending.username,
+        bet: pending.bet
+      }).catch((refundError) => logger.error('Failed to refund timing wager:', refundError));
+    }
+    logger.error(error);
+    await interaction.update({
+      content: `타이밍 게임 실패: ${error.message}`,
+      components: []
+    });
+  }
+
+  return true;
+}
+
+async function playDeadline(interaction, economy, bet) {
+  let reserved = false;
+  let gameId = null;
+
+  try {
+    await economy.reserveWager({
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username,
+      bet
+    });
+    reserved = true;
+
+    const game = createDeadlineRound({ bet });
+    gameId = createChallengeId();
+    pendingDeadlineGames.set(gameId, {
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username,
+      bet,
+      game,
+      reserved: true,
+      expiresAt: Date.now() + CHALLENGE_TTL_MS
+    });
+
+    await interaction.reply(createDeadlineProgressPayload(interaction.user, game, gameId));
+  } catch (error) {
+    if (gameId) pendingDeadlineGames.delete(gameId);
+    if (reserved) {
+      await economy.refundReservedWager({
+        guildId: interaction.guildId,
+        userId: interaction.user.id,
+        username: interaction.user.username,
+        bet
+      });
+    }
+    throw error;
+  }
+}
+
+async function handleDeadlineButton(interaction, economy, logger, options = {}) {
+  const [action, gameId] = interaction.customId.split(':');
+  const pending = pendingDeadlineGames.get(gameId);
+
+  if (!pending) {
+    await interaction.reply({
+      content: '이미 만료되었거나 처리된 데드라인입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (interaction.user.id !== pending.userId) {
+    await interaction.reply({
+      content: '이 데드라인 버튼은 게임을 시작한 유저만 누를 수 있습니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  try {
+    if (Date.now() > pending.expiresAt) {
+      const game = cashOutDeadlineRound(pending.game);
+      pendingDeadlineGames.delete(gameId);
+      const settlement = await economy.resolveReservedWager({
+        guildId: pending.guildId,
+        userId: pending.userId,
+        username: pending.username,
+        bet: pending.bet,
+        payout: game.payout
+      });
+      pending.reserved = false;
+      await interaction.update({
+        content: formatDeadlineExpiredResult(interaction.user, game, settlement),
+        allowedMentions: createAllowedMentionsForUsers([pending.userId]),
+        components: []
+      });
+      return true;
+    }
+
+    if (action === 'deadline_cashout') {
+      const game = cashOutDeadlineRound(pending.game);
+      pendingDeadlineGames.delete(gameId);
+      const settlement = await economy.resolveReservedWager({
+        guildId: pending.guildId,
+        userId: pending.userId,
+        username: pending.username,
+        bet: pending.bet,
+        payout: game.payout
+      });
+      pending.reserved = false;
+      await interaction.update({
+        content: formatDeadlineResult(interaction.user, game, settlement),
+        allowedMentions: createAllowedMentionsForUsers([pending.userId]),
+        components: []
+      });
+      return true;
+    }
+
+    if (action !== 'deadline_press') {
+      await interaction.reply({
+        content: '알 수 없는 데드라인 버튼입니다.',
+        flags: MessageFlags.Ephemeral
+      });
+      return true;
+    }
+
+    const game = pressDeadlineRound(pending.game, {
+      randomInt: options.randomInt
+    });
+    pending.game = game;
+
+    if (game.status === 'pressing') {
+      pending.expiresAt = Date.now() + CHALLENGE_TTL_MS;
+      await interaction.update(createDeadlineProgressPayload(interaction.user, game, gameId));
+      return true;
+    }
+
+    pendingDeadlineGames.delete(gameId);
+    const settlement = await economy.resolveReservedWager({
+      guildId: pending.guildId,
+      userId: pending.userId,
+      username: pending.username,
+      bet: pending.bet,
+      payout: game.payout
+    });
+    pending.reserved = false;
+    await interaction.update({
+      content: formatDeadlineResult(interaction.user, game, settlement),
+      allowedMentions: createAllowedMentionsForUsers([pending.userId]),
+      components: []
+    });
+  } catch (error) {
+    pendingDeadlineGames.delete(gameId);
+    if (pending.reserved) {
+      await economy.refundReservedWager({
+        guildId: pending.guildId,
+        userId: pending.userId,
+        username: pending.username,
+        bet: pending.bet
+      }).catch((refundError) => logger.error('Failed to refund deadline wager:', refundError));
+    }
+    logger.error(error);
+    await interaction.update({
+      content: `데드라인 실패: ${error.message}`,
+      components: []
+    });
+  }
+
+  return true;
 }
 
 async function playAiBlackjack(interaction, economy, bet) {
@@ -1079,6 +1557,93 @@ function formatKenoResult(user, game, settlement) {
   ].join('\n');
 }
 
+
+
+function createTimingProgressPayload(user, game, gameId) {
+  return {
+    content: formatTimingProgress(user, game),
+    allowedMentions: createAllowedMentionsForUsers([user.id]),
+    components: [createTimingActionRow(gameId)]
+  };
+}
+
+function formatTimingProgress(user, game) {
+  return [
+    `🎯 **타이밍 게임** — ${formatUserMention(user, user.username)}`,
+    `목표: **${formatSeconds4(game.targetSeconds)}** 뒤에 버튼을 누르세요.`,
+    `베팅금: **${game.bet.toLocaleString()}골드**`,
+    `배율표: ${formatTimingPayoutTable()}`,
+    '누른 순간의 기록은 소수점 4자리까지 공개됩니다.'
+  ].join('\n');
+}
+
+function formatTimingResult(user, game, settlement) {
+  return [
+    `🎯 **타이밍 결과** — ${formatUserMention(user, user.username)}`,
+    `목표: **${formatSeconds4(game.targetSeconds)}**`,
+    `기록: **${formatSeconds4(game.elapsedSeconds)}**`,
+    `오차: **${formatSeconds4(game.differenceSeconds)}**`,
+    game.win
+      ? `판정: **${game.tier.label}** · 배율 **${formatMultiplier(game.multiplier)}배**`
+      : `판정: **실패** · ${formatSeconds4(0.5)}보다 멀어 배율이 없습니다.`,
+    formatSettlement(game.win, settlement)
+  ].join('\n');
+}
+
+function formatTimingPayoutTable() {
+  return TIMING_PAYOUT_TIERS
+    .map((tier) => `${tier.label} ${formatMultiplier(tier.multiplier)}배`)
+    .join(' / ');
+}
+
+function createDeadlineProgressPayload(user, game, gameId) {
+  return {
+    content: formatDeadlineProgress(user, game),
+    allowedMentions: createAllowedMentionsForUsers([user.id]),
+    components: [createDeadlineActionRow(gameId, game)]
+  };
+}
+
+function formatDeadlineProgress(user, game) {
+  return [
+    `⏳ **데드라인 버튼** — ${formatUserMention(user, user.username)}`,
+    `안전 누름: **${game.presses}/${DEADLINE_MAX_SAFE_PRESSES}회**`,
+    `베팅금: **${game.bet.toLocaleString()}골드** / 누적 보상: **${game.reward.toLocaleString()}골드** / 지금 수령: **${(game.bet + game.reward).toLocaleString()}골드**`,
+    game.lastReward > 0 ? `방금 안전했습니다: **+${game.lastReward.toLocaleString()}골드**` : null,
+    `다음 안전 보상: **+${game.nextReward.toLocaleString()}골드** / 다음 꽝 확률: **${formatBasisPoints(game.bustChanceBps)}**`,
+    '누르면 보상이 커지지만, 꽝이면 이번 판 누적 보상을 모두 잃습니다. 멈추면 베팅금+누적 보상을 수령합니다.'
+  ].filter(Boolean).join('\n');
+}
+
+function formatDeadlineResult(user, game, settlement) {
+  if (game.status === 'busted') {
+    return [
+      `💥 **데드라인 폭발** — ${formatUserMention(user, user.username)}`,
+      `안전 누름: **${game.presses}/${DEADLINE_MAX_SAFE_PRESSES}회**`,
+      `판정: ${game.lastRoll.toLocaleString()} / ${DEADLINE_ROLL_MAX.toLocaleString()} (꽝 확률 ${formatBasisPoints(game.bustChanceBps)})`,
+      `잃은 누적 보상: **${game.lostReward.toLocaleString()}골드**`,
+      formatSettlement(false, settlement)
+    ].join('\n');
+  }
+
+  return [
+    `${game.autoCashedOut ? '🏁 **데드라인 한계 도달 자동 수령**' : '🛑 **데드라인 수령**'} — ${formatUserMention(user, user.username)}`,
+    `안전 누름: **${game.presses}/${DEADLINE_MAX_SAFE_PRESSES}회**`,
+    `누적 보상: **${game.reward.toLocaleString()}골드**`,
+    formatSettlement(true, settlement)
+  ].join('\n');
+}
+
+function formatDeadlineExpiredResult(user, game, settlement) {
+  return [
+    `⏰ **데드라인 시간 만료** — ${formatUserMention(user, user.username)}`,
+    game.reward > 0
+      ? `60초 동안 추가 입력이 없어 누적 보상 **${game.reward.toLocaleString()}골드**를 자동 수령했습니다.`
+      : '60초 동안 버튼을 누르지 않아 베팅금만 환불되었습니다.',
+    formatSettlement(true, settlement)
+  ].join('\n');
+}
+
 function formatAiBlackjackProgress(user, game) {
   return [
     `🃏 **블랙잭 vs AI** — ${formatUserMention(user, user.username)}`,
@@ -1203,6 +1768,53 @@ function getCasinoChips(profile) {
   return profile.balance ?? profile.currencyBalances?.main ?? profile.currencyBalances?.casino ?? 0;
 }
 
+
+
+function createTimingActionRow(gameId) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`timing_press:${gameId}`)
+      .setLabel('지금 누르기')
+      .setStyle(ButtonStyle.Primary)
+  );
+}
+
+function formatSeconds4(seconds) {
+  return `${Number(seconds).toFixed(4)}초`;
+}
+
+function formatMultiplier(multiplier) {
+  return Number.isInteger(multiplier)
+    ? multiplier.toFixed(0)
+    : multiplier.toFixed(1);
+}
+
+function getNowMsProvider(options = {}) {
+  if (typeof options.nowMs === 'function') return options.nowMs;
+  if (options.nowMs !== undefined) return () => Number(options.nowMs);
+
+  return () => globalThis.performance?.now?.() ?? Date.now();
+}
+
+function createDeadlineActionRow(gameId, game) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`deadline_press:${gameId}`)
+      .setLabel('데드라인 누르기')
+      .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId(`deadline_cashout:${gameId}`)
+      .setLabel('멈추고 수령')
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(game.reward <= 0)
+  );
+}
+
+function formatBasisPoints(basisPoints) {
+  const percent = basisPoints / 100;
+  return `${Number.isInteger(percent) ? percent.toFixed(0) : percent.toFixed(1)}%`;
+}
+
 function createBlackjackActionRow(gameId) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -1284,4 +1896,15 @@ function isCasinoCommand(commandName) {
 
 function createChallengeId() {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
+async function waitForRaceFrame(delayMs, sleepFn) {
+  if (delayMs <= 0) return;
+  await sleepFn(delayMs);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }

@@ -11,6 +11,10 @@ data/*
 !data/.gitkeep
 !data/wordchain-ko.txt
 !data/wordchain-ko.SOURCE.md
+!data/choseong-ko.txt
+!data/choseong-ko.SOURCE.md
+!data/liar-game-words.json
+!data/wordle-allowed-guesses.txt
 
 # SQLite sidecar files
 *.sqlite
