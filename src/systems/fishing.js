@@ -4,6 +4,7 @@ import {
   migrateLegacyWalletsToGold,
   normalizeWallets
 } from './currencies.js';
+import { getOrCreateLinkedAccountProfile } from './accounts.js';
 
 const TEAM_SIZE = 3;
 const MAX_ROD_LEVEL = 20;
@@ -436,12 +437,24 @@ function getOrCreateFishingProfile(data, guildId, userId, username = 'Unknown') 
 }
 
 function getOrCreateGoldProfile(data, guildId, userId, username = 'Unknown') {
-  data.guilds ??= {};
-  data.guilds[guildId] ??= {};
+  const now = Date.now();
+  const profile = getOrCreateLinkedAccountProfile(data, {
+    guildId,
+    userId,
+    username,
+    now,
+    createDefaultProfile: createDefaultGoldProfile
+  });
+  profile.userId = String(userId ?? '').trim();
+  profile.username = username || profile.username || 'Unknown';
+  profile.balance = normalizeNonNegativeInteger(profile.balance);
+  profile.wallets = normalizeWallets(profile.wallets);
+  migrateLegacyWalletsToGold(profile, { now });
+  return profile;
+}
 
-  const guild = data.guilds[guildId];
-  guild.users ??= {};
-  guild.users[userId] ??= {
+function createDefaultGoldProfile(userId, username, now = Date.now()) {
+  return {
     userId,
     username,
     level: 1,
@@ -449,16 +462,8 @@ function getOrCreateGoldProfile(data, guildId, userId, username = 'Unknown') {
     totalXp: 0,
     balance: 0,
     wallets: normalizeWallets(),
-    createdAt: Date.now()
+    createdAt: now
   };
-
-  const profile = guild.users[userId];
-  profile.userId = userId;
-  profile.username = username || profile.username || 'Unknown';
-  profile.balance = normalizeNonNegativeInteger(profile.balance);
-  profile.wallets = normalizeWallets(profile.wallets);
-  migrateLegacyWalletsToGold(profile);
-  return profile;
 }
 
 function createDefaultFishingProfile(userId, username) {

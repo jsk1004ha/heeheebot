@@ -1,4 +1,14 @@
-import { MessageFlags, EmbedBuilder, SlashCommandBuilder } from 'discord.js';
+import {
+  ActionRowBuilder,
+  MessageFlags,
+  EmbedBuilder,
+  SlashCommandBuilder,
+  StringSelectMenuBuilder
+} from 'discord.js';
+import {
+  ACCOUNT_LINK_SELECT_CUSTOM_ID_PREFIX,
+  isAccountSelectionRequiredError
+} from '../systems/accounts.js';
 import { formatCurrencyAmount } from '../systems/currencies.js';
 import {
   getCurrentProfileLevelBadge,
@@ -62,7 +72,10 @@ export const economyCommands = [
     ),
   new SlashCommandBuilder()
     .setName('재화정보')
-    .setDescription('통합 골드 사용처와 기존 지갑 정산 기준을 확인합니다.')
+    .setDescription('통합 골드 사용처와 기존 지갑 정산 기준을 확인합니다.'),
+  new SlashCommandBuilder()
+    .setName('계정연동')
+    .setDescription('여러 서버에 흩어진 희희봇 계정을 하나로 선택하고 나머지는 삭제합니다.')
 ];
 
 export function getEconomyCommandPayloads() {
@@ -83,6 +96,26 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
   const guildId = interaction.guildId;
   const user = interaction.user;
 
+  if (interaction.commandName === '계정연동') {
+    const summary = await economy.getAccountLinkSummary({
+      guildId,
+      userId: user.id,
+      username: user.username
+    });
+
+    if (summary.required) {
+      await interaction.reply(createAccountLinkSelectionPayload(summary, user.id));
+      return true;
+    }
+
+    const profile = await economy.getProfile(guildId, user.id, user.username);
+    await interaction.reply({
+      content: `✅ 계정 연동 완료: 이제 어느 서버에서든 **${profile.username}**님의 통합 계정 1개만 사용합니다.`,
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
   if (interaction.commandName === '프로필') {
     const target = getProfileTargetUser(interaction, user);
     if (target.bot) {
@@ -93,7 +126,19 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
       return true;
     }
 
-    const profile = await economy.getProfile(guildId, target.id, target.username);
+    let profile;
+    try {
+      profile = await economy.getProfile(guildId, target.id, target.username);
+    } catch (error) {
+      if (!isAccountSelectionRequiredError(error)) throw error;
+      await interaction.reply({
+        content: target.id === user.id
+          ? '계정이 여러 서버에 있습니다. `/계정연동`으로 사용할 계정 1개를 먼저 선택해주세요.'
+          : '대상 유저에게 여러 서버 계정이 있어 프로필을 표시할 수 없습니다. 대상 유저가 `/계정연동`을 먼저 완료해야 합니다.',
+        flags: MessageFlags.Ephemeral
+      });
+      return true;
+    }
     const profileContext = await createProfileContext({
       guildId,
       target,
@@ -189,6 +234,84 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
   }
 
   return false;
+}
+
+export async function handleAccountLinkComponent(interaction, economy) {
+  if (!interaction.isStringSelectMenu?.()
+    || !interaction.customId?.startsWith(`${ACCOUNT_LINK_SELECT_CUSTOM_ID_PREFIX}:`)) {
+    return false;
+  }
+
+  const [, ownerId] = interaction.customId.split(':');
+  if (ownerId !== interaction.user.id) {
+    await interaction.reply({
+      content: '이 계정 선택 메뉴는 명령어를 실행한 유저만 사용할 수 있습니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  const selectedAccountId = interaction.values?.[0];
+  const result = await economy.resolveAccountLink({
+    guildId: interaction.guildId,
+    userId: interaction.user.id,
+    username: interaction.user.username,
+    selectedAccountId
+  });
+
+  await interaction.update({
+    content: [
+      '✅ 계정 연동 완료',
+      `선택한 계정: **${result.selected.label}**`,
+      `삭제한 중복 계정: **${result.deletedAccountCount.toLocaleString()}개**`,
+      '이제 희희봇이 있는 모든 서버에서 이 계정 하나만 사용합니다.'
+    ].join('\n'),
+    components: []
+  });
+  return true;
+}
+
+export async function replyWithAccountLinkSelectionIfNeeded(interaction, economy) {
+  if (!interaction.isChatInputCommand?.()
+    || !interaction.inGuild?.()
+    || interaction.commandName === '계정연동') {
+    return false;
+  }
+
+  const summary = await economy.getAccountLinkSummary({
+    guildId: interaction.guildId,
+    userId: interaction.user.id,
+    username: interaction.user.username
+  });
+
+  if (!summary.required) return false;
+
+  await interaction.reply(createAccountLinkSelectionPayload(summary, interaction.user.id));
+  return true;
+}
+
+function createAccountLinkSelectionPayload(summary, ownerId) {
+  const options = summary.candidates.slice(0, 25).map((candidate) => ({
+    label: candidate.label,
+    description: candidate.description,
+    value: candidate.id
+  }));
+
+  const select = new StringSelectMenuBuilder()
+    .setCustomId(`${ACCOUNT_LINK_SELECT_CUSTOM_ID_PREFIX}:${ownerId}`)
+    .setPlaceholder('계속 사용할 계정 1개를 선택하세요')
+    .setMinValues(1)
+    .setMaxValues(1)
+    .addOptions(options);
+
+  return {
+    content: [
+      '⚠️ 같은 Discord 유저로 생성된 희희봇 계정이 여러 서버에서 발견되었습니다.',
+      '계속 사용할 계정 1개를 선택하면 나머지 중복 계정은 삭제되고, 이후 모든 서버에서 선택한 계정만 사용합니다.'
+    ].join('\n'),
+    components: [new ActionRowBuilder().addComponents(select)],
+    flags: MessageFlags.Ephemeral
+  };
 }
 
 const PROFILE_SHOP_BADGE_LABELS = Object.freeze({

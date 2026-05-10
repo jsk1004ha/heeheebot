@@ -8,6 +8,12 @@ import {
   migrateLegacyWalletsToGold,
   normalizeWallets
 } from './currencies.js';
+import {
+  getAccountUserIdsForGuild,
+  getLinkedAccountUsername,
+  getOrCreateLinkedAccountProfile,
+  isAccountSelectionRequiredError
+} from './accounts.js';
 
 const DEFAULT_TICK_MS = 3 * 60 * 1000;
 const DEFAULT_STOCK_ALERT_INTERVAL_MS = 60 * 1000;
@@ -352,7 +358,7 @@ export class StockService {
   async getMarket({ guildId, now = Date.now(), limit = null } = {}) {
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = syncMarket(guild, now, this);
+      const market = syncMarket(data, guildId, guild, now, this);
       return cloneMarket(market, limit);
     });
   }
@@ -360,7 +366,7 @@ export class StockService {
   async getQuote({ guildId, stockId, now = Date.now() }) {
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = syncMarket(guild, now, this);
+      const market = syncMarket(data, guildId, guild, now, this);
       const normalizedStockId = normalizeStockIdForGuild(stockId, guild);
       return cloneQuote(normalizedStockId, market.symbols[normalizedStockId]);
     });
@@ -369,7 +375,7 @@ export class StockService {
   async getListings({ guildId, now = Date.now() }) {
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = syncMarket(guild, now, this);
+      const market = syncMarket(data, guildId, guild, now, this);
       return buildListingSummary(market);
     });
   }
@@ -379,10 +385,10 @@ export class StockService {
 
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = syncMarket(guild, now, this);
+      const market = syncMarket(data, guildId, guild, now, this);
       const normalizedStockId = normalizeStockIdForGuild(stockId, guild);
-      const profile = getOrCreateMoneyProfile(guild, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username);
+      const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
       const quote = getTradableQuote(normalizedStockId, market);
       const subtotal = quote.price * normalizedQuantity;
       const fee = calculateFee(subtotal, this.feeBps);
@@ -437,10 +443,10 @@ export class StockService {
 
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = syncMarket(guild, now, this);
+      const market = syncMarket(data, guildId, guild, now, this);
       const normalizedStockId = normalizeStockIdForGuild(stockId, guild);
-      const profile = getOrCreateMoneyProfile(guild, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username);
+      const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
       const holding = stockUser.holdings[normalizedStockId];
 
       if (!holding || holding.quantity < normalizedQuantity) {
@@ -512,10 +518,10 @@ export class StockService {
 
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = syncMarket(guild, now, this);
+      const market = syncMarket(data, guildId, guild, now, this);
       const normalizedStockId = normalizeStockIdForGuild(stockId, guild);
-      const profile = getOrCreateMoneyProfile(guild, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username);
+      const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
       const quote = getTradableQuote(normalizedStockId, market);
       const order = {
         id: createStockOrderId(now, stockUser.nextOrderSeq + 1),
@@ -567,9 +573,9 @@ export class StockService {
   async getLimitOrders({ guildId, userId, username, now = Date.now() }) {
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = syncMarket(guild, now, this);
-      getOrCreateMoneyProfile(guild, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username);
+      const market = syncMarket(data, guildId, guild, now, this);
+      const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
       return buildLimitOrderSummary(stockUser, market);
     });
   }
@@ -580,9 +586,9 @@ export class StockService {
 
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = syncMarket(guild, now, this);
-      const profile = getOrCreateMoneyProfile(guild, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username);
+      const market = syncMarket(data, guildId, guild, now, this);
+      const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
       const order = stockUser.limitOrders[normalizedOrderId];
 
       if (!order) throw new Error('해당 지정가 주문을 찾을 수 없습니다.');
@@ -608,10 +614,10 @@ export class StockService {
 
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = syncMarket(guild, now, this);
+      const market = syncMarket(data, guildId, guild, now, this);
       const normalizedStockId = normalizeStockIdForGuild(stockId, guild);
-      getOrCreateMoneyProfile(guild, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username);
+      const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
       const quote = getTradableQuote(normalizedStockId, market);
       const alert = {
         id: createStockAlertId(now, stockUser.nextAlertSeq + 1),
@@ -638,9 +644,9 @@ export class StockService {
   async getPriceAlerts({ guildId, userId, username, now = Date.now() }) {
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = syncMarket(guild, now, this);
-      getOrCreateMoneyProfile(guild, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username);
+      const market = syncMarket(data, guildId, guild, now, this);
+      const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
       return buildPriceAlertSummary(stockUser, market);
     });
   }
@@ -651,9 +657,9 @@ export class StockService {
 
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = syncMarket(guild, now, this);
-      getOrCreateMoneyProfile(guild, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username);
+      const market = syncMarket(data, guildId, guild, now, this);
+      const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
       const alert = stockUser.priceAlerts[normalizedAlertId];
 
       if (!alert) throw new Error('해당 가격 알림을 찾을 수 없습니다.');
@@ -670,12 +676,14 @@ export class StockService {
       const guild = getExistingGuild(data, guildId);
       if (!guild?.stocks) return [];
 
-      const market = syncMarket(guild, now, this);
+      const market = syncMarket(data, guildId, guild, now, this);
       const pending = [];
 
       for (const [userId, rawStockUser] of Object.entries(guild.stocks.users ?? {})) {
-        const username = rawStockUser?.username ?? guild.users?.[userId]?.username ?? 'Unknown';
-        const stockUser = getOrCreateStockUser(guild, userId, username);
+        const username = rawStockUser?.username ?? getLinkedAccountUsername(data, userId);
+        const profile = getOptionalMoneyProfile(data, guildId, userId, username, now);
+        if (!profile) continue;
+        const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
 
         for (const alert of Object.values(stockUser.priceAlerts)) {
           if (alert.status !== 'triggered' || alert.notifiedAt > 0 || !alert.channelId) continue;
@@ -699,8 +707,10 @@ export class StockService {
         throw new Error('해당 가격 알림을 찾을 수 없습니다.');
       }
 
-      const market = syncMarket(guild, now, this);
-      const stockUser = getOrCreateStockUser(guild, userId, guild.users?.[userId]?.username ?? 'Unknown');
+      const market = syncMarket(data, guildId, guild, now, this);
+      const username = getLinkedAccountUsername(data, userId);
+      const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
       const alert = stockUser.priceAlerts[normalizedAlertId];
 
       if (!alert || alert.status !== 'triggered') {
@@ -717,9 +727,9 @@ export class StockService {
 
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = syncMarket(guild, now, this);
-      getOrCreateMoneyProfile(guild, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username);
+      const market = syncMarket(data, guildId, guild, now, this);
+      const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
 
       return {
         userId: stockUser.userId,
@@ -737,7 +747,7 @@ export class StockService {
 
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = syncMarket(guild, now, this);
+      const market = syncMarket(data, guildId, guild, now, this);
 
       return {
         tickIndex: market.tickIndex,
@@ -754,7 +764,7 @@ export class StockService {
 
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = syncMarket(guild, now, this);
+      const market = syncMarket(data, guildId, guild, now, this);
       const normalizedStockId = normalizeStockIdForGuild(stockId, guild);
       const stock = cloneQuote(normalizedStockId, market.symbols[normalizedStockId]);
       const history = normalizePriceHistory(market.symbols[normalizedStockId]?.history, market.symbols[normalizedStockId], market.tickIndex, market.lastTickAt)
@@ -783,10 +793,10 @@ export class StockService {
 
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = syncMarket(guild, now, this);
+      const market = syncMarket(data, guildId, guild, now, this);
       const normalizedStockId = normalizeStockIdForGuild(stockId, guild);
-      const profile = getOrCreateMoneyProfile(guild, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username);
+      const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
       const liquidated = liquidateLeveragedPositions(profile, stockUser, market);
       const quote = getTradableQuote(normalizedStockId, market);
       const fee = calculateFee(normalizedMargin, this.leverageFeeBps);
@@ -846,9 +856,9 @@ export class StockService {
   async closeLeveragedPosition({ guildId, userId, username, positionId, now = Date.now() }) {
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = syncMarket(guild, now, this);
-      const profile = getOrCreateMoneyProfile(guild, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username);
+      const market = syncMarket(data, guildId, guild, now, this);
+      const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
       const position = stockUser.leveragedPositions[positionId];
 
       if (!position) {
@@ -925,9 +935,9 @@ export class StockService {
   async getLeveragePortfolio({ guildId, userId, username, now = Date.now() }) {
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = syncMarket(guild, now, this);
-      const profile = getOrCreateMoneyProfile(guild, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username);
+      const market = syncMarket(data, guildId, guild, now, this);
+      const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
       const liquidated = liquidateLeveragedPositions(profile, stockUser, market);
       const positions = getEvaluatedLeveragedPositions(stockUser, market);
       const marginTotal = positions.reduce((sum, position) => sum + position.margin, 0);
@@ -952,9 +962,9 @@ export class StockService {
   async getPortfolio({ guildId, userId, username, now = Date.now() }) {
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = syncMarket(guild, now, this);
-      const profile = getOrCreateMoneyProfile(guild, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username);
+      const market = syncMarket(data, guildId, guild, now, this);
+      const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
       liquidateLeveragedPositions(profile, stockUser, market);
       return buildPortfolio(profile, stockUser, market);
     });
@@ -965,24 +975,27 @@ export class StockService {
 
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
-      const market = syncMarket(guild, now, this);
+      const market = syncMarket(data, guildId, guild, now, this);
       const userIds = new Set([
-        ...Object.keys(guild.users ?? {}),
+        ...getAccountUserIdsForGuild(data, guildId),
         ...Object.keys(guild.stocks?.users ?? {})
       ]);
 
       return [...userIds]
         .map((userId) => {
-          const profile = getOrCreateMoneyProfile(
-            guild,
+          const profile = getOptionalMoneyProfile(
+            data,
+            guildId,
             userId,
-            guild.users?.[userId]?.username ?? guild.stocks?.users?.[userId]?.username ?? 'Unknown',
+            getLinkedAccountUsername(data, userId, guild.stocks?.users?.[userId]?.username ?? 'Unknown'),
             now
           );
-          const stockUser = getOrCreateStockUser(guild, userId, profile.username);
+          if (!profile) return null;
+          const stockUser = getOrCreateStockUser(guild, userId, profile.username, profile, now);
           liquidateLeveragedPositions(profile, stockUser, market);
           return buildPortfolio(profile, stockUser, market);
         })
+        .filter(Boolean)
         .filter((portfolio) => portfolio.cash > 0 || portfolio.positions.length > 0)
         .sort((a, b) => {
           if (b.totalAssets !== a.totalAssets) return b.totalAssets - a.totalAssets;
@@ -1136,7 +1149,6 @@ function getOrCreateGuild(data, guildId) {
   if (!guildId) throw new Error('서버에서만 사용할 수 있는 기능입니다.');
   data.guilds ??= {};
   data.guilds[guildId] ??= {};
-  data.guilds[guildId].users ??= {};
   return data.guilds[guildId];
 }
 
@@ -1243,13 +1255,13 @@ function normalizeSymbolState(state, definition, now) {
   };
 }
 
-function syncMarket(guild, now, service) {
+function syncMarket(data, guildId, guild, now, service) {
   const market = getOrCreateMarket(guild, now);
-  advanceMarket(guild, market, now, service);
+  advanceMarket(data, guildId, guild, market, now, service);
   return market;
 }
 
-function advanceMarket(guild, market, now, service) {
+function advanceMarket(data, guildId, guild, market, now, service) {
   const safeNow = normalizeNonNegativeInteger(now);
   const elapsed = safeNow - market.lastTickAt;
   if (elapsed < service.tickMs) return;
@@ -1270,7 +1282,7 @@ function advanceMarket(guild, market, now, service) {
     }
     listScheduledStocks(guild, market);
     maybeAutoListStock(guild, market, service);
-    processMarketSideEffects(guild, market, service);
+    processMarketSideEffects(data, guildId, guild, market, service);
   }
 }
 
@@ -1574,9 +1586,37 @@ function getStockNewsTemplateOffset(definition) {
     .reduce((sum, character) => sum + character.codePointAt(0), 0);
 }
 
-function getOrCreateMoneyProfile(guild, userId, username, now) {
-  guild.users ??= {};
-  guild.users[userId] ??= {
+function getOrCreateMoneyProfile(data, guildId, userId, username, now) {
+  const profile = getOrCreateLinkedAccountProfile(data, {
+    guildId,
+    userId,
+    username,
+    now,
+    createDefaultProfile: createDefaultStockMoneyProfile
+  });
+  profile.userId = String(userId ?? '').trim();
+  profile.username = username || profile.username || 'Unknown';
+  profile.balance = normalizeNonNegativeInteger(profile.balance);
+  migrateLegacyWalletsToGold(profile, { now });
+  profile.wallets = normalizeWallets(profile.wallets);
+  profile.level = normalizePositiveStoredInteger(profile.level, 1);
+  profile.xp = normalizeNonNegativeInteger(profile.xp);
+  profile.totalXp = normalizeNonNegativeInteger(profile.totalXp);
+  profile.createdAt = normalizeNonNegativeInteger(profile.createdAt) || now;
+  return profile;
+}
+
+function getOptionalMoneyProfile(data, guildId, userId, username, now) {
+  try {
+    return getOrCreateMoneyProfile(data, guildId, userId, username, now);
+  } catch (error) {
+    if (isAccountSelectionRequiredError(error)) return null;
+    throw error;
+  }
+}
+
+function createDefaultStockMoneyProfile(userId, username, now = Date.now()) {
+  return {
     userId,
     username,
     level: 1,
@@ -1591,21 +1631,9 @@ function getOrCreateMoneyProfile(guild, userId, username, now) {
     lastFirstMessageBonusDay: null,
     createdAt: now
   };
-
-  const profile = guild.users[userId];
-  profile.userId = userId;
-  profile.username = username || profile.username || 'Unknown';
-  profile.balance = normalizeNonNegativeInteger(profile.balance);
-  migrateLegacyWalletsToGold(profile, { now });
-  profile.wallets = normalizeWallets(profile.wallets);
-  profile.level = normalizePositiveStoredInteger(profile.level, 1);
-  profile.xp = normalizeNonNegativeInteger(profile.xp);
-  profile.totalXp = normalizeNonNegativeInteger(profile.totalXp);
-  profile.createdAt = normalizeNonNegativeInteger(profile.createdAt) || now;
-  return profile;
 }
 
-function getOrCreateStockUser(guild, userId, username) {
+function getOrCreateStockUser(guild, userId, username, moneyProfile = null, now = Date.now()) {
   guild.stocks ??= { users: {} };
   guild.stocks.users ??= {};
   guild.stocks.users[userId] ??= {
@@ -1647,7 +1675,7 @@ function getOrCreateStockUser(guild, userId, username) {
     stockUser.tradeHistory.reduce((max, entry) => Math.max(max, normalizeNonNegativeInteger(entry.sequence)), 0)
   );
   stockUser.lastTradeAt = normalizeNonNegativeInteger(stockUser.lastTradeAt);
-  migrateLegacyStockLiabilitiesToGold(guild.users?.[userId], stockUser);
+  migrateLegacyStockLiabilitiesToGold(moneyProfile, stockUser, now);
   return stockUser;
 }
 
@@ -2264,12 +2292,13 @@ function getTradableQuote(stockId, market) {
   return quote;
 }
 
-function processMarketSideEffects(guild, market, service) {
+function processMarketSideEffects(data, guildId, guild, market, service) {
   const users = guild.stocks?.users ?? {};
   for (const [userId, rawStockUser] of Object.entries(users)) {
-    const username = rawStockUser?.username ?? guild.users?.[userId]?.username ?? 'Unknown';
-    const profile = getOrCreateMoneyProfile(guild, userId, username, market.lastTickAt);
-    const stockUser = getOrCreateStockUser(guild, userId, username);
+    const username = rawStockUser?.username ?? getLinkedAccountUsername(data, userId);
+    const profile = getOptionalMoneyProfile(data, guildId, userId, username, market.lastTickAt);
+    if (!profile) continue;
+    const stockUser = getOrCreateStockUser(guild, userId, username, profile, market.lastTickAt);
     processLimitOrders(profile, stockUser, market, service);
     triggerPriceAlerts(stockUser, market);
   }

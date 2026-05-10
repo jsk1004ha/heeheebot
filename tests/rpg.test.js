@@ -363,7 +363,7 @@ test('히든 제작 장비와 거래소 판매/구매는 RPG 장비와 골드만
       };
     });
     await fixture.store.update((data) => {
-      data.guilds['guild-1'].users['buyer-1'].balance = 20_000;
+      data.accounts.users['buyer-1'].balance = 20_000;
     });
 
     const crafted = await fixture.economy.craftRpgRecipe({
@@ -886,7 +886,7 @@ async function createFixture(options = {}) {
 
 async function mutateProfile(store, mutator) {
   await store.update((data) => {
-    const profile = data.guilds['guild-1'].users['user-1'];
+    const profile = data.accounts.users['user-1'];
     mutator(profile);
   });
 }

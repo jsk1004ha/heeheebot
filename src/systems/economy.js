@@ -99,6 +99,14 @@ import {
   migrateLegacyWalletsToGold,
   normalizeWallets
 } from './currencies.js';
+import {
+  getAccountLinkSummary,
+  getAccountUserIdsForGuild,
+  getLinkedAccountUsername,
+  getOrCreateLinkedAccountProfile,
+  isAccountSelectionRequiredError,
+  resolveLinkedAccountSelection
+} from './accounts.js';
 
 const RPG_SCHEMA_VERSION = 'heehee-rpg-v1';
 
@@ -220,6 +228,29 @@ export class EconomyService {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
       return cloneProfile(profile);
+    });
+  }
+
+  async getAccountLinkSummary({ guildId, userId, username = 'Unknown' }) {
+    const data = await this.store.load();
+    return getAccountLinkSummary(data, { guildId, userId, username });
+  }
+
+  async resolveAccountLink({ guildId, userId, username = 'Unknown', selectedAccountId, now = Date.now() }) {
+    return this.store.update((data) => {
+      const result = resolveLinkedAccountSelection(data, {
+        guildId,
+        userId,
+        username,
+        selectedAccountId,
+        now
+      });
+      const profile = getOrCreateProfile(data, guildId, userId, username, this, now);
+
+      return {
+        ...result,
+        profile: cloneProfile(profile)
+      };
     });
   }
 
@@ -2341,17 +2372,19 @@ export class EconomyService {
     const safeLimit = Math.min(20, Math.max(1, Number(limit) || 10));
 
     return this.store.update((data) => {
-      const guild = data.guilds?.[guildId];
-      if (!guild) return [];
+      const userIds = getAccountUserIdsForGuild(data, guildId);
+      if (userIds.length === 0) return [];
 
-      return Object.entries(guild.users ?? {})
-        .map(([userId, profile]) => {
-          const normalizedProfile = cloneProfile(getOrCreateProfile(data, guildId, userId, profile?.username, this));
+      return userIds
+        .map((userId) => {
+          const normalizedProfile = getOptionalProfileForGuild(data, guildId, userId, this);
+          if (!normalizedProfile) return null;
           return {
             ...normalizedProfile,
             metric: normalizedProfile.sword[normalizedCategory] ?? 0
           };
         })
+        .filter(Boolean)
         .filter((profile) => profile.metric > 0)
         .sort((a, b) => {
           if (b.metric !== a.metric) return b.metric - a.metric;
@@ -2920,14 +2953,12 @@ export class EconomyService {
 
   async getLeaderboard(guildId, limit = 10) {
     return this.store.update((data) => {
-      const guild = data.guilds?.[guildId];
+      const userIds = getAccountUserIdsForGuild(data, guildId);
+      if (userIds.length === 0) return [];
 
-      if (!guild) return [];
-
-      return Object.entries(guild.users ?? {})
-        .map(([userId, profile]) =>
-          cloneProfile(getOrCreateProfile(data, guildId, userId, profile?.username, this))
-        )
+      return userIds
+        .map((userId) => getOptionalProfileForGuild(data, guildId, userId, this))
+        .filter(Boolean)
         .sort((a, b) => {
           if (b.level !== a.level) return b.level - a.level;
           if (b.totalXp !== a.totalXp) return b.totalXp - a.totalXp;
@@ -2990,34 +3021,15 @@ function normalizeWordChainParticipants(participants) {
   return [...uniqueParticipants.values()];
 }
 
-function getOrCreateProfile(data, guildId, userId, username, economy) {
-  data.guilds ??= {};
-  data.guilds[guildId] ??= {};
-
-  const guild = data.guilds[guildId];
-  guild.users ??= {};
-
-  guild.users[userId] ??= {
+function getOrCreateProfile(data, guildId, userId, username, economy, now = Date.now()) {
+  const profile = getOrCreateLinkedAccountProfile(data, {
+    guildId,
     userId,
     username,
-    level: 1,
-    xp: 0,
-    totalXp: 0,
-    balance: 0,
-    wallets: normalizeWallets(),
-    lastMessageRewardAt: 0,
-    lastDailyAt: 0,
-    lastDailyDay: null,
-    dailyStreak: 0,
-    lastFirstMessageBonusDay: null,
-    lastFortuneXpDay: null,
-    rpg: createDefaultRpgStats(),
-    sword: createDefaultSwordStats(),
-    createdAt: Date.now()
-  };
-
-  const profile = guild.users[userId];
-  profile.userId = userId;
+    now,
+    createDefaultProfile: createDefaultEconomyProfile
+  });
+  profile.userId = String(userId ?? '').trim();
   profile.username = username || profile.username || 'Unknown';
   profile.level = normalizeStoredPositiveInteger(profile.level, 1);
   profile.xp = normalizeStoredNonNegativeInteger(profile.xp);
@@ -3036,10 +3048,61 @@ function getOrCreateProfile(data, guildId, userId, username, economy) {
   profile.lastFortuneXpDay = normalizeStoredNullableInteger(profile.lastFortuneXpDay);
   profile.rpg = normalizeRpgStats(profile.rpg, profile.level);
   profile.sword = normalizeSwordStats(profile.sword);
-  profile.createdAt = normalizeStoredNonNegativeInteger(profile.createdAt) || Date.now();
+  profile.createdAt = normalizeStoredNonNegativeInteger(profile.createdAt) || now;
   reconcileProfileProgress(profile, economy);
 
   return profile;
+}
+
+function createDefaultEconomyProfile(userId, username, now = Date.now()) {
+  return {
+    userId,
+    username,
+    level: 1,
+    xp: 0,
+    totalXp: 0,
+    balance: 0,
+    wallets: normalizeWallets(),
+    lastMessageRewardAt: 0,
+    lastDailyAt: 0,
+    lastDailyDay: null,
+    dailyStreak: 0,
+    lastFirstMessageBonusDay: null,
+    lastFortuneXpDay: null,
+    rpg: createDefaultRpgStats(),
+    sword: createDefaultSwordStats(),
+    createdAt: now
+  };
+}
+
+function getOptionalProfileForGuild(data, guildId, userId, economy) {
+  try {
+    return cloneProfile(getOrCreateProfile(
+      data,
+      guildId,
+      userId,
+      getLinkedAccountUsername(data, userId),
+      economy
+    ));
+  } catch (error) {
+    if (isAccountSelectionRequiredError(error)) return null;
+    throw error;
+  }
+}
+
+function getOptionalMutableProfileForGuild(data, guildId, userId, economy) {
+  try {
+    return getOrCreateProfile(
+      data,
+      guildId,
+      userId,
+      getLinkedAccountUsername(data, userId),
+      economy
+    );
+  } catch (error) {
+    if (isAccountSelectionRequiredError(error)) return null;
+    throw error;
+  }
 }
 
 function cloneProfile(profile) {
@@ -4271,23 +4334,22 @@ function selectRandomSwordOpponentProfile({
   randomInt,
   economy
 }) {
-  const guild = data.guilds?.[guildId];
-  const candidates = Object.entries(guild?.users ?? {})
-    .filter(([candidateUserId]) => candidateUserId !== challengerUserId)
-    .filter(([, candidate]) => candidate && typeof candidate === 'object');
+  const candidates = getAccountUserIdsForGuild(data, guildId)
+    .filter((candidateUserId) => candidateUserId !== challengerUserId);
 
   if (candidates.length <= 0) {
     throw new Error('랜덤 검배틀을 진행할 기존 유저가 없습니다. 다른 유저가 먼저 봇 활동을 한 뒤 다시 시도하세요.');
   }
 
-  const [opponentUserId, opponentProfile] = candidates[randomInt(0, candidates.length - 1)];
-  const profile = getOrCreateProfile(
-    data,
-    guildId,
-    opponentUserId,
-    opponentProfile.username ?? '상대',
-    economy
-  );
+  const profiles = candidates
+    .map((opponentUserId) => getOptionalMutableProfileForGuild(data, guildId, opponentUserId, economy))
+    .filter(Boolean);
+
+  if (profiles.length <= 0) {
+    throw new Error('랜덤 검배틀을 진행할 기존 유저가 없습니다. 다른 유저가 먼저 봇 활동을 한 뒤 다시 시도하세요.');
+  }
+
+  const profile = profiles[randomInt(0, profiles.length - 1)];
   return {
     ...profile,
     npc: false
@@ -4888,14 +4950,9 @@ function getRpgGearEnhanceStatKey(gear) {
 }
 
 function getRpgGuildRaidPartyProfiles(data, guildId, guild, leaderProfile, economy, raid, now) {
-  const profiles = Object.entries(guild.users ?? {})
-    .map(([memberId, memberProfile]) => getOrCreateProfile(
-      data,
-      guildId,
-      memberId,
-      memberProfile?.username,
-      economy
-    ))
+  const profiles = getAccountUserIdsForGuild(data, guildId)
+    .map((memberId) => getOptionalMutableProfileForGuild(data, guildId, memberId, economy))
+    .filter(Boolean)
     .filter((profile) => canJoinRpgGuildRaid(profile, raid, economy, now))
     .sort((a, b) => {
       if (a.userId === leaderProfile.userId) return -1;
@@ -4923,10 +4980,8 @@ function getRpgGuildRaidPartyProfilesByIds(data, guildId, guild, leaderProfile, 
     .filter(Boolean);
   const uniqueIds = [...new Set(orderedIds)].slice(0, 4);
   const profiles = uniqueIds
-    .map((memberId) => {
-      const storedProfile = guild.users?.[memberId];
-      return getOrCreateProfile(data, guildId, memberId, storedProfile?.username, economy);
-    })
+    .map((memberId) => getOptionalMutableProfileForGuild(data, guildId, memberId, economy))
+    .filter(Boolean)
     .filter((profile) => canJoinRpgGuildRaid(profile, raid, economy, now));
 
   if (!profiles.some((profile) => profile.userId === leaderProfile.userId)) {

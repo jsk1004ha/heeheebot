@@ -1,7 +1,11 @@
 import { MessageFlags, Client, Events, GatewayIntentBits } from 'discord.js';
 import { handleCasinoCommand } from './commands/casino.js';
 import { handleCommunityCommand } from './commands/community.js';
-import { handleEconomyCommand } from './commands/economy.js';
+import {
+  handleAccountLinkComponent,
+  handleEconomyCommand,
+  replyWithAccountLinkSelectionIfNeeded
+} from './commands/economy.js';
 import { handleFishingCommand } from './commands/fishing.js';
 import { handleFortuneCommand } from './commands/fortune.js';
 import {
@@ -39,6 +43,7 @@ import {
 } from './commands/wordchain.js';
 import { ModerationService } from './systems/moderation.js';
 import { createSqliteStore } from './storage/sqlite-store.js';
+import { isAccountSelectionRequiredError } from './systems/accounts.js';
 import { CommunityService } from './systems/community.js';
 import { EconomyService } from './systems/economy.js';
 import { FishingService } from './systems/fishing.js';
@@ -129,6 +134,12 @@ export function createBot({
     if (!isSupportedCommandInteraction(interaction)) return;
 
     try {
+      const handledAccountLinkComponent = await handleAccountLinkComponent(interaction, economy);
+      if (handledAccountLinkComponent) return;
+
+      const needsAccountSelection = await replyWithAccountLinkSelectionIfNeeded(interaction, economy);
+      if (needsAccountSelection) return;
+
       const handledCasino = await handleCasinoCommand(interaction, economy, logger);
       if (handledCasino) {
         if (interaction.isChatInputCommand()
@@ -172,7 +183,9 @@ export function createBot({
 
       logUnexpectedInteractionError(logger, error, 'Command handling failed');
 
-      const content = isUserFacingInteractionError(error)
+      const content = isAccountSelectionRequiredError(error)
+        ? '계정이 여러 서버에 있습니다. `/계정연동`으로 사용할 계정 1개를 먼저 선택해주세요.'
+        : isUserFacingInteractionError(error)
         ? `처리 실패: ${error.message}`
         : '명령어 처리 중 오류가 발생했습니다.';
       try {
@@ -197,6 +210,13 @@ export function createBot({
 
       const handledWordChain = await handleWordChainMessage(message, economy, logger);
       if (handledWordChain) return;
+
+      const accountSummary = await economy.getAccountLinkSummary({
+        guildId: message.guild.id,
+        userId: message.author.id,
+        username: message.author.username
+      });
+      if (accountSummary.required) return;
 
       const result = await economy.rewardMessage({
         guildId: message.guild.id,

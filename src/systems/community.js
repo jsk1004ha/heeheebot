@@ -1,4 +1,5 @@
 import { migrateLegacyWalletsToGold, normalizeWallets } from './currencies.js';
+import { getOrCreateLinkedAccountProfile } from './accounts.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
@@ -538,7 +539,6 @@ function getOrCreateGuildCommunity(data, guildId) {
   data.guilds ??= {};
   data.guilds[guildId] ??= {};
   const guild = data.guilds[guildId];
-  guild.users ??= {};
   guild.community ??= {};
   guild.community.lottery = normalizeLottery(guild.community.lottery);
   guild.community.event ??= null;
@@ -546,29 +546,14 @@ function getOrCreateGuildCommunity(data, guildId) {
 }
 
 function getOrCreateProfile(data, guildId, userId, username, now) {
-  data.guilds ??= {};
-  data.guilds[guildId] ??= {};
-  const guild = data.guilds[guildId];
-  guild.users ??= {};
-  guild.users[userId] ??= {
+  const profile = getOrCreateLinkedAccountProfile(data, {
+    guildId,
     userId,
     username,
-    level: 1,
-    xp: 0,
-    totalXp: 0,
-    balance: 0,
-    wallets: normalizeWallets(),
-    lastMessageRewardAt: 0,
-    lastDailyAt: 0,
-    lastDailyDay: null,
-    dailyStreak: 0,
-    lastFirstMessageBonusDay: null,
-    lastFortuneXpDay: null,
-    createdAt: now
-  };
-
-  const profile = guild.users[userId];
-  profile.userId = userId;
+    now,
+    createDefaultProfile: createDefaultCommunityAccountProfile
+  });
+  profile.userId = String(userId ?? '').trim();
   profile.username = username || profile.username || 'Unknown';
   profile.level = normalizeStoredPositiveInteger(profile.level, 1);
   profile.xp = normalizeStoredNonNegativeInteger(profile.xp);
@@ -585,6 +570,25 @@ function getOrCreateProfile(data, guildId, userId, username, now) {
   profile.createdAt = normalizeStoredNonNegativeInteger(profile.createdAt) || now;
   normalizeCommunityProfile(profile, now);
   return profile;
+}
+
+function createDefaultCommunityAccountProfile(userId, username, now = Date.now()) {
+  return {
+    userId,
+    username,
+    level: 1,
+    xp: 0,
+    totalXp: 0,
+    balance: 0,
+    wallets: normalizeWallets(),
+    lastMessageRewardAt: 0,
+    lastDailyAt: 0,
+    lastDailyDay: null,
+    dailyStreak: 0,
+    lastFirstMessageBonusDay: null,
+    lastFortuneXpDay: null,
+    createdAt: now
+  };
 }
 
 function normalizeCommunityProfile(profile, now = Date.now()) {

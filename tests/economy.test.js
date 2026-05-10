@@ -211,6 +211,110 @@ test('랭킹도 기존 프로필의 누락/초과 경험치를 보정해서 표�
   }
 });
 
+test('단일 레거시 계정은 다른 서버에서도 같은 통합 계정으로 자동 연동된다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await fixture.store.update((data) => {
+      data.guilds['guild-1'] = {
+        users: {
+          'user-1': {
+            userId: 'user-1',
+            username: '연동유저',
+            level: 4,
+            xp: 10,
+            totalXp: 674,
+            balance: 777
+          }
+        }
+      };
+    });
+
+    const profile = await fixture.economy.getProfile('guild-2', 'user-1', '연동유저');
+    const leaderboard = await fixture.economy.getLeaderboard('guild-1');
+    const data = await fixture.store.load();
+
+    assert.equal(profile.balance, 777);
+    assert.equal(profile.level, 4);
+    assert.equal(leaderboard[0].userId, 'user-1');
+    assert.equal(data.accounts.users['user-1'].balance, 777);
+    assert.equal(data.guilds['guild-1'].users?.['user-1'], undefined);
+    assert.equal(data.guilds['guild-2'].users?.['user-1'], undefined);
+    assert.ok(data.accounts.guilds['guild-1'].users['user-1']);
+    assert.ok(data.accounts.guilds['guild-2'].users['user-1']);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('여러 서버에 같은 유저 레거시 계정이 있으면 선택 후 나머지를 삭제한다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await fixture.store.update((data) => {
+      data.guilds['guild-1'] = {
+        users: {
+          'user-1': {
+            userId: 'user-1',
+            username: '첫계정',
+            level: 2,
+            xp: 0,
+            totalXp: 100,
+            balance: 100
+          }
+        }
+      };
+      data.guilds['guild-2'] = {
+        users: {
+          'user-1': {
+            userId: 'user-1',
+            username: '둘째계정',
+            level: 5,
+            xp: 0,
+            totalXp: 1764,
+            balance: 900
+          }
+        }
+      };
+    });
+
+    const summary = await fixture.economy.getAccountLinkSummary({
+      guildId: 'guild-3',
+      userId: 'user-1',
+      username: '선택자'
+    });
+
+    assert.equal(summary.required, true);
+    assert.deepEqual(summary.candidates.map((candidate) => candidate.id), ['guild:guild-1', 'guild:guild-2']);
+    await assert.rejects(
+      () => fixture.economy.getProfile('guild-3', 'user-1', '선택자'),
+      /여러 서버/
+    );
+
+    const resolved = await fixture.economy.resolveAccountLink({
+      guildId: 'guild-3',
+      userId: 'user-1',
+      username: '선택자',
+      selectedAccountId: 'guild:guild-2',
+      now: 1234
+    });
+    const profile = await fixture.economy.getProfile('guild-1', 'user-1', '선택자');
+    const data = await fixture.store.load();
+
+    assert.equal(resolved.deletedAccountCount, 1);
+    assert.equal(profile.balance, 900);
+    assert.equal(profile.level, 5);
+    assert.equal(data.accounts.users['user-1'].balance, 900);
+    assert.equal(data.guilds['guild-1'].users?.['user-1'], undefined);
+    assert.equal(data.guilds['guild-2'].users?.['user-1'], undefined);
+    assert.ok(data.accounts.guilds['guild-1'].users['user-1']);
+    assert.ok(data.accounts.guilds['guild-2'].users['user-1']);
+    assert.ok(data.accounts.guilds['guild-3'].users['user-1']);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 test('레벨 필요 경험치는 100 × 레벨^1.5 공식을 따른다', async () => {
   const fixture = await createFixture();
 

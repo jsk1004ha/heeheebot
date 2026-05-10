@@ -14,18 +14,56 @@ test('경제 명령 payload는 경험치를 단일 표현으로 설명한다', (
   const profileCommand = payloads.find((command) => command.name === '프로필');
   const leaderboardCommand = payloads.find((command) => command.name === '랭킹');
   const currencyInfoCommand = payloads.find((command) => command.name === '재화정보');
+  const accountLinkCommand = payloads.find((command) => command.name === '계정연동');
   const exchangeCommand = payloads.find((command) => command.name === '환전');
 
   assert.ok(profileCommand);
   assert.ok(leaderboardCommand);
   assert.ok(currencyInfoCommand);
+  assert.ok(accountLinkCommand);
   assert.equal(exchangeCommand, undefined);
   assert.match(profileCommand.description, /레벨, 경험치, 골드, 성장 배지/);
   assert.ok(profileCommand.options.some((option) => option.name === '대상'));
   assert.match(leaderboardCommand.description, /레벨\/경험치 랭킹/);
   assert.match(currencyInfoCommand.description, /통합 골드|정산 기준|사용처/);
+  assert.match(accountLinkCommand.description, /계정/);
   assert.doesNotMatch(profileCommand.description, /누적|현재/);
   assert.doesNotMatch(leaderboardCommand.description, /누적|현재/);
+});
+
+test('계정연동 명령은 중복 계정 선택 메뉴를 표시한다', async () => {
+  const economy = {
+    async getAccountLinkSummary() {
+      return {
+        required: true,
+        candidates: [
+          {
+            id: 'guild:guild-1',
+            label: '서버 guild-1 · 첫계정',
+            description: 'Lv.2 · 100 XP · 100골드'
+          },
+          {
+            id: 'guild:guild-2',
+            label: '서버 guild-2 · 둘째계정',
+            description: 'Lv.5 · 1,000 XP · 900골드'
+          }
+        ]
+      };
+    }
+  };
+  const interaction = createInteraction('계정연동');
+
+  await handleEconomyCommand(interaction, economy);
+
+  const reply = interaction.replies[0];
+  const row = reply.components[0].toJSON();
+  assert.match(reply.content, /계정이 여러 서버에서 발견/);
+  assert.equal(reply.components.length, 1);
+  assert.equal(row.components[0].custom_id, 'account_link_select:user-1');
+  assert.deepEqual(
+    row.components[0].options.map((option) => option.value),
+    ['guild:guild-1', 'guild:guild-2']
+  );
 });
 
 test('프로필과 랭킹 출력은 전체 경험치를 경험치로 표시한다', async () => {
