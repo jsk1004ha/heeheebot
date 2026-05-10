@@ -4,6 +4,7 @@ export function loadConfig(env = process.env) {
     clientId: env.DISCORD_CLIENT_ID,
     guildId: env.DISCORD_GUILD_ID,
     neisApiKey: env.NEIS_API_KEY,
+    registerCommandsOnStartup: parseBooleanEnv(env.REGISTER_COMMANDS_ON_STARTUP, true),
     databasePath: env.BOT_SQLITE_PATH ?? 'data/profiles.sqlite',
     legacyJsonPath: env.BOT_JSON_MIGRATION_PATH ?? env.BOT_DATA_PATH ?? 'data/profiles.json'
   };
@@ -18,4 +19,9 @@ export function requireBotConfig(config) {
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }
+}
+
+function parseBooleanEnv(value, defaultValue) {
+  if (value === undefined || value === null || value === '') return defaultValue;
+  return !['0', 'false', 'no', 'off'].includes(String(value).trim().toLowerCase());
 }
