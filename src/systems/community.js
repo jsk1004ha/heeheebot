@@ -188,27 +188,45 @@ export class CommunityService {
       const community = normalizeCommunityProfile(profile, now);
       const achievementSources = getAchievementSources(guild, userId, profile);
       const statuses = achievements.getAchievementStatuses(profile, community, achievementSources);
-      const claimed = [];
-      let totalCoins = 0;
-      let totalXp = 0;
-
-      for (const status of statuses) {
-        if (!status.completed || status.claimed) continue;
-        community.claimedAchievements[status.id] = true;
-        totalCoins += status.reward.coins;
-        totalXp += status.reward.xp;
-        if (status.reward.titleId) addOwnedTitle(community, status.reward.titleId);
-        claimed.push(status);
-      }
-
-      if (totalCoins > 0) profile.balance += totalCoins;
-      const levelResult = addXp(profile, totalXp);
+      const rewardResult = applyCompletedAchievementRewards({
+        profile,
+        community,
+        statuses,
+        getStatusesAfterReward: () => achievements.getAchievementStatuses(profile, community, achievementSources)
+      });
 
       return {
-        claimed,
-        totalCoins,
-        totalXp,
-        ...levelResult,
+        ...rewardResult,
+        totalClaimed: rewardResult.claimed.length,
+        profile: cloneCommunityProfile(profile, now),
+        achievements: achievements.getAchievementStatuses(profile, community, achievementSources),
+        titles: achievements.getTitleStatuses(community)
+      };
+    });
+  }
+
+  async grantCompletedAchievements({ guildId, userId, username, now = Date.now(), limit = 5 }) {
+    const safeLimit = Math.max(1, Math.min(10, normalizeStoredNonNegativeInteger(limit, 5)));
+
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, now);
+      const guild = data.guilds?.[guildId] ?? {};
+      const community = normalizeCommunityProfile(profile, now);
+      const achievementSources = getAchievementSources(guild, userId, profile);
+      const statuses = achievements.getAchievementStatuses(profile, community, achievementSources);
+      const rewardResult = applyCompletedAchievementRewards({
+        profile,
+        community,
+        statuses,
+        getStatusesAfterReward: () => achievements.getAchievementStatuses(profile, community, achievementSources)
+      });
+      const displayed = rewardResult.claimed.slice(0, safeLimit);
+
+      return {
+        ...rewardResult,
+        totalClaimed: rewardResult.claimed.length,
+        displayed,
+        hiddenCount: Math.max(0, rewardResult.claimed.length - displayed.length),
         profile: cloneCommunityProfile(profile, now),
         achievements: achievements.getAchievementStatuses(profile, community, achievementSources),
         titles: achievements.getTitleStatuses(community)
@@ -1425,6 +1443,38 @@ function normalizeCountsMap(map) {
   }
 
   return result;
+}
+
+function applyCompletedAchievementRewards({ profile, community, statuses, getStatusesAfterReward = null }) {
+  const claimed = [];
+  let totalCoins = 0;
+  let totalXp = 0;
+
+  for (const status of statuses) {
+    if (!status.completed || status.claimed) continue;
+    community.claimedAchievements[status.id] = true;
+    totalCoins += status.reward.coins;
+    totalXp += status.reward.xp;
+    if (status.reward.titleId) addOwnedTitle(community, status.reward.titleId);
+    claimed.push(status);
+  }
+
+  if (totalCoins > 0) profile.balance += totalCoins;
+  const levelResult = addXp(profile, totalXp);
+
+  if (claimed.length > 0 && typeof getStatusesAfterReward === 'function') {
+    for (const status of getStatusesAfterReward()) {
+      if (!status.completed || status.claimed) continue;
+      community.claimedAchievements[status.id] = true;
+    }
+  }
+
+  return {
+    claimed,
+    totalCoins,
+    totalXp,
+    ...levelResult
+  };
 }
 
 function normalizeCommandName(commandName) {

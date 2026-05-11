@@ -3,7 +3,7 @@ import { MessageFlags } from 'discord.js';
 import test from 'node:test';
 import {
   isSupportedCommandInteraction,
-  sendClaimableAchievementNotice
+  sendAutomaticAchievementNotice
 } from '../src/bot.js';
 
 test('봇 라우팅은 RPG 선택 메뉴 상호작용도 처리 대상으로 인정한다', () => {
@@ -32,41 +32,44 @@ test('봇 라우팅은 명령/버튼/선택 메뉴가 아니면 무시한다', (
   }), false);
 });
 
-test('명령 처리 후 새로 달성 가능한 업적은 followUp으로 짧게 안내한다', async () => {
+test('명령 처리 후 새 업적은 자동 지급 안내로 표시한다', async () => {
   const interaction = createCommandInteraction('낚시');
   const community = {
-    async getClaimableAchievements(input) {
+    async grantCompletedAchievements(input) {
       assert.equal(input.guildId, 'guild-1');
       assert.equal(input.userId, 'user-1');
       return {
-        total: 2,
-        achievements: [
+        totalClaimed: 2,
+        totalCoins: 300,
+        totalXp: 110,
+        displayed: [
           { title: '물비린내 입문' },
           { title: '대장장이의 악몽' }
-        ]
+        ],
+        hiddenCount: 0
       };
     }
   };
 
-  const sent = await sendClaimableAchievementNotice(interaction, community, { debug() {}, error() {} });
+  const sent = await sendAutomaticAchievementNotice(interaction, community, { debug() {}, error() {} });
 
   assert.equal(sent, true);
   assert.equal(interaction.followUps.length, 1);
   assert.equal(interaction.followUps[0].flags, MessageFlags.Ephemeral);
-  assert.match(interaction.followUps[0].content, /달성 가능한 업적/);
+  assert.match(interaction.followUps[0].content, /자동 수령/);
   assert.match(interaction.followUps[0].content, /물비린내 입문/);
-  assert.match(interaction.followUps[0].content, /\/업적 보기:수령 가능/);
+  assert.match(interaction.followUps[0].content, /300골드/);
 });
 
-test('/업적 명령 자체는 달성 가능 업적 followUp을 중복으로 보내지 않는다', async () => {
+test('/업적 명령 자체는 자동 업적 followUp을 중복으로 보내지 않는다', async () => {
   const interaction = createCommandInteraction('업적');
   const community = {
-    async getClaimableAchievements() {
-      throw new Error('업적 명령에서는 조회하면 안 됨');
+    async grantCompletedAchievements() {
+      throw new Error('업적 명령에서는 지급하면 안 됨');
     }
   };
 
-  const sent = await sendClaimableAchievementNotice(interaction, community, { debug() {}, error() {} });
+  const sent = await sendAutomaticAchievementNotice(interaction, community, { debug() {}, error() {} });
 
   assert.equal(sent, false);
   assert.deepEqual(interaction.followUps, []);

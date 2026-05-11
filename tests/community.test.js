@@ -246,6 +246,39 @@ test('히든 업적과 히든 칭호는 조건 달성 전에는 숨기고 달성
   }
 });
 
+
+test('자동 업적 수령은 완료 업적 보상을 한 번만 지급한다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await seedProfile(fixture.store, {
+      community: { stats: { commandsUsed: 50 } }
+    });
+
+    const first = await fixture.community.grantCompletedAchievements({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '자동러'
+    });
+    const second = await fixture.community.grantCompletedAchievements({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '자동러'
+    });
+
+    assert.equal(first.claimed.some((achievement) => achievement.id === 'commands_50'), true);
+    assert.equal(first.totalCoins, 1_000);
+    assert.equal(first.totalXp, 120);
+    assert.equal(first.profile.community.ownedTitles.includes('commander'), true);
+    assert.equal(second.claimed.length, 0);
+    assert.equal(second.totalCoins, 0);
+    assert.equal(second.totalXp, 0);
+    assert.equal(second.profile.balance, first.profile.balance);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 test('새로 달성 가능한 업적 조회는 보상 수령 없이 알림 대상만 반환한다', async () => {
   const fixture = await createFixture();
 

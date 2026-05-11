@@ -195,7 +195,7 @@ export function createBot({
           }).catch((error) => logger.error('Failed to record casino activity:', error));
         }
         await recordCommandActivity(interaction, economy, community, logger);
-        await sendClaimableAchievementNotice(interaction, community, logger);
+        await sendAutomaticAchievementNotice(interaction, community, logger);
         return;
       }
 
@@ -228,7 +228,7 @@ export function createBot({
         });
       } else {
         await recordCommandActivity(interaction, economy, community, logger);
-        await sendClaimableAchievementNotice(interaction, community, logger);
+        await sendAutomaticAchievementNotice(interaction, community, logger);
       }
     } catch (error) {
       if (isUnknownInteractionError(error)) {
@@ -375,37 +375,41 @@ async function recordCommandActivity(interaction, economy, community, logger) {
   }
 }
 
-export async function sendClaimableAchievementNotice(interaction, community, logger = console) {
+export async function sendAutomaticAchievementNotice(interaction, community, logger = console) {
   if (!interaction.isChatInputCommand?.() || !interaction.inGuild?.()) return false;
   if (interaction.commandName === '업적') return false;
-  if (typeof community?.getClaimableAchievements !== 'function') return false;
+  if (typeof community?.grantCompletedAchievements !== 'function') return false;
 
   let result = null;
   try {
-    result = await community.getClaimableAchievements({
+    result = await community.grantCompletedAchievements({
       guildId: interaction.guildId,
       userId: interaction.user.id,
       username: interaction.user.username,
       limit: 3
     });
   } catch (error) {
-    logger.debug?.('Failed to collect claimable achievement notice:', error);
+    logger.debug?.('Failed to grant automatic achievement rewards:', error);
     return false;
   }
 
-  if (!result?.total || !Array.isArray(result.achievements) || result.achievements.length <= 0) {
+  if (!result?.totalClaimed || !Array.isArray(result.displayed) || result.displayed.length <= 0) {
     return false;
   }
 
-  const achievementText = result.achievements
+  const achievementText = result.displayed
     .map((achievement) => `**${achievement.title}**`)
     .join(', ');
-  const hiddenCount = Math.max(0, result.total - result.achievements.length);
+  const hiddenCount = Math.max(0, result.hiddenCount ?? result.totalClaimed - result.displayed.length);
   const moreText = hiddenCount > 0 ? ` 외 ${hiddenCount.toLocaleString()}개` : '';
+  const rewards = [];
+  if (result.totalCoins > 0) rewards.push(`${result.totalCoins.toLocaleString()}골드`);
+  if (result.totalXp > 0) rewards.push(`${result.totalXp.toLocaleString()} XP`);
+  const rewardText = rewards.length > 0 ? rewards.join(', ') : '보상 없음';
 
   return safeReplyToInteraction(interaction, [
-    `🏆 달성 가능한 업적: ${achievementText}${moreText}`,
-    '`/업적 보기:수령 가능`으로 보상을 수령하세요.'
+    `🏆 업적 자동 수령: ${achievementText}${moreText}`,
+    `보상: ${rewardText}`
   ].join('\n'), {
     flags: MessageFlags.Ephemeral
   });
