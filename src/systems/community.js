@@ -216,6 +216,26 @@ export class CommunityService {
     });
   }
 
+  async getClaimableAchievements({ guildId, userId, username, now = Date.now(), limit = 5 }) {
+    const safeLimit = Math.max(1, Math.min(10, normalizeStoredNonNegativeInteger(limit, 5)));
+
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, now);
+      const guild = data.guilds?.[guildId] ?? {};
+      const community = normalizeCommunityProfile(profile, now);
+      const achievementSources = getAchievementSources(guild, userId, profile);
+      const claimable = achievements
+        .getAchievementStatuses(profile, community, achievementSources)
+        .filter((status) => status.completed && !status.claimed);
+
+      return {
+        achievements: claimable.slice(0, safeLimit),
+        total: claimable.length,
+        profile: cloneCommunityProfile(profile, now)
+      };
+    });
+  }
+
   async equipTitle({ guildId, userId, username, titleId, now = Date.now() }) {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, now);

@@ -8,6 +8,7 @@ import { handleChoiceCommand } from './commands/choice.js';
 import { handleCompatibilityCommand } from './commands/compatibility.js';
 import {
   formatLotteryDraw,
+  handleCommunityAutocomplete,
   handleCommunityCommand
 } from './commands/community.js';
 import {
@@ -156,6 +157,7 @@ export function createBot({
     if (interaction.isAutocomplete?.()) {
       try {
         const handled = await handleTamagotchiAutocomplete(interaction)
+          || await handleCommunityAutocomplete(interaction, community)
           || await handleStockAutocomplete(interaction, stocks);
         if (!handled) await safeAutocompleteRespond(interaction, []);
       } catch (error) {
@@ -193,6 +195,7 @@ export function createBot({
           }).catch((error) => logger.error('Failed to record casino activity:', error));
         }
         await recordCommandActivity(interaction, economy, community, logger);
+        await sendClaimableAchievementNotice(interaction, community, logger);
         return;
       }
 
@@ -225,6 +228,7 @@ export function createBot({
         });
       } else {
         await recordCommandActivity(interaction, economy, community, logger);
+        await sendClaimableAchievementNotice(interaction, community, logger);
       }
     } catch (error) {
       if (isUnknownInteractionError(error)) {
@@ -369,6 +373,42 @@ async function recordCommandActivity(interaction, economy, community, logger) {
     logger.error('Failed to reward command activity:', error);
     return null;
   }
+}
+
+export async function sendClaimableAchievementNotice(interaction, community, logger = console) {
+  if (!interaction.isChatInputCommand?.() || !interaction.inGuild?.()) return false;
+  if (interaction.commandName === '업적') return false;
+  if (typeof community?.getClaimableAchievements !== 'function') return false;
+
+  let result = null;
+  try {
+    result = await community.getClaimableAchievements({
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username,
+      limit: 3
+    });
+  } catch (error) {
+    logger.debug?.('Failed to collect claimable achievement notice:', error);
+    return false;
+  }
+
+  if (!result?.total || !Array.isArray(result.achievements) || result.achievements.length <= 0) {
+    return false;
+  }
+
+  const achievementText = result.achievements
+    .map((achievement) => `**${achievement.title}**`)
+    .join(', ');
+  const hiddenCount = Math.max(0, result.total - result.achievements.length);
+  const moreText = hiddenCount > 0 ? ` 외 ${hiddenCount.toLocaleString()}개` : '';
+
+  return safeReplyToInteraction(interaction, [
+    `🏆 달성 가능한 업적: ${achievementText}${moreText}`,
+    '`/업적 보기:수령 가능`으로 보상을 수령하세요.'
+  ].join('\n'), {
+    flags: MessageFlags.Ephemeral
+  });
 }
 
 async function rewardChatActivity(message, economy, community, logger) {
