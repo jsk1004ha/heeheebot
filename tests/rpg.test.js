@@ -8,6 +8,7 @@ import { getRpgCommandPayloads, handleRpgCommand } from '../src/commands/rpg.js'
 import { createRpgVisualPayload } from '../src/commands/rpg/visual.js';
 import { playOddEven } from '../src/systems/casino.js';
 import { EconomyService } from '../src/systems/economy.js';
+import { getRpgDungeonRunTheme } from '../src/systems/rpg-dungeon-run.js';
 import {
   getRpgAdvancedClassOptions,
   getRpgAdvancedClassConfig,
@@ -538,7 +539,7 @@ test('히든 던전 탐사는 레벨과 탐사 진행도를 요구하고 전용 
     await mutateProfile(fixture.store, (profile) => {
       profile.rpg.areaProgress = { moonlit_feywood: 35 };
     });
-    const result = await fixture.economy.runRpgDungeon({
+    const started = await fixture.economy.runRpgDungeon({
       guildId: 'guild-1',
       userId: 'user-1',
       username: '탐험가',
@@ -547,12 +548,106 @@ test('히든 던전 탐사는 레벨과 탐사 진행도를 요구하고 전용 
       now: 3_000
     });
 
+    assert.equal(started.type, 'dungeon_run');
+    assert.equal(started.run.maxFloors, 3);
+    assert.equal(started.dungeonConfig.hidden, true);
+    assert.equal(started.area, 'moonlit_feywood');
+    assert.equal(started.profile.rpg.dungeonClears.moonlit_feywood, undefined);
+
+    const result = await clearDungeonRun(fixture.economy, started, {
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '탐험가',
+      now: 4_000
+    });
+
+    assert.equal(result.type, 'dungeon_result');
+    assert.equal(result.outcome, 'cleared');
     assert.equal(result.dungeonConfig.hidden, true);
     assert.equal(result.area, 'moonlit_feywood');
     assert.equal(result.profile.rpg.dungeonClears.moonlit_feywood, 1);
     assert.equal(result.gearDrop.baseItemId, 'hidden_forest_king_bow');
     assert.equal(result.gearDrop.hidden, true);
     assert.ok(result.materialDrops.some((drop) => drop.itemId === 'shadow_crystal'));
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('RPG 던전은 진행형 로그라이트 런으로 시작·선택·유물·정산을 처리한다', async () => {
+  const fixture = await createFixture({ rpgDungeonCooldownMs: 0, randomInt: (min) => min });
+
+  try {
+    await fixture.economy.chooseRpgClass({ guildId: 'guild-1', userId: 'user-1', username: '탐험가', characterClass: 'novice', characterGender: 'male', now: 1_000 });
+    await mutateProfile(fixture.store, (profile) => {
+      profile.rpg.level = 20;
+      profile.rpg.hp = 400;
+      profile.rpg.mp = 120;
+    });
+
+    const started = await fixture.economy.runRpgDungeon({ guildId: 'guild-1', userId: 'user-1', username: '탐험가', depth: 5, now: 2_000 });
+    assert.equal(started.type, 'dungeon_run');
+    assert.equal(started.run.state, 'active');
+    assert.ok(started.run.maxFloors >= 3 && started.run.maxFloors <= 5);
+    assert.ok(started.run.currentChoices.some((choice) => choice.risk === 'high'));
+    assert.equal(started.profile.rpg.daily.dungeons, 0);
+
+    const highRisk = started.run.currentChoices.find((choice) => choice.risk === 'high');
+    const room = await fixture.economy.chooseRpgDungeonRoom({ guildId: 'guild-1', userId: 'user-1', username: '탐험가', runId: started.run.id, revision: started.run.revision, choiceId: highRisk.id, now: 3_000 });
+    assert.equal(room.type, 'dungeon_run');
+    assert.equal(room.run.state, 'awaiting_relic');
+    assert.equal(room.run.highRiskTaken, true);
+    assert.ok(room.run.pendingRelicChoices.length >= 2);
+    assert.ok(room.run.pendingRelicChoices.every((relic) => relic.upside && relic.downside));
+
+    await assert.rejects(
+      () => fixture.economy.chooseRpgDungeonRoom({ guildId: 'guild-1', userId: 'user-1', username: '탐험가', runId: started.run.id, revision: started.run.revision, choiceId: highRisk.id, now: 3_100 }),
+      /이미 지난 던전 선택/
+    );
+
+    const relic = room.run.pendingRelicChoices[0];
+    const afterRelic = await fixture.economy.chooseRpgDungeonRelic({ guildId: 'guild-1', userId: 'user-1', username: '탐험가', runId: room.run.id, revision: room.run.revision, relicId: relic.id, now: 4_000 });
+    assert.equal(afterRelic.type, 'dungeon_run');
+    assert.equal(afterRelic.run.state, 'active');
+    assert.equal(afterRelic.run.relics[0].id, relic.id);
+
+    afterRelic.profile.rpg.dungeonRun.relics[0].label = 'mutated';
+    const stored = await fixture.economy.getProfile('guild-1', 'user-1', '탐험가');
+    assert.notEqual(stored.rpg.dungeonRun.relics[0].label, 'mutated');
+
+    const result = await clearDungeonRun(fixture.economy, afterRelic, { guildId: 'guild-1', userId: 'user-1', username: '탐험가', now: 5_000 });
+    assert.equal(result.type, 'dungeon_result');
+    assert.equal(result.outcome, 'cleared');
+    assert.equal(result.profile.rpg.dungeonRun, null);
+    assert.equal(result.profile.rpg.daily.dungeons, 1);
+    assert.equal(result.profile.rpg.dungeonClears.forest, 1);
+    assert.equal(getRpgDungeonRunTheme('volcano'), 'desert');
+    assert.equal(getRpgDungeonRunTheme('abyss_mine'), 'cave');
+    assert.equal(getRpgDungeonRunTheme('void_gate'), 'void');
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('/rpg 던전 UI는 짧은 진행 카드와 던전 버튼을 반환한다', async () => {
+  const fixture = await createFixture({ rpgDungeonCooldownMs: 0, randomInt: (min) => min });
+
+  try {
+    await fixture.economy.chooseRpgClass({ guildId: 'guild-1', userId: 'user-1', username: '용사', characterClass: 'novice', characterGender: 'male', now: 1_000 });
+    await mutateProfile(fixture.store, (profile) => {
+      profile.rpg.level = 10;
+      profile.rpg.hp = 300;
+      profile.rpg.mp = 100;
+    });
+    const interaction = createChatInputInteraction('던전', {}, { integers: { 깊이: 3 } });
+    const handled = await handleRpgCommand(interaction, fixture.economy);
+    assert.equal(handled, true);
+    const description = getReplyDescription(interaction.replies[0]);
+    assert.match(description, /던전 진행/);
+    assert.match(description, /다음 방/);
+    assert.doesNotMatch(description, /성공 확률|계산식|몇줄 생략/);
+    assert.ok(description.length < 1_200);
+    assert.ok(getComponentCustomIds(interaction.replies[0].components).some((id) => id.startsWith('rpg_dungeon:user-1:room:')));
   } finally {
     await fixture.cleanup();
   }
@@ -942,6 +1037,23 @@ test('타짜는 카지노 확률을 바꾸지 않고 정산 금액만 증감한�
     await fixture.cleanup();
   }
 });
+
+
+async function clearDungeonRun(economy, currentResult, { guildId, userId, username, now = Date.now() }) {
+  let current = currentResult;
+  for (let step = 0; step < 20; step += 1) {
+    if (current.type === 'dungeon_result') return current;
+    if (current.run.state === 'awaiting_relic') {
+      current = await economy.chooseRpgDungeonRelic({ guildId, userId, username, runId: current.run.id, revision: current.run.revision, relicId: current.run.pendingRelicChoices[0].id, now: now + step });
+      continue;
+    }
+    const choice = current.run.currentChoices.find((candidate) => candidate.type === 'boss')
+      ?? current.run.currentChoices.find((candidate) => candidate.risk !== 'high')
+      ?? current.run.currentChoices[0];
+    current = await economy.chooseRpgDungeonRoom({ guildId, userId, username, runId: current.run.id, revision: current.run.revision, choiceId: choice.id, now: now + step });
+  }
+  throw new Error('던전 클리어 루프가 끝나지 않았습니다.');
+}
 
 async function createFixture(options = {}) {
   const dir = await mkdtemp(join(tmpdir(), 'heehee-rpg-test-'));

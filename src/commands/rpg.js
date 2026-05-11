@@ -442,6 +442,9 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
     if (interaction.customId.startsWith('rpg_story:')) {
       return handleRpgStoryButton(interaction, economy);
     }
+    if (interaction.customId.startsWith('rpg_dungeon:')) {
+      return handleRpgDungeonButton(interaction, economy);
+    }
     if (interaction.customId.startsWith('rpg_quick:')) {
       return handleRpgQuickButton(interaction, economy, services);
     }
@@ -657,7 +660,7 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
         depth
       });
       await replyWithRpgAssets(interaction, formatRpgDungeon(user, result), getDungeonAssetIds(result), {
-        components: createRpgActionLoopRows(user.id)
+        components: createRpgDungeonRows(result, user.id)
       });
     } catch (error) {
       await interaction.reply({
@@ -2415,6 +2418,67 @@ function createRpgRaidLobbyId(now = Date.now()) {
   return `${now.toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 }
 
+async function handleRpgDungeonButton(interaction, economy) {
+  const [, userId, action, runId, revision, targetId] = interaction.customId.split(':');
+  if (interaction.user.id !== userId) {
+    await safeReplyToInteraction(interaction, '이 던전 버튼은 던전을 시작한 유저만 누를 수 있습니다.', {
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  const acknowledged = await safeDeferUpdate(interaction);
+  if (!acknowledged) return true;
+
+  const context = {
+    guildId: interaction.guildId,
+    userId: interaction.user.id,
+    username: interaction.user.username
+  };
+  const runRevision = Number(revision);
+
+  try {
+    let result;
+    if (action === 'room') {
+      result = await economy.chooseRpgDungeonRoom({
+        ...context,
+        runId,
+        revision: runRevision,
+        choiceId: targetId
+      });
+    } else if (action === 'relic') {
+      result = await economy.chooseRpgDungeonRelic({
+        ...context,
+        runId,
+        revision: runRevision,
+        relicId: targetId
+      });
+    } else if (action === 'abandon') {
+      result = await economy.abandonRpgDungeonRun({ ...context, runId, revision: runRevision });
+    } else if (action === 'resume') {
+      result = await economy.runRpgDungeon(context);
+    } else {
+      throw new Error('알 수 없는 던전 버튼입니다.');
+    }
+
+    await updateWithRpgAssets(interaction, formatRpgDungeon(interaction.user, result), getDungeonAssetIds(result), {
+      components: createRpgDungeonRows(result, interaction.user.id)
+    });
+  } catch (error) {
+    await updateWithRpgCard(
+      interaction,
+      ['🏰 **던전 흐름 복구**', error.message, '`/rpg 던전`으로 현재 진행을 다시 열 수 있습니다.'].join('\n'),
+      {
+        components: createButtonRows([
+          createRpgQuickButton(interaction.user.id, 'dungeon', '🏰 던전 다시 열기', ButtonStyle.Primary),
+          createRpgQuickButton(interaction.user.id, 'menu', '🎮 허브', ButtonStyle.Secondary)
+        ])
+      }
+    );
+  }
+  return true;
+}
+
 async function handleRpgQuickButton(interaction, economy, services = {}) {
   const [, userId, action] = interaction.customId.split(':');
 
@@ -2505,7 +2569,7 @@ async function handleRpgQuickButton(interaction, economy, services = {}) {
         depth: 3
       });
       await replyWithRpgAssets(interaction, formatRpgDungeon(interaction.user, result), getDungeonAssetIds(result), {
-        components: createRpgActionLoopRows(interaction.user.id)
+        components: createRpgDungeonRows(result, interaction.user.id)
       });
       return true;
     }
@@ -3766,6 +3830,9 @@ function formatRpgExplore(user, result) {
 }
 
 function formatRpgDungeon(user, result) {
+  if (result.type === 'dungeon_run') return formatRpgDungeonRun(user, result);
+  if (result.type === 'dungeon_result') return formatRpgDungeonSettlement(user, result);
+
   const rows = result.floors.map((floor) =>
     `${floor.floor}층 ${floor.eventLabel}: +${floor.rewards.xp} XP, +${floor.rewards.coins}골드${floor.damageTaken ? `, 피해 ${floor.damageTaken}` : ''}`
   );
@@ -3785,6 +3852,50 @@ function formatRpgDungeon(user, result) {
     rewardRows.length > 0 ? rewardRows.join('\n') : null,
     formatRpgPostActionState(result.profile),
     `📊 던전 클리어: **${result.profile.rpg.dungeonClears[result.area].toLocaleString()}회**`,
+    formatRpgNextAction(result.profile, result)
+  ].filter(Boolean).join('\n');
+}
+
+function formatRpgDungeonRun(user, result) {
+  const { run } = result;
+  const choiceRows = run.state === 'awaiting_relic'
+    ? run.pendingRelicChoices.map((relic, index) => `${index + 1}. 🧿 **${relic.label}** — ${relic.upside} / 대가: ${relic.downside}`)
+    : run.currentChoices.map((choice, index) => `${index + 1}. ${choice.risk === 'high' ? '☠️ ' : ''}**${choice.label}** — ${choice.description}`);
+  const relicRows = run.relics.length > 0
+    ? run.relics.slice(-3).map((relic) => `- ${relic.label}: ${relic.upside} / ${relic.downside}`)
+    : ['- 없음'];
+  const resultLine = result.roomResult
+    ? `최근: ${result.roomResult.description} (${result.roomResult.damageTaken ? `피해 ${result.roomResult.damageTaken}` : '피해 없음'})`
+    : result.relic
+      ? `최근: 유물 **${result.relic.label}** 획득`
+      : null;
+  return [
+    `${run.state === 'awaiting_relic' ? '🧿 **유물 선택**' : '🏰 **던전 진행**'} — ${formatDiscordUserMention(user)}`,
+    `📍 **${run.state === 'awaiting_relic' ? '유물 선택' : '던전 진행'}** · **${result.dungeonConfig?.label ?? result.areaConfig.label}** · ${result.areaConfig.label} · ${run.floor}/${run.maxFloors}방`,
+    `❤️ HP **${run.hp}/${run.maxHp}** · 🔷 MP **${run.mp}/${run.maxMp}** · 보상풀 +${run.rewardPool.xp}XP/+${run.rewardPool.coins}G`,
+    resultLine,
+    `🧿 유물\n${relicRows.join('\n')}`,
+    run.state === 'awaiting_relic' ? `선택할 유물\n${choiceRows.join('\n')}` : `다음 방\n${choiceRows.join('\n')}`,
+    run.currentChoices.some((choice) => choice.risk === 'high') ? '☠️ 표시는 선택형 고위험 방입니다.' : null
+  ].filter(Boolean).join('\n');
+}
+
+function formatRpgDungeonSettlement(user, result) {
+  const outcomeLabels = { cleared: '클리어', failed: '실패', abandoned: '포기' };
+  const rewardRows = [
+    formatRpgMaterialDrops(result.materialDrops),
+    result.gearDrop ? `🧰 획득 장비 **${formatGearLabel(result.gearDrop)}**` : null,
+    result.leveledUp ? `🎉 레벨업 Lv.${result.profile.rpg.level} / 보너스 +${formatRpgGoldReward(result.levelReward, result.levelRewardRequested)}` : null,
+    formatRpgRewardCapHint(result)
+  ].filter(Boolean);
+  return [
+    `🏁 **RPG 던전 ${outcomeLabels[result.outcome] ?? '결과'}** — ${formatDiscordUserMention(user)}`,
+    `📍 **${result.dungeonConfig?.label ?? result.areaConfig.label}** · ${result.areaConfig.label} · ${result.run.maxFloors}방`,
+    result.roomResult?.description ? `마지막: ${result.roomResult.description}` : null,
+    `🎁 정산: +${result.totalXp.toLocaleString()} XP, +${formatRpgGoldReward(result.totalCoins, result.requestedTotalCoins)}`,
+    rewardRows.length > 0 ? rewardRows.join('\n') : null,
+    `❤️ HP **${result.profile.rpg.hp.toLocaleString()}** · 🔷 MP **${result.profile.rpg.mp.toLocaleString()}**`,
+    result.outcome === 'cleared' ? `📊 던전 클리어: **${result.profile.rpg.dungeonClears[result.area].toLocaleString()}회**` : '실패/포기는 돈이나 장비를 잃지 않습니다.',
     formatRpgNextAction(result.profile, result)
   ].filter(Boolean).join('\n');
 }
@@ -4201,6 +4312,9 @@ function getExploreAssetIds(result) {
 }
 
 function getDungeonAssetIds(result) {
+  if (result.type === 'dungeon_run' || result.type === 'dungeon_result') {
+    return [result.areaConfig?.backgroundAssetId, result.gearDrop?.assetId];
+  }
   return [
     result.floors?.[0]?.assets?.background,
     result.gearDrop?.assetId
@@ -4940,6 +5054,47 @@ function createRpgActionLoopRows(userId) {
     createRpgQuickButton(userId, 'growth', '📈 성장', ButtonStyle.Primary),
     createRpgQuickButton(userId, 'menu', '🎮 허브', ButtonStyle.Secondary)
   ]);
+}
+
+function createRpgDungeonRows(result, userId) {
+  if (result.type === 'dungeon_result') return createRpgActionLoopRows(userId);
+  if (result.type !== 'dungeon_run' || !result.run) return createRpgActionLoopRows(userId);
+
+  const { run } = result;
+  const buttons = [];
+  if (run.state === 'awaiting_relic') {
+    for (const relic of run.pendingRelicChoices.slice(0, 4)) {
+      buttons.push(
+        new ButtonBuilder()
+          .setCustomId(`rpg_dungeon:${userId}:relic:${run.id}:${run.revision}:${relic.id}`)
+          .setLabel(shortenButtonLabel(`🧿 ${relic.label}`, 80))
+          .setStyle(ButtonStyle.Primary)
+      );
+    }
+  } else {
+    for (const choice of run.currentChoices.slice(0, 4)) {
+      buttons.push(
+        new ButtonBuilder()
+          .setCustomId(`rpg_dungeon:${userId}:room:${run.id}:${run.revision}:${choice.id}`)
+          .setLabel(shortenButtonLabel(choice.risk === 'high' ? `☠️ ${choice.label}` : choice.label, 80))
+          .setStyle(getRpgDungeonChoiceButtonStyle(choice))
+      );
+    }
+  }
+
+  buttons.push(
+    new ButtonBuilder()
+      .setCustomId(`rpg_dungeon:${userId}:abandon:${run.id}:${run.revision}:run`)
+      .setLabel('🚪 포기')
+      .setStyle(ButtonStyle.Secondary)
+  );
+  return createButtonRows(buttons.slice(0, 5));
+}
+
+function getRpgDungeonChoiceButtonStyle(choice) {
+  if (choice.risk === 'high') return ButtonStyle.Danger;
+  if (choice.risk === 'safe') return ButtonStyle.Success;
+  return ButtonStyle.Primary;
 }
 
 function createButtonRows(buttons) {
