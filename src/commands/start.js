@@ -88,24 +88,52 @@ async function createStartPayload(interaction, services) {
 
 async function buildStartContext(interaction, services) {
   const base = createBaseContext(interaction);
+  const logger = services.logger ?? services.log ?? null;
   const [communityOverview, rpgStatus, swordStatus, fishingStatus, stockOverview, seasonOverview] = await Promise.all([
-    services.community?.getOverview ? services.community.getOverview(base).catch(() => null) : null,
-    services.economy?.getRpgStatus ? services.economy.getRpgStatus(base).catch(() => null) : null,
-    services.economy?.getSwordStatus ? services.economy.getSwordStatus(base).catch(() => null) : null,
-    services.fishing?.getProfile ? services.fishing.getProfile(base.guildId, base.userId, base.username).catch(() => null) : null,
-    services.stocks?.getPortfolio ? services.stocks.getPortfolio(base).catch(() => null) : null,
-    services.seasons?.getOverview ? services.seasons.getOverview(base).catch(() => null) : null
+    services.community?.getOverview
+      ? settleOptional('community status', services.community.getOverview(base), logger)
+      : null,
+    services.economy?.getRpgStatus
+      ? settleOptional('RPG status', services.economy.getRpgStatus(base), logger)
+      : null,
+    services.economy?.getSwordStatus
+      ? settleOptional('sword status', services.economy.getSwordStatus(base), logger)
+      : null,
+    services.fishing?.getProfile
+      ? settleOptional('fishing status', services.fishing.getProfile(base.guildId, base.userId, base.username), logger)
+      : null,
+    services.stocks?.getPortfolio
+      ? settleOptional('stock status', services.stocks.getPortfolio(base), logger)
+      : null,
+    services.seasons?.getOverview
+      ? settleOptional('season status', services.seasons.getOverview(base), logger)
+      : null
   ]);
 
-  const profile = rpgStatus?.profile ?? communityOverview?.profile ?? {};
-  const communityProfile = profile.community ?? communityOverview?.profile?.community ?? communityOverview?.community ?? null;
-  const rpg = rpgStatus?.profile?.rpg ?? rpgStatus?.rpg ?? rpgStatus ?? {};
+  const communityProfileRoot = isUnavailable(communityOverview) ? {} : communityOverview?.profile ?? {};
+  const rpgProfile = isUnavailable(rpgStatus) ? {} : rpgStatus?.profile ?? {};
+  const communityProfile = rpgProfile.community
+    ?? communityProfileRoot.community
+    ?? (isUnavailable(communityOverview) ? null : communityOverview?.community)
+    ?? null;
+  const rpg = isUnavailable(rpgStatus)
+    ? rpgStatus
+    : rpgStatus?.profile?.rpg ?? rpgStatus?.rpg ?? rpgStatus ?? {};
 
   return {
     ...base,
     profile: {
-      ...profile,
+      ...communityProfileRoot,
+      ...rpgProfile,
       community: communityProfile
+    },
+    unavailable: {
+      community: isUnavailable(communityOverview),
+      rpg: isUnavailable(rpgStatus),
+      sword: isUnavailable(swordStatus),
+      fishing: isUnavailable(fishingStatus),
+      stocks: isUnavailable(stockOverview),
+      seasons: isUnavailable(seasonOverview)
     },
     rpg,
     swordStatus,
@@ -113,6 +141,19 @@ async function buildStartContext(interaction, services) {
     stockOverview,
     seasonOverview
   };
+}
+
+async function settleOptional(name, promise, logger) {
+  try {
+    return await promise;
+  } catch (error) {
+    logger?.debug?.(`Failed to load start guide ${name}.`, error);
+    return { unavailable: true };
+  }
+}
+
+function isUnavailable(value) {
+  return value?.unavailable === true;
 }
 
 function createBaseContext(interaction) {
@@ -126,63 +167,75 @@ function createBaseContext(interaction) {
 function formatStartGuide(context) {
   const steps = buildStartSteps(context);
   const completed = steps.filter((step) => step.complete).length;
-  const firstIncompleteIndex = steps.findIndex((step) => !step.complete);
+  const firstIncompleteIndex = steps.findIndex((step) => !step.complete && !step.unavailable);
   const next = firstIncompleteIndex >= 0 ? steps[firstIncompleteIndex] : { command: '`/오늘할일`' };
 
   return [
     `🚀 **희희봇 시작하기** — ${context.username}`,
-    `진행도 ${completed}/7`,
+    `진행도 ${completed}/${steps.length}`,
     '',
-    ...steps.map((step, index) => `${getStepIcon(step, index, firstIncompleteIndex)} ${index + 1}. ${step.label} ${step.command}`),
+    ...steps.map((step, index) => `${getStepIcon(step, index, firstIncompleteIndex)} ${index + 1}. ${step.label} ${step.command}${formatUnavailableHint(step)}`),
     '',
     `다음 추천: ${next.command}`
   ].join('\n');
 }
 
-function buildStartSteps({ profile, rpg, swordStatus, fishingStatus, stockOverview, seasonOverview }) {
+function buildStartSteps({ profile, unavailable, rpg, swordStatus, fishingStatus, stockOverview, seasonOverview }) {
   return [
     {
       label: '출석 받기',
       command: '`/출석`',
+      unavailable: unavailable.community && profile.lastDailyDay === undefined,
       complete: profile.lastDailyDay !== null && profile.lastDailyDay !== undefined
     },
     {
       label: '프로필 확인',
       command: '`/프로필`',
+      unavailable: unavailable.community && !profile.community?.stats,
       complete: (profile.community?.stats?.commandsUsed ?? 0) > 0
     },
     {
       label: 'RPG 시작',
       command: '`/rpg 시작`',
-      complete: (rpg.startedAt ?? 0) > 0
+      unavailable: unavailable.rpg,
+      complete: !unavailable.rpg && (rpg.startedAt ?? 0) > 0
     },
     {
       label: '낚시 1회',
       command: '`/낚시`',
-      complete: (fishingStatus?.stats?.totalCatches ?? 0) > 0
+      unavailable: unavailable.fishing,
+      complete: !unavailable.fishing && (fishingStatus?.stats?.totalCatches ?? 0) > 0
     },
     {
       label: '검 선물받기',
       command: '`/선물받기`',
-      complete: swordStatus?.giftAvailable === false
+      unavailable: unavailable.sword,
+      complete: !unavailable.sword && swordStatus?.giftAvailable === false
     },
     {
       label: '주식 거래 입문',
       command: '`/주식 매수` 또는 `/주식 시세`',
-      complete: (stockOverview?.tradeCount ?? 0) > 0 || (stockOverview?.positions?.length ?? 0) > 0
+      unavailable: unavailable.stocks,
+      complete: !unavailable.stocks && ((stockOverview?.tradeCount ?? 0) > 0 || (stockOverview?.positions?.length ?? 0) > 0)
     },
     {
       label: '시즌 정보 확인',
       command: '`/시즌 정보`',
-      complete: (seasonOverview?.profile?.totalPoints ?? 0) > 0
+      unavailable: unavailable.seasons,
+      complete: !unavailable.seasons && (seasonOverview?.profile?.totalPoints ?? 0) > 0
     }
   ];
 }
 
 function getStepIcon(step, index, firstIncompleteIndex) {
   if (step.complete) return '✅';
+  if (step.unavailable) return '⚠️';
   if (index === firstIncompleteIndex) return '🎯';
   return '⬜';
+}
+
+function formatUnavailableHint(step) {
+  return step.unavailable ? ' — 정보를 불러오지 못했습니다.' : '';
 }
 
 function createStartRows(context) {

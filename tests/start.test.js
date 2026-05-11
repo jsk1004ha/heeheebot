@@ -33,6 +33,47 @@ test('시작하기는 새 유저에게 핵심 루트와 버튼을 보여준다',
   ]);
 });
 
+test('시작하기는 서비스 실패를 가이드에 표시하고 디버그 로그를 남긴다', async () => {
+  const interaction = createStartInteraction();
+  const logger = createLogger();
+  const handled = await handleStartCommand(interaction, createServices({
+    logger,
+    failingServices: ['fishing']
+  }));
+
+  assert.equal(handled, true);
+  assert.match(interaction.replies[0].content, /낚시 1회/);
+  assert.match(interaction.replies[0].content, /낚시 1회.*불러오지 못했습니다/);
+  assert.equal(logger.debugs.length, 1);
+  assert.match(logger.debugs[0][0], /Failed to load start guide fishing status/);
+  assert.equal(logger.debugs[0][1].message, 'fishing unavailable');
+});
+
+test('시작하기 새로고침 버튼은 가이드를 다시 계산해 업데이트한다', async () => {
+  const interaction = createStartButtonInteraction('start:refresh:user-1');
+  const handled = await handleStartCommand(interaction, createServices({
+    profile: {
+      lastDailyDay: 20_000,
+      community: { stats: { commandsUsed: 2 } }
+    },
+    rpgStatus: { startedAt: 123_456 },
+    swordStatus: { giftAvailable: false },
+    fishingStatus: { stats: { totalCatches: 1 } },
+    stockOverview: { tradeCount: 1, positions: [] },
+    seasonOverview: { profile: { totalPoints: 10 } }
+  }));
+
+  assert.equal(handled, true);
+  assert.equal(interaction.updates.length, 1);
+  assert.match(interaction.updates[0].content, /진행도 7\/7/);
+  assert.deepEqual(getButtonLabels(interaction.updates[0]), [
+    '새로고침',
+    '오늘할일',
+    '시즌',
+    '도움말'
+  ]);
+});
+
 test('시작하기 버튼은 실행한 유저만 누를 수 있다', async () => {
   const interaction = createStartButtonInteraction('start:refresh:owner-1', {
     userId: 'other-1'
@@ -46,6 +87,8 @@ test('시작하기 버튼은 실행한 유저만 누를 수 있다', async () =>
 });
 
 function createServices({
+  logger = undefined,
+  failingServices = [],
   profile = {
     lastDailyDay: null,
     community: { stats: { commandsUsed: 0 } }
@@ -56,34 +99,59 @@ function createServices({
   stockOverview = { tradeCount: 0, positions: [] },
   seasonOverview = { profile: { totalPoints: 0 } }
 } = {}) {
+  const failing = new Set(failingServices);
+
   return {
+    logger,
     community: {
       async getOverview() {
-        return { profile: profile.community };
+        if (failing.has('community')) throw new Error('community unavailable');
+        return {
+          profile: {
+            ...profile,
+            community: profile.community
+          },
+          community: profile.community
+        };
       }
     },
     economy: {
       async getRpgStatus() {
-        return rpgStatus;
+        if (failing.has('rpg')) throw new Error('rpg unavailable');
+        return { profile: { rpg: rpgStatus } };
       },
       async getSwordStatus() {
+        if (failing.has('sword')) throw new Error('sword unavailable');
         return swordStatus;
       }
     },
     fishing: {
       async getProfile() {
+        if (failing.has('fishing')) throw new Error('fishing unavailable');
         return fishingStatus;
       }
     },
     stocks: {
       async getPortfolio() {
+        if (failing.has('stocks')) throw new Error('stocks unavailable');
         return stockOverview;
       }
     },
     seasons: {
       async getOverview() {
+        if (failing.has('seasons')) throw new Error('seasons unavailable');
         return seasonOverview;
       }
+    }
+  };
+}
+
+function createLogger() {
+  const debugs = [];
+  return {
+    debugs,
+    debug(...args) {
+      debugs.push(args);
     }
   };
 }
