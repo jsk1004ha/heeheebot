@@ -502,6 +502,61 @@ test('히든 제작 장비와 거래소 판매/구매는 RPG 장비와 골드만
   }
 });
 
+test('/rpg 인벤토리는 장비 관리 진입점을 한 화면으로 압축한다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      characterClass: 'novice',
+      characterGender: 'male',
+      now: 1_000
+    });
+    await mutateProfile(fixture.store, (profile) => {
+      profile.rpg.inventory = {
+        potion: 2,
+        iron_sword: 1,
+        enhancement_stone: 3
+      };
+      profile.rpg.gearInventory = {
+        gear_alpha: {
+          id: 'gear_alpha',
+          baseItemId: 'iron_longsword',
+          label: '철 장검',
+          rarity: 'common',
+          rarityLabel: '일반',
+          slot: 'weapon',
+          stats: { attack: 5 },
+          power: 3,
+          enhanceLevel: 0,
+          assetId: 'item_iron_longsword_icon',
+          acquiredAt: 1_100
+        }
+      };
+      profile.rpg.equippedGear.weapon = 'gear_alpha';
+    });
+
+    const interaction = createChatInputInteraction('인벤토리');
+    await handleRpgCommand(interaction, fixture.economy);
+
+    const description = getReplyDescription(interaction.replies[0]);
+    assert.match(description, /착용 중인 장비/);
+    assert.match(description, /보유 장비/);
+    assert.doesNotMatch(description, /인벤토리 장비|전리품|rpg_/);
+    assert.ok(interaction.replies[0].components.length <= 3, 'inventory hub should stay compact');
+
+    const customIds = getComponentCustomIds(interaction.replies[0].components);
+    assert.ok(customIds.includes('rpg_select:user-1:gear_equip'), 'default inventory should allow direct gear equip');
+    assert.ok(customIds.includes('rpg_quick:user-1:gear'), 'inventory should link to gear list');
+    assert.ok(customIds.includes('rpg_quick:user-1:enhance'), 'inventory should link to enhancement view');
+    assert.ok(customIds.includes('rpg_quick:user-1:disassemble'), 'inventory should link to disassembly view');
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 test('히든 던전 탐사는 레벨과 탐사 진행도를 요구하고 전용 장비를 준다', async () => {
   const fixture = await createFixture({
     rpgDungeonCooldownMs: 0,

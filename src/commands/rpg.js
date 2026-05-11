@@ -977,31 +977,21 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
 
     if (view === 'gear') {
       await replyWithRpgAssets(interaction, formatRpgGearInventory(status), [status.heroAssetId], {
-        components: [
-          ...createRpgGearRows(status, user.id),
-          ...createRpgGearDisassembleRows(status, user.id),
-          ...createRpgActionLoopRows(user.id).slice(0, 1)
-        ].slice(0, 5)
+        components: createRpgInventoryManagementRows(status, user.id, 'gear')
       });
       return true;
     }
 
     if (view === 'enhance') {
       await replyWithRpgAssets(interaction, formatRpgGearEnhanceGuide(status), [status.heroAssetId], {
-        components: [
-          ...createRpgGearEnhanceRows(status, user.id),
-          ...createRpgActionLoopRows(user.id).slice(0, 1)
-        ].slice(0, 5)
+        components: createRpgInventoryManagementRows(status, user.id, 'enhance')
       });
       return true;
     }
 
     if (view === 'disassemble') {
       await replyWithRpgAssets(interaction, formatRpgGearDisassembleGuide(status), [status.heroAssetId], {
-        components: [
-          ...createRpgGearDisassembleRows(status, user.id),
-          ...createRpgActionLoopRows(user.id).slice(0, 1)
-        ].slice(0, 5)
+        components: createRpgInventoryManagementRows(status, user.id, 'disassemble')
       });
       return true;
     }
@@ -2678,31 +2668,21 @@ async function handleRpgQuickButton(interaction, economy, services = {}) {
 
     if (action === 'gear') {
       await updateWithRpgAssets(interaction, formatRpgGearInventory(status), [status.heroAssetId], {
-        components: [
-          ...createRpgGearRows(status, interaction.user.id),
-          ...createRpgGearDisassembleRows(status, interaction.user.id),
-          ...createRpgActionLoopRows(interaction.user.id).slice(0, 1)
-        ].slice(0, 5)
+        components: createRpgInventoryManagementRows(status, interaction.user.id, 'gear')
       });
       return true;
     }
 
     if (action === 'enhance') {
       await updateWithRpgAssets(interaction, formatRpgGearEnhanceGuide(status), [status.heroAssetId], {
-        components: [
-          ...createRpgGearEnhanceRows(status, interaction.user.id),
-          ...createRpgActionLoopRows(interaction.user.id).slice(0, 1)
-        ].slice(0, 5)
+        components: createRpgInventoryManagementRows(status, interaction.user.id, 'enhance')
       });
       return true;
     }
 
     if (action === 'disassemble') {
       await updateWithRpgAssets(interaction, formatRpgGearDisassembleGuide(status), [status.heroAssetId], {
-        components: [
-          ...createRpgGearDisassembleRows(status, interaction.user.id),
-          ...createRpgActionLoopRows(interaction.user.id).slice(0, 1)
-        ].slice(0, 5)
+        components: createRpgInventoryManagementRows(status, interaction.user.id, 'disassemble')
       });
       return true;
     }
@@ -3602,15 +3582,33 @@ function resolveRpgMarketplaceListingId(listings = [], input, { userId, mode = '
 
 function formatRpgInventory(status) {
   const { profile, derivedStats } = status;
-  const inventoryRows = Object.entries(profile.rpg.inventory)
-    .map(([itemId, count]) => `- **${getRpgItemConfig(itemId).label}** × ${count.toLocaleString()}`);
-  const equipmentRows = Object.entries(profile.rpg.equipment)
-    .map(([slot, itemId]) => `- ${formatEquipmentSlot(slot)}: **${itemId ? getRpgItemConfig(itemId).label : '없음'}**`);
-  const gearRows = Object.entries(profile.rpg.equippedGear)
-    .map(([slot, gearId]) => {
+  const equippedRows = ['weapon', 'armor', 'accessory']
+    .map((slot) => {
+      const gearId = profile.rpg.equippedGear?.[slot];
       const gear = gearId ? profile.rpg.gearInventory[gearId] : null;
-      return `- ${formatEquipmentSlot(slot)} 장비: **${gear ? formatGearLabel(gear) : '없음'}**`;
+      const itemId = profile.rpg.equipment?.[slot];
+      const item = itemId ? getRpgItemConfig(itemId) : null;
+      const label = gear ? formatGearLabel(gear) : item?.label;
+      const stats = gear ? formatGearStats(gear.stats) : formatGearStats(item?.stats);
+      return `- ${formatEquipmentSlot(slot)}: **${label ?? '없음'}**${stats ? ` · ${stats}` : ''}`;
     });
+  const gearRows = getSortedRpgGears(status)
+    .slice(0, 5)
+    .map((gear, index) => {
+      const equipped = Object.values(profile.rpg.equippedGear).includes(gear.id) ? ' ✅착용중' : '';
+      const stats = formatGearStats(gear.stats);
+      return `${index + 1}. **${formatGearLabel(gear)}** · ${formatEquipmentSlot(gear.slot)} · 전투력 ${gear.power ?? 1}${stats ? ` · ${stats}` : ''}${equipped}`;
+    });
+  const inventoryEntries = Object.entries(profile.rpg.inventory)
+    .filter(([, count]) => count > 0);
+  const inventoryRows = inventoryEntries
+    .slice(0, 8)
+    .map(([itemId, count]) => {
+      const item = getRpgItemConfig(itemId);
+      const typeLabel = item.type === 'consumable' ? '소모품' : item.type === 'material' ? '재료' : '기본 장비';
+      return `- ${typeLabel} **${item.label}** × ${count.toLocaleString()}`;
+    });
+  const hiddenItemCount = Math.max(0, inventoryEntries.length - inventoryRows.length);
 
   return [
     `🎒 **RPG 인벤토리**`,
@@ -3618,11 +3616,11 @@ function formatRpgInventory(status) {
     `MP: **${profile.rpg.mp.toLocaleString()} / ${derivedStats.maxMp.toLocaleString()}**`,
     `궁극기 게이지: ${formatRpgMeter(profile.rpg.ultimateCharge, 100)} **${profile.rpg.ultimateCharge}/100**`,
     `공격력: **${derivedStats.attack}** / 방어력: **${derivedStats.defense}**`,
-    `장비:\n${equipmentRows.join('\n')}`,
-    `인벤토리 장비:\n${gearRows.join('\n')}`,
-    `아이템:\n${inventoryRows.length > 0 ? inventoryRows.join('\n') : '- 비어 있음'}`,
+    `착용 중인 장비\n${equippedRows.join('\n')}`,
+    `보유 장비\n${gearRows.length > 0 ? gearRows.join('\n') : '- 보유 장비 없음. `/rpg 던전`에서 장비를 얻어보세요.'}`,
+    `아이템\n${inventoryRows.length > 0 ? inventoryRows.join('\n') : '- 비어 있음'}${hiddenItemCount > 0 ? `\n- 외 ${hiddenItemCount.toLocaleString()}종` : ''}`,
     '',
-    '아래 선택 메뉴로 포션 사용, 장비 장착, 아이템 판매를 바로 처리할 수 있습니다.'
+    '아래 선택 메뉴로 바로 장착하고, 버튼으로 장비 목록/강화/분해 화면을 전환하세요.'
   ].join('\n');
 }
 
@@ -4633,12 +4631,44 @@ function createRpgPostPurchaseRows(result, userId) {
 }
 
 function createRpgInventoryRows(status, userId) {
-  return createRpgCompactViewRows([
-    ...createRpgUsableItemRows(status, userId),
-    ...createRpgEquipmentRows(status, userId),
-    ...createRpgGearRows(status, userId),
-    ...createRpgItemSellRows(status, userId)
-  ], userId);
+  return createRpgInventoryManagementRows(status, userId, 'all');
+}
+
+function createRpgInventoryManagementRows(status, userId, mode = 'all') {
+  const primaryRows = getRpgInventoryPrimaryRows(status, userId, mode);
+  return [
+    ...primaryRows.slice(0, 1),
+    ...createRpgInventoryNavigationRows(userId, mode)
+  ].slice(0, 3);
+}
+
+function getRpgInventoryPrimaryRows(status, userId, mode = 'all') {
+  if (mode === 'enhance') return createRpgGearEnhanceRows(status, userId);
+  if (mode === 'disassemble') return createRpgGearDisassembleRows(status, userId);
+
+  const gearRows = createRpgGearRows(status, userId);
+  if (gearRows.length > 0) return gearRows;
+
+  const equipmentRows = createRpgEquipmentRows(status, userId);
+  if (equipmentRows.length > 0) return equipmentRows;
+
+  return createRpgUsableItemRows(status, userId);
+}
+
+function createRpgInventoryNavigationRows(userId, activeMode = 'all') {
+  const buttons = [
+    createRpgInventoryNavButton(userId, 'inventory', '🎒 전체', activeMode === 'all'),
+    createRpgInventoryNavButton(userId, 'gear', '🧰 장착', activeMode === 'gear'),
+    createRpgInventoryNavButton(userId, 'enhance', '🛠 강화', activeMode === 'enhance'),
+    createRpgInventoryNavButton(userId, 'disassemble', '♻️ 분해', activeMode === 'disassemble'),
+    createRpgQuickButton(userId, 'menu', '🎮 허브', ButtonStyle.Secondary)
+  ];
+  return createButtonRows(buttons);
+}
+
+function createRpgInventoryNavButton(userId, action, label, disabled = false) {
+  return createRpgQuickButton(userId, action, label, ButtonStyle.Secondary)
+    .setDisabled(disabled);
 }
 
 function createRpgUsableItemRows(status, userId) {
