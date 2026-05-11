@@ -55,7 +55,11 @@ import {
   createAllowedMentionsForUsers,
   formatUserMention
 } from './ui.js';
-import { safeReplyToInteraction } from './interactions.js';
+import {
+  safeDeferUpdate,
+  safeReplyToInteraction,
+  sendInteractionUpdate
+} from './interactions.js';
 
 const CHALLENGE_TTL_MS = 60_000;
 const SCRATCH_TICKET_TTL_MS = 5 * 60_000;
@@ -793,7 +797,7 @@ async function handleScratchTicketButton(interaction, economy, logger) {
   const pending = pendingScratchTickets.get(gameId);
 
   if (!pending) {
-    await interaction.reply({
+    await safeReplyToInteraction(interaction, {
       content: '이미 만료되었거나 처리된 스크래치 복권입니다.',
       flags: MessageFlags.Ephemeral
     });
@@ -801,7 +805,7 @@ async function handleScratchTicketButton(interaction, economy, logger) {
   }
 
   if (interaction.user.id !== pending.userId) {
-    await interaction.reply({
+    await safeReplyToInteraction(interaction, {
       content: '이 스크래치 복권은 구매한 유저만 긁을 수 있습니다.',
       flags: MessageFlags.Ephemeral
     });
@@ -809,7 +813,7 @@ async function handleScratchTicketButton(interaction, economy, logger) {
   }
 
   if (action !== 'scratch_reveal') {
-    await interaction.reply({
+    await safeReplyToInteraction(interaction, {
       content: '알 수 없는 스크래치 복권 버튼입니다.',
       flags: MessageFlags.Ephemeral
     });
@@ -818,7 +822,7 @@ async function handleScratchTicketButton(interaction, economy, logger) {
 
   const spotIndex = parseScratchTicketButtonIndex(rawIndex);
   if (spotIndex === null) {
-    await interaction.reply({
+    await safeReplyToInteraction(interaction, {
       content: `스크래치 복권 칸 번호는 1~${SCRATCH_TICKET_SPOT_COUNT} 사이여야 합니다.`,
       flags: MessageFlags.Ephemeral
     });
@@ -827,7 +831,22 @@ async function handleScratchTicketButton(interaction, economy, logger) {
 
   const alreadyExpired = Date.now() > pending.expiresAt;
   if (!alreadyExpired && pending.ticket.revealed[spotIndex]) {
-    await interaction.reply({
+    await safeReplyToInteraction(interaction, {
+      content: '이미 긁은 복권 칸입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  const acknowledged = await safeDeferUpdate(interaction);
+  if (!acknowledged) {
+    logger.warn?.('Scratch ticket interaction expired before it could be acknowledged.');
+    return true;
+  }
+
+  const expired = Date.now() > pending.expiresAt;
+  if (!expired && pending.ticket.revealed[spotIndex]) {
+    await safeReplyToInteraction(interaction, {
       content: '이미 긁은 복권 칸입니다.',
       flags: MessageFlags.Ephemeral
     });
@@ -835,7 +854,6 @@ async function handleScratchTicketButton(interaction, economy, logger) {
   }
 
   try {
-    const expired = alreadyExpired;
     const ticket = expired
       ? revealAllScratchTicketSpots(pending.ticket)
       : revealScratchTicketSpot(pending.ticket, spotIndex);
@@ -843,7 +861,13 @@ async function handleScratchTicketButton(interaction, economy, logger) {
 
     if (ticket.status !== 'settled') {
       pending.expiresAt = Date.now() + SCRATCH_TICKET_TTL_MS;
-      await interaction.update(createScratchTicketProgressPayload(interaction.user, ticket, gameId));
+      const updated = await sendInteractionUpdate(
+        interaction,
+        createScratchTicketProgressPayload(interaction.user, ticket, gameId)
+      );
+      if (!updated) {
+        logger.warn?.('Scratch ticket progress could not be sent because the interaction expired.');
+      }
       return true;
     }
 
@@ -857,9 +881,13 @@ async function handleScratchTicketButton(interaction, economy, logger) {
     });
     pending.reserved = false;
 
-    await interaction.update(createScratchTicketResultPayload(interaction.user, ticket, settlement, {
-      expired
-    }));
+    const updated = await sendInteractionUpdate(
+      interaction,
+      createScratchTicketResultPayload(interaction.user, ticket, settlement, { expired })
+    );
+    if (!updated) {
+      logger.warn?.('Scratch ticket result could not be sent because the interaction expired.');
+    }
   } catch (error) {
     pendingScratchTickets.delete(gameId);
     if (pending.reserved) {
@@ -871,10 +899,13 @@ async function handleScratchTicketButton(interaction, economy, logger) {
       }).catch((refundError) => logger.error('Failed to refund scratch ticket wager:', refundError));
     }
     logger.error(error);
-    await interaction.update({
+    const updated = await sendInteractionUpdate(interaction, {
       content: `스크래치 복권 실패: ${error.message}`,
       components: []
     });
+    if (!updated) {
+      logger.warn?.('Scratch ticket failure could not be sent because the interaction expired.');
+    }
   }
 
   return true;
@@ -1823,8 +1854,18 @@ function createScratchTicketRows(gameId, ticket) {
 
 function getScratchTicketButtonStyle(ticket, index) {
   if (!ticket.revealed[index]) return ButtonStyle.Primary;
-  if (ticket.winningAmount && ticket.spots[index].amount === ticket.winningAmount) return ButtonStyle.Success;
+  if (getRevealedScratchTicketAmountCount(ticket, ticket.spots[index].amount) >= 3) {
+    return ButtonStyle.Success;
+  }
   return ButtonStyle.Secondary;
+}
+
+function getRevealedScratchTicketAmountCount(ticket, amount) {
+  return ticket.spots.reduce((count, spot, index) => (
+    ticket.revealed[index] && spot.amount === amount
+      ? count + 1
+      : count
+  ), 0);
 }
 
 function parseScratchTicketButtonIndex(rawIndex) {
