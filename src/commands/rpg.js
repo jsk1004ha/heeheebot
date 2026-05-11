@@ -2895,35 +2895,116 @@ function formatRpgMainMenu(user, status) {
   const dailyGoldText = formatRpgDailyGoldLimit(status.dailyGold);
   const actionAvailabilityText = formatRpgActionAvailability(status.actionAvailability);
   const tutorialText = formatRpgTutorialMiniSummary(status.tutorial);
+  const alertText = formatRpgHubAlerts(status);
 
   return [
-    `🎮 **RPG 메인 허브** — ${user.username}`,
-    `Lv.${profile.rpg.level} **${classConfig.label}${advancedText}** · 지역 **${currentArea.label}** · 전투력 **${adventureGuide.powerScore}** · 골드 **${getRpgGold(profile).toLocaleString()}**`,
-    `HP **${profile.rpg.hp}/${derivedStats.maxHp}** · MP **${profile.rpg.mp}/${derivedStats.maxMp}** · XP ${adventureGuide.levelProgress.current}/${adventureGuide.levelProgress.required} (${adventureGuide.levelProgress.percent}%)`,
-    `목표: **${adventureGuide.mainObjective.label}** — ${adventureGuide.mainObjective.progressText}`,
-    `다음 행동: **${adventureGuide.recommendedAction.label}** · \`${adventureGuide.recommendedAction.command}\``,
-    `스마트 추천: ${formatRpgSmartRecommendationSummary(status)}`,
-    `🎓 초보자 여정: ${tutorialText}`,
-    `오늘: ${dailySummary} · 보상 ${dailyGoldText}`,
-    `버튼: 전투 / 모험 / 성장 / 관리 / 오늘 할 일 · ${actionAvailabilityText} · ${nextAreaText}`
+    `🎮 **RPG 허브** — ${user.username}`,
+    `**${genderConfig.label} ${classConfig.label}${advancedText}** · ${currentArea.label} · Lv.${profile.rpg.level}`,
+    formatRpgHud(profile, derivedStats, adventureGuide),
+    `🧭 **추천** ${adventureGuide.recommendedAction.label} · \`${adventureGuide.recommendedAction.command}\`\n└ ${adventureGuide.recommendedAction.reason}`,
+    `🎯 **목표** ${adventureGuide.mainObjective.label} — ${adventureGuide.mainObjective.progressText}`,
+    alertText ? `🔔 **알림** ${alertText}` : null,
+    `🎓 **초보자** ${tutorialText}`,
+    `📋 **오늘** ${dailySummary} · ${dailyGoldText}`,
+    `🗺️ **진행** ${nextAreaText}`,
+    `🎛️ 아래 버튼: **추천 행동** → **전투/모험/성장** → 필요하면 **관리/오늘**`
   ].join('\n');
 }
 
 function formatRpgSectionMenu(user, status, section) {
   const { profile, currentArea, derivedStats, adventureGuide } = status;
   const sectionConfig = getRpgMenuSectionConfig(section);
-  const hpText = `${profile.rpg.hp}/${derivedStats.maxHp}`;
-  const mpText = `${profile.rpg.mp}/${derivedStats.maxMp}`;
+  const sectionHint = getRpgSectionHint(status, section);
 
   return [
-    `${sectionConfig.emoji} **RPG ${sectionConfig.label} 메뉴** — ${user.username}`,
-    `현재 지역 **${currentArea.label}** · Lv.${profile.rpg.level} · 전투력 **${adventureGuide.powerScore}** · HP **${hpText}** · MP **${mpText}**`,
-    `다음 추천: **${adventureGuide.recommendedAction.label}** — ${adventureGuide.recommendedAction.reason}`,
-    '',
-    sectionConfig.description,
-    '',
-    `빠른 판단: ${formatRpgSmartRecommendationSummary(status)}`
+    `${sectionConfig.emoji} **RPG ${sectionConfig.label} 탭** — ${user.username}`,
+    `현재 지역 **${currentArea.label}** · Lv.${profile.rpg.level} · 이 탭: ${sectionConfig.description}`,
+    formatRpgHud(profile, derivedStats, adventureGuide),
+    `🧭 **추천** ${adventureGuide.recommendedAction.label} — ${adventureGuide.recommendedAction.reason}`,
+    `⚡ **빠른 판단** ${formatRpgSmartRecommendationSummary(status)}`,
+    sectionHint ? `📌 **이 탭에서** ${sectionHint}` : null
   ].join('\n');
+}
+
+function formatRpgHud(profile, derivedStats, adventureGuide) {
+  const levelProgress = adventureGuide?.levelProgress ?? {
+    current: 0,
+    required: 1,
+    percent: 0
+  };
+  const xpBar = levelProgress.bar
+    ?? formatRpgMeter(levelProgress.current, levelProgress.required, 8);
+
+  return [
+    '```ansi',
+    `HP ${formatRpgMeter(profile.rpg.hp, derivedStats.maxHp, 10)} ${profile.rpg.hp.toLocaleString()}/${derivedStats.maxHp.toLocaleString()}`,
+    `MP ${formatRpgMeter(profile.rpg.mp, derivedStats.maxMp, 10)} ${profile.rpg.mp.toLocaleString()}/${derivedStats.maxMp.toLocaleString()}`,
+    `XP ${xpBar} ${levelProgress.current.toLocaleString()}/${levelProgress.required.toLocaleString()} (${levelProgress.percent}%)`,
+    `ATK ${derivedStats.attack}  DEF ${derivedStats.defense}  PWR ${adventureGuide?.powerScore ?? 0}  GOLD ${getRpgGold(profile).toLocaleString()}`,
+    '```'
+  ].join('\n');
+}
+
+function formatRpgHubAlerts(status) {
+  const alerts = [];
+  const hpRatio = status.derivedStats.maxHp > 0
+    ? status.profile.rpg.hp / status.derivedStats.maxHp
+    : 1;
+  const claimableDailyCount = status.dailyMissions.filter((mission) => mission.canClaim).length;
+  const claimableQuestCount = status.quests.filter((quest) => quest.canClaim).length;
+  const claimableCodexCount = status.codex.filter((entry) => entry.canClaim).length;
+  const skillPointCount = status.skillPoints?.available ?? 0;
+  const advanceCount = status.classPaths.filter((advanced) => advanced.canAdvance).length;
+
+  if (hpRatio <= 0.35) alerts.push('HP 낮음 · 휴식 추천');
+  if (claimableDailyCount > 0) alerts.push(`일일 보상 ${claimableDailyCount}개`);
+  if (claimableQuestCount > 0) alerts.push(`퀘스트 보상 ${claimableQuestCount}개`);
+  if (claimableCodexCount > 0) alerts.push(`도감 보상 ${claimableCodexCount}개`);
+  if (skillPointCount > 0) alerts.push(`스킬 포인트 ${skillPointCount}점`);
+  if (advanceCount > 0) alerts.push(`전직 가능 ${advanceCount}개`);
+
+  return alerts.slice(0, 4).join(' · ');
+}
+
+function getRpgSectionHint(status, section) {
+  const hasGear = Object.keys(status.profile.rpg.gearInventory ?? {}).length > 0;
+  const claimableDailyCount = status.dailyMissions.filter((mission) => mission.canClaim).length;
+  const claimableQuestCount = status.quests.filter((quest) => quest.canClaim).length;
+  const progressableStoryCount = status.storyChapters.filter((chapter) => chapter.canProgress).length;
+  const claimableCodexCount = status.codex.filter((entry) => entry.canClaim).length;
+  const hasSkillPoints = (status.skillPoints?.available ?? 0) > 0;
+  const hasAdvance = status.classPaths.some((advanced) => advanced.canAdvance);
+
+  if (section === 'combat') {
+    return '사냥으로 기본 성장, 던전으로 전리품, 위험하면 휴식부터.';
+  }
+
+  if (section === 'adventure') {
+    return progressableStoryCount > 0
+      ? `메인 퀘스트 ${progressableStoryCount}개 진행 가능 · 탐험으로 지역 탐사율을 올리세요.`
+      : '탐험으로 지역 탐사율을 올리고 월드맵에서 다음 사냥터를 확인하세요.';
+  }
+
+  if (section === 'growth') {
+    const parts = [];
+    if (hasGear) parts.push('전리품 장착/강화 가능');
+    if (hasSkillPoints) parts.push(`스킬 ${status.skillPoints.available}점 사용 가능`);
+    if (hasAdvance) parts.push('전직 가능');
+    return parts.join(' · ') || '던전/레이드에서 전리품을 얻으면 성장 버튼이 활성화됩니다.';
+  }
+
+  if (section === 'manage') {
+    return '인벤토리, 상점, 장비 상태를 정비하는 화면입니다.';
+  }
+
+  const todoParts = [];
+  if (claimableDailyCount > 0) todoParts.push(`일일 ${claimableDailyCount}`);
+  if (claimableQuestCount > 0) todoParts.push(`퀘스트 ${claimableQuestCount}`);
+  if (progressableStoryCount > 0) todoParts.push(`메인 ${progressableStoryCount}`);
+  if (claimableCodexCount > 0) todoParts.push(`도감 ${claimableCodexCount}`);
+  return todoParts.length > 0
+    ? `지금 받을/진행할 보상: ${todoParts.join(', ')}`
+    : '오늘 받을 보상이 없으면 전투나 탐험으로 새 진행도를 쌓으세요.';
 }
 
 function formatRpgTutorial(status) {

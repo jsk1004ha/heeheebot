@@ -277,6 +277,8 @@ test('RPG 카드는 긴 본문을 안전 길이로 줄이고 버튼 행을 3개 
 
     assert.equal(handled, true);
     assert.equal(interaction.replies.length, 1);
+    assert.match(interaction.replies[0].embeds[0].data.title, /RPG 허브/);
+    assert.match(getReplyDescription(interaction.replies[0]), /HP .*MP .*XP|추천|상태판|아래 버튼/);
     for (const row of interaction.replies[0].components ?? []) {
       assert.ok((row.components?.length ?? 0) <= 3, 'RPG button rows should stay compact');
     }

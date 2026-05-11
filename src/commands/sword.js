@@ -321,7 +321,10 @@ async function routeSwordCommand(interaction, economy, services = {}) {
         formatRandomSwordBattle(user, result),
         result.profile.sword.level,
         `내 검 — ${getSwordAssetLabel(result.profile.sword.level)}`,
-        { contentSuffix: formatSeasonAwardLine(seasonAward) }
+        {
+          contentSuffix: formatSeasonAwardLine(seasonAward),
+          mentionUserIds: [user.id, result.opponent.userId].filter(Boolean)
+        }
       ));
       return;
     }
@@ -493,6 +496,7 @@ function createSwordEnhancementReplyPayload(user, result) {
     {
       includeBlacksmith: true,
       blacksmithOutcome: result.outcome,
+      mentionUserIds: [user.id],
       components: [createSwordQuickActionRow(user.id)]
     }
   );
@@ -556,26 +560,101 @@ function withSeasonAwardPayload(payload, award) {
 }
 
 function formatSwordEnhancement(user, result) {
-  const outcomeText = {
-    success: '✅ 강화 성공',
-    maintain: '➖ 유지',
-    destroy: '💥 파괴',
-    protect: '🛡️ 보호권 발동'
-  }[result.outcome] ?? result.outcomeLabel;
-  const stoneCostText = result.stoneCost > 0
-    ? ` / 제련석 -${result.stoneCost.toLocaleString()}개`
-    : '';
-  const rewardText = result.refineStoneReward > 0
-    ? ` · 파괴 보상 제련석 +${result.refineStoneReward.toLocaleString()}개`
-    : '';
+  const lines = [
+    `${formatUserMention(user, user.username)} ${formatSwordEnhancementTitle(result)}`,
+    '',
+    `💬 ${formatBlacksmithEnhancementLine(result).replace(/^🔨 \*\*대장장이\*\*/, '대장장이')}`,
+    '',
+    `💸사용 골드: -${result.moneyCost.toLocaleString()}G`,
+    `💰보유 골드: ${getSwordCoins(result.profile).toLocaleString()}G`
+  ];
 
-  return [
-    `🗡️ **${result.modeLabel} 결과** — ${formatUserMention(user, user.username)}`,
-    `시도 **+${result.beforeLevel} → +${result.beforeLevel + 1}** · 결과 **${outcomeText}** · 현재 검: **${formatSwordLevel(result.profile.sword.level)}**`,
-    `확률 성공 ${result.successRate}% / 유지 ${result.maintainRate}% / 파괴 ${result.destroyRate}% · 사용 ${result.moneyCost.toLocaleString()}골드${stoneCostText}`,
-    `보유: 골드 **${getSwordCoins(result.profile).toLocaleString()}골드** · 제련석 **${result.profile.sword.refineStones.toLocaleString()}개** · 보호권 **${(result.profile.sword.protectionScrolls ?? 0).toLocaleString()}개** · 최고 **+${result.profile.sword.highestLevel}**${rewardText}`,
-    formatBlacksmithEnhancementLine(result),
-  ].join('\n');
+  if (result.stoneCost > 0) {
+    lines.push(
+      `🪨사용 제련석: -${result.stoneCost.toLocaleString()}개`,
+      `🧱보유 제련석: ${result.profile.sword.refineStones.toLocaleString()}개`
+    );
+  }
+
+  lines.push(...formatSwordEnhancementOutcomeLines(result));
+  lines.push(...formatSwordEnhancementBonusLines(result));
+
+  return lines.join('\n');
+}
+
+function formatSwordEnhancementTitle(result) {
+  if (result.mode === 'advanced' && result.outcome === 'success') {
+    return `〖🌠 상급강화 ${formatActualEnhancementRange(result)}〗`;
+  }
+
+  if (result.outcome === 'success') {
+    return `〖🔥강화 성공🔥 ${formatActualEnhancementRange(result)}〗`;
+  }
+
+  if (result.outcome === 'maintain') return '〖💦강화 유지💦〗';
+  if (result.outcome === 'destroy') return '〖💥강화 파괴💥〗';
+  if (result.outcome === 'protect') return '〖🛡️보호권 발동🛡️〗';
+  return `〖${result.outcomeLabel ?? '강화 결과'}〗`;
+}
+
+function formatSwordEnhancementOutcomeLines(result) {
+  if (result.outcome === 'success') {
+    const gainText = result.levelGain > 1 ? ` · 대성공 +${result.levelGain}` : '';
+    return [
+      `⚔️ 획득 검: [${formatSwordLevel(result.profile.sword.level)}]${gainText}`,
+      `📈 적용 확률: 성공 ${formatRate(result.successRate)}% / 유지 ${formatRate(result.maintainRate)}% / 파괴 ${formatRate(result.destroyRate)}%`
+    ];
+  }
+
+  if (result.outcome === 'maintain') {
+    return [
+      `『[${formatSwordLevel(result.beforeLevel)}]』의 레벨이 유지되었습니다.`,
+      `📈 적용 확률: 성공 ${formatRate(result.successRate)}% / 유지 ${formatRate(result.maintainRate)}% / 파괴 ${formatRate(result.destroyRate)}%`
+    ];
+  }
+
+  if (result.outcome === 'destroy') {
+    const rewardLines = [];
+    if (result.refineStoneReward > 0) {
+      const beforeStones = Math.max(0, result.profile.sword.refineStones - result.refineStoneReward);
+      rewardLines.push(
+        `🧱 제련석 ${result.refineStoneReward.toLocaleString()}개 획득! (${beforeStones.toLocaleString()}개 → ${result.profile.sword.refineStones.toLocaleString()}개)`
+      );
+    }
+
+    return [
+      `💔 [${formatSwordLevel(result.beforeLevel)}]이 산산조각나 +0으로 돌아갔습니다.`,
+      ...rewardLines,
+      `📈 적용 확률: 성공 ${formatRate(result.successRate)}% / 유지 ${formatRate(result.maintainRate)}% / 파괴 ${formatRate(result.destroyRate)}%`
+    ];
+  }
+
+  if (result.outcome === 'protect') {
+    return [
+      `🛡️ 보호권이 발동해 [${formatSwordLevel(result.beforeLevel)}]을 지켰습니다.`,
+      `🧾 보유 보호권: ${(result.profile.sword.protectionScrolls ?? 0).toLocaleString()}개`,
+      `📈 적용 확률: 성공 ${formatRate(result.successRate)}% / 유지 ${formatRate(result.maintainRate)}% / 파괴 ${formatRate(result.destroyRate)}%`
+    ];
+  }
+
+  return [`📈 적용 확률: 성공 ${formatRate(result.successRate)}% / 유지 ${formatRate(result.maintainRate)}% / 파괴 ${formatRate(result.destroyRate)}%`];
+}
+
+function formatSwordEnhancementBonusLines(result) {
+  const lines = [];
+
+  if (result.successBonusRate > 0) {
+    const remainingText = result.successBonus?.remainingMs > 0
+      ? ` (${formatDuration(result.successBonus.remainingMs)} 남음)`
+      : '';
+    lines.push(`🔥추가 확률 +${formatRate(result.successBonusRate, 2)}%p${remainingText}`);
+  }
+
+  if (result.triggeredSuccessBonus?.rate > 0) {
+    lines.push(`🔥서버 추가 확률 +${formatRate(result.triggeredSuccessBonus.rate, 2)}%p 발동! ${formatDuration(result.triggeredSuccessBonus.durationMs)} 동안 다른 유저에게 적용됩니다.`);
+  }
+
+  return lines;
 }
 
 function formatSwordSilentTribute(user) {
@@ -693,10 +772,31 @@ function formatEnhancePreview(config, label) {
     : '';
 
   return [
-    `${label}: **+${config.level} → +${config.targetLevel}**`,
+    `${label}: **${formatEnhancementTargetRange(config)}**`,
     `비용 ${config.moneyCost.toLocaleString()}골드${stoneText}`,
-    `성공 ${config.successRate}% / 유지 ${config.maintainRate}% / 파괴 ${config.destroyRate}%`
+    `성공 ${formatRate(config.successRate)}% / 유지 ${formatRate(config.maintainRate)}% / 파괴 ${formatRate(config.destroyRate)}%${config.successBonusRate > 0 ? ` / 추가 +${formatRate(config.successBonusRate, 2)}%p` : ''}`
   ].join(' — ');
+}
+
+function formatEnhancementTargetRange(config) {
+  const targetLevel = Math.max(0, Number(config.targetLevel) || Number(config.level) + 1 || 1);
+  const maxTargetLevel = Math.max(targetLevel, Number(config.maxTargetLevel) || targetLevel);
+  if (maxTargetLevel > targetLevel) {
+    return `+${config.level} → +${targetLevel}~+${maxTargetLevel}`;
+  }
+  return `+${config.level} → +${targetLevel}`;
+}
+
+function formatActualEnhancementRange(result) {
+  return `+${Math.max(0, Number(result.beforeLevel) || 0)} → +${Math.max(0, Number(result.afterLevel) || 0)}`;
+}
+
+function formatRate(value, digits = 0) {
+  const normalized = Number(value);
+  const safeValue = Number.isFinite(normalized) ? normalized : 0;
+  return digits > 0
+    ? safeValue.toFixed(digits)
+    : safeValue.toLocaleString();
 }
 
 function formatSwordSalePreview(user, result) {
@@ -759,10 +859,13 @@ function formatRandomSwordBattle(user, result) {
   const levelText = result.leveledUp
     ? ` · 🎉 Lv.${result.profile.level} 보너스 +${result.levelReward.toLocaleString()}골드`
     : '';
+  const opponentMention = result.opponent.userId
+    ? formatUserMention(result.opponent.userId, result.opponent.username)
+    : result.opponent.username;
 
   return [
     `⚔️ **랜덤 검배틀** — ${formatUserMention(user, user.username)}`,
-    `상대: **${result.opponent.username}** (+${result.opponent.sword.level}검 / Lv.${result.opponent.level})`,
+    `상대 유저: ${opponentMention} (+${result.opponent.sword.level}검 / Lv.${result.opponent.level})`,
     `전투력: 나 ${result.battle.challenger.power} / 상대 ${result.battle.opponent.power} · 주사위 ${result.battle.challenger.roll}/${result.battle.opponent.roll}`,
     `결과: **${result.won ? '승리' : '패배'}** · ${rewardText}`,
     `남은 검배틀 **${result.remainingBattles}회** · 전적 **${result.profile.sword.battleWins}승 ${result.profile.sword.battleLosses}패** · 골드 **${getSwordCoins(result.profile).toLocaleString()}골드**${levelText}`

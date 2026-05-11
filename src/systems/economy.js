@@ -80,6 +80,10 @@ import {
   MAX_DAILY_SWORD_BATTLES,
   MAX_DAILY_SWORD_BATTLE_STONES,
   MAX_SWORD_LEVEL,
+  SWORD_DESTRUCTION_SUCCESS_BONUS_DURATION_MS,
+  SWORD_DESTRUCTION_SUCCESS_BONUS_MAX_BASIS_POINTS,
+  SWORD_DESTRUCTION_SUCCESS_BONUS_MIN_BASIS_POINTS,
+  applySwordSuccessBonus,
   getAdvancedSwordEnhanceConfig,
   getSwordEnhanceConfig,
   getSwordSellValue,
@@ -2476,14 +2480,17 @@ export class EconomyService {
   async getSwordStatus({ guildId, userId, username, now = Date.now() }) {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
+      const guild = getOrCreateGuildData(data, guildId);
+      const successBonus = getActiveSwordSuccessBonus(guild, userId, now);
       resetSwordDailyState(profile.sword, now);
       const today = getDayIndex(now);
 
       return {
         profile: cloneProfile(profile),
         saleValue: getSwordSellValue(profile.sword.level),
-        normalEnhance: getSwordEnhanceConfig(profile.sword.level),
-        advancedEnhance: getAdvancedSwordEnhanceConfig(profile.sword.level),
+        normalEnhance: applySwordSuccessBonus(getSwordEnhanceConfig(profile.sword.level), successBonus?.rate ?? 0),
+        advancedEnhance: applySwordSuccessBonus(getAdvancedSwordEnhanceConfig(profile.sword.level), successBonus?.rate ?? 0),
+        successBonus,
         giftAvailable: profile.sword.lastGiftDay !== today,
         giftRemainingMs: profile.sword.lastGiftDay === today ? getNextDayStartMs(now) - now : 0,
         battleRemaining: Math.max(0, MAX_DAILY_SWORD_BATTLES - profile.sword.battlesToday),
@@ -2610,10 +2617,13 @@ export class EconomyService {
   async enhanceSword({ guildId, userId, username, now = Date.now() }) {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
+      const guild = getOrCreateGuildData(data, guildId);
+      const successBonus = getActiveSwordSuccessBonus(guild, userId, now);
       let enhancement = resolveSwordEnhancement({
         level: profile.sword.level,
         mode: 'normal',
-        randomInt: this.randomInt
+        randomInt: this.randomInt,
+        successBonusRate: successBonus?.rate ?? 0
       });
 
       debitCurrency(
@@ -2627,6 +2637,7 @@ export class EconomyService {
         enhancement = {
           ...enhancement,
           afterLevel: enhancement.beforeLevel,
+          levelGain: 0,
           outcome: 'protect',
           outcomeLabel: '보호',
           originalOutcome: 'destroy',
@@ -2635,9 +2646,14 @@ export class EconomyService {
         };
       }
       applySwordEnhancement(profile, enhancement, now, 'normal');
+      const triggeredSuccessBonus = enhancement.outcome === 'destroy'
+        ? activateSwordSuccessBonus(guild, profile, now, this.randomInt)
+        : null;
 
       return {
         ...enhancement,
+        successBonus,
+        triggeredSuccessBonus,
         profile: cloneProfile(profile)
       };
     });
@@ -2646,10 +2662,13 @@ export class EconomyService {
   async advancedEnhanceSword({ guildId, userId, username, now = Date.now() }) {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
+      const guild = getOrCreateGuildData(data, guildId);
+      const successBonus = getActiveSwordSuccessBonus(guild, userId, now);
       const enhancement = resolveSwordEnhancement({
         level: profile.sword.level,
         mode: 'advanced',
-        randomInt: this.randomInt
+        randomInt: this.randomInt,
+        successBonusRate: successBonus?.rate ?? 0
       });
 
       if (getCurrencyBalance(profile, CURRENCY_SWORD) < enhancement.moneyCost) {
@@ -2666,6 +2685,8 @@ export class EconomyService {
 
       return {
         ...enhancement,
+        successBonus,
+        triggeredSuccessBonus: null,
         profile: cloneProfile(profile)
       };
     });
@@ -4820,6 +4841,65 @@ function getOrCreateGuildData(data, guildId) {
   data.guilds ??= {};
   data.guilds[guildId] ??= {};
   return data.guilds[guildId];
+}
+
+function getActiveSwordSuccessBonus(guild, userId, now = Date.now()) {
+  const bonus = normalizeSwordSuccessBonus(guild?.swordSuccessBonus);
+  if (!bonus || bonus.expiresAt <= now) {
+    if (guild?.swordSuccessBonus) delete guild.swordSuccessBonus;
+    return null;
+  }
+
+  if (bonus.sourceUserId === String(userId ?? '').trim()) {
+    return null;
+  }
+
+  return {
+    ...bonus,
+    remainingMs: Math.max(0, bonus.expiresAt - now)
+  };
+}
+
+function activateSwordSuccessBonus(guild, profile, now = Date.now(), rollInt = randomInt) {
+  const rate = rollInt(
+    SWORD_DESTRUCTION_SUCCESS_BONUS_MIN_BASIS_POINTS,
+    SWORD_DESTRUCTION_SUCCESS_BONUS_MAX_BASIS_POINTS
+  ) / 100;
+  const bonus = {
+    rate,
+    durationMs: SWORD_DESTRUCTION_SUCCESS_BONUS_DURATION_MS,
+    triggeredAt: now,
+    expiresAt: now + SWORD_DESTRUCTION_SUCCESS_BONUS_DURATION_MS,
+    sourceUserId: String(profile?.userId ?? '').trim(),
+    sourceUsername: profile?.username || 'Unknown'
+  };
+
+  guild.swordSuccessBonus = bonus;
+
+  return {
+    ...bonus,
+    remainingMs: SWORD_DESTRUCTION_SUCCESS_BONUS_DURATION_MS
+  };
+}
+
+function normalizeSwordSuccessBonus(rawBonus) {
+  if (!rawBonus || typeof rawBonus !== 'object') return null;
+
+  const rate = Number(rawBonus.rate);
+  const triggeredAt = normalizeStoredNonNegativeInteger(rawBonus.triggeredAt);
+  const expiresAt = normalizeStoredNonNegativeInteger(rawBonus.expiresAt);
+  const sourceUserId = String(rawBonus.sourceUserId ?? '').trim();
+
+  if (!Number.isFinite(rate) || rate <= 0 || expiresAt <= 0 || !sourceUserId) return null;
+
+  return {
+    rate,
+    durationMs: normalizeStoredNonNegativeInteger(rawBonus.durationMs),
+    triggeredAt,
+    expiresAt,
+    sourceUserId,
+    sourceUsername: rawBonus.sourceUsername || 'Unknown'
+  };
 }
 
 function getRpgCraftingSuccessRate(profile, recipe, masteryStatus = getRpgCraftingMasteryStatus(profile, recipe.masteryType)) {

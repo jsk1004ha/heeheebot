@@ -3,28 +3,32 @@ export const MAX_ADVANCED_SWORD_LEVEL = 90;
 export const DAILY_SWORD_GIFT_STONES = 3;
 export const MAX_DAILY_SWORD_BATTLES = 10;
 export const MAX_DAILY_SWORD_BATTLE_STONES = 3;
+export const SWORD_DESTRUCTION_SUCCESS_BONUS_MIN_BASIS_POINTS = 100;
+export const SWORD_DESTRUCTION_SUCCESS_BONUS_MAX_BASIS_POINTS = 500;
+export const SWORD_DESTRUCTION_SUCCESS_BONUS_DURATION_MS = 2 * 60 * 1000;
+const MAX_ADVANCED_LEVEL_GAIN = 5;
 
 const NORMAL_ENHANCE_BANDS = Object.freeze([
-  band(0, 4, 100, 0, 0, 100),
-  band(5, 9, 100, 0, 0, 150),
-  band(10, 14, 100, 0, 0, 220),
-  band(15, 19, 98, 0, 2, 320),
-  band(20, 24, 95, 0, 5, 460),
-  band(25, 29, 90, 0, 10, 650),
-  band(30, 34, 90, 0, 10, 900),
-  band(35, 39, 80, 10, 10, 1_200),
-  band(40, 44, 70, 20, 10, 1_600),
-  band(45, 49, 60, 30, 10, 2_100),
-  band(50, 54, 50, 40, 10, 2_700),
-  band(55, 59, 44, 46, 10, 3_400),
-  band(60, 64, 40, 50, 10, 4_200),
-  band(65, 69, 36, 54, 10, 5_100),
-  band(70, 74, 30, 60, 10, 6_200),
-  band(75, 79, 24, 66, 10, 7_400),
-  band(80, 84, 20, 70, 10, 8_700),
-  band(85, 89, 16, 74, 10, 10_100),
-  band(90, 94, 12, 78, 10, 11_600),
-  band(95, 99, 8, 81, 11, 13_200)
+  band(0, 4, 95, 5, 0, 100),
+  band(5, 9, 93, 7, 0, 150),
+  band(10, 14, 90, 10, 0, 220),
+  band(15, 19, 88, 10, 2, 320),
+  band(20, 24, 84, 11, 5, 460),
+  band(25, 29, 78, 12, 10, 650),
+  band(30, 34, 75, 15, 10, 900),
+  band(35, 39, 70, 20, 10, 1_200),
+  band(40, 44, 62, 28, 10, 1_600),
+  band(45, 49, 55, 35, 10, 2_100),
+  band(50, 54, 45, 45, 10, 2_700),
+  band(55, 59, 38, 52, 10, 3_400),
+  band(60, 64, 34, 56, 10, 4_200),
+  band(65, 69, 30, 60, 10, 5_100),
+  band(70, 74, 25, 65, 10, 6_200),
+  band(75, 79, 20, 70, 10, 7_400),
+  band(80, 84, 16, 74, 10, 8_700),
+  band(85, 89, 12, 78, 10, 10_100),
+  band(90, 94, 8, 82, 10, 11_600),
+  band(95, 99, 5, 84, 11, 13_200)
 ]);
 
 const ADVANCED_STONE_COSTS = Object.freeze([
@@ -65,7 +69,8 @@ export function getAdvancedSwordEnhanceConfig(level) {
   }
 
   const normalConfig = getSwordEnhanceConfig(normalizedLevel);
-  const successRate = Math.min(95, normalConfig.successRate + 15);
+  const boostedSuccessRate = Math.min(95, normalConfig.successRate + 15);
+  const successRate = Math.max(normalConfig.successRate, boostedSuccessRate);
   const stoneCost = ADVANCED_STONE_COSTS.find((entry) =>
     normalizedLevel >= entry.min && normalizedLevel <= entry.max
   )?.stoneCost ?? 8;
@@ -75,6 +80,8 @@ export function getAdvancedSwordEnhanceConfig(level) {
     max: normalConfig.max,
     level: normalizedLevel,
     targetLevel: normalizedLevel + 1,
+    maxTargetLevel: Math.min(MAX_SWORD_LEVEL, normalizedLevel + MAX_ADVANCED_LEVEL_GAIN),
+    maxLevelGain: MAX_ADVANCED_LEVEL_GAIN,
     mode: 'advanced',
     modeLabel: '상급 강화',
     blocked: false,
@@ -86,10 +93,16 @@ export function getAdvancedSwordEnhanceConfig(level) {
   };
 }
 
-export function resolveSwordEnhancement({ level, mode = 'normal', randomInt = defaultRandomInt } = {}) {
-  const config = mode === 'advanced'
+export function resolveSwordEnhancement({
+  level,
+  mode = 'normal',
+  randomInt = defaultRandomInt,
+  successBonusRate = 0
+} = {}) {
+  const baseConfig = mode === 'advanced'
     ? getAdvancedSwordEnhanceConfig(level)
     : getSwordEnhanceConfig(level);
+  const config = applySwordSuccessBonus(baseConfig, successBonusRate);
 
   if (config.blocked) {
     throw new Error(config.reason);
@@ -99,11 +112,16 @@ export function resolveSwordEnhancement({ level, mode = 'normal', randomInt = de
   const roll = randomInt(1, 100);
   let outcome = 'maintain';
   let afterLevel = beforeLevel;
+  let levelGain = 0;
   let refineStoneReward = 0;
 
   if (roll <= config.successRate) {
     outcome = 'success';
-    afterLevel = Math.min(MAX_SWORD_LEVEL, beforeLevel + 1);
+    const requestedLevelGain = config.mode === 'advanced'
+      ? rollAdvancedLevelGain(randomInt)
+      : 1;
+    afterLevel = Math.min(MAX_SWORD_LEVEL, beforeLevel + requestedLevelGain);
+    levelGain = Math.max(0, afterLevel - beforeLevel);
   } else if (roll > config.successRate + config.maintainRate && config.destroyRate > 0) {
     outcome = 'destroy';
     afterLevel = 0;
@@ -114,6 +132,7 @@ export function resolveSwordEnhancement({ level, mode = 'normal', randomInt = de
     ...config,
     beforeLevel,
     afterLevel,
+    levelGain,
     roll,
     outcome,
     outcomeLabel: getSwordOutcomeLabel(outcome),
@@ -121,21 +140,37 @@ export function resolveSwordEnhancement({ level, mode = 'normal', randomInt = de
   };
 }
 
-export function createRandomSwordOpponent({ profile, randomInt = defaultRandomInt } = {}) {
-  const swordLevel = normalizeSwordLevel(profile?.sword?.level ?? 0);
-  const profileLevel = Math.max(1, Number(profile?.level) || 1);
-  const opponentSwordLevel = clampInteger(swordLevel + randomInt(-5, 8), 0, MAX_SWORD_LEVEL);
-  const opponentLevel = Math.max(1, profileLevel + randomInt(-2, 2));
+export function applySwordSuccessBonus(config, bonusRate = 0) {
+  if (!config || config.blocked) return config;
+
+  const baseSuccessRate = normalizeRate(config.successRate);
+  const baseMaintainRate = normalizeRate(config.maintainRate);
+  const baseDestroyRate = normalizeRate(config.destroyRate);
+  const requestedBonusRate = Math.max(0, Number(bonusRate) || 0);
+  const maxBonusRate = Math.min(99 - baseSuccessRate, baseMaintainRate + baseDestroyRate);
+  const successBonusRate = Math.max(0, Math.min(requestedBonusRate, maxBonusRate));
+  const maintainReduction = Math.min(baseMaintainRate, successBonusRate);
+  const destroyReduction = Math.max(0, successBonusRate - maintainReduction);
 
   return {
-    userId: 'random-sword-opponent',
-    username: getRandomOpponentName(opponentSwordLevel),
-    level: opponentLevel,
-    sword: {
-      level: opponentSwordLevel
-    },
-    npc: true
+    ...config,
+    baseSuccessRate,
+    baseMaintainRate,
+    baseDestroyRate,
+    successBonusRate,
+    successRate: baseSuccessRate + successBonusRate,
+    maintainRate: baseMaintainRate - maintainReduction,
+    destroyRate: baseDestroyRate - destroyReduction
   };
+}
+
+function rollAdvancedLevelGain(randomInt) {
+  const bonusRoll = randomInt(1, 100);
+  if (bonusRoll <= 2) return 5;
+  if (bonusRoll <= 6) return 4;
+  if (bonusRoll <= 14) return 3;
+  if (bonusRoll <= 30) return 2;
+  return 1;
 }
 
 export function resolveSwordBattle({ challengerProfile, opponentProfile, randomInt = defaultRandomInt } = {}) {
@@ -283,18 +318,16 @@ function decideSwordBattleWinner({
   return randomInt(0, 1) === 0 ? 'challenger' : 'opponent';
 }
 
-function getRandomOpponentName(swordLevel) {
-  if (swordLevel >= 90) return '전설의 검성';
-  if (swordLevel >= 70) return '왕국 기사단장';
-  if (swordLevel >= 50) return '숙련된 검사';
-  if (swordLevel >= 25) return '떠돌이 용병';
-  return '수련생 검사';
-}
-
 function clampInteger(value, min, max) {
   const normalized = Number(value);
   if (!Number.isSafeInteger(normalized)) return min;
   return Math.min(max, Math.max(min, normalized));
+}
+
+function normalizeRate(value) {
+  const normalized = Number(value);
+  if (!Number.isFinite(normalized)) return 0;
+  return Math.max(0, normalized);
 }
 
 function defaultRandomInt(min, max) {

@@ -801,6 +801,9 @@ export class StockService {
       const quote = getTradableQuote(normalizedStockId, market);
       const fee = calculateFee(normalizedMargin, this.leverageFeeBps);
       const totalCost = normalizedMargin + fee;
+      const exposure = calculateLeveragedExposure(normalizedMargin, normalizedLeverage);
+
+      assertNoOpposingLeveragedPosition(stockUser, normalizedStockId, normalizedSide, quote);
 
       if (getCurrencyBalance(profile, CURRENCY_STOCK) < totalCost) {
         throw new Error(`골드가 부족합니다. 필요 금액: ${totalCost.toLocaleString()}골드`);
@@ -817,6 +820,8 @@ export class StockService {
         side: normalizedSide,
         leverage: normalizedLeverage,
         margin: normalizedMargin,
+        notional: exposure.notional,
+        debt: exposure.debt,
         entryPrice: quote.price,
         openedAt: now
       };
@@ -941,6 +946,8 @@ export class StockService {
       const liquidated = liquidateLeveragedPositions(profile, stockUser, market);
       const positions = getEvaluatedLeveragedPositions(stockUser, market);
       const marginTotal = positions.reduce((sum, position) => sum + position.margin, 0);
+      const notionalTotal = positions.reduce((sum, position) => sum + position.notional, 0);
+      const debtTotal = positions.reduce((sum, position) => sum + position.debt, 0);
       const equityTotal = positions.reduce((sum, position) => sum + position.equity, 0);
       const unrealizedProfit = positions.reduce((sum, position) => sum + position.unrealizedProfit, 0);
 
@@ -951,6 +958,8 @@ export class StockService {
         positions,
         liquidated,
         marginTotal,
+        notionalTotal,
+        debtTotal,
         equityTotal,
         unrealizedProfit,
         realizedLeveragedProfit: stockUser.realizedLeveragedProfit,
@@ -1716,6 +1725,9 @@ function migrateLegacyStockLiabilitiesToGold(profile, stockUser, now = Date.now(
       delete stockUser.leveragedPositions[positionId];
     } else {
       position.margin = convertedMargin;
+      const exposure = calculateLeveragedExposure(position.margin, position.leverage);
+      position.notional = exposure.notional;
+      position.debt = exposure.debt;
     }
   }
 
@@ -1867,13 +1879,18 @@ function normalizeLeveragedPosition(position = {}, fallbackId, guild = null) {
   const safePosition = position && typeof position === 'object' ? position : {};
   const id = String(safePosition.id ?? fallbackId ?? '').trim();
   if (!id) throw new Error('레버리지 포지션 id가 없습니다.');
+  const leverage = normalizeLeverage(safePosition.leverage);
+  const margin = normalizePositiveInteger(safePosition.margin, '증거금');
+  const exposure = calculateLeveragedExposure(margin, leverage);
 
   return {
     id,
     stockId: guild ? normalizeStockIdForGuild(safePosition.stockId, guild) : normalizeStockId(safePosition.stockId),
     side: normalizeLeverageSide(safePosition.side),
-    leverage: normalizeLeverage(safePosition.leverage),
-    margin: normalizePositiveInteger(safePosition.margin, '증거금'),
+    leverage,
+    margin,
+    notional: normalizePositiveStoredInteger(safePosition.notional, exposure.notional),
+    debt: normalizeStoredDebt(safePosition.debt, exposure.debt),
     entryPrice: normalizePositiveStoredInteger(safePosition.entryPrice, 1),
     openedAt: normalizeNonNegativeInteger(safePosition.openedAt)
   };
@@ -2146,6 +2163,7 @@ function buildPortfolio(profile, stockUser, market) {
   const costBasis = positions.reduce((sum, position) => sum + position.costBasis, 0);
   const leveragedPositions = getEvaluatedLeveragedPositions(stockUser, market);
   const leveragedEquity = leveragedPositions.reduce((sum, position) => sum + position.equity, 0);
+  const leveragedDebt = leveragedPositions.reduce((sum, position) => sum + position.debt, 0);
   const leveragedUnrealizedProfit = leveragedPositions.reduce((sum, position) => sum + position.unrealizedProfit, 0);
 
   return {
@@ -2154,6 +2172,7 @@ function buildPortfolio(profile, stockUser, market) {
     cash: getCurrencyBalance(profile, CURRENCY_STOCK),
     stockValue,
     leveragedEquity,
+    leveragedDebt,
     totalAssets: getCurrencyBalance(profile, CURRENCY_STOCK) + stockValue + leveragedEquity,
     costBasis,
     unrealizedProfit: stockValue - costBasis,
@@ -2480,6 +2499,17 @@ function getEvaluatedLeveragedPositions(stockUser, market) {
     .sort((a, b) => b.equity - a.equity);
 }
 
+function assertNoOpposingLeveragedPosition(stockUser, stockId, side, quote = null) {
+  const oppositeSide = side === 'long' ? 'short' : 'long';
+  const existing = Object.values(stockUser.leveragedPositions ?? {})
+    .find((position) => position.stockId === stockId && position.side === oppositeSide);
+
+  if (!existing) return;
+
+  const stockName = quote?.name ?? stockId;
+  throw new Error(`같은 종목(${stockName})의 반대 방향 레버리지 포지션이 이미 열려 있습니다. 롱/숏 양방향 돈복사를 막기 위해 먼저 기존 포지션을 청산하세요.`);
+}
+
 function liquidateLeveragedPositions(profile, stockUser, market) {
   const liquidated = [];
 
@@ -2527,17 +2557,32 @@ function evaluateLeveragedPosition(position, quote) {
   const unrealizedProfit = Math.max(-position.margin, rawProfit);
   const equity = Math.max(0, position.margin + unrealizedProfit);
   const liquidated = equity <= 0;
+  const exposure = calculateLeveragedExposure(position.margin, position.leverage);
+  const notional = normalizePositiveStoredInteger(position.notional, exposure.notional);
+  const debt = normalizeStoredDebt(position.debt, exposure.debt);
 
   return {
     ...position,
     stock: quote,
     currentPrice: quote.price,
+    notional,
+    debt,
     priceChangeBps,
     leveragedChangeBps,
     returnPercent: Math.round((leveragedChangeBps / 100) * 100) / 100,
     unrealizedProfit,
     equity,
     liquidated
+  };
+}
+
+function calculateLeveragedExposure(margin, leverage) {
+  const safeMargin = Math.max(1, Number(margin) || 1);
+  const safeLeverage = Math.max(1, Number(leverage) || 1);
+  const notional = Math.min(Number.MAX_SAFE_INTEGER, safeMargin * safeLeverage);
+  return {
+    notional,
+    debt: Math.max(0, notional - safeMargin)
   };
 }
 
@@ -2625,6 +2670,11 @@ function normalizePositiveStoredInteger(value, fallback) {
 function normalizeNonNegativeInteger(value) {
   const normalized = Number(value);
   return Number.isSafeInteger(normalized) && normalized >= 0 ? normalized : 0;
+}
+
+function normalizeStoredDebt(value, fallback) {
+  const normalized = Number(value);
+  return Number.isSafeInteger(normalized) && normalized >= 0 ? normalized : fallback;
 }
 
 function normalizeOptionalStringId(value) {

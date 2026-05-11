@@ -17,6 +17,7 @@ const DISCORD_CONTENT_MAX_LENGTH = 2000;
 const STOCK_PAGE_CONTENT_MAX_LENGTH = 1900;
 const STOCK_PAGINATION_TTL_MS = 10 * 60 * 1000;
 const STOCK_PAGE_BUTTON_PREFIX = 'stock_page';
+const STOCK_LEVERAGE_BUTTON_PREFIX = 'stock_leverage';
 const stockPaginationSessions = new Map();
 const FULL_MARKET_PAGE_SIZE = 10;
 const STOCK_NAME_COLLATOR = new Intl.Collator('ko-KR', {
@@ -319,13 +320,13 @@ export const stockCommands = [
     .addSubcommand((subcommand) =>
       subcommand
         .setName('레버리지청산')
-        .setDescription('레버리지 포지션 id를 지정해 청산합니다.')
+        .setDescription('레버리지 거래를 닫습니다. 하나만 있으면 대상 없이 바로 닫습니다.')
         .addStringOption((option) =>
           option
-            .setName('포지션')
-            .setDescription('레버리지보유에서 보이는 포지션 id')
+            .setName('대상')
+            .setDescription('선택 사항: 번호, 종목명, 자동완성 중 하나. 비우면 자동 선택/버튼 선택')
             .setMaxLength(50)
-            .setRequired(true)
+            .setAutocomplete(true)
         )
     )
     .addSubcommand((subcommand) =>
@@ -355,12 +356,18 @@ export async function handleStockAutocomplete(interaction, stocks) {
   }
 
   const focused = interaction.options.getFocused(true);
+  const subcommand = interaction.options.getSubcommand(false);
+  if (['대상', '포지션'].includes(focused.name) && subcommand === '레버리지청산') {
+    const choices = await getLeveragedPositionAutocompleteChoices(interaction, stocks, String(focused.value ?? ''));
+    await safeAutocompleteRespond(interaction, choices.slice(0, STOCK_AUTOCOMPLETE_LIMIT));
+    return true;
+  }
+
   if (focused.name !== '종목') {
     await safeAutocompleteRespond(interaction, []);
     return true;
   }
 
-  const subcommand = interaction.options.getSubcommand(false);
   const query = String(focused.value ?? '');
   const choices = ['매도', '지정가매도'].includes(subcommand)
     ? await getSellStockAutocompleteChoices(interaction, stocks, query)
@@ -372,13 +379,21 @@ export async function handleStockAutocomplete(interaction, stocks) {
 
 export async function handleStockCommand(interaction, stocks) {
   if (interaction.isButton?.()) {
-    if (interaction.customId?.startsWith('stock_quick:')) {
-      return handleStockQuickButton(interaction, stocks);
+    try {
+      if (interaction.customId?.startsWith('stock_quick:')) {
+        return handleStockQuickButton(interaction, stocks);
+      }
+      if (interaction.customId?.startsWith('stock_market_page:')) {
+        return handleStockMarketPageButton(interaction, stocks);
+      }
+      if (interaction.customId?.startsWith(`${STOCK_LEVERAGE_BUTTON_PREFIX}:`)) {
+        return handleStockLeverageButton(interaction, stocks);
+      }
+      return handleStockPaginationButton(interaction);
+    } catch (error) {
+      await safeReply(interaction, `주식 처리 실패: ${error.message}`, true);
+      return true;
     }
-    if (interaction.customId?.startsWith('stock_market_page:')) {
-      return handleStockMarketPageButton(interaction, stocks);
-    }
-    return handleStockPaginationButton(interaction);
   }
 
   if (!interaction.isChatInputCommand() || interaction.commandName !== '주식') {
@@ -570,7 +585,9 @@ async function routeStockCommand(interaction, stocks) {
       userId: target.id,
       username: target.username
     });
-    await replyStockContent(interaction, formatPortfolio(target, portfolio));
+    await replyStockContent(interaction, formatPortfolio(target, portfolio), {
+      components: target.id === user.id ? createStockQuickRows(user.id) : []
+    });
     return;
   }
 
@@ -593,18 +610,40 @@ async function routeStockCommand(interaction, stocks) {
       leverage: interaction.options.getInteger('배율', true),
       margin: interaction.options.getInteger('증거금', true)
     });
-    await replyStockContent(interaction, formatOpenLeverageResult(user, result));
+    await replyStockContent(interaction, formatOpenLeverageResult(user, result), {
+      components: createLeveragePositionRows(user.id, [result.position], {
+        includeNavigation: true
+      })
+    });
     return;
   }
 
   if (subcommand === '레버리지청산') {
+    const closeTarget = await resolveLeverageCloseTarget(stocks, {
+      guildId,
+      user,
+      rawTarget: getLeverageCloseInput(interaction)
+    });
+
+    if (closeTarget.selection) {
+      await replyStockContent(interaction, formatLeverageCloseSelection(user, closeTarget.selection), {
+        components: createLeveragePositionRows(user.id, closeTarget.selection.positions, {
+          includeNavigation: true
+        })
+      });
+      return;
+    }
+
     const result = await stocks.closeLeveragedPosition({
       guildId,
       userId: user.id,
       username: user.username,
-      positionId: interaction.options.getString('포지션', true)
+      positionId: closeTarget.positionId
     });
-    await replyStockContent(interaction, formatCloseLeverageResult(user, result));
+    const portfolio = await stocks.getLeveragePortfolio({ guildId, userId: user.id, username: user.username });
+    await replyStockContent(interaction, formatCloseLeverageWithPortfolio(user, result, portfolio), {
+      components: createLeveragePortfolioRows(user.id, portfolio)
+    });
     return;
   }
 
@@ -615,11 +654,84 @@ async function routeStockCommand(interaction, stocks) {
       userId: target.id,
       username: target.username
     });
-    await replyStockContent(interaction, formatLeveragePortfolio(target, portfolio));
+    await replyStockContent(interaction, formatLeveragePortfolio(target, portfolio), {
+      components: target.id === user.id ? createLeveragePortfolioRows(user.id, portfolio) : []
+    });
     return;
   }
 
   await replyStockContent(interaction, '알 수 없는 주식 명령입니다. `/주식 시세` 또는 `/주식 전체시세`로 다시 시도해주세요.');
+}
+
+function getLeverageCloseInput(interaction) {
+  return interaction.options.getString('대상') ?? interaction.options.getString('포지션') ?? '';
+}
+
+async function resolveLeverageCloseTarget(stocks, { guildId, user, rawTarget }) {
+  const portfolio = await stocks.getLeveragePortfolio({
+    guildId,
+    userId: user.id,
+    username: user.username
+  });
+  const positions = portfolio.positions;
+  const target = String(rawTarget ?? '').trim();
+
+  if (!target) {
+    if (positions.length === 1) {
+      return { positionId: positions[0].id };
+    }
+    return {
+      selection: {
+        portfolio,
+        positions,
+        reason: positions.length === 0 ? 'empty' : 'choose'
+      }
+    };
+  }
+
+  const exactMatch = positions.find((position) => position.id === target);
+  if (exactMatch) return { positionId: exactMatch.id };
+
+  if (/^\d+$/.test(target)) {
+    const numberIndex = Number.parseInt(target, 10) - 1;
+    if (numberIndex >= 0 && numberIndex < positions.length) {
+      return { positionId: positions[numberIndex].id };
+    }
+  }
+
+  const normalizedTarget = normalizeAutocompleteQuery(target);
+  const matches = positions.filter((position, index) =>
+    matchesLeverageCloseTarget(position, index, normalizedTarget)
+  );
+
+  if (matches.length === 1) {
+    return { positionId: matches[0].id };
+  }
+
+  return {
+    selection: {
+      portfolio,
+      positions: matches.length > 0 ? matches : positions,
+      reason: matches.length > 1 ? 'ambiguous' : 'not_found',
+      rawTarget: target
+    }
+  };
+}
+
+function matchesLeverageCloseTarget(position, index, normalizedTarget) {
+  if (!normalizedTarget) return true;
+  return [
+    String(index + 1),
+    `${index + 1}번`,
+    position.id,
+    position.stockId,
+    position.stock?.id,
+    position.stock?.name,
+    position.stock?.symbol,
+    formatLeverageSide(position.side),
+    position.side,
+    `${position.leverage}배`
+  ].some((value) => normalizeAutocompleteQuery(value).includes(normalizedTarget));
 }
 
 async function handleStockQuickButton(interaction, stocks) {
@@ -644,6 +756,7 @@ async function handleStockQuickButton(interaction, stocks) {
   const guildId = interaction.guildId;
   const user = interaction.user;
   let content = '';
+  let components = createStockQuickRows(user.id);
 
   if (action === 'gainers') {
     const market = await stocks.getMarket({ guildId });
@@ -665,6 +778,14 @@ async function handleStockQuickButton(interaction, stocks) {
       userId: user.id,
       username: user.username
     }));
+  } else if (action === 'leverage') {
+    const portfolio = await stocks.getLeveragePortfolio({
+      guildId,
+      userId: user.id,
+      username: user.username
+    });
+    content = formatLeveragePortfolio(user, portfolio);
+    components = createLeveragePortfolioRows(user.id, portfolio);
   } else {
     await interaction.reply({
       content: '알 수 없는 주식 빠른 버튼입니다.',
@@ -675,7 +796,54 @@ async function handleStockQuickButton(interaction, stocks) {
 
   await interaction.update({
     content,
-    components: createStockQuickRows(user.id)
+    components
+  });
+  return true;
+}
+
+async function handleStockLeverageButton(interaction, stocks) {
+  const parsed = parseStockLeverageCustomId(interaction.customId);
+  if (!parsed) return false;
+
+  if (parsed.ownerId && interaction.user.id !== parsed.ownerId) {
+    await interaction.reply({
+      content: '이 레버리지 닫기 버튼은 거래 주인만 사용할 수 있습니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (!interaction.inGuild()) {
+    await interaction.reply({
+      content: '서버에서만 사용할 수 있는 명령어입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (parsed.action !== 'close' || !parsed.positionId) {
+    await interaction.reply({
+      content: '알 수 없는 레버리지 버튼입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  const result = await stocks.closeLeveragedPosition({
+    guildId: interaction.guildId,
+    userId: interaction.user.id,
+    username: interaction.user.username,
+    positionId: parsed.positionId
+  });
+  const portfolio = await stocks.getLeveragePortfolio({
+    guildId: interaction.guildId,
+    userId: interaction.user.id,
+    username: interaction.user.username
+  });
+
+  await interaction.update({
+    content: formatCloseLeverageWithPortfolio(interaction.user, result, portfolio),
+    components: createLeveragePortfolioRows(interaction.user.id, portfolio)
   });
   return true;
 }
@@ -729,9 +897,48 @@ function createStockQuickRows(userId) {
       new ButtonBuilder()
         .setCustomId(`stock_quick:portfolio:${userId}`)
         .setLabel('내 보유')
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId(`stock_quick:leverage:${userId}`)
+        .setLabel('레버리지')
         .setStyle(ButtonStyle.Secondary)
     )
   ];
+}
+
+function createLeveragePortfolioRows(userId, portfolio) {
+  return createLeveragePositionRows(userId, portfolio.positions, {
+    includeNavigation: true
+  });
+}
+
+function createLeveragePositionRows(userId, positions, { includeNavigation = false } = {}) {
+  const rows = [];
+  const closeButtons = positions
+    .slice(0, 10)
+    .map((position, index) => new ButtonBuilder()
+      .setCustomId(createStockLeverageCustomId('close', userId, position.id))
+      .setLabel(`${index + 1}번 닫기`)
+      .setStyle(ButtonStyle.Danger));
+
+  for (let index = 0; index < closeButtons.length; index += 5) {
+    rows.push(new ActionRowBuilder().addComponents(...closeButtons.slice(index, index + 5)));
+  }
+
+  if (includeNavigation && rows.length < 5) {
+    rows.push(new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`stock_quick:leverage:${userId}`)
+        .setLabel('레버리지 보유')
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId(`stock_quick:portfolio:${userId}`)
+        .setLabel('전체 보유')
+        .setStyle(ButtonStyle.Secondary)
+    ));
+  }
+
+  return rows;
 }
 
 function createFullMarketPageRows(userId, market, page = 0) {
@@ -784,6 +991,36 @@ async function getSellStockAutocompleteChoices(interaction, stocks, query) {
       name: `${position.stock.name} · ${position.stock.symbol} · 보유 ${position.quantity.toLocaleString()}주`,
       value: position.stockId
     }));
+}
+
+async function getLeveragedPositionAutocompleteChoices(interaction, stocks, query) {
+  if (!interaction.guildId || !interaction.user?.id || !stocks?.getLeveragePortfolio) return [];
+
+  const normalizedQuery = normalizeAutocompleteQuery(query);
+  const portfolio = await stocks.getLeveragePortfolio({
+    guildId: interaction.guildId,
+    userId: interaction.user.id,
+    username: interaction.user.username
+  });
+
+  return portfolio.positions
+    .map((position, index) => ({
+      name: formatLeveragePositionChoice(position, index),
+      value: position.id
+    }))
+    .filter((choice) => {
+      if (!normalizedQuery) return true;
+      return normalizeAutocompleteQuery(`${choice.name} ${choice.value}`).includes(normalizedQuery);
+    });
+}
+
+function formatLeveragePositionChoice(position, index) {
+  return [
+    `${index + 1}. ${position.stock.name}`,
+    `${formatLeverageSide(position.side)} ${position.leverage}배`,
+    `평가 ${position.equity.toLocaleString()}G`,
+    `손익 ${formatSignedMoney(position.unrealizedProfit)}`
+  ].join(' · ').slice(0, 100);
 }
 
 async function getTradableStockAutocompleteChoices(interaction, stocks, query) {
@@ -1079,7 +1316,7 @@ function formatPortfolio(user, portfolio) {
     `💼 **${user.username}님의 가상주식 보유 현황**`,
     `골드: **${portfolio.cash.toLocaleString()}골드**`,
     `주식 평가액: **${portfolio.stockValue.toLocaleString()}골드**`,
-    `레버리지 평가금: **${portfolio.leveragedEquity.toLocaleString()}골드**`,
+    `레버리지 평가금: **${portfolio.leveragedEquity.toLocaleString()}골드** / 부채 노출: **${(portfolio.leveragedDebt ?? 0).toLocaleString()}골드**`,
     `총자산: **${portfolio.totalAssets.toLocaleString()}골드**`,
     `평가손익: **${formatSignedMoney(portfolio.unrealizedProfit)}** / 레버리지 손익: **${formatSignedMoney(portfolio.leveragedUnrealizedProfit)}**`,
     `실현손익: **${formatSignedMoney(portfolio.realizedProfit)}** / 레버리지 실현손익: **${formatSignedMoney(portfolio.realizedLeveragedProfit)}**`,
@@ -1101,10 +1338,37 @@ function formatOpenLeverageResult(user, result) {
   const sideLabel = formatLeverageSide(position.side);
   return [
     `⚡ **레버리지 ${sideLabel} 진입 완료** — ${formatUserMention(user, user.username)}`,
-    `포지션: \`${position.id}\` / 종목: **${position.stock.name}** / 배율: **${position.leverage}배**`,
-    `진입가: ${position.entryPrice.toLocaleString()}골드 / 증거금: ${position.margin.toLocaleString()}골드 / 수수료: ${result.fee.toLocaleString()}골드`,
+    `종목: **${position.stock.name}** / 배율: **${position.leverage}배**`,
+    `진입가: ${position.entryPrice.toLocaleString()}골드 / 증거금: ${position.margin.toLocaleString()}골드 / 부채: ${position.debt.toLocaleString()}골드 / 명목가: ${position.notional.toLocaleString()}골드 / 수수료: ${result.fee.toLocaleString()}골드`,
     `골드: **${result.profile.balance.toLocaleString()}골드**`,
-    '손실이 증거금 100%에 도달하면 자동 청산됩니다.'
+    '아래 `1번 닫기` 버튼으로 바로 닫을 수 있습니다. 같은 종목 롱/숏 양방향은 차단되고 손실 100%면 자동 청산됩니다.'
+  ].join('\n');
+}
+
+function formatLeverageCloseSelection(user, selection) {
+  if (selection.reason === 'empty') {
+    return [
+      `⚡ **${user.username}님의 레버리지 닫기**`,
+      '닫을 레버리지 거래가 없습니다.',
+      '`/주식 레버리지진입`으로 먼저 거래를 열 수 있습니다.'
+    ].join('\n');
+  }
+
+  const lead = selection.rawTarget
+    ? `입력한 **${selection.rawTarget}**만으로는 닫을 거래를 하나로 고르기 어렵습니다.`
+    : '닫을 거래를 골라주세요.';
+  const body = selection.positions.length > 0
+    ? selection.positions
+      .slice(0, 10)
+      .map((position, index) => `${index + 1}. **${position.stock.name}** ${formatLeverageSide(position.side)} ${position.leverage}배 / 평가 ${position.equity.toLocaleString()}골드 / 손익 ${formatSignedMoney(position.unrealizedProfit)}`)
+      .join('\n')
+    : '일치하는 거래가 없습니다. 아래 레버리지 보유 버튼으로 전체를 다시 확인하세요.';
+
+  return [
+    `⚡ **${user.username}님의 레버리지 닫기**`,
+    lead,
+    body,
+    '버튼을 누르거나 `/주식 레버리지청산 대상:1`처럼 번호만 입력해도 됩니다.'
   ].join('\n');
 }
 
@@ -1112,40 +1376,58 @@ function formatCloseLeverageResult(user, result) {
   const position = result.position;
   if (result.liquidated) {
     return [
-      `💥 **레버리지 포지션 자동 청산** — ${formatUserMention(user, user.username)}`,
-      `포지션: \`${position.id}\` / 종목: **${position.stock.name}** / ${formatLeverageSide(position.side)} ${position.leverage}배`,
+      `💥 **레버리지 자동 청산** — ${formatUserMention(user, user.username)}`,
+      `종목: **${position.stock.name}** / ${formatLeverageSide(position.side)} ${position.leverage}배`,
       `손익: **${formatSignedMoney(result.realizedProfit)}** / 지급액: 0골드`,
       `골드: **${result.profile.balance.toLocaleString()}골드**`
     ].join('\n');
   }
 
   return [
-    `✅ **레버리지 포지션 청산 완료** — ${formatUserMention(user, user.username)}`,
-    `포지션: \`${position.id}\` / 종목: **${position.stock.name}** / ${formatLeverageSide(position.side)} ${position.leverage}배`,
+    `✅ **레버리지 청산 완료** — ${formatUserMention(user, user.username)}`,
+    `종목: **${position.stock.name}** / ${formatLeverageSide(position.side)} ${position.leverage}배`,
     `진입가: ${position.entryPrice.toLocaleString()}골드 → 청산가: ${position.currentPrice.toLocaleString()}골드`,
     `손익: **${formatSignedMoney(result.realizedProfit)}** / 지급액: **${result.payout.toLocaleString()}골드**`,
     `골드: **${result.profile.balance.toLocaleString()}골드**`
   ].join('\n');
 }
 
+function formatCloseLeverageWithPortfolio(user, result, portfolio) {
+  const closeText = formatCloseLeverageResult(user, result);
+  const portfolioText = formatLeveragePortfolio(user, portfolio);
+  const fullText = `${closeText}\n\n${portfolioText}`;
+  if (fullText.length <= DISCORD_CONTENT_MAX_LENGTH) return fullText;
+
+  return [
+    closeText,
+    '',
+    '⚡ **남은 레버리지 보유 현황**',
+    `평가금: **${portfolio.equityTotal.toLocaleString()}골드** / 부채 노출: **${portfolio.debtTotal.toLocaleString()}골드**`,
+    `미실현손익: **${formatSignedMoney(portfolio.unrealizedProfit)}**`,
+    portfolio.positions.length > 0
+      ? '남은 거래는 아래 `레버리지 보유` 버튼으로 다시 확인하세요.'
+      : '열려 있는 레버리지 거래가 없습니다.'
+  ].join('\n');
+}
+
 function formatLeveragePortfolio(user, portfolio) {
   const liquidatedText = portfolio.liquidated.length > 0
-    ? `\n💥 이번 조회에서 자동 청산: ${portfolio.liquidated.map((entry) => `\`${entry.positionId}\``).join(', ')}`
+    ? `\n💥 이번 조회에서 자동 청산: ${portfolio.liquidated.map((entry) => `**${entry.stock.name}** ${formatLeverageSide(entry.side)} ${entry.leverage}배`).join(', ')}`
     : '';
   const positions = portfolio.positions.length > 0
     ? portfolio.positions
       .slice(0, 10)
-      .map((position) => [
-        `- \`${position.id}\` **${position.stock.name}** ${formatLeverageSide(position.side)} ${position.leverage}배`,
-        `  진입 ${position.entryPrice.toLocaleString()}골드 → 현재 ${position.currentPrice.toLocaleString()}골드 / 증거금 ${position.margin.toLocaleString()}골드 / 평가 ${position.equity.toLocaleString()}골드 / 손익 ${formatSignedMoney(position.unrealizedProfit)}`
+      .map((position, index) => [
+        `${index + 1}. **${position.stock.name}** ${formatLeverageSide(position.side)} ${position.leverage}배`,
+        `  진입 ${position.entryPrice.toLocaleString()}골드 → 현재 ${position.currentPrice.toLocaleString()}골드 / 증거금 ${position.margin.toLocaleString()}골드 / 부채 ${position.debt.toLocaleString()}골드 / 평가 ${position.equity.toLocaleString()}골드 / 손익 ${formatSignedMoney(position.unrealizedProfit)}`
       ].join('\n'))
       .join('\n')
-    : '열려 있는 레버리지 포지션이 없습니다.';
+    : '열려 있는 레버리지 거래가 없습니다.';
 
   return [
     `⚡ **${user.username}님의 레버리지 보유 현황**`,
     `골드: **${portfolio.cash.toLocaleString()}골드**`,
-    `증거금 합계: **${portfolio.marginTotal.toLocaleString()}골드** / 평가금: **${portfolio.equityTotal.toLocaleString()}골드**`,
+    `증거금 합계: **${portfolio.marginTotal.toLocaleString()}골드** / 부채 노출: **${portfolio.debtTotal.toLocaleString()}골드** / 명목가: **${portfolio.notionalTotal.toLocaleString()}골드** / 평가금: **${portfolio.equityTotal.toLocaleString()}골드**`,
     `미실현손익: **${formatSignedMoney(portfolio.unrealizedProfit)}** / 누적실현손익: **${formatSignedMoney(portfolio.realizedLeveragedProfit)}**`,
     positions + liquidatedText
   ].join('\n');
@@ -1314,6 +1596,20 @@ async function handleStockPaginationButton(interaction) {
     pageIndex: nextPageIndex
   }));
   return true;
+}
+
+function createStockLeverageCustomId(action, ownerId, positionId) {
+  return `${STOCK_LEVERAGE_BUTTON_PREFIX}:${action}:${ownerId}:${positionId}`;
+}
+
+function parseStockLeverageCustomId(customId) {
+  const parts = String(customId ?? '').split(':');
+  if (parts[0] !== STOCK_LEVERAGE_BUTTON_PREFIX || parts.length < 3) return null;
+  return {
+    action: parts[1],
+    ownerId: parts[2],
+    positionId: parts.slice(3).join(':')
+  };
 }
 
 function createStockPagePayload({
