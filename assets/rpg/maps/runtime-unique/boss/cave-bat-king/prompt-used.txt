@@ -1,0 +1,1 @@
+Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background that is unique to 폐광 박쥐왕 전용 보스 배경, 16:9 open center arena, scope boss:cave_bat_king, no characters, no UI, no text.

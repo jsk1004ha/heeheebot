@@ -1,0 +1,15 @@
+{
+  "id": "map_runtime_boss_orc_warlord",
+  "label": "오크 전쟁군주 전용 보스 배경",
+  "category": "map",
+  "kind": "map",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_boss_orc_warlord/background.png",
+  "raw": "assets/rpg/maps/runtime-unique/boss/orc-warlord/raw/background.png",
+  "outputSize": [
+    1024,
+    576
+  ],
+  "prompt": "assets/rpg/maps/runtime-unique/boss/orc-warlord/prompt-used.txt",
+  "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+}

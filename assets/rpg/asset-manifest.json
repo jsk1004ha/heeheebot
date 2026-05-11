@@ -4256,7 +4256,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/berserker/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4280,7 +4280,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/berserker/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4304,7 +4304,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/swordmaster/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4328,7 +4328,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/swordmaster/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4352,7 +4352,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/lancer/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4376,7 +4376,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/lancer/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4400,7 +4400,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/blood_warlord/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4424,7 +4424,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/blood_warlord/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4448,7 +4448,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/giantslayer/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4472,7 +4472,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/giantslayer/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4496,7 +4496,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/archmage/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4520,7 +4520,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/archmage/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4544,7 +4544,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/warlock/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4568,7 +4568,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/warlock/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4592,7 +4592,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/ice_magus/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4616,7 +4616,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/ice_magus/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4640,7 +4640,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/grand_magus/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4664,7 +4664,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/grand_magus/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4688,7 +4688,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/sniper/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4712,7 +4712,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/sniper/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4736,7 +4736,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/hunter/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4760,7 +4760,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/hunter/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4784,7 +4784,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/crossbowman/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4808,7 +4808,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/crossbowman/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4832,7 +4832,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/dragon_hunter/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4856,7 +4856,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/dragon_hunter/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4880,7 +4880,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/guardian_knight/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4904,7 +4904,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/guardian_knight/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4928,7 +4928,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/crusader/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4952,7 +4952,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/crusader/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -4976,7 +4976,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/templar_guardian/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5000,7 +5000,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/templar_guardian/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5024,7 +5024,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/royal_shield/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5048,7 +5048,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/royal_shield/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5072,7 +5072,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/saint/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5096,7 +5096,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/saint/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5120,7 +5120,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/exorcist/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5144,7 +5144,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/exorcist/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5168,7 +5168,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/oracle/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5192,7 +5192,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/oracle/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5216,7 +5216,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/archbishop/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5240,7 +5240,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/archbishop/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5264,7 +5264,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/shadow/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5288,7 +5288,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/shadow/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5312,7 +5312,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/phantom_thief/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5336,7 +5336,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/phantom_thief/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5360,7 +5360,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/scout/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5384,7 +5384,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/scout/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5408,7 +5408,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/treasure_hunter/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5432,7 +5432,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/treasure_hunter/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5456,7 +5456,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/card_mage/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5480,7 +5480,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/card_mage/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5504,7 +5504,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/dice_gambler/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5528,7 +5528,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/dice_gambler/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5552,7 +5552,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/coin_trickster/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5576,7 +5576,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/coin_trickster/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5600,7 +5600,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/arcana_lord/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5624,7 +5624,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/arcana_lord/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5648,7 +5648,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/battle_smith/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5672,7 +5672,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/battle_smith/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5696,7 +5696,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/siege_engineer/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5720,7 +5720,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/siege_engineer/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5744,7 +5744,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/rune_smith/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5768,7 +5768,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/rune_smith/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5792,7 +5792,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/sword_saint/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5816,7 +5816,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/sword_saint/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5840,7 +5840,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/shadow_swordsman/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5864,7 +5864,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/shadow_swordsman/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5888,7 +5888,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/stormcaller/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5912,7 +5912,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/stormcaller/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5936,7 +5936,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/curseweaver/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5960,7 +5960,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/curseweaver/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -5984,7 +5984,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/falconer/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6008,7 +6008,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/falconer/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6032,7 +6032,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/forest_stalker/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6056,7 +6056,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/forest_stalker/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6080,7 +6080,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/iron_guardian/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6104,7 +6104,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/iron_guardian/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6128,7 +6128,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/sun_knight/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6152,7 +6152,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/sun_knight/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6176,7 +6176,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/judgment_knight/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6200,7 +6200,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/judgment_knight/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6224,7 +6224,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/sanctuary_weaver/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6248,7 +6248,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/sanctuary_weaver/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6272,7 +6272,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/heresy_inquisitor/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6296,7 +6296,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/heresy_inquisitor/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6320,7 +6320,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/light_apostle/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6344,7 +6344,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/light_apostle/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6368,7 +6368,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/shadow_slayer/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6392,7 +6392,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/shadow_slayer/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6416,7 +6416,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/poison_blade/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6440,7 +6440,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/poison_blade/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6464,7 +6464,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/illusion_thief/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6488,7 +6488,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/illusion_thief/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6512,7 +6512,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/fate_dealer/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6536,7 +6536,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/fate_dealer/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6560,7 +6560,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/chance_weaver/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6584,7 +6584,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/chance_weaver/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6608,7 +6608,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/mad_gambler/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6632,7 +6632,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/mad_gambler/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6656,7 +6656,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/armor_smith/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6680,7 +6680,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/armor_smith/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6704,7 +6704,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/weapon_master/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6728,7 +6728,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/weapon_master/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6752,7 +6752,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/golem_maker/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6776,7 +6776,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/golem_maker/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6800,7 +6800,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/battlefield_architect/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6824,7 +6824,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/battlefield_architect/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6848,7 +6848,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/royal_dragoon/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6872,7 +6872,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/royal_dragoon/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6896,7 +6896,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/frost_sage/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6920,7 +6920,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/frost_sage/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6944,7 +6944,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/storm_marksman/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6968,7 +6968,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/storm_marksman/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -6992,7 +6992,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/holy_avenger/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7016,7 +7016,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/holy_avenger/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7040,7 +7040,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/miracle_worker/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7064,7 +7064,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/miracle_worker/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7088,7 +7088,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/night_raven/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7112,7 +7112,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/night_raven/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7136,7 +7136,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/royal_jester/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7160,7 +7160,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/royal_jester/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7184,7 +7184,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/dragon_forge_master/male/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7208,7 +7208,7 @@
       "clean": "assets/rpg/heroes/advanced/runtime-unique/dragon_forge_master/female/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7232,7 +7232,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_001/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7256,7 +7256,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_002/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7280,7 +7280,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_003/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7304,7 +7304,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_004/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7328,7 +7328,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_005/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7352,7 +7352,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_006/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7376,7 +7376,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_007/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7400,7 +7400,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_008/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7424,7 +7424,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_009/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7448,7 +7448,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_010/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7472,7 +7472,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_011/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7496,7 +7496,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_012/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7520,7 +7520,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_013/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7544,7 +7544,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_014/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7568,7 +7568,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_015/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7592,7 +7592,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_016/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7616,7 +7616,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_017/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7640,7 +7640,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_018/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7664,7 +7664,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_019/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7688,7 +7688,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_020/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7712,7 +7712,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_021/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7736,7 +7736,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_022/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7760,7 +7760,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_023/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7784,7 +7784,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_024/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7808,7 +7808,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_025/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7832,7 +7832,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_026/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7856,7 +7856,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_027/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7880,7 +7880,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_028/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7904,7 +7904,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_029/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7928,7 +7928,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_030/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7952,7 +7952,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_031/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -7976,7 +7976,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_032/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8000,7 +8000,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_033/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8024,7 +8024,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_034/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8048,7 +8048,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_035/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8072,7 +8072,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_036/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8096,7 +8096,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_037/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8120,7 +8120,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_038/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8144,7 +8144,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_039/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8168,7 +8168,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_040/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8192,7 +8192,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_041/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8216,7 +8216,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_042/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8240,7 +8240,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_043/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8264,7 +8264,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_044/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8288,7 +8288,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_045/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8312,7 +8312,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_046/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8336,7 +8336,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_047/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8360,7 +8360,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_048/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8384,7 +8384,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_049/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8408,7 +8408,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_050/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8432,7 +8432,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_051/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8456,7 +8456,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_052/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8480,7 +8480,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_053/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8504,7 +8504,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_054/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8528,7 +8528,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_055/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8552,7 +8552,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_056/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8576,7 +8576,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_057/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8600,7 +8600,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_058/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8624,7 +8624,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_059/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8648,7 +8648,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_060/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8672,7 +8672,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_061/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8696,7 +8696,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_062/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8720,7 +8720,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_063/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8744,7 +8744,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_064/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8768,7 +8768,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_065/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8792,7 +8792,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_066/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8816,7 +8816,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_067/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8840,7 +8840,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_068/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8864,7 +8864,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_069/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8888,7 +8888,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_070/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8912,7 +8912,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_071/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8936,7 +8936,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_072/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8960,7 +8960,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_073/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -8984,7 +8984,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_074/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9008,7 +9008,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_075/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9032,7 +9032,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_076/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9056,7 +9056,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_077/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9080,7 +9080,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_078/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9104,7 +9104,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_079/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9128,7 +9128,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_080/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9152,7 +9152,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_081/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9176,7 +9176,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_082/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9200,7 +9200,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_083/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9224,7 +9224,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_084/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9248,7 +9248,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_085/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9272,7 +9272,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_086/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9296,7 +9296,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_087/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9320,7 +9320,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_088/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9344,7 +9344,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_089/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9368,7 +9368,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_090/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9392,7 +9392,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_091/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9416,7 +9416,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_092/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9440,7 +9440,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_093/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9464,7 +9464,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_094/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9488,7 +9488,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_095/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9512,7 +9512,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_096/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9536,7 +9536,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_097/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9560,7 +9560,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_098/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9584,7 +9584,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_099/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9608,7 +9608,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_100/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9632,7 +9632,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_101/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9656,7 +9656,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_102/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9680,7 +9680,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_103/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9704,7 +9704,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_104/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9728,7 +9728,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_105/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9752,7 +9752,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_106/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9776,7 +9776,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_107/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9800,7 +9800,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_108/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9824,7 +9824,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_109/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9848,7 +9848,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_110/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9872,7 +9872,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_111/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9896,7 +9896,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_112/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9920,7 +9920,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_113/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9944,7 +9944,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_114/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9968,7 +9968,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_115/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -9992,7 +9992,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_116/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -10016,7 +10016,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_117/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -10040,7 +10040,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_118/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -10064,7 +10064,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_119/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -10088,7 +10088,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_120/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -10112,7 +10112,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_121/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -10136,7 +10136,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_122/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -10160,7 +10160,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_123/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -10184,7 +10184,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_124/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -10208,7 +10208,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_125/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -10232,7 +10232,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_126/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -10256,7 +10256,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_127/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -10280,7 +10280,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_128/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -10304,7 +10304,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_129/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -10328,7 +10328,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_130/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -10352,7 +10352,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_131/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -10376,7 +10376,7 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_132/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     },
     {
@@ -10400,7 +10400,1067 @@
       "clean": "assets/rpg/monsters/runtime-unique/unique_133/idle/processed/clean.png",
       "forgeAudit": {
         "normalized": true,
-        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_area_forest",
+      "label": "왕도 남쪽 초원 전용 사냥 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/area/forest/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/area/forest/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/area/forest/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_forest/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_area_wildflower_plains",
+      "label": "고블린 숲 전용 사냥 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/area/wildflower-plains/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/area/wildflower-plains/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/area/wildflower-plains/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_wildflower_plains/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_area_cave",
+      "label": "버려진 은광 전용 사냥 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/area/cave/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/area/cave/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/area/cave/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_cave/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_area_moonlit_hill",
+      "label": "안개 늪지 전용 사냥 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/area/moonlit-hill/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/area/moonlit-hill/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/area/moonlit-hill/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_moonlit_hill/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_area_marsh",
+      "label": "도적단 요새 전용 사냥 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/area/marsh/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/area/marsh/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/area/marsh/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_marsh/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_area_mushroom_grove",
+      "label": "저주받은 수도원 전용 사냥 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/area/mushroom-grove/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/area/mushroom-grove/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/area/mushroom-grove/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_mushroom_grove/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_area_ruins",
+      "label": "붉은 협곡 전용 사냥 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/area/ruins/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/area/ruins/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/area/ruins/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_ruins/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_area_bandit_outpost",
+      "label": "얼어붙은 산맥 전용 사냥 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/area/bandit-outpost/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/area/bandit-outpost/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/area/bandit-outpost/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_bandit_outpost/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_area_red_desert",
+      "label": "고대 엘프 유적 전용 사냥 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/area/red-desert/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/area/red-desert/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/area/red-desert/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_red_desert/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_area_volcano",
+      "label": "용의 둥지 전용 사냥 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/area/volcano/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/area/volcano/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/area/volcano/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_volcano/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_area_thunder_plateau",
+      "label": "마탑 지하서고 전용 사냥 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/area/thunder-plateau/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/area/thunder-plateau/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/area/thunder-plateau/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_thunder_plateau/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_area_frost",
+      "label": "마왕성 외곽 전용 사냥 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/area/frost/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/area/frost/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/area/frost/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_frost/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_area_crystal_lake",
+      "label": "성지 아르덴 전용 사냥 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/area/crystal-lake/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/area/crystal-lake/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/area/crystal-lake/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_crystal_lake/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_area_sky",
+      "label": "왕국 수도 성벽 전용 사냥 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/area/sky/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/area/sky/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/area/sky/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_sky/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_area_phantom_forest",
+      "label": "왕국 대장간 거리 전용 사냥 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/area/phantom-forest/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/area/phantom-forest/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/area/phantom-forest/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_phantom_forest/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_area_abyss_mine",
+      "label": "왕국 비밀 광산 전용 사냥 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/area/abyss-mine/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/area/abyss-mine/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/area/abyss-mine/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_abyss_mine/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_area_starfall_crater",
+      "label": "길드 훈련장 전용 사냥 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/area/starfall-crater/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/area/starfall-crater/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/area/starfall-crater/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_starfall_crater/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_area_dragon_nest",
+      "label": "검은 용의 둥지 전용 사냥 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/area/dragon-nest/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/area/dragon-nest/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/area/dragon-nest/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_dragon_nest/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_area_void_gate",
+      "label": "마왕성 내부 전용 사냥 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/area/void-gate/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/area/void-gate/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/area/void-gate/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_void_gate/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_area_sunken_catacombs",
+      "label": "가라앉은 지하묘지 전용 사냥 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/area/sunken-catacombs/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/area/sunken-catacombs/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/area/sunken-catacombs/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_sunken_catacombs/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_area_dwarven_ironhold",
+      "label": "드워프 철산 전용 사냥 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/area/dwarven-ironhold/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/area/dwarven-ironhold/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/area/dwarven-ironhold/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_dwarven_ironhold/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_area_moonlit_feywood",
+      "label": "달빛 요정숲 전용 사냥 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/area/moonlit-feywood/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/area/moonlit-feywood/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/area/moonlit-feywood/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_moonlit_feywood/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_area_ancient_dragon_altar",
+      "label": "고룡의 제단 전용 사냥 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/area/ancient-dragon-altar/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/area/ancient-dragon-altar/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/area/ancient-dragon-altar/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_ancient_dragon_altar/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_boss_slime_king",
+      "label": "고블린 족장 전용 보스 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/boss/slime-king/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/boss/slime-king/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/boss/slime-king/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_boss_slime_king/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_boss_cave_bat_king",
+      "label": "폐광 박쥐왕 전용 보스 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/boss/cave-bat-king/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/boss/cave-bat-king/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/boss/cave-bat-king/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_boss_cave_bat_king/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_boss_wolf_alpha",
+      "label": "늑대 우두머리 전용 보스 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/boss/wolf-alpha/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/boss/wolf-alpha/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/boss/wolf-alpha/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_boss_wolf_alpha/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_boss_spider_queen",
+      "label": "숲거미 여왕 전용 보스 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/boss/spider-queen/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/boss/spider-queen/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/boss/spider-queen/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_boss_spider_queen/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_boss_orc_warlord",
+      "label": "오크 전쟁군주 전용 보스 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/boss/orc-warlord/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/boss/orc-warlord/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/boss/orc-warlord/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_boss_orc_warlord/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_boss_cursed_abbot",
+      "label": "저주받은 수도원장 전용 보스 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/boss/cursed-abbot/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/boss/cursed-abbot/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/boss/cursed-abbot/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_boss_cursed_abbot/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_boss_marsh_hydra",
+      "label": "늪지 히드라 전용 보스 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/boss/marsh-hydra/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/boss/marsh-hydra/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/boss/marsh-hydra/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_boss_marsh_hydra/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_boss_red_wyvern",
+      "label": "붉은 와이번 전용 보스 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/boss/red-wyvern/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/boss/red-wyvern/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/boss/red-wyvern/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_boss_red_wyvern/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_boss_frost_giant",
+      "label": "서리 거인 전용 보스 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/boss/frost-giant/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/boss/frost-giant/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/boss/frost-giant/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_boss_frost_giant/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_boss_ancient_lich",
+      "label": "고대 리치 전용 보스 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/boss/ancient-lich/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/boss/ancient-lich/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/boss/ancient-lich/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_boss_ancient_lich/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_boss_fallen_paladin",
+      "label": "타락한 성기사 전용 보스 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/boss/fallen-paladin/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/boss/fallen-paladin/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/boss/fallen-paladin/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_boss_fallen_paladin/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_boss_ancient_dragon",
+      "label": "검은 용 베르카르 전용 보스 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/boss/ancient-dragon/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/boss/ancient-dragon/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/boss/ancient-dragon/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_boss_ancient_dragon/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_boss_demon_apostle",
+      "label": "마왕의 사도 전용 보스 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/boss/demon-apostle/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/boss/demon-apostle/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/boss/demon-apostle/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_boss_demon_apostle/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_boss_nightmare_knight",
+      "label": "악몽의 기사 전용 보스 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/boss/nightmare-knight/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/boss/nightmare-knight/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/boss/nightmare-knight/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_boss_nightmare_knight/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_boss_demon_king_valtar",
+      "label": "마왕 발타르 전용 보스 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/boss/demon-king-valtar/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/boss/demon-king-valtar/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/boss/demon-king-valtar/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_boss_demon_king_valtar/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_raid_slime_horde",
+      "label": "숲거미 여왕 전용 레이드 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/raid/slime-horde/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/raid/slime-horde/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/raid/slime-horde/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_raid_slime_horde/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_raid_goblin_warband",
+      "label": "오크 전쟁군주 전용 레이드 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/raid/goblin-warband/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/raid/goblin-warband/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/raid/goblin-warband/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_raid_goblin_warband/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_raid_orc_warlord",
+      "label": "오크 전쟁군주 전용 레이드 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/raid/orc-warlord/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/raid/orc-warlord/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/raid/orc-warlord/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_raid_orc_warlord/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_raid_crystal_hydra",
+      "label": "늪지 히드라 전용 레이드 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/raid/crystal-hydra/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/raid/crystal-hydra/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/raid/crystal-hydra/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_raid_crystal_hydra/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_raid_marsh_behemoth",
+      "label": "붉은 와이번 전용 레이드 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/raid/marsh-behemoth/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/raid/marsh-behemoth/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/raid/marsh-behemoth/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_raid_marsh_behemoth/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_raid_flame_giant",
+      "label": "서리 거인 전용 레이드 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/raid/flame-giant/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/raid/flame-giant/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/raid/flame-giant/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_raid_flame_giant/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_raid_ruins_sentinel",
+      "label": "고대 리치 전용 레이드 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/raid/ruins-sentinel/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/raid/ruins-sentinel/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/raid/ruins-sentinel/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_raid_ruins_sentinel/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_raid_ancient_lich",
+      "label": "고대 리치 전용 레이드 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/raid/ancient-lich/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/raid/ancient-lich/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/raid/ancient-lich/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_raid_ancient_lich/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_raid_frost_lich",
+      "label": "타락한 성기사 전용 레이드 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/raid/frost-lich/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/raid/frost-lich/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/raid/frost-lich/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_raid_frost_lich/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_raid_storm_wyvern",
+      "label": "검은 용 베르카르 전용 레이드 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/raid/storm-wyvern/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/raid/storm-wyvern/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/raid/storm-wyvern/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_raid_storm_wyvern/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_raid_black_dragon",
+      "label": "검은 용 베르카르 전용 레이드 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/raid/black-dragon/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/raid/black-dragon/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/raid/black-dragon/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_raid_black_dragon/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_raid_void_knights",
+      "label": "마왕의 사도 전용 레이드 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/raid/void-knights/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/raid/void-knights/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/raid/void-knights/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_raid_void_knights/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_raid_dragon_rift",
+      "label": "재앙룡 니드호그 전용 레이드 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/raid/dragon-rift/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/raid/dragon-rift/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/raid/dragon-rift/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_raid_dragon_rift/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_raid_sky_golem",
+      "label": "악몽의 기사 전용 레이드 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/raid/sky-golem/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/raid/sky-golem/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/raid/sky-golem/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_raid_sky_golem/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+      }
+    },
+    {
+      "id": "map_runtime_raid_apocalypse_dragon",
+      "label": "마왕 발타르 전용 레이드 배경",
+      "category": "map",
+      "kind": "map",
+      "generatedWith": "agent-sprite-forge:$generate2dmap",
+      "prompt": "assets/rpg/maps/runtime-unique/raid/apocalypse-dragon/prompt-used.txt",
+      "meta": "assets/rpg/maps/runtime-unique/raid/apocalypse-dragon/processed/pipeline-meta.json",
+      "raw": "assets/rpg/maps/runtime-unique/raid/apocalypse-dragon/raw/background.png",
+      "status": "generated",
+      "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_raid_apocalypse_dragon/background.png",
+      "outputSize": [
+        1024,
+        576
+      ],
+      "forgeAudit": {
+        "normalized": true,
+        "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
       }
     }
   ],
@@ -10414,10 +11474,10 @@
   "forgeAudit": {
     "normalizedAt": "2026-05-11T03:16:39.684Z",
     "generatedWithPrefix": "agent-sprite-forge:",
-    "assetCount": 429,
-    "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring",
+    "assetCount": 482,
+    "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring",
     "repaired": [],
-    "runtimeUniqueExpandedAt": "2026-05-11T13:27:50.096Z",
-    "runtimeUniqueGenerated": 257
+    "runtimeUniqueExpandedAt": "2026-05-11T13:38:18.428Z",
+    "runtimeUniqueGenerated": 310
   }
 }

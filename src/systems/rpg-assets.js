@@ -267,11 +267,67 @@ const UNIQUE_RPG_MONSTER_ASSETS = Object.freeze([
   Object.freeze(['monster_unique_132_idle', '검은 용 베르카르']),
   Object.freeze(['monster_unique_133_idle', '마왕 발타르'])
 ]);
+const UNIQUE_RPG_BACKGROUND_MAP_ASSETS = Object.freeze([
+  Object.freeze(['map_runtime_area_forest', '왕도 남쪽 초원 전용 사냥 배경', 'area', 'forest']),
+  Object.freeze(['map_runtime_area_wildflower_plains', '고블린 숲 전용 사냥 배경', 'area', 'wildflower_plains']),
+  Object.freeze(['map_runtime_area_cave', '버려진 은광 전용 사냥 배경', 'area', 'cave']),
+  Object.freeze(['map_runtime_area_moonlit_hill', '안개 늪지 전용 사냥 배경', 'area', 'moonlit_hill']),
+  Object.freeze(['map_runtime_area_marsh', '도적단 요새 전용 사냥 배경', 'area', 'marsh']),
+  Object.freeze(['map_runtime_area_mushroom_grove', '저주받은 수도원 전용 사냥 배경', 'area', 'mushroom_grove']),
+  Object.freeze(['map_runtime_area_ruins', '붉은 협곡 전용 사냥 배경', 'area', 'ruins']),
+  Object.freeze(['map_runtime_area_bandit_outpost', '얼어붙은 산맥 전용 사냥 배경', 'area', 'bandit_outpost']),
+  Object.freeze(['map_runtime_area_red_desert', '고대 엘프 유적 전용 사냥 배경', 'area', 'red_desert']),
+  Object.freeze(['map_runtime_area_volcano', '용의 둥지 전용 사냥 배경', 'area', 'volcano']),
+  Object.freeze(['map_runtime_area_thunder_plateau', '마탑 지하서고 전용 사냥 배경', 'area', 'thunder_plateau']),
+  Object.freeze(['map_runtime_area_frost', '마왕성 외곽 전용 사냥 배경', 'area', 'frost']),
+  Object.freeze(['map_runtime_area_crystal_lake', '성지 아르덴 전용 사냥 배경', 'area', 'crystal_lake']),
+  Object.freeze(['map_runtime_area_sky', '왕국 수도 성벽 전용 사냥 배경', 'area', 'sky']),
+  Object.freeze(['map_runtime_area_phantom_forest', '왕국 대장간 거리 전용 사냥 배경', 'area', 'phantom_forest']),
+  Object.freeze(['map_runtime_area_abyss_mine', '왕국 비밀 광산 전용 사냥 배경', 'area', 'abyss_mine']),
+  Object.freeze(['map_runtime_area_starfall_crater', '길드 훈련장 전용 사냥 배경', 'area', 'starfall_crater']),
+  Object.freeze(['map_runtime_area_dragon_nest', '검은 용의 둥지 전용 사냥 배경', 'area', 'dragon_nest']),
+  Object.freeze(['map_runtime_area_void_gate', '마왕성 내부 전용 사냥 배경', 'area', 'void_gate']),
+  Object.freeze(['map_runtime_area_sunken_catacombs', '가라앉은 지하묘지 전용 사냥 배경', 'area', 'sunken_catacombs']),
+  Object.freeze(['map_runtime_area_dwarven_ironhold', '드워프 철산 전용 사냥 배경', 'area', 'dwarven_ironhold']),
+  Object.freeze(['map_runtime_area_moonlit_feywood', '달빛 요정숲 전용 사냥 배경', 'area', 'moonlit_feywood']),
+  Object.freeze(['map_runtime_area_ancient_dragon_altar', '고룡의 제단 전용 사냥 배경', 'area', 'ancient_dragon_altar']),
+  Object.freeze(['map_runtime_boss_slime_king', '고블린 족장 전용 보스 배경', 'boss', 'slime_king']),
+  Object.freeze(['map_runtime_boss_cave_bat_king', '폐광 박쥐왕 전용 보스 배경', 'boss', 'cave_bat_king']),
+  Object.freeze(['map_runtime_boss_wolf_alpha', '늑대 우두머리 전용 보스 배경', 'boss', 'wolf_alpha']),
+  Object.freeze(['map_runtime_boss_spider_queen', '숲거미 여왕 전용 보스 배경', 'boss', 'spider_queen']),
+  Object.freeze(['map_runtime_boss_orc_warlord', '오크 전쟁군주 전용 보스 배경', 'boss', 'orc_warlord']),
+  Object.freeze(['map_runtime_boss_cursed_abbot', '저주받은 수도원장 전용 보스 배경', 'boss', 'cursed_abbot']),
+  Object.freeze(['map_runtime_boss_marsh_hydra', '늪지 히드라 전용 보스 배경', 'boss', 'marsh_hydra']),
+  Object.freeze(['map_runtime_boss_red_wyvern', '붉은 와이번 전용 보스 배경', 'boss', 'red_wyvern']),
+  Object.freeze(['map_runtime_boss_frost_giant', '서리 거인 전용 보스 배경', 'boss', 'frost_giant']),
+  Object.freeze(['map_runtime_boss_ancient_lich', '고대 리치 전용 보스 배경', 'boss', 'ancient_lich']),
+  Object.freeze(['map_runtime_boss_fallen_paladin', '타락한 성기사 전용 보스 배경', 'boss', 'fallen_paladin']),
+  Object.freeze(['map_runtime_boss_ancient_dragon', '검은 용 베르카르 전용 보스 배경', 'boss', 'ancient_dragon']),
+  Object.freeze(['map_runtime_boss_demon_apostle', '마왕의 사도 전용 보스 배경', 'boss', 'demon_apostle']),
+  Object.freeze(['map_runtime_boss_nightmare_knight', '악몽의 기사 전용 보스 배경', 'boss', 'nightmare_knight']),
+  Object.freeze(['map_runtime_boss_demon_king_valtar', '마왕 발타르 전용 보스 배경', 'boss', 'demon_king_valtar']),
+  Object.freeze(['map_runtime_raid_slime_horde', '숲거미 여왕 전용 레이드 배경', 'raid', 'slime_horde']),
+  Object.freeze(['map_runtime_raid_goblin_warband', '오크 전쟁군주 전용 레이드 배경', 'raid', 'goblin_warband']),
+  Object.freeze(['map_runtime_raid_orc_warlord', '오크 전쟁군주 전용 레이드 배경', 'raid', 'orc_warlord']),
+  Object.freeze(['map_runtime_raid_crystal_hydra', '늪지 히드라 전용 레이드 배경', 'raid', 'crystal_hydra']),
+  Object.freeze(['map_runtime_raid_marsh_behemoth', '붉은 와이번 전용 레이드 배경', 'raid', 'marsh_behemoth']),
+  Object.freeze(['map_runtime_raid_flame_giant', '서리 거인 전용 레이드 배경', 'raid', 'flame_giant']),
+  Object.freeze(['map_runtime_raid_ruins_sentinel', '고대 리치 전용 레이드 배경', 'raid', 'ruins_sentinel']),
+  Object.freeze(['map_runtime_raid_ancient_lich', '고대 리치 전용 레이드 배경', 'raid', 'ancient_lich']),
+  Object.freeze(['map_runtime_raid_frost_lich', '타락한 성기사 전용 레이드 배경', 'raid', 'frost_lich']),
+  Object.freeze(['map_runtime_raid_storm_wyvern', '검은 용 베르카르 전용 레이드 배경', 'raid', 'storm_wyvern']),
+  Object.freeze(['map_runtime_raid_black_dragon', '검은 용 베르카르 전용 레이드 배경', 'raid', 'black_dragon']),
+  Object.freeze(['map_runtime_raid_void_knights', '마왕의 사도 전용 레이드 배경', 'raid', 'void_knights']),
+  Object.freeze(['map_runtime_raid_dragon_rift', '재앙룡 니드호그 전용 레이드 배경', 'raid', 'dragon_rift']),
+  Object.freeze(['map_runtime_raid_sky_golem', '악몽의 기사 전용 레이드 배경', 'raid', 'sky_golem']),
+  Object.freeze(['map_runtime_raid_apocalypse_dragon', '마왕 발타르 전용 레이드 배경', 'raid', 'apocalypse_dragon'])
+]);
 // AUTO-GENERATED UNIQUE RPG RUNTIME ASSETS END
 
 const RPG_ASSETS = Object.freeze([
   ...UNIQUE_RPG_ADVANCED_CLASS_ASSETS.map(createUniqueAdvancedClassAsset),
   ...UNIQUE_RPG_MONSTER_ASSETS.map(createUniqueMonsterAsset),
+  ...UNIQUE_RPG_BACKGROUND_MAP_ASSETS.map(createUniqueBackgroundMapAsset),
   spriteAsset({
     id: 'hero_adventurer_idle',
     label: '초보 모험가 대기 모션',
@@ -1572,6 +1628,16 @@ function createUniqueMonsterAsset([id, label]) {
     sheet: 'single',
     outputDir: `assets/rpg/monsters/runtime-unique/${id.replace(/^monster_/, '').replace(/_idle$/, '')}/idle`,
     prompt: `Use $generate2dsprite to create a clean HD 2D RPG monster sprite, single creature centered, visually distinct silhouette, no duplicate monster design, no text, transparent final asset. Korean monster concept: ${label}.`
+  });
+}
+
+function createUniqueBackgroundMapAsset([id, label, scope, key]) {
+  return mapAsset({
+    id,
+    label,
+    category: 'map',
+    outputDir: `assets/rpg/maps/runtime-unique/${scope}/${key.replaceAll('_', '-')}`,
+    prompt: `Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background that is unique to ${label}, 16:9 open center arena, scope ${scope}:${key}, no characters, no UI, no text.`
   });
 }
 

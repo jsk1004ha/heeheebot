@@ -339,7 +339,7 @@ const RPG_AREAS = Object.freeze({
     label: '왕도 남쪽 초원',
     unlockLevel: 1,
     description: '슬라임, 늑대, 들쥐가 나오는 초보 모험가 사냥터',
-    backgroundAssetId: 'map_forest_glade',
+    backgroundAssetId: 'map_runtime_area_forest',
     coinMultiplier: 1,
     xpMultiplier: 1,
     monsters: Object.freeze({
@@ -352,7 +352,7 @@ const RPG_AREAS = Object.freeze({
     label: '고블린 숲',
     unlockLevel: 5,
     description: '고블린과 숲거미가 자원을 숨겨둔 초반 숲',
-    backgroundAssetId: 'map_wildflower_plains',
+    backgroundAssetId: 'map_runtime_area_wildflower_plains',
     coinMultiplier: 1.08,
     xpMultiplier: 1.05,
     monsters: Object.freeze({
@@ -365,7 +365,7 @@ const RPG_AREAS = Object.freeze({
     label: '버려진 은광',
     unlockLevel: 10,
     description: '박쥐와 광산 골렘이 지키는 광석 파밍 지역',
-    backgroundAssetId: 'map_crystal_cave',
+    backgroundAssetId: 'map_runtime_area_cave',
     coinMultiplier: 1.18,
     xpMultiplier: 1.12,
     monsters: Object.freeze({
@@ -378,7 +378,7 @@ const RPG_AREAS = Object.freeze({
     label: '안개 늪지',
     unlockLevel: 15,
     description: '독두꺼비와 늪지 망령이 떠도는 위험한 습지',
-    backgroundAssetId: 'map_moonlit_hill',
+    backgroundAssetId: 'map_runtime_area_moonlit_hill',
     coinMultiplier: 1.28,
     xpMultiplier: 1.2,
     monsters: Object.freeze({
@@ -391,7 +391,7 @@ const RPG_AREAS = Object.freeze({
     label: '도적단 요새',
     unlockLevel: 20,
     description: '도적, 암살자, 함정이 많은 인간형 전투 지역',
-    backgroundAssetId: 'map_bandit_outpost',
+    backgroundAssetId: 'map_runtime_area_marsh',
     coinMultiplier: 1.4,
     xpMultiplier: 1.28,
     monsters: Object.freeze({
@@ -404,7 +404,7 @@ const RPG_AREAS = Object.freeze({
     label: '저주받은 수도원',
     unlockLevel: 25,
     description: '스켈레톤과 망령이 배회하는 성직자 활약 지역',
-    backgroundAssetId: 'map_mushroom_grove',
+    backgroundAssetId: 'map_runtime_area_mushroom_grove',
     coinMultiplier: 1.52,
     xpMultiplier: 1.36,
     monsters: Object.freeze({
@@ -417,7 +417,7 @@ const RPG_AREAS = Object.freeze({
     label: '붉은 협곡',
     unlockLevel: 30,
     description: '오크와 와이번이 지키는 붉은 광석 협곡',
-    backgroundAssetId: 'map_red_desert',
+    backgroundAssetId: 'map_runtime_area_ruins',
     coinMultiplier: 1.65,
     xpMultiplier: 1.48,
     monsters: Object.freeze({
@@ -430,7 +430,7 @@ const RPG_AREAS = Object.freeze({
     label: '얼어붙은 산맥',
     unlockLevel: 40,
     description: '서리정령과 설인이 버티는 냉기 저항 요구 지역',
-    backgroundAssetId: 'map_frozen_peak',
+    backgroundAssetId: 'map_runtime_area_bandit_outpost',
     coinMultiplier: 1.85,
     xpMultiplier: 1.68,
     monsters: Object.freeze({
@@ -443,7 +443,7 @@ const RPG_AREAS = Object.freeze({
     label: '고대 엘프 유적',
     unlockLevel: 45,
     description: '정령과 고대 수호자가 룬석을 지키는 유적',
-    backgroundAssetId: 'map_ancient_ruins',
+    backgroundAssetId: 'map_runtime_area_red_desert',
     coinMultiplier: 2.05,
     xpMultiplier: 1.9,
     monsters: Object.freeze({
@@ -456,7 +456,7 @@ const RPG_AREAS = Object.freeze({
     label: '용의 둥지',
     unlockLevel: 55,
     description: '드레이크와 용족이 화염 장비 재료를 드롭하는 상위 지역',
-    backgroundAssetId: 'map_dragon_nest',
+    backgroundAssetId: 'map_runtime_area_volcano',
     coinMultiplier: 2.35,
     xpMultiplier: 2.18,
     monsters: Object.freeze({
@@ -469,7 +469,7 @@ const RPG_AREAS = Object.freeze({
     label: '마탑 지하서고',
     unlockLevel: 60,
     description: '마법사와 성직자가 활약하는 고난도 마법 지역',
-    backgroundAssetId: 'map_thunder_plateau',
+    backgroundAssetId: 'map_runtime_area_thunder_plateau',
     coinMultiplier: 2.55,
     xpMultiplier: 2.35,
     monsters: Object.freeze({
@@ -482,7 +482,7 @@ const RPG_AREAS = Object.freeze({
     label: '마왕성 외곽',
     unlockLevel: 70,
     description: '악마와 타락 기사가 등장하는 엔드게임 전초지',
-    backgroundAssetId: 'map_void_bastion',
+    backgroundAssetId: 'map_runtime_area_frost',
     coinMultiplier: 2.9,
     xpMultiplier: 2.7,
     monsters: Object.freeze({
@@ -495,7 +495,7 @@ const RPG_AREAS = Object.freeze({
     label: '성지 아르덴',
     unlockLevel: 60,
     description: '성역과 부활 의식이 얽힌 고난도 성지',
-    backgroundAssetId: 'map_crystal_lake',
+    backgroundAssetId: 'map_runtime_area_crystal_lake',
     coinMultiplier: 2.5,
     xpMultiplier: 2.3,
     monsters: Object.freeze({
@@ -508,7 +508,7 @@ const RPG_AREAS = Object.freeze({
     label: '왕국 수도 성벽',
     unlockLevel: 65,
     description: '서버 공동 방어전과 길드 활동의 거점',
-    backgroundAssetId: 'map_sky_citadel',
+    backgroundAssetId: 'map_runtime_area_sky',
     coinMultiplier: 2.65,
     xpMultiplier: 2.45,
     monsters: Object.freeze({
@@ -521,7 +521,7 @@ const RPG_AREAS = Object.freeze({
     label: '왕국 대장간 거리',
     unlockLevel: 25,
     description: '대장장이 제작 재료와 강화석을 얻기 쉬운 도시 외곽',
-    backgroundAssetId: 'map_phantom_forest',
+    backgroundAssetId: 'map_runtime_area_phantom_forest',
     coinMultiplier: 1.45,
     xpMultiplier: 1.3,
     monsters: Object.freeze({
@@ -534,7 +534,7 @@ const RPG_AREAS = Object.freeze({
     label: '왕국 비밀 광산',
     unlockLevel: 35,
     description: '히든 무기 재료를 노리는 위험한 광산',
-    backgroundAssetId: 'map_abyss_mine',
+    backgroundAssetId: 'map_runtime_area_abyss_mine',
     coinMultiplier: 1.78,
     xpMultiplier: 1.6,
     monsters: Object.freeze({
@@ -547,7 +547,7 @@ const RPG_AREAS = Object.freeze({
     label: '길드 훈련장',
     unlockLevel: 1,
     description: '직업 전환과 전투 튜토리얼을 연습하는 길드 시설',
-    backgroundAssetId: 'map_starfall_crater',
+    backgroundAssetId: 'map_runtime_area_starfall_crater',
     coinMultiplier: 0.95,
     xpMultiplier: 0.95,
     monsters: Object.freeze({
@@ -560,7 +560,7 @@ const RPG_AREAS = Object.freeze({
     label: '검은 용의 둥지',
     unlockLevel: 75,
     description: '검은 용 베르카르에게 도전하기 전 최상위 용족 사냥터',
-    backgroundAssetId: 'map_dragon_nest',
+    backgroundAssetId: 'map_runtime_area_dragon_nest',
     coinMultiplier: 3.1,
     xpMultiplier: 2.95,
     monsters: Object.freeze({
@@ -573,7 +573,7 @@ const RPG_AREAS = Object.freeze({
     label: '마왕성 내부',
     unlockLevel: 80,
     description: '마왕 발타르와 시즌 최종 보스를 향하는 최심부',
-    backgroundAssetId: 'map_void_gate',
+    backgroundAssetId: 'map_runtime_area_void_gate',
     coinMultiplier: 3.35,
     xpMultiplier: 3.1,
     monsters: Object.freeze({
@@ -586,7 +586,7 @@ const RPG_AREAS = Object.freeze({
     label: '가라앉은 지하묘지',
     unlockLevel: 30,
     description: '왕국 옛 묘지가 늪 아래로 잠긴 언데드 탐사 지역',
-    backgroundAssetId: 'map_marsh_depths',
+    backgroundAssetId: 'map_runtime_area_sunken_catacombs',
     coinMultiplier: 1.72,
     xpMultiplier: 1.55,
     monsters: Object.freeze({
@@ -599,7 +599,7 @@ const RPG_AREAS = Object.freeze({
     label: '드워프 철산',
     unlockLevel: 45,
     description: '드워프 폐요새와 용광로가 남은 고급 금속 탐사 지역',
-    backgroundAssetId: 'map_sky_foundry',
+    backgroundAssetId: 'map_runtime_area_dwarven_ironhold',
     coinMultiplier: 2.08,
     xpMultiplier: 1.95,
     monsters: Object.freeze({
@@ -612,7 +612,7 @@ const RPG_AREAS = Object.freeze({
     label: '달빛 요정숲',
     unlockLevel: 55,
     description: '고대 숲의 결계와 달샘이 숨겨진 유물 탐사 지역',
-    backgroundAssetId: 'map_ancient_ruins',
+    backgroundAssetId: 'map_runtime_area_moonlit_feywood',
     coinMultiplier: 2.38,
     xpMultiplier: 2.18,
     monsters: Object.freeze({
@@ -625,7 +625,7 @@ const RPG_AREAS = Object.freeze({
     label: '고룡의 제단',
     unlockLevel: 70,
     description: '용의심장과 검은 용창 전승이 남은 최상위 제단',
-    backgroundAssetId: 'map_lava_throne',
+    backgroundAssetId: 'map_runtime_area_ancient_dragon_altar',
     coinMultiplier: 3,
     xpMultiplier: 2.82,
     monsters: Object.freeze({
@@ -1023,21 +1023,21 @@ const RPG_DAILY_MISSIONS = Object.freeze({
 });
 
 const RPG_BOSSES = Object.freeze({
-  slime_king: Object.freeze({ label: '고블린 족장', area: 'wildflower_plains', unlockLevel: 5, powerMin: 14, powerMax: 26, xpReward: 220, coinReward: 650, monster: '고블린 족장', backgroundAssetId: 'map_wildflower_plains' }),
-  cave_bat_king: Object.freeze({ label: '폐광 박쥐왕', area: 'cave', unlockLevel: 10, powerMin: 18, powerMax: 32, xpReward: 300, coinReward: 780, monster: '폐광 박쥐왕', backgroundAssetId: 'map_crystal_cave' }),
-  wolf_alpha: Object.freeze({ label: '늑대 우두머리', area: 'forest', unlockLevel: 8, powerMin: 16, powerMax: 30, xpReward: 260, coinReward: 700, monster: '늑대 우두머리', backgroundAssetId: 'map_forest_glade' }),
-  spider_queen: Object.freeze({ label: '숲거미 여왕', area: 'wildflower_plains', unlockLevel: 12, powerMin: 22, powerMax: 38, xpReward: 420, coinReward: 1000, monster: '숲거미 여왕', backgroundAssetId: 'map_wildflower_plains' }),
-  orc_warlord: Object.freeze({ label: '오크 전쟁군주', area: 'ruins', unlockLevel: 30, powerMin: 42, powerMax: 62, xpReward: 900, coinReward: 2300, monster: '오크 전쟁군주', backgroundAssetId: 'map_red_desert' }),
-  cursed_abbot: Object.freeze({ label: '저주받은 수도원장', area: 'mushroom_grove', unlockLevel: 28, powerMin: 38, powerMax: 58, xpReward: 820, coinReward: 2100, monster: '저주받은 사제', backgroundAssetId: 'map_mushroom_grove' }),
-  marsh_hydra: Object.freeze({ label: '늪지 히드라', area: 'moonlit_hill', unlockLevel: 35, powerMin: 50, powerMax: 72, xpReward: 1300, coinReward: 3000, monster: '늪지 히드라', backgroundAssetId: 'map_crystal_nest' }),
-  red_wyvern: Object.freeze({ label: '붉은 와이번', area: 'ruins', unlockLevel: 40, powerMin: 54, powerMax: 78, xpReward: 1500, coinReward: 3400, monster: '붉은 와이번', backgroundAssetId: 'map_red_desert' }),
-  frost_giant: Object.freeze({ label: '서리 거인', area: 'bandit_outpost', unlockLevel: 50, powerMin: 62, powerMax: 86, xpReward: 1900, coinReward: 4000, monster: '서리 거인', backgroundAssetId: 'map_frozen_peak' }),
-  ancient_lich: Object.freeze({ label: '고대 리치', area: 'red_desert', unlockLevel: 55, powerMin: 68, powerMax: 92, xpReward: 2200, coinReward: 4600, monster: '고대 리치', backgroundAssetId: 'map_ancient_ruins' }),
-  fallen_paladin: Object.freeze({ label: '타락한 성기사', area: 'crystal_lake', unlockLevel: 60, powerMin: 72, powerMax: 98, xpReward: 2600, coinReward: 5200, monster: '타락한 성기사', backgroundAssetId: 'map_crystal_lake' }),
-  ancient_dragon: Object.freeze({ label: '검은 용 베르카르', area: 'dragon_nest', unlockLevel: 75, powerMin: 60, powerMax: 88, xpReward: 1500, coinReward: 4200, monster: '검은 용 베르카르', backgroundAssetId: 'map_dragon_nest' }),
-  demon_apostle: Object.freeze({ label: '마왕의 사도', area: 'frost', unlockLevel: 80, powerMin: 92, powerMax: 120, xpReward: 4200, coinReward: 8200, monster: '마왕의 사도', backgroundAssetId: 'map_void_bastion' }),
-  nightmare_knight: Object.freeze({ label: '악몽의 기사', area: 'void_gate', unlockLevel: 82, powerMin: 96, powerMax: 126, xpReward: 4600, coinReward: 9000, monster: '악몽의 기사', backgroundAssetId: 'map_void_gate' }),
-  demon_king_valtar: Object.freeze({ label: '마왕 발타르', area: 'void_gate', unlockLevel: 85, powerMin: 108, powerMax: 142, xpReward: 6500, coinReward: 14000, monster: '마왕 발타르', backgroundAssetId: 'map_eclipse_throne' })
+  slime_king: Object.freeze({ label: '고블린 족장', area: 'wildflower_plains', unlockLevel: 5, powerMin: 14, powerMax: 26, xpReward: 220, coinReward: 650, monster: '고블린 족장', backgroundAssetId: 'map_runtime_boss_slime_king' }),
+  cave_bat_king: Object.freeze({ label: '폐광 박쥐왕', area: 'cave', unlockLevel: 10, powerMin: 18, powerMax: 32, xpReward: 300, coinReward: 780, monster: '폐광 박쥐왕', backgroundAssetId: 'map_runtime_boss_cave_bat_king' }),
+  wolf_alpha: Object.freeze({ label: '늑대 우두머리', area: 'forest', unlockLevel: 8, powerMin: 16, powerMax: 30, xpReward: 260, coinReward: 700, monster: '늑대 우두머리', backgroundAssetId: 'map_runtime_boss_wolf_alpha' }),
+  spider_queen: Object.freeze({ label: '숲거미 여왕', area: 'wildflower_plains', unlockLevel: 12, powerMin: 22, powerMax: 38, xpReward: 420, coinReward: 1000, monster: '숲거미 여왕', backgroundAssetId: 'map_runtime_boss_spider_queen' }),
+  orc_warlord: Object.freeze({ label: '오크 전쟁군주', area: 'ruins', unlockLevel: 30, powerMin: 42, powerMax: 62, xpReward: 900, coinReward: 2300, monster: '오크 전쟁군주', backgroundAssetId: 'map_runtime_boss_orc_warlord' }),
+  cursed_abbot: Object.freeze({ label: '저주받은 수도원장', area: 'mushroom_grove', unlockLevel: 28, powerMin: 38, powerMax: 58, xpReward: 820, coinReward: 2100, monster: '저주받은 사제', backgroundAssetId: 'map_runtime_boss_cursed_abbot' }),
+  marsh_hydra: Object.freeze({ label: '늪지 히드라', area: 'moonlit_hill', unlockLevel: 35, powerMin: 50, powerMax: 72, xpReward: 1300, coinReward: 3000, monster: '늪지 히드라', backgroundAssetId: 'map_runtime_boss_marsh_hydra' }),
+  red_wyvern: Object.freeze({ label: '붉은 와이번', area: 'ruins', unlockLevel: 40, powerMin: 54, powerMax: 78, xpReward: 1500, coinReward: 3400, monster: '붉은 와이번', backgroundAssetId: 'map_runtime_boss_red_wyvern' }),
+  frost_giant: Object.freeze({ label: '서리 거인', area: 'bandit_outpost', unlockLevel: 50, powerMin: 62, powerMax: 86, xpReward: 1900, coinReward: 4000, monster: '서리 거인', backgroundAssetId: 'map_runtime_boss_frost_giant' }),
+  ancient_lich: Object.freeze({ label: '고대 리치', area: 'red_desert', unlockLevel: 55, powerMin: 68, powerMax: 92, xpReward: 2200, coinReward: 4600, monster: '고대 리치', backgroundAssetId: 'map_runtime_boss_ancient_lich' }),
+  fallen_paladin: Object.freeze({ label: '타락한 성기사', area: 'crystal_lake', unlockLevel: 60, powerMin: 72, powerMax: 98, xpReward: 2600, coinReward: 5200, monster: '타락한 성기사', backgroundAssetId: 'map_runtime_boss_fallen_paladin' }),
+  ancient_dragon: Object.freeze({ label: '검은 용 베르카르', area: 'dragon_nest', unlockLevel: 75, powerMin: 60, powerMax: 88, xpReward: 1500, coinReward: 4200, monster: '검은 용 베르카르', backgroundAssetId: 'map_runtime_boss_ancient_dragon' }),
+  demon_apostle: Object.freeze({ label: '마왕의 사도', area: 'frost', unlockLevel: 80, powerMin: 92, powerMax: 120, xpReward: 4200, coinReward: 8200, monster: '마왕의 사도', backgroundAssetId: 'map_runtime_boss_demon_apostle' }),
+  nightmare_knight: Object.freeze({ label: '악몽의 기사', area: 'void_gate', unlockLevel: 82, powerMin: 96, powerMax: 126, xpReward: 4600, coinReward: 9000, monster: '악몽의 기사', backgroundAssetId: 'map_runtime_boss_nightmare_knight' }),
+  demon_king_valtar: Object.freeze({ label: '마왕 발타르', area: 'void_gate', unlockLevel: 85, powerMin: 108, powerMax: 142, xpReward: 6500, coinReward: 14000, monster: '마왕 발타르', backgroundAssetId: 'map_runtime_boss_demon_king_valtar' })
 });
 
 const RPG_BOSS_PATTERNS = Object.freeze({
@@ -1174,21 +1174,21 @@ const RPG_TUTORIAL_STEPS = Object.freeze({
 });
 
 const RPG_RAIDS = Object.freeze({
-  slime_horde: Object.freeze({ label: '숲거미 여왕', area: 'wildflower_plains', unlockLevel: 10, powerMin: 24, powerMax: 38, xpReward: 420, coinReward: 1100, monster: '숲거미 여왕', backgroundAssetId: 'map_wildflower_plains' }),
-  goblin_warband: Object.freeze({ label: '오크 전쟁군주', area: 'ruins', unlockLevel: 30, powerMin: 42, powerMax: 62, xpReward: 900, coinReward: 2300, monster: '오크 전쟁군주', backgroundAssetId: 'map_red_desert' }),
-  orc_warlord: Object.freeze({ label: '오크 전쟁군주', area: 'ruins', unlockLevel: 30, powerMin: 42, powerMax: 62, xpReward: 900, coinReward: 2300, monster: '오크 전쟁군주', backgroundAssetId: 'map_red_desert' }),
-  crystal_hydra: Object.freeze({ label: '늪지 히드라', area: 'moonlit_hill', unlockLevel: 35, powerMin: 50, powerMax: 72, xpReward: 1300, coinReward: 3000, monster: '늪지 히드라', backgroundAssetId: 'map_crystal_nest' }),
-  marsh_behemoth: Object.freeze({ label: '붉은 와이번', area: 'ruins', unlockLevel: 40, powerMin: 54, powerMax: 78, xpReward: 1500, coinReward: 3400, monster: '붉은 와이번', backgroundAssetId: 'map_red_desert' }),
-  ruins_sentinel: Object.freeze({ label: '고대 리치', area: 'red_desert', unlockLevel: 55, powerMin: 68, powerMax: 92, xpReward: 2200, coinReward: 4600, monster: '고대 리치', backgroundAssetId: 'map_ancient_ruins' }),
-  ancient_lich: Object.freeze({ label: '고대 리치', area: 'red_desert', unlockLevel: 55, powerMin: 68, powerMax: 92, xpReward: 2200, coinReward: 4600, monster: '고대 리치', backgroundAssetId: 'map_ancient_ruins' }),
-  flame_giant: Object.freeze({ label: '서리 거인', area: 'bandit_outpost', unlockLevel: 50, powerMin: 62, powerMax: 86, xpReward: 1900, coinReward: 4000, monster: '서리 거인', backgroundAssetId: 'map_frozen_peak' }),
-  frost_lich: Object.freeze({ label: '타락한 성기사', area: 'crystal_lake', unlockLevel: 60, powerMin: 72, powerMax: 98, xpReward: 2600, coinReward: 5200, monster: '타락한 성기사', backgroundAssetId: 'map_crystal_lake' }),
-  storm_wyvern: Object.freeze({ label: '검은 용 베르카르', area: 'dragon_nest', unlockLevel: 75, powerMin: 84, powerMax: 112, xpReward: 3600, coinReward: 7000, monster: '검은 용 베르카르', backgroundAssetId: 'map_dragon_nest' }),
-  black_dragon: Object.freeze({ label: '검은 용 베르카르', area: 'dragon_nest', unlockLevel: 75, powerMin: 84, powerMax: 112, xpReward: 3600, coinReward: 7000, monster: '검은 용 베르카르', backgroundAssetId: 'map_dragon_nest' }),
-  void_knights: Object.freeze({ label: '마왕의 사도', area: 'frost', unlockLevel: 80, powerMin: 92, powerMax: 120, xpReward: 4200, coinReward: 8200, monster: '마왕의 사도', backgroundAssetId: 'map_void_bastion' }),
-  sky_golem: Object.freeze({ label: '악몽의 기사', area: 'void_gate', unlockLevel: 82, powerMin: 96, powerMax: 126, xpReward: 4600, coinReward: 9000, monster: '악몽의 기사', backgroundAssetId: 'map_void_gate' }),
-  dragon_rift: Object.freeze({ label: '재앙룡 니드호그', area: 'dragon_nest', unlockLevel: 80, powerMin: 100, powerMax: 132, xpReward: 5400, coinReward: 11000, monster: '검은 용 베르카르', backgroundAssetId: 'map_dragon_nest' }),
-  apocalypse_dragon: Object.freeze({ label: '마왕 발타르', area: 'void_gate', unlockLevel: 85, powerMin: 108, powerMax: 142, xpReward: 6500, coinReward: 14000, monster: '마왕 발타르', backgroundAssetId: 'map_eclipse_throne' })
+  slime_horde: Object.freeze({ label: '숲거미 여왕', area: 'wildflower_plains', unlockLevel: 10, powerMin: 24, powerMax: 38, xpReward: 420, coinReward: 1100, monster: '숲거미 여왕', backgroundAssetId: 'map_runtime_raid_slime_horde' }),
+  goblin_warband: Object.freeze({ label: '오크 전쟁군주', area: 'ruins', unlockLevel: 30, powerMin: 42, powerMax: 62, xpReward: 900, coinReward: 2300, monster: '오크 전쟁군주', backgroundAssetId: 'map_runtime_raid_goblin_warband' }),
+  orc_warlord: Object.freeze({ label: '오크 전쟁군주', area: 'ruins', unlockLevel: 30, powerMin: 42, powerMax: 62, xpReward: 900, coinReward: 2300, monster: '오크 전쟁군주', backgroundAssetId: 'map_runtime_raid_orc_warlord' }),
+  crystal_hydra: Object.freeze({ label: '늪지 히드라', area: 'moonlit_hill', unlockLevel: 35, powerMin: 50, powerMax: 72, xpReward: 1300, coinReward: 3000, monster: '늪지 히드라', backgroundAssetId: 'map_runtime_raid_crystal_hydra' }),
+  marsh_behemoth: Object.freeze({ label: '붉은 와이번', area: 'ruins', unlockLevel: 40, powerMin: 54, powerMax: 78, xpReward: 1500, coinReward: 3400, monster: '붉은 와이번', backgroundAssetId: 'map_runtime_raid_marsh_behemoth' }),
+  ruins_sentinel: Object.freeze({ label: '고대 리치', area: 'red_desert', unlockLevel: 55, powerMin: 68, powerMax: 92, xpReward: 2200, coinReward: 4600, monster: '고대 리치', backgroundAssetId: 'map_runtime_raid_ruins_sentinel' }),
+  ancient_lich: Object.freeze({ label: '고대 리치', area: 'red_desert', unlockLevel: 55, powerMin: 68, powerMax: 92, xpReward: 2200, coinReward: 4600, monster: '고대 리치', backgroundAssetId: 'map_runtime_raid_ancient_lich' }),
+  flame_giant: Object.freeze({ label: '서리 거인', area: 'bandit_outpost', unlockLevel: 50, powerMin: 62, powerMax: 86, xpReward: 1900, coinReward: 4000, monster: '서리 거인', backgroundAssetId: 'map_runtime_raid_flame_giant' }),
+  frost_lich: Object.freeze({ label: '타락한 성기사', area: 'crystal_lake', unlockLevel: 60, powerMin: 72, powerMax: 98, xpReward: 2600, coinReward: 5200, monster: '타락한 성기사', backgroundAssetId: 'map_runtime_raid_frost_lich' }),
+  storm_wyvern: Object.freeze({ label: '검은 용 베르카르', area: 'dragon_nest', unlockLevel: 75, powerMin: 84, powerMax: 112, xpReward: 3600, coinReward: 7000, monster: '검은 용 베르카르', backgroundAssetId: 'map_runtime_raid_storm_wyvern' }),
+  black_dragon: Object.freeze({ label: '검은 용 베르카르', area: 'dragon_nest', unlockLevel: 75, powerMin: 84, powerMax: 112, xpReward: 3600, coinReward: 7000, monster: '검은 용 베르카르', backgroundAssetId: 'map_runtime_raid_black_dragon' }),
+  void_knights: Object.freeze({ label: '마왕의 사도', area: 'frost', unlockLevel: 80, powerMin: 92, powerMax: 120, xpReward: 4200, coinReward: 8200, monster: '마왕의 사도', backgroundAssetId: 'map_runtime_raid_void_knights' }),
+  sky_golem: Object.freeze({ label: '악몽의 기사', area: 'void_gate', unlockLevel: 82, powerMin: 96, powerMax: 126, xpReward: 4600, coinReward: 9000, monster: '악몽의 기사', backgroundAssetId: 'map_runtime_raid_sky_golem' }),
+  dragon_rift: Object.freeze({ label: '재앙룡 니드호그', area: 'dragon_nest', unlockLevel: 80, powerMin: 100, powerMax: 132, xpReward: 5400, coinReward: 11000, monster: '검은 용 베르카르', backgroundAssetId: 'map_runtime_raid_dragon_rift' }),
+  apocalypse_dragon: Object.freeze({ label: '마왕 발타르', area: 'void_gate', unlockLevel: 85, powerMin: 108, powerMax: 142, xpReward: 6500, coinReward: 14000, monster: '마왕 발타르', backgroundAssetId: 'map_runtime_raid_apocalypse_dragon' })
 });
 
 const RPG_GACHA_BANNERS = Object.freeze({

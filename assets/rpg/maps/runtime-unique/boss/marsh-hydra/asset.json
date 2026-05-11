@@ -1,0 +1,20 @@
+{
+  "id": "map_runtime_boss_marsh_hydra",
+  "label": "늪지 히드라 전용 보스 배경",
+  "category": "map",
+  "kind": "map",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "prompt": "assets/rpg/maps/runtime-unique/boss/marsh-hydra/prompt-used.txt",
+  "meta": "assets/rpg/maps/runtime-unique/boss/marsh-hydra/processed/pipeline-meta.json",
+  "raw": "assets/rpg/maps/runtime-unique/boss/marsh-hydra/raw/background.png",
+  "status": "generated",
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_boss_marsh_hydra/background.png",
+  "outputSize": [
+    1024,
+    576
+  ],
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+  }
+}

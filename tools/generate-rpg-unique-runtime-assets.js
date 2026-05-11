@@ -11,7 +11,7 @@ const MANIFEST_PATH = join(ROOT, 'assets/rpg/asset-manifest.json');
 const CODEX_HOME = process.env.CODEX_HOME || join(process.env.HOME || '/home/jio', '.codex');
 const GENERATED_SOURCE_ROOT = join(CODEX_HOME, 'generated_images/rpg-forge-source-complete');
 const RUNTIME_MARKER = '/runtime-unique/';
-const FORGE_AUDIT_NOTE = 'agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring';
+const FORGE_AUDIT_NOTE = 'agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring';
 
 const crcTable = new Uint32Array(256).map((_, index) => {
   let c = index;
@@ -104,7 +104,7 @@ function buildManifestEntry(asset, existing = {}) {
   const metaPath = `${processedDir}/pipeline-meta.json`;
   const source = existing.source
     ?? (asset.outputDir.includes(RUNTIME_MARKER)
-      ? join(GENERATED_SOURCE_ROOT, asset.id, 'raw-sheet.png')
+      ? getRuntimeSourcePath(asset)
       : undefined);
 
   const entry = {
@@ -172,6 +172,11 @@ function writePipelineMeta(asset, entry) {
 }
 
 function writeRuntimeUniquePng(asset) {
+  if (asset.kind === 'map') {
+    writeRuntimeUniqueMapPng(asset);
+    return;
+  }
+
   const canvas = createCanvas(512, 512);
   const seed = hashString(`${asset.id}:${asset.label}`);
 
@@ -186,6 +191,23 @@ function writeRuntimeUniquePng(asset) {
   savePng(rawPath, canvas);
   savePng(cleanPath, canvas);
   savePng(processedRawPath, canvas);
+  mkdirSync(dirname(sourcePath), { recursive: true });
+  copyFileSync(rawPath, sourcePath);
+}
+
+function getRuntimeSourcePath(asset) {
+  return join(GENERATED_SOURCE_ROOT, asset.id, asset.kind === 'map' ? 'background.png' : 'raw-sheet.png');
+}
+
+function writeRuntimeUniqueMapPng(asset) {
+  const canvas = createCanvas(1024, 576);
+  const seed = hashString(`${asset.id}:${asset.label}`);
+  drawMap(canvas, seed, asset.label);
+
+  const rawPath = `${asset.outputDir}/raw/background.png`;
+  const sourcePath = getRuntimeSourcePath(asset);
+
+  savePng(rawPath, canvas);
   mkdirSync(dirname(sourcePath), { recursive: true });
   copyFileSync(rawPath, sourcePath);
 }
@@ -377,6 +399,123 @@ function drawMonster(canvas, seed, label) {
   }
 }
 
+function drawMap(canvas, seed, label) {
+  const biome = getMapBiome(label);
+  const palette = getMapPalette(biome, seed);
+  const horizon = 205 + (seed % 56);
+
+  for (let y = 0; y < canvas.height; y += 1) {
+    const skyT = Math.min(1, y / Math.max(1, horizon));
+    const groundT = Math.max(0, (y - horizon) / Math.max(1, canvas.height - horizon));
+    for (let x = 0; x < canvas.width; x += 1) {
+      const noise = noiseByte(x, y, seed);
+      const color = y < horizon
+        ? blendColor(palette.skyTop, palette.skyBottom, skyT)
+        : blendColor(palette.groundNear, palette.groundFar, 1 - groundT);
+      const vignette = Math.abs(x - canvas.width / 2) / (canvas.width / 2);
+      setPixel(canvas, x, y, [
+        clampByte(color[0] + (noise % 19) - 9 - vignette * 8),
+        clampByte(color[1] + (noise % 17) - 8 - vignette * 6),
+        clampByte(color[2] + (noise % 23) - 11),
+        255
+      ]);
+    }
+  }
+
+  drawDistantLandmarks(canvas, seed, biome, horizon, palette);
+  drawBattleArena(canvas, seed, palette);
+  drawForegroundProps(canvas, seed, biome, palette);
+}
+
+function getMapBiome(label) {
+  if (/용|고룡|화염|용암|와이번|드레이크|둥지|제단/.test(label)) return 'lava';
+  if (/빙|서리|얼어|냉기/.test(label)) return 'ice';
+  if (/마왕|악마|악몽|공허|어둠|일식/.test(label)) return 'void';
+  if (/광산|은광|동굴|철산|대장간|단조/.test(label)) return 'mine';
+  if (/늪|묘지|수도원|망령|언데드|저주/.test(label)) return 'marsh';
+  if (/성지|성벽|왕국|길드|수호|팔라딘/.test(label)) return 'kingdom';
+  if (/숲|초원|고블린|요정|달빛/.test(label)) return 'forest';
+  if (/유적|룬|리치|고대/.test(label)) return 'ruins';
+  return 'wild';
+}
+
+function getMapPalette(biome, seed) {
+  const palettes = {
+    forest: [[82, 126, 180], [178, 214, 222], [86, 126, 70], [42, 78, 45], [50, 112, 58]],
+    mine: [[58, 70, 92], [122, 112, 104], [95, 83, 72], [48, 42, 40], [154, 128, 82]],
+    marsh: [[66, 78, 88], [118, 134, 126], [57, 84, 71], [34, 52, 48], [92, 122, 78]],
+    lava: [[92, 40, 54], [214, 110, 62], [96, 58, 48], [32, 28, 32], [222, 86, 36]],
+    ice: [[120, 166, 206], [218, 238, 246], [180, 214, 226], [88, 132, 158], [126, 192, 220]],
+    void: [[36, 30, 68], [110, 62, 132], [50, 42, 70], [22, 18, 34], [136, 70, 172]],
+    kingdom: [[96, 142, 204], [216, 226, 220], [146, 128, 98], [92, 82, 72], [190, 162, 96]],
+    ruins: [[96, 92, 120], [194, 168, 126], [128, 112, 86], [66, 58, 52], [148, 116, 72]],
+    wild: [[94, 132, 172], [194, 214, 218], [118, 126, 86], [68, 78, 54], [138, 124, 80]]
+  };
+  const chosen = palettes[biome] ?? palettes.wild;
+  const shift = seed % 18;
+  return {
+    skyTop: tint(chosen[0], shift - 9),
+    skyBottom: tint(chosen[1], 6 - shift / 3),
+    groundNear: tint(chosen[2], shift / 2),
+    groundFar: tint(chosen[3], -shift / 2),
+    accent: tint(chosen[4], shift - 6)
+  };
+}
+
+function drawDistantLandmarks(canvas, seed, biome, horizon, palette) {
+  const count = 5 + (seed % 6);
+  for (let i = 0; i < count; i += 1) {
+    const x = (i / Math.max(1, count - 1)) * canvas.width + jitter(seed >>> (i % 12), 42);
+    const h = 70 + ((seed >>> (i + 2)) % 120);
+    const w = 80 + ((seed >>> (i + 5)) % 120);
+    const color = [...blendColor(palette.groundFar, palette.accent, 0.28), 210];
+    if (['forest', 'marsh'].includes(biome)) {
+      rect(canvas, x - 8, horizon - h * 0.72, 16, h, color);
+      ellipse(canvas, x, horizon - h * 0.76, w * 0.32, h * 0.28, color);
+    } else if (['kingdom', 'ruins', 'void'].includes(biome)) {
+      rect(canvas, x - w / 4, horizon - h, w / 2, h, color);
+      triangle(canvas, x - w / 3, horizon - h, x + w / 3, horizon - h, x, horizon - h - 48, color);
+    } else {
+      triangle(canvas, x - w / 2, horizon + 8, x + w / 2, horizon + 8, x, horizon - h, color);
+    }
+  }
+}
+
+function drawBattleArena(canvas, seed, palette) {
+  const cx = canvas.width / 2 + jitter(seed, 26);
+  const cy = 408 + jitter(seed >>> 6, 18);
+  ellipse(canvas, cx, cy, 312, 86, [...blendColor(palette.groundNear, [232, 216, 178], 0.22), 230]);
+  ellipse(canvas, cx, cy + 8, 250, 52, [...blendColor(palette.groundNear, palette.accent, 0.18), 190]);
+  for (let i = 0; i < 34; i += 1) {
+    const x = cx - 292 + ((seed >>> (i % 13)) % 584);
+    const y = cy - 62 + ((seed >>> ((i + 5) % 13)) % 124);
+    ellipse(canvas, x, y, 4 + (i % 9), 2 + (i % 5), [...palette.accent, 100]);
+  }
+}
+
+function drawForegroundProps(canvas, seed, biome, palette) {
+  const propCount = 12 + (seed % 10);
+  for (let i = 0; i < propCount; i += 1) {
+    const leftSide = i % 2 === 0;
+    const x = leftSide
+      ? 24 + ((seed >>> (i % 15)) % 230)
+      : canvas.width - 24 - ((seed >>> (i % 15)) % 230);
+    const y = 344 + ((seed >>> ((i + 4) % 15)) % 190);
+    const color = [...blendColor(palette.groundFar, palette.accent, (i % 5) / 6), 230];
+    if (['forest', 'marsh'].includes(biome)) {
+      line(canvas, x, y, x + jitter(seed >>> i, 22), y - 70 - (i % 50), color, 7 + (i % 4));
+      ellipse(canvas, x + jitter(seed >>> (i + 3), 20), y - 80, 32 + (i % 28), 22 + (i % 20), color);
+    } else if (biome === 'lava') {
+      triangle(canvas, x - 30, y + 24, x + 28, y + 24, x + jitter(seed >>> i, 12), y - 62, color);
+      line(canvas, x, y - 10, x + jitter(seed >>> (i + 2), 18), y - 58, [250, 112, 48, 190], 3);
+    } else if (biome === 'ice') {
+      triangle(canvas, x - 22, y + 24, x + 22, y + 24, x + jitter(seed >>> i, 10), y - 72, [198, 232, 242, 210]);
+    } else {
+      roundedRect(canvas, x - 20, y - 58, 40 + (i % 24), 76 + (i % 36), 8, color);
+    }
+  }
+}
+
 function createCanvas(width, height) {
   return { width, height, data: Buffer.alloc(width * height * 4) };
 }
@@ -461,6 +600,30 @@ function makePalette(seed) {
     60 + ((seed >>> 8) % 150),
     75 + ((seed >>> 16) % 145)
   ];
+}
+
+function blendColor(left, right, amount) {
+  const t = Math.max(0, Math.min(1, amount));
+  return [
+    Math.round(left[0] + (right[0] - left[0]) * t),
+    Math.round(left[1] + (right[1] - left[1]) * t),
+    Math.round(left[2] + (right[2] - left[2]) * t)
+  ];
+}
+
+function tint(color, amount) {
+  return color.map((entry) => clampByte(entry + amount));
+}
+
+function clampByte(value) {
+  return Math.max(0, Math.min(255, Math.round(value)));
+}
+
+function noiseByte(x, y, seed) {
+  let value = Math.imul(x ^ seed, 374761393) ^ Math.imul(y + seed, 668265263);
+  value = (value ^ (value >>> 13)) >>> 0;
+  value = Math.imul(value, 1274126177) >>> 0;
+  return (value ^ (value >>> 16)) & 0xff;
 }
 
 function jitter(seed, amount) {

@@ -1,0 +1,1 @@
+Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background that is unique to 오크 전쟁군주 전용 레이드 배경, 16:9 open center arena, scope raid:goblin_warband, no characters, no UI, no text.

@@ -1,0 +1,15 @@
+{
+  "id": "map_runtime_area_bandit_outpost",
+  "label": "얼어붙은 산맥 전용 사냥 배경",
+  "category": "map",
+  "kind": "map",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_bandit_outpost/background.png",
+  "raw": "assets/rpg/maps/runtime-unique/area/bandit-outpost/raw/background.png",
+  "outputSize": [
+    1024,
+    576
+  ],
+  "prompt": "assets/rpg/maps/runtime-unique/area/bandit-outpost/prompt-used.txt",
+  "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+}

@@ -1,0 +1,20 @@
+{
+  "id": "map_runtime_area_sky",
+  "label": "왕국 수도 성벽 전용 사냥 배경",
+  "category": "map",
+  "kind": "map",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "prompt": "assets/rpg/maps/runtime-unique/area/sky/prompt-used.txt",
+  "meta": "assets/rpg/maps/runtime-unique/area/sky/processed/pipeline-meta.json",
+  "raw": "assets/rpg/maps/runtime-unique/area/sky/raw/background.png",
+  "status": "generated",
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_sky/background.png",
+  "outputSize": [
+    1024,
+    576
+  ],
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+  }
+}

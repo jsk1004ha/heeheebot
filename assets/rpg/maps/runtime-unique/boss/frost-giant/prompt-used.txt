@@ -1,0 +1,1 @@
+Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background that is unique to 서리 거인 전용 보스 배경, 16:9 open center arena, scope boss:frost_giant, no characters, no UI, no text.

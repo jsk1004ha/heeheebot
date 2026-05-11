@@ -1,0 +1,1 @@
+Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background that is unique to 마왕의 사도 전용 보스 배경, 16:9 open center arena, scope boss:demon_apostle, no characters, no UI, no text.

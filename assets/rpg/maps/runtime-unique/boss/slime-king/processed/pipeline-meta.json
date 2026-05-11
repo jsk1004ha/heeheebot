@@ -1,0 +1,15 @@
+{
+  "id": "map_runtime_boss_slime_king",
+  "label": "고블린 족장 전용 보스 배경",
+  "category": "map",
+  "kind": "map",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_boss_slime_king/background.png",
+  "raw": "assets/rpg/maps/runtime-unique/boss/slime-king/raw/background.png",
+  "outputSize": [
+    1024,
+    576
+  ],
+  "prompt": "assets/rpg/maps/runtime-unique/boss/slime-king/prompt-used.txt",
+  "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+}

@@ -1,0 +1,15 @@
+{
+  "id": "map_runtime_area_moonlit_hill",
+  "label": "안개 늪지 전용 사냥 배경",
+  "category": "map",
+  "kind": "map",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_moonlit_hill/background.png",
+  "raw": "assets/rpg/maps/runtime-unique/area/moonlit-hill/raw/background.png",
+  "outputSize": [
+    1024,
+    576
+  ],
+  "prompt": "assets/rpg/maps/runtime-unique/area/moonlit-hill/prompt-used.txt",
+  "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+}

@@ -13,5 +13,5 @@
     512
   ],
   "prompt": "assets/rpg/heroes/advanced/runtime-unique/frost_sage/female/idle/prompt-used.txt",
-  "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+  "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
 }

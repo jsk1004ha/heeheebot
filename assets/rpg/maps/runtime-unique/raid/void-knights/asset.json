@@ -1,0 +1,20 @@
+{
+  "id": "map_runtime_raid_void_knights",
+  "label": "마왕의 사도 전용 레이드 배경",
+  "category": "map",
+  "kind": "map",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "prompt": "assets/rpg/maps/runtime-unique/raid/void-knights/prompt-used.txt",
+  "meta": "assets/rpg/maps/runtime-unique/raid/void-knights/processed/pipeline-meta.json",
+  "raw": "assets/rpg/maps/runtime-unique/raid/void-knights/raw/background.png",
+  "status": "generated",
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_raid_void_knights/background.png",
+  "outputSize": [
+    1024,
+    576
+  ],
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+  }
+}

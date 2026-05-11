@@ -1,0 +1,20 @@
+{
+  "id": "map_runtime_area_thunder_plateau",
+  "label": "마탑 지하서고 전용 사냥 배경",
+  "category": "map",
+  "kind": "map",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "prompt": "assets/rpg/maps/runtime-unique/area/thunder-plateau/prompt-used.txt",
+  "meta": "assets/rpg/maps/runtime-unique/area/thunder-plateau/processed/pipeline-meta.json",
+  "raw": "assets/rpg/maps/runtime-unique/area/thunder-plateau/raw/background.png",
+  "status": "generated",
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_area_thunder_plateau/background.png",
+  "outputSize": [
+    1024,
+    576
+  ],
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+  }
+}

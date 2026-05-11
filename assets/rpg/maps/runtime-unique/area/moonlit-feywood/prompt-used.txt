@@ -1,0 +1,1 @@
+Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background that is unique to 달빛 요정숲 전용 사냥 배경, 16:9 open center arena, scope area:moonlit_feywood, no characters, no UI, no text.

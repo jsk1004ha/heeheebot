@@ -1,0 +1,20 @@
+{
+  "id": "map_runtime_boss_demon_king_valtar",
+  "label": "마왕 발타르 전용 보스 배경",
+  "category": "map",
+  "kind": "map",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "prompt": "assets/rpg/maps/runtime-unique/boss/demon-king-valtar/prompt-used.txt",
+  "meta": "assets/rpg/maps/runtime-unique/boss/demon-king-valtar/processed/pipeline-meta.json",
+  "raw": "assets/rpg/maps/runtime-unique/boss/demon-king-valtar/raw/background.png",
+  "status": "generated",
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_boss_demon_king_valtar/background.png",
+  "outputSize": [
+    1024,
+    576
+  ],
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+  }
+}

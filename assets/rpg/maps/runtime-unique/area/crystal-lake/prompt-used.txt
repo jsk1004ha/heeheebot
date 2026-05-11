@@ -1,0 +1,1 @@
+Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background that is unique to 성지 아르덴 전용 사냥 배경, 16:9 open center arena, scope area:crystal_lake, no characters, no UI, no text.

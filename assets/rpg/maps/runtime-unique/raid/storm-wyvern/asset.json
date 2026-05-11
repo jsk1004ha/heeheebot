@@ -1,0 +1,20 @@
+{
+  "id": "map_runtime_raid_storm_wyvern",
+  "label": "검은 용 베르카르 전용 레이드 배경",
+  "category": "map",
+  "kind": "map",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "prompt": "assets/rpg/maps/runtime-unique/raid/storm-wyvern/prompt-used.txt",
+  "meta": "assets/rpg/maps/runtime-unique/raid/storm-wyvern/processed/pipeline-meta.json",
+  "raw": "assets/rpg/maps/runtime-unique/raid/storm-wyvern/raw/background.png",
+  "status": "generated",
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_runtime_raid_storm_wyvern/background.png",
+  "outputSize": [
+    1024,
+    576
+  ],
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text runtime variants for distinct wiring"
+  }
+}

@@ -1,0 +1,1 @@
+Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background that is unique to 마왕 발타르 전용 레이드 배경, 16:9 open center arena, scope raid:apocalypse_dragon, no characters, no UI, no text.
