@@ -17,6 +17,7 @@ import {
   normalizeStockId,
   scheduleStockAlertAnnouncements
 } from '../src/systems/stocks.js';
+import { SEASON_POINT_SOURCES } from '../src/systems/seasons.js';
 
 test('주식 명령 payload는 현물, 지정가, 알림, 신규상장, 레버리지 subcommand를 등록한다', () => {
   const [payload] = getStockCommandPayloads();
@@ -820,11 +821,19 @@ test('주식 매수와 매도 결과에도 다음 확인 버튼을 붙인다', a
     integers: { 수량: 2 }
   });
 
-  assert.equal(await handleStockCommand(buyInteraction, fakeStocks), true);
-  assert.equal(await handleStockCommand(sellInteraction, fakeStocks), true);
+  const seasons = createSeasonSpy();
+
+  assert.equal(await handleStockCommand(buyInteraction, fakeStocks, { seasons }), true);
+  assert.equal(await handleStockCommand(sellInteraction, fakeStocks, { seasons }), true);
 
   assert.match(buyInteraction.replies[0], /매수 완료/);
   assert.match(sellInteraction.replies[0], /매도 완료/);
+  assert.deepEqual(seasons.awards.map(({ source, points }) => ({ source, points })), [
+    { source: SEASON_POINT_SOURCES.STOCK_TRADE, points: 15 },
+    { source: SEASON_POINT_SOURCES.STOCK_TRADE, points: 15 }
+  ]);
+  assert.match(buyInteraction.replies[0], /시즌: 테스트 시즌/);
+  assert.match(sellInteraction.replies[0], /시즌: 테스트 시즌/);
   for (const interaction of [buyInteraction, sellInteraction]) {
     assert.deepEqual(
       interaction.rawReplies[0].components[0].components.map((component) => component.data.label),
@@ -1925,6 +1934,24 @@ function createStockAutocompleteInteraction(subcommand, focusedValue, options = 
     async respond(nextChoices) {
       if (respondError) throw respondError;
       choices.push(...nextChoices);
+    }
+  };
+}
+
+function createSeasonSpy() {
+  const awards = [];
+  return {
+    awards,
+    async awardPoints(input) {
+      awards.push(input);
+      return {
+        awarded: true,
+        points: input.points,
+        requestedPoints: input.points,
+        totalPoints: input.points,
+        sourceLabel: '테스트 시즌',
+        newlyClaimableRewards: []
+      };
     }
   };
 }

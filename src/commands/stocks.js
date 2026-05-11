@@ -6,11 +6,13 @@ import {
   SlashCommandBuilder
 } from 'discord.js';
 import { getStockCatalog } from '../systems/stocks.js';
+import { SEASON_POINT_SOURCES } from '../systems/seasons.js';
 import {
   safeAutocompleteRespond,
   toInteractionPayload
 } from './interactions.js';
 import { createPagedButtonRow, formatUserMention } from './ui.js';
+import { formatSeasonAwardLine } from './seasons.js';
 
 const STOCK_AUTOCOMPLETE_LIMIT = 25;
 const DISCORD_CONTENT_MAX_LENGTH = 2000;
@@ -388,7 +390,7 @@ export async function handleStockAutocomplete(interaction, stocks) {
   return true;
 }
 
-export async function handleStockCommand(interaction, stocks) {
+export async function handleStockCommand(interaction, stocks, services = {}) {
   if (interaction.isButton?.()) {
     try {
       if (interaction.customId?.startsWith('stock_quick:')) {
@@ -417,7 +419,7 @@ export async function handleStockCommand(interaction, stocks) {
   }
 
   try {
-    await routeStockCommand(interaction, stocks);
+    await routeStockCommand(interaction, stocks, services);
   } catch (error) {
     await safeReply(interaction, `주식 처리 실패: ${error.message}`, true);
   }
@@ -425,7 +427,28 @@ export async function handleStockCommand(interaction, stocks) {
   return true;
 }
 
-async function routeStockCommand(interaction, stocks) {
+
+async function awardStockTradeSeasonPoints(services, interaction) {
+  if (typeof services?.seasons?.awardPoints !== 'function') return null;
+
+  try {
+    return await services.seasons.awardPoints({
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username,
+      source: SEASON_POINT_SOURCES.STOCK_TRADE,
+      points: 15
+    });
+  } catch {
+    return null;
+  }
+}
+
+function withSeasonAward(content, award) {
+  return [content, formatSeasonAwardLine(award)].filter(Boolean).join('\n');
+}
+
+async function routeStockCommand(interaction, stocks, services = {}) {
   const subcommand = interaction.options.getSubcommand(true);
   const guildId = interaction.guildId;
   const user = interaction.user;
@@ -469,7 +492,8 @@ async function routeStockCommand(interaction, stocks) {
       stockId: interaction.options.getString('종목', true),
       quantity: interaction.options.getInteger('수량', true)
     });
-    await replyStockContent(interaction, formatBuyResult(user, result), {
+    const seasonAward = await awardStockTradeSeasonPoints(services, interaction);
+    await replyStockContent(interaction, withSeasonAward(formatBuyResult(user, result), seasonAward), {
       components: createStockQuickRows(user.id)
     });
     return;
@@ -483,7 +507,8 @@ async function routeStockCommand(interaction, stocks) {
       stockId: interaction.options.getString('종목', true),
       quantity: interaction.options.getInteger('수량', true)
     });
-    await replyStockContent(interaction, formatSellResult(user, result), {
+    const seasonAward = await awardStockTradeSeasonPoints(services, interaction);
+    await replyStockContent(interaction, withSeasonAward(formatSellResult(user, result), seasonAward), {
       components: createStockQuickRows(user.id)
     });
     return;

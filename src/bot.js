@@ -79,7 +79,7 @@ import {
   StockService,
   scheduleStockAlertAnnouncements
 } from './systems/stocks.js';
-import { SeasonService } from './systems/seasons.js';
+import { SeasonService, SEASON_POINT_SOURCES } from './systems/seasons.js';
 import { TamagotchiService } from './systems/tamagotchi.js';
 import { TimetableService } from './systems/timetable.js';
 import { WordleService } from './systems/wordle.js';
@@ -196,11 +196,11 @@ export function createBot({
           }).catch((error) => logger.error('Failed to record casino activity:', error));
         }
         await recordCommandActivity(interaction, economy, community, logger);
-        await sendAutomaticAchievementNotice(interaction, community, logger);
+        await sendAutomaticAchievementNotice(interaction, community, logger, seasons);
         return;
       }
 
-      const handled = await handleCommunityCommand(interaction, community, logger)
+      const handled = await handleCommunityCommand(interaction, community, logger, { seasons, logger })
         || await handleChoiceCommand(interaction)
         || await handleCompatibilityCommand(interaction)
         || await handleHelpCommand(interaction)
@@ -217,9 +217,9 @@ export function createBot({
         || await handleMealCommand(interaction, meals)
         || await handleTimetableCommand(interaction, timetable)
         || await handleSeasonCommand(interaction, seasons, logger)
-        || await handleStockCommand(interaction, stocks)
+        || await handleStockCommand(interaction, stocks, { seasons })
         || await handleTamagotchiCommand(interaction, tamagotchi, logger)
-        || await handleFishingCommand(interaction, fishing)
+        || await handleFishingCommand(interaction, fishing, { seasons })
         || await handleSwordCommand(interaction, economy, logger, { seasons })
         || await handleRpgCommand(interaction, economy, { seasons })
         || await handleEconomyCommand(interaction, economy, { stocks });
@@ -230,7 +230,7 @@ export function createBot({
         });
       } else {
         await recordCommandActivity(interaction, economy, community, logger);
-        await sendAutomaticAchievementNotice(interaction, community, logger);
+        await sendAutomaticAchievementNotice(interaction, community, logger, seasons);
       }
     } catch (error) {
       if (isUnknownInteractionError(error)) {
@@ -377,7 +377,7 @@ async function recordCommandActivity(interaction, economy, community, logger) {
   }
 }
 
-export async function sendAutomaticAchievementNotice(interaction, community, logger = console) {
+export async function sendAutomaticAchievementNotice(interaction, community, logger = console, seasons = null) {
   if (!interaction.isChatInputCommand?.() || !interaction.inGuild?.()) return false;
   if (interaction.commandName === '업적') return false;
   if (typeof community?.grantCompletedAchievements !== 'function') return false;
@@ -397,6 +397,20 @@ export async function sendAutomaticAchievementNotice(interaction, community, log
 
   if (!result?.totalClaimed || !Array.isArray(result.displayed) || result.displayed.length <= 0) {
     return false;
+  }
+
+  if (typeof seasons?.awardPoints === 'function') {
+    try {
+      await seasons.awardPoints({
+        guildId: interaction.guildId,
+        userId: interaction.user.id,
+        username: interaction.user.username,
+        source: SEASON_POINT_SOURCES.ACHIEVEMENT_EARN,
+        points: Math.min(30, result.totalClaimed * 10)
+      });
+    } catch (error) {
+      logger.debug?.('Failed to award achievement season points:', error);
+    }
   }
 
   const achievementText = result.displayed

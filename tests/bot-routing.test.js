@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { MessageFlags } from 'discord.js';
+import { SEASON_POINT_SOURCES } from '../src/systems/seasons.js';
 import test from 'node:test';
 import {
   isSupportedCommandInteraction,
@@ -51,9 +52,14 @@ test('명령 처리 후 새 업적은 자동 지급 안내로 표시한다', asy
     }
   };
 
-  const sent = await sendAutomaticAchievementNotice(interaction, community, { debug() {}, error() {} });
+  const seasons = createSeasonSpy();
+
+  const sent = await sendAutomaticAchievementNotice(interaction, community, { debug() {}, error() {} }, seasons);
 
   assert.equal(sent, true);
+  assert.deepEqual(seasons.awards.map(({ source, points }) => ({ source, points })), [
+    { source: SEASON_POINT_SOURCES.ACHIEVEMENT_EARN, points: 20 }
+  ]);
   assert.equal(interaction.followUps.length, 1);
   assert.equal(interaction.followUps[0].flags, MessageFlags.Ephemeral);
   assert.match(interaction.followUps[0].content, /자동 수령/);
@@ -97,6 +103,24 @@ function createCommandInteraction(commandName) {
     },
     async followUp(payload) {
       this.followUps.push(payload);
+    }
+  };
+}
+
+function createSeasonSpy() {
+  const awards = [];
+  return {
+    awards,
+    async awardPoints(input) {
+      awards.push(input);
+      return {
+        awarded: true,
+        points: input.points,
+        requestedPoints: input.points,
+        totalPoints: input.points,
+        sourceLabel: '테스트 시즌',
+        newlyClaimableRewards: []
+      };
     }
   };
 }
