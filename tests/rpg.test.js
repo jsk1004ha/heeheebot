@@ -700,9 +700,86 @@ test('/rpg 던전 UI는 짧은 진행 카드와 던전 버튼을 반환한다', 
     const description = getReplyDescription(interaction.replies[0]);
     assert.match(description, /던전 진행/);
     assert.match(description, /다음 방/);
+    assert.match(description, /보상 미리보기/);
     assert.doesNotMatch(description, /성공 확률|계산식|몇줄 생략/);
     assert.ok(description.length < 1_200);
-    assert.ok(getComponentCustomIds(interaction.replies[0].components).some((id) => id.startsWith('rpg_dungeon:user-1:room:')));
+    const customIds = getComponentCustomIds(interaction.replies[0].components);
+    assert.ok(customIds.some((id) => id.startsWith('rpg_dungeon:user-1:room:')));
+    assert.ok(customIds.some((id) => id.startsWith('rpg_dungeon:user-1:resume:')), 'dungeon card should expose a state refresh button');
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('RPG 장비 추천은 슬롯별 더 강한 장비를 자동 장착하고 비교를 남긴다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      characterClass: 'novice',
+      characterGender: 'male',
+      now: 1_000
+    });
+    await mutateProfile(fixture.store, (profile) => {
+      profile.rpg.gearInventory = {
+        weak_weapon: {
+          id: 'weak_weapon',
+          label: '낡은 철검',
+          rarity: 'common',
+          rarityLabel: '일반',
+          slot: 'weapon',
+          stats: { attack: 2 },
+          power: 1,
+          enhanceLevel: 0,
+          assetId: 'item_iron_sword_icon',
+          acquiredAt: 1_100
+        },
+        strong_weapon: {
+          id: 'strong_weapon',
+          label: '기사 장검',
+          rarity: 'rare',
+          rarityLabel: '희귀',
+          slot: 'weapon',
+          stats: { attack: 8, maxHp: 12 },
+          power: 5,
+          enhanceLevel: 0,
+          assetId: 'item_iron_longsword_icon',
+          acquiredAt: 1_200
+        },
+        sturdy_armor: {
+          id: 'sturdy_armor',
+          label: '튼튼한 갑옷',
+          rarity: 'rare',
+          rarityLabel: '희귀',
+          slot: 'armor',
+          stats: { defense: 6, maxHp: 30 },
+          power: 4,
+          enhanceLevel: 0,
+          assetId: 'item_leather_armor_icon',
+          acquiredAt: 1_300
+        }
+      };
+      profile.rpg.equippedGear.weapon = 'weak_weapon';
+    });
+
+    const recommended = await fixture.economy.equipRecommendedRpgGear({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사'
+    });
+
+    assert.equal(recommended.equipped.length, 2);
+    assert.equal(recommended.profile.rpg.equippedGear.weapon, 'strong_weapon');
+    assert.equal(recommended.profile.rpg.equippedGear.armor, 'sturdy_armor');
+    assert.ok(recommended.equipped[0].comparison.scoreDelta > 0);
+
+    const inventory = createChatInputInteraction('인벤토리');
+    await handleRpgCommand(inventory, fixture.economy);
+    assert.match(getReplyDescription(inventory.replies[0]), /추천/);
+    assert.ok(getComponentCustomIds(inventory.replies[0].components).includes('rpg_gear_recommend:user-1:balanced'));
   } finally {
     await fixture.cleanup();
   }

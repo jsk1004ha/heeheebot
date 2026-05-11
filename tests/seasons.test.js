@@ -10,6 +10,7 @@ import {
 import { createSqliteStore } from '../src/storage/sqlite-store.js';
 import {
   DEFAULT_SEASON_ID,
+  SEASON_REWARDS,
   SEASON_POINT_SOURCES,
   SeasonService
 } from '../src/systems/seasons.js';
@@ -291,6 +292,68 @@ test('시즌 과제는 낚시, 주식, 커뮤니티, 업적 출처를 진행도�
     assert.equal(board.daily.find((challenge) => challenge.id === 'daily_stock_trade').claimable, true);
     assert.equal(board.daily.find((challenge) => challenge.id === 'daily_achievement_earn').claimable, true);
     assert.equal(board.weekly.find((challenge) => challenge.id === 'weekly_three_categories').progress, 5);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('시즌패스는 칭호와 한정 배지를 포함한 다단계 보상을 제공한다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    assert.ok(SEASON_REWARDS.length >= 6);
+    assert.ok(SEASON_REWARDS.some((reward) => reward.kind === 'title'));
+    assert.ok(SEASON_REWARDS.some((reward) => reward.kind === 'badge'));
+    assert.ok(SEASON_REWARDS.some((reward) => reward.kind === 'profile_badge'));
+
+    for (let day = 0; day < 4; day += 1) {
+      await fixture.seasons.awardPoints({
+        guildId: 'guild-1',
+        userId: 'user-1',
+        username: '시즌러',
+        source: SEASON_POINT_SOURCES.RPG_DUNGEON_CLEAR,
+        points: 300,
+        now: Date.UTC(2026, 4, 11 + day, 12)
+      });
+    }
+
+    const claim = await fixture.seasons.claimRewards({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '시즌러'
+    });
+
+    assert.ok(claim.claimed.some((reward) => reward.kind === 'title'));
+    assert.ok(claim.claimed.some((reward) => reward.kind === 'badge'));
+    assert.ok(claim.claimed.some((reward) => reward.kind === 'profile_badge'));
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('시즌 과제는 RPG 던전 클리어 출처도 별도 활동으로 반영한다', async () => {
+  const fixture = await createFixture();
+  const now = Date.UTC(2026, 4, 13, 12);
+
+  try {
+    await fixture.seasons.awardPoints({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '던전러',
+      source: SEASON_POINT_SOURCES.RPG_DUNGEON_CLEAR,
+      points: 30,
+      now
+    });
+
+    const board = await fixture.seasons.getChallenges({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '던전러',
+      now
+    });
+
+    assert.equal(board.daily.find((challenge) => challenge.id === 'daily_rpg_dungeon').claimable, true);
+    assert.equal(board.weekly.find((challenge) => challenge.id === 'weekly_three_categories').progress, 1);
   } finally {
     await fixture.cleanup();
   }
