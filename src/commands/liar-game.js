@@ -211,7 +211,7 @@ async function handleLiarGameButton(interaction, economy, logger, options) {
   }
 
   if (action === 'liar_vote') {
-    await handleVoteButton(interaction, state, targetId);
+    await handleVoteButton(interaction, state, targetId, economy, logger);
     return true;
   }
 
@@ -385,7 +385,7 @@ async function startLiarVoting(state, economy, logger, { allowedTargetIds = null
   );
 }
 
-async function handleVoteButton(interaction, state, targetId) {
+async function handleVoteButton(interaction, state, targetId, economy, logger) {
   if (state.status !== 'voting') {
     await interaction.reply({
       content: '현재 투표 시간이 아닙니다.',
@@ -416,12 +416,19 @@ async function handleVoteButton(interaction, state, targetId) {
     return;
   }
 
+  const votingComplete = state.game.isVotingComplete(state.voteAllowedTargetIds);
   const payload = createVoteMessagePayload(state, {
     title: state.runoffUsed ? '📊 라이어게임 결선 투표' : '📊 라이어게임 투표',
-    description: `${formatPlayerMention(result.voter)}님이 투표했습니다. 투표는 마감 전까지 변경할 수 있습니다.`
+    description: votingComplete
+      ? `${formatPlayerMention(result.voter)}님까지 전원이 투표했습니다. 즉시 개표합니다.`
+      : `${formatPlayerMention(result.voter)}님이 투표했습니다. 투표는 마감 전까지 변경할 수 있습니다.`
   });
 
   await interaction.update(payload);
+
+  if (votingComplete) {
+    await resolveLiarVoting(state, economy, logger);
+  }
 }
 
 async function resolveLiarVoting(state, economy, logger) {
@@ -568,11 +575,11 @@ async function replyWithPrivateAssignment(interaction, state) {
     `모드: **${assignment.mode.label}**`
   ];
 
-  if (assignment.isLiar && assignment.mode.value === LIAR_GAME_MODES.normal.value) {
-    lines.push('', '당신은 **라이어**입니다. 제시어를 모르는 척이 아니라, 정말 모릅니다. 다른 사람의 설명을 듣고 유추하세요.');
-  } else if (assignment.isLiar) {
-    lines.push('', '당신은 **라이어**입니다. 다른 플레이어와 다른 제시어를 받았습니다.');
+  if (assignment.mode.value === LIAR_GAME_MODES.hard.value) {
+    lines.push('', '어려움 모드에서는 역할을 공개하지 않습니다.');
     lines.push(`당신의 제시어: **${assignment.word}**`);
+  } else if (assignment.isLiar) {
+    lines.push('', '당신은 **라이어**입니다. 제시어를 모르는 척이 아니라, 정말 모릅니다. 다른 사람의 설명을 듣고 유추하세요.');
   } else {
     lines.push('', '당신은 **시민**입니다.');
     lines.push(`제시어: **${assignment.word}**`);

@@ -12,7 +12,7 @@ export const LIAR_GAME_MODES = Object.freeze({
   hard: Object.freeze({
     value: 'hard',
     label: '어려움',
-    description: '라이어도 같은 주제의 다른 제시어를 받습니다.'
+    description: '역할을 공개하지 않고, 라이어도 같은 주제의 다른 제시어를 받습니다.'
   })
 });
 
@@ -178,6 +178,14 @@ export class LiarGame {
       player,
       count: counts.get(player.userId) ?? 0
     }));
+  }
+
+  isVotingComplete(allowedTargetIds = null) {
+    const allowed = allowedTargetIds ? new Set(allowedTargetIds) : null;
+    return this.players.every((player) => {
+      const targetId = this.votes.get(player.userId);
+      return targetId && (!allowed || allowed.has(targetId));
+    });
   }
 
   resolveVote(allowedTargetIds = null) {
