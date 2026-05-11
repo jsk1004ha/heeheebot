@@ -296,16 +296,106 @@ test('낚시도감은 수집률, 희귀도 진행도, 최고 크기를 embed 카
 
     assert.equal(handled, true);
     assert.match(payload.embeds[0].data.title, /낚시 도감/);
-    assert.match(description, new RegExp(`진행도: \\*\\*2/${getFishCount()}종`));
+    assert.match(description, new RegExp(`진행도: \\*\\*2/${getFishCount({ includeHidden: false })}종`));
+    assert.match(description, /그래프: `█/);
     assert.match(description, /전설 1\/11/);
-    assert.match(description, /현재 보기: \*\*전설\*\*/);
-    assert.match(description, /용왕의 물고기/);
-    assert.match(description, /최고 300cm/);
+    assert.match(description, /현재 보기: \*\*전설\*\* · 페이지 \*\*1\/1\*\*/);
+    assert.match(description, /\* 용왕의 물고기 전설 최고 300cm/);
+    assert.match(description, /\* \?\?\? 전설 \?\?\?/);
     assert.doesNotMatch(description, /dragonfish|fish_dragonfish/);
     assert.deepEqual(
       payload.components[0].components.map((component) => component.data.label),
       ['낚시', '낚싯대 강화', '도감']
     );
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('낚시도감은 미발견 물고기 이름을 숨기고 히든 물고기는 잡기 전까지 제외한다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await seedFishingProfile(fixture.store, {
+      inventory: {
+        mackerel: 1
+      },
+      bestFish: {
+        mackerel: { size: 44, caughtAt: 10_000 }
+      },
+      collection: {
+        mackerel: 10_000
+      },
+      totalCatches: 1
+    });
+
+    const interaction = createInteraction('낚시도감', { 희귀도: 'common' });
+    await handleFishingCommand(interaction, fixture.fishing);
+    const description = interaction.lastReply.embeds[0].data.description;
+
+    assert.match(description, /\* 고등어 일반 최고 44cm/);
+    assert.match(description, /\* \?\?\? 일반 \?\?\?/);
+    assert.doesNotMatch(description, /잉어 일반 \?\?\?|붕어 일반 \?\?\?/);
+    assert.doesNotMatch(description, /히든 0\/10|\?\?\? 히든 \?\?\?/);
+
+    await seedFishingProfile(fixture.store, {
+      inventory: {
+        hidden_fish_1: 1
+      },
+      bestFish: {
+        hidden_fish_1: { size: 404, caughtAt: 20_000 }
+      },
+      collection: {
+        hidden_fish_1: 20_000
+      },
+      totalCatches: 1
+    });
+
+    const hiddenInteraction = createInteraction('낚시도감', { 희귀도: 'hidden' });
+    await handleFishingCommand(hiddenInteraction, fixture.fishing);
+    const hiddenDescription = hiddenInteraction.lastReply.embeds[0].data.description;
+
+    assert.match(hiddenDescription, /히든 1\/1/);
+    assert.match(hiddenDescription, /\* 안개고래 히든 최고 404cm/);
+    assert.doesNotMatch(hiddenDescription, /\* \?\?\? 히든 \?\?\?/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('낚시도감은 페이지 버튼으로 긴 목록을 넘긴다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await seedFishingProfile(fixture.store);
+
+    const interaction = createInteraction('낚시도감');
+    await handleFishingCommand(interaction, fixture.fishing);
+    const payload = interaction.lastReply;
+    const pageRow = payload.components[1];
+
+    assert.match(payload.embeds[0].data.description, /현재 보기: \*\*전체\*\* · 페이지 \*\*1\/12\*\*/);
+    assert.deepEqual(
+      pageRow.components.map((component) => component.data.label),
+      ['이전', '다음']
+    );
+    assert.equal(pageRow.components[0].data.disabled, true);
+    assert.equal(pageRow.components[1].data.disabled, false);
+
+    const updates = [];
+    const replies = [];
+    const nextButton = createFishingButtonInteraction({
+      customId: pageRow.components[1].data.custom_id,
+      updates,
+      replies
+    });
+    const handled = await handleFishingCommand(nextButton, fixture.fishing);
+
+    assert.equal(handled, true);
+    assert.equal(replies.length, 0);
+    assert.equal(updates.length, 1);
+    assert.match(updates[0].embeds[0].data.description, /현재 보기: \*\*전체\*\* · 페이지 \*\*2\/12\*\*/);
+    assert.equal(updates[0].components[1].components[0].data.disabled, false);
   } finally {
     await fixture.cleanup();
   }

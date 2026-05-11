@@ -22,6 +22,10 @@ import {
   truncateEmbedDescription
 } from './ui.js';
 
+const FISHING_CODEX_PAGE_SIZE = 12;
+const FISHING_CODEX_PAGE_BUTTON_PREFIX = 'fishing_codex_page';
+const FISHING_CODEX_RARITIES = Object.freeze(['common', 'uncommon', 'rare', 'epic', 'legendary', 'hidden']);
+
 export const fishingCommands = [
   new SlashCommandBuilder()
     .setName('낚시')
@@ -111,6 +115,10 @@ export async function handleFishingCommand(interaction, fishing) {
 }
 
 async function handleFishingButton(interaction, fishing) {
+  if (interaction.customId?.startsWith(`${FISHING_CODEX_PAGE_BUTTON_PREFIX}:`)) {
+    return handleFishingCodexPageButton(interaction, fishing);
+  }
+
   if (!interaction.customId?.startsWith('fishing_quick:')) return false;
 
   const [, action, ownerId] = interaction.customId.split(':');
@@ -153,7 +161,7 @@ async function handleFishingButton(interaction, fishing) {
 
     if (action === 'codex') {
       const profile = await fishing.getProfile(interaction.guildId, interaction.user.id, interaction.user.username);
-      await interaction.reply(createFishingCodexPayload(interaction.user, profile, 'all', interaction.user.id));
+      await interaction.reply(createFishingCodexPayload(interaction.user, profile, 'all', interaction.user.id, 0));
       return true;
     }
 
@@ -165,6 +173,43 @@ async function handleFishingButton(interaction, fishing) {
   } catch (error) {
     await interaction.reply({
       content: `낚시 처리 실패: ${error.message}`,
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+}
+
+async function handleFishingCodexPageButton(interaction, fishing) {
+  const [, rarity, pageText, ownerId] = interaction.customId.split(':');
+  if (ownerId && interaction.user.id !== ownerId) {
+    await interaction.reply({
+      content: '이 낚시 도감 버튼은 명령어를 실행한 유저만 사용할 수 있습니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (!interaction.inGuild()) {
+    await interaction.reply({
+      content: '서버에서만 사용할 수 있는 명령어입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  try {
+    const profile = await fishing.getProfile(interaction.guildId, interaction.user.id, interaction.user.username);
+    await interaction.update(createFishingCodexPayload(
+      interaction.user,
+      profile,
+      rarity,
+      interaction.user.id,
+      Number.parseInt(pageText, 10)
+    ));
+    return true;
+  } catch (error) {
+    await interaction.reply({
+      content: `낚시 도감 처리 실패: ${error.message}`,
       flags: MessageFlags.Ephemeral
     });
     return true;
@@ -188,7 +233,7 @@ async function routeFishingCommand(interaction, fishing) {
   if (interaction.commandName === '낚시도감') {
     const profile = await fishing.getProfile(guildId, user.id, user.username);
     const rarity = interaction.options.getString('희귀도') ?? 'all';
-    await interaction.reply(createFishingCodexPayload(user, profile, rarity, user.id));
+    await interaction.reply(createFishingCodexPayload(user, profile, rarity, user.id, 0));
     return;
   }
 
@@ -310,55 +355,65 @@ function formatTeamResult(user, result) {
   ].join('\n');
 }
 
-function formatFishingCodex(user, profile, rarityFilter = 'all') {
+function createFishingCodexView(user, profile, rarityFilter = 'all', page = 0) {
   const normalizedFilter = normalizeFishingCodexRarity(rarityFilter);
-  const catalog = getFishCatalog({ includeHidden: true });
-  const entries = catalog.map((fish) => createFishingCodexEntry(fish, profile));
+  const entries = getFishCatalog({ includeHidden: true })
+    .map((fish, index) => createFishingCodexEntry(fish, profile, index))
+    .filter(isVisibleFishingCodexEntry);
   const visibleEntries = normalizedFilter === 'all'
     ? entries
     : entries.filter((entry) => entry.fish.rarity === normalizedFilter);
   const caughtTotal = entries.filter((entry) => entry.caught).length;
-  const progressPercent = catalog.length > 0
-    ? Math.floor(caughtTotal / catalog.length * 1000) / 10
+  const progressPercent = entries.length > 0
+    ? Math.floor(caughtTotal / entries.length * 1000) / 10
     : 0;
-  const rarityProgress = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'hidden']
+  const rarityProgress = FISHING_CODEX_RARITIES
     .map((rarity) => {
       const rarityEntries = entries.filter((entry) => entry.fish.rarity === rarity);
+      if (rarityEntries.length === 0) return null;
       const rarityCaught = rarityEntries.filter((entry) => entry.caught).length;
       return `${getRarityLabel(rarity)} ${rarityCaught}/${rarityEntries.length}`;
     })
+    .filter(Boolean)
     .join(' · ');
-  const caughtRows = visibleEntries
-    .filter((entry) => entry.caught)
-    .slice(0, 10)
-    .map(formatCaughtCodexEntry);
-  const missingRows = visibleEntries
-    .filter((entry) => !entry.caught)
-    .slice(0, Math.max(4, 12 - caughtRows.length))
-    .map(formatMissingCodexEntry);
+  const pageEntries = sortFishingCodexEntries(visibleEntries);
+  const pageCount = getFishingCodexPageCount(pageEntries.length);
+  const currentPage = clampFishingCodexPage(page, pageCount);
+  const start = currentPage * FISHING_CODEX_PAGE_SIZE;
+  const rows = pageEntries
+    .slice(start, start + FISHING_CODEX_PAGE_SIZE)
+    .map(formatFishingCodexEntry);
   const viewLabel = normalizedFilter === 'all' ? '전체' : getRarityLabel(normalizedFilter);
+  const emptyText = normalizedFilter === 'hidden'
+    ? '- 발견한 히든 물고기가 없습니다. 히든 물고기는 잡기 전까지 도감에 표시되지 않습니다.'
+    : '- 이 보기에는 표시할 물고기가 없습니다.';
 
-  return [
-    `📘 **낚시 도감** — ${formatUserMention(user, user.username)}`,
-    `진행도: **${caughtTotal}/${catalog.length}종 (${progressPercent}%)** / 총 낚시 **${profile.stats.totalCatches.toLocaleString()}회**`,
-    `희귀도별: ${rarityProgress}`,
-    `현재 보기: **${viewLabel}**`,
-    '',
-    `발견한 물고기:\n${caughtRows.length > 0 ? caughtRows.join('\n') : '- 아직 발견한 물고기가 없습니다.'}`,
-    '',
-    `미발견 물고기:\n${missingRows.length > 0 ? missingRows.join('\n') : '- 이 보기에서는 전부 발견했습니다.'}`,
-    '',
-    '팁: `/낚시도감 희귀도:전설`처럼 희귀도별로 좁혀볼 수 있습니다.'
-  ].join('\n');
+  return {
+    normalizedFilter,
+    currentPage,
+    pageCount,
+    content: [
+      `📘 **낚시 도감** — ${formatUserMention(user, user.username)}`,
+      `진행도: **${caughtTotal}/${entries.length}종 (${progressPercent}%)** / 총 낚시 **${profile.stats.totalCatches.toLocaleString()}회**`,
+      `그래프: \`${formatFishingProgressBar(caughtTotal, entries.length)}\``,
+      `희귀도별: ${rarityProgress || '표시할 항목 없음'}`,
+      `현재 보기: **${viewLabel}** · 페이지 **${currentPage + 1}/${pageCount}**`,
+      '',
+      `도감 목록:\n${rows.length > 0 ? rows.join('\n') : emptyText}`,
+      '',
+      '팁: `/낚시도감 희귀도:전설`처럼 희귀도별로 좁혀보고, 버튼으로 페이지를 넘길 수 있습니다.'
+    ].join('\n')
+  };
 }
 
-function createFishingCodexEntry(fish, profile) {
+function createFishingCodexEntry(fish, profile, catalogIndex = 0) {
   const count = profile.inventory[fish.id] ?? 0;
   const firstCaughtAt = profile.collection[fish.id] ?? profile.bestFish[fish.id]?.caughtAt ?? 0;
   const bestSize = profile.bestFish[fish.id]?.size ?? null;
 
   return {
     fish,
+    catalogIndex,
     count,
     firstCaughtAt,
     bestSize,
@@ -366,21 +421,53 @@ function createFishingCodexEntry(fish, profile) {
   };
 }
 
+function isVisibleFishingCodexEntry(entry) {
+  return !entry.fish.hidden || entry.caught;
+}
+
+function sortFishingCodexEntries(entries) {
+  return [...entries].sort((left, right) => {
+    if (left.caught !== right.caught) return left.caught ? -1 : 1;
+    return left.catalogIndex - right.catalogIndex;
+  });
+}
+
+function formatFishingCodexEntry(entry) {
+  return entry.caught
+    ? formatCaughtCodexEntry(entry)
+    : formatMissingCodexEntry(entry);
+}
+
 function formatCaughtCodexEntry(entry) {
-  const bestText = entry.bestSize ? ` · 최고 ${entry.bestSize.toLocaleString()}cm` : '';
-  return `✅ **${entry.fish.label}** (${getRarityLabel(entry.fish.rarity)} / ${entry.fish.type}) ×${entry.count.toLocaleString()}${bestText}`;
+  const bestText = entry.bestSize ? `${entry.bestSize.toLocaleString()}cm` : '???';
+  return `* ${entry.fish.label} ${getRarityLabel(entry.fish.rarity)} 최고 ${bestText}`;
 }
 
 function formatMissingCodexEntry(entry) {
-  const label = entry.fish.hidden ? '???' : entry.fish.label;
-  return `⬜ **${label}** (${getRarityLabel(entry.fish.rarity)} / ${entry.fish.type})`;
+  return `* ??? ${getRarityLabel(entry.fish.rarity)} ???`;
 }
 
 function normalizeFishingCodexRarity(rarity) {
   const normalized = String(rarity ?? 'all').trim().toLocaleLowerCase('ko-KR');
-  return ['common', 'uncommon', 'rare', 'epic', 'legendary', 'hidden'].includes(normalized)
+  return FISHING_CODEX_RARITIES.includes(normalized)
     ? normalized
     : 'all';
+}
+
+function formatFishingProgressBar(caught, total, width = 16) {
+  if (total <= 0) return '░'.repeat(width);
+  const rawFilled = Math.round(caught / total * width);
+  const filled = Math.min(width, Math.max(caught > 0 ? 1 : 0, rawFilled));
+  return `${'█'.repeat(filled)}${'░'.repeat(width - filled)}`;
+}
+
+function getFishingCodexPageCount(entryCount) {
+  return Math.max(1, Math.ceil(entryCount / FISHING_CODEX_PAGE_SIZE));
+}
+
+function clampFishingCodexPage(page, pageCount) {
+  const normalizedPage = Math.floor(Number(page) || 0);
+  return Math.min(Math.max(0, normalizedPage), Math.max(1, pageCount) - 1);
 }
 
 function formatBattleResult(user, opponent, result) {
@@ -485,10 +572,16 @@ function createRodCardPayload(content, rodLevel, userId = null) {
   });
 }
 
-function createFishingCodexPayload(user, profile, rarity = 'all', userId = null) {
-  return createFishingCardPayload(formatFishingCodex(user, profile, rarity), {
+function createFishingCodexPayload(user, profile, rarity = 'all', userId = null, page = 0) {
+  const view = createFishingCodexView(user, profile, rarity, page);
+  return createFishingCardPayload(view.content, {
     color: 0x0ea5e9,
-    components: createFishingQuickRows(userId)
+    components: createFishingCodexRows({
+      userId,
+      rarity: view.normalizedFilter,
+      page: view.currentPage,
+      pageCount: view.pageCount
+    })
   });
 }
 
@@ -529,6 +622,30 @@ function createFishingQuickRows(userId) {
         .setStyle(ButtonStyle.Success)
     )
   ];
+}
+
+function createFishingCodexRows({ userId, rarity, page, pageCount }) {
+  const rows = createFishingQuickRows(userId);
+  if (!userId || pageCount <= 1) return rows;
+
+  rows.push(new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(createFishingCodexPageCustomId(rarity, Math.max(0, page - 1), userId))
+      .setLabel('이전')
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(page <= 0),
+    new ButtonBuilder()
+      .setCustomId(createFishingCodexPageCustomId(rarity, Math.min(pageCount - 1, page + 1), userId))
+      .setLabel('다음')
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(page >= pageCount - 1)
+  ));
+
+  return rows;
+}
+
+function createFishingCodexPageCustomId(rarity, page, userId) {
+  return `${FISHING_CODEX_PAGE_BUTTON_PREFIX}:${rarity}:${page}:${userId}`;
 }
 
 function getFishingEmbedColor(rarity) {
