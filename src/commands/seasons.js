@@ -117,7 +117,7 @@ function formatSeasonOverview(overview) {
     .slice(0, 5)
     .map((reward) => {
       const marker = reward.claimed ? '✅' : reward.claimable ? '🎁' : reward.unlocked ? '⬜' : '🔒';
-      return `- ${marker} **${reward.label}** ${reward.requiredPoints.toLocaleString()}점`;
+      return `- ${marker} ${reward.icon ?? '🎁'} **${reward.label}** · ${formatSeasonRewardKind(reward.kind)} · ${reward.requiredPoints.toLocaleString()}점`;
     })
     .join('\n');
   const leaderboard = overview.leaderboardPreview.length > 0
@@ -154,7 +154,7 @@ function formatSeasonRewardClaim(result) {
 
   return [
     `🎁 **시즌 보상 수령**`,
-    `수령 보상: ${result.claimed.map((reward) => `**${reward.label}**`).join(', ')}`,
+    `수령 보상: ${result.claimed.map((reward) => `${reward.icon ?? '🎁'} **${reward.label}** · ${formatSeasonRewardKind(reward.kind)}`).join(', ')}`,
     `현재 점수: **${result.profile.totalPoints.toLocaleString()}점**`
   ].join('\n');
 }
@@ -205,4 +205,12 @@ function formatSeasonChallengeRow(challenge) {
   return [
     `- ${marker} **${challenge.label}** — ${challenge.progress.toLocaleString()} / ${challenge.requiredPoints.toLocaleString()}${unit} · +${challenge.rewardPoints.toLocaleString()}점`
   ].join('\n');
+}
+
+function formatSeasonRewardKind(kind) {
+  return {
+    badge: '한정 배지',
+    title: '시즌 칭호',
+    profile_badge: '프로필 배지'
+  }[kind] ?? '보상';
 }

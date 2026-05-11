@@ -424,6 +424,9 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
     if (interaction.customId.startsWith('rpg_gear_equip:')) {
       return handleRpgGearEquipButton(interaction, economy);
     }
+    if (interaction.customId.startsWith('rpg_gear_recommend:')) {
+      return handleRpgGearRecommendButton(interaction, economy);
+    }
     if (interaction.customId.startsWith('rpg_gear_enhance:')) {
       return handleRpgGearEnhanceButton(interaction, economy);
     }
@@ -443,7 +446,7 @@ export async function handleRpgCommand(interaction, economy, services = {}) {
       return handleRpgStoryButton(interaction, economy);
     }
     if (interaction.customId.startsWith('rpg_dungeon:')) {
-      return handleRpgDungeonButton(interaction, economy);
+      return handleRpgDungeonButton(interaction, economy, services);
     }
     if (interaction.customId.startsWith('rpg_quick:')) {
       return handleRpgQuickButton(interaction, economy, services);
@@ -1748,6 +1751,36 @@ async function handleRpgGearEquipButton(interaction, economy) {
   return true;
 }
 
+async function handleRpgGearRecommendButton(interaction, economy) {
+  const [, userId] = interaction.customId.split(':');
+
+  if (interaction.user.id !== userId) {
+    await interaction.reply({
+      content: '이 추천 장착 버튼은 명령어를 실행한 유저만 누를 수 있습니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  try {
+    const result = await economy.equipRecommendedRpgGear({
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username
+    });
+    await updateWithRpgAssets(interaction, formatRpgRecommendedGear(result), [], {
+      components: createRpgInventoryManagementRows(result, interaction.user.id, 'all')
+    });
+  } catch (error) {
+    await interaction.reply({
+      content: `추천 장착 실패: ${error.message}`,
+      flags: MessageFlags.Ephemeral
+    });
+  }
+
+  return true;
+}
+
 async function handleRpgGearDisassembleButton(interaction, economy) {
   const [, userId, gearId] = interaction.customId.split(':');
 
@@ -2408,7 +2441,7 @@ function createRpgRaidLobbyId(now = Date.now()) {
   return `${now.toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 }
 
-async function handleRpgDungeonButton(interaction, economy) {
+async function handleRpgDungeonButton(interaction, economy, services = {}) {
   const [, userId, action, runId, revision, targetId] = interaction.customId.split(':');
   if (interaction.user.id !== userId) {
     await safeReplyToInteraction(interaction, '이 던전 버튼은 던전을 시작한 유저만 누를 수 있습니다.', {
@@ -2451,7 +2484,12 @@ async function handleRpgDungeonButton(interaction, economy) {
       throw new Error('알 수 없는 던전 버튼입니다.');
     }
 
-    await updateWithRpgAssets(interaction, formatRpgDungeon(interaction.user, result), getDungeonAssetIds(result), {
+    const seasonAward = await awardRpgDungeonSeasonPoints(services, {
+      guildId: interaction.guildId,
+      user: interaction.user,
+      result
+    });
+    await updateWithRpgAssets(interaction, appendSeasonAwardLine(formatRpgDungeon(interaction.user, result), seasonAward), getDungeonAssetIds(result), {
       components: createRpgDungeonRows(result, interaction.user.id)
     });
   } catch (error) {
@@ -3620,7 +3658,7 @@ function formatRpgInventory(status) {
     `보유 장비\n${gearRows.length > 0 ? gearRows.join('\n') : '- 보유 장비 없음. `/rpg 던전`에서 장비를 얻어보세요.'}`,
     `아이템\n${inventoryRows.length > 0 ? inventoryRows.join('\n') : '- 비어 있음'}${hiddenItemCount > 0 ? `\n- 외 ${hiddenItemCount.toLocaleString()}종` : ''}`,
     '',
-    '아래 선택 메뉴로 바로 장착하고, 버튼으로 장비 목록/강화/분해 화면을 전환하세요.'
+    '아래 선택 메뉴로 바로 장착하고, 추천 장착/장비 목록/강화/분해 버튼으로 관리하세요.'
   ].join('\n');
 }
 
@@ -3678,20 +3716,23 @@ function formatRpgEquipItem(result) {
 }
 
 function formatRpgGearInventory(status) {
+  const recommendedIds = getRecommendedRpgGearIds(status);
   const gears = getSortedRpgGears(status)
     .slice(0, 10);
   const rows = gears.map((gear, index) => {
     const equipped = Object.values(status.profile.rpg.equippedGear).includes(gear.id) ? ' ✅장착중' : '';
+    const recommended = recommendedIds.has(gear.id) ? ' ⭐추천' : '';
     const statsText = formatGearStats(gear.stats);
-    return `- **${index + 1}. ${formatGearLabel(gear)}** / ${formatEquipmentSlot(gear.slot)}${statsText ? ` / ${statsText}` : ''}${equipped}`;
+    const comparison = formatRpgGearComparison(compareRpgGearWithEquipped(status, gear));
+    return `- **${index + 1}. ${formatGearLabel(gear)}** / ${formatEquipmentSlot(gear.slot)}${statsText ? ` / ${statsText}` : ''}${equipped}${recommended}${comparison ? `\n  ${comparison}` : ''}`;
   });
 
   return [
-    '🧰 **RPG 인벤토리 장비**',
+    '🧰 **RPG 인벤토리 장비 관리**',
     rows.length > 0 ? rows.join('\n') : '- 보유한 인벤토리 장비가 없습니다. `/rpg 던전` 또는 `/rpg 레이드`로 획득하세요.',
     '',
     rows.length > 0
-      ? '아래 선택 메뉴를 쓰거나 `/rpg 인벤토리 보기:장비`의 `장비` 옵션에 번호를 넣어 장착할 수 있습니다. 필요 없는 장비는 `보기:분해`에서 강화석으로 바꾸세요.'
+      ? '⭐추천 장비는 현재 착용 장비보다 점수가 높은 장비입니다. 추천 장착 버튼으로 슬롯별 최고 장비를 한 번에 착용할 수 있습니다.'
       : '장비를 얻으면 여기서 선택 메뉴로 바로 장착할 수 있습니다.'
   ].join('\n');
 }
@@ -3702,7 +3743,20 @@ function formatRpgEquipGear(result) {
     `슬롯: **${formatEquipmentSlot(result.slot)}**`,
     `장비: **${formatGearLabel(result.gear)}**`,
     `옵션: ${formatGearStats(result.gear.stats)}`,
+    result.comparison ? `비교: ${formatRpgGearComparison(result.comparison)}` : null,
     `공격력: **${result.derivedStats.attack}** / 방어력: **${result.derivedStats.defense}** / 최대 HP: **${result.derivedStats.maxHp}** / 최대 MP: **${result.derivedStats.maxMp}**`
+  ].filter(Boolean).join('\n');
+}
+
+function formatRpgRecommendedGear(result) {
+  const rows = result.equipped.length > 0
+    ? result.equipped.map((entry) => `- ${formatEquipmentSlot(entry.slot)}: **${formatGearLabel(entry.gear)}** ${formatRpgGearComparison(entry.comparison)}`)
+    : ['- 이미 슬롯별 추천 장비를 착용 중입니다.'];
+
+  return [
+    '⭐ **추천 장비 장착**',
+    rows.join('\n'),
+    `현재 스탯: 공격력 **${result.derivedStats.attack}** / 방어력 **${result.derivedStats.defense}** / 최대 HP **${result.derivedStats.maxHp}** / 최대 MP **${result.derivedStats.maxMp}**`
   ].join('\n');
 }
 
@@ -3867,15 +3921,29 @@ function formatRpgDungeonRun(user, result) {
     : result.relic
       ? `최근: 유물 **${result.relic.label}** 획득`
       : null;
+  const rewardPreview = formatRpgDungeonRewardPreview(run, result);
   return [
     `${run.state === 'awaiting_relic' ? '🧿 **유물 선택**' : '🏰 **던전 진행**'} — ${formatDiscordUserMention(user)}`,
     `📍 **${run.state === 'awaiting_relic' ? '유물 선택' : '던전 진행'}** · **${result.dungeonConfig?.label ?? result.areaConfig.label}** · ${result.areaConfig.label} · ${run.floor}/${run.maxFloors}방`,
     `❤️ HP **${run.hp}/${run.maxHp}** · 🔷 MP **${run.mp}/${run.maxMp}** · 보상풀 +${run.rewardPool.xp}XP/+${run.rewardPool.coins}G`,
+    rewardPreview,
     resultLine,
     `🧿 유물\n${relicRows.join('\n')}`,
     run.state === 'awaiting_relic' ? `선택할 유물\n${choiceRows.join('\n')}` : `다음 방\n${choiceRows.join('\n')}`,
     run.currentChoices.some((choice) => choice.risk === 'high') ? '☠️ 표시는 선택형 고위험 방입니다.' : null
   ].filter(Boolean).join('\n');
+}
+
+function formatRpgDungeonRewardPreview(run, result) {
+  const rewardMultiplier = result.dungeonConfig?.rewardMultiplier ?? (result.dungeonConfig?.hidden ? 1.2 : 1);
+  const clearXp = Math.floor((run.rewardPool?.xp ?? 0) * rewardMultiplier);
+  const clearCoins = Math.floor((run.rewardPool?.coins ?? 0) * rewardMultiplier);
+  const abandonXp = Math.floor((run.rewardPool?.xp ?? 0) * 0.25);
+  const abandonCoins = Math.floor((run.rewardPool?.coins ?? 0) * 0.25);
+  const failureScale = run.highRiskTaken ? 0.2 : 0.35;
+  const failXp = Math.floor((run.rewardPool?.xp ?? 0) * failureScale);
+  const failCoins = Math.floor((run.rewardPool?.coins ?? 0) * failureScale);
+  return `🎁 보상 미리보기: 포기 +${abandonXp}XP/+${abandonCoins}G · 실패 +${failXp}XP/+${failCoins}G · 클리어 최대 +${clearXp}XP/+${clearCoins}G`;
 }
 
 function formatRpgDungeonSettlement(user, result) {
@@ -4206,6 +4274,20 @@ async function awardRpgBattleSeasonPoints(services, { guildId, user, result }) {
     username: user.username,
     source: SEASON_POINT_SOURCES.RPG_BATTLE_WIN,
     points: 25
+  });
+}
+
+async function awardRpgDungeonSeasonPoints(services, { guildId, user, result }) {
+  if (result?.type !== 'dungeon_result' || result.outcome !== 'cleared' || !services?.seasons?.awardPoints) {
+    return null;
+  }
+
+  return services.seasons.awardPoints({
+    guildId,
+    userId: user.id,
+    username: user.username,
+    source: SEASON_POINT_SOURCES.RPG_DUNGEON_CLEAR,
+    points: 30
   });
 }
 
@@ -4656,19 +4738,23 @@ function getRpgInventoryPrimaryRows(status, userId, mode = 'all') {
 }
 
 function createRpgInventoryNavigationRows(userId, activeMode = 'all') {
+  void activeMode;
   const buttons = [
-    createRpgInventoryNavButton(userId, 'inventory', '🎒 전체', activeMode === 'all'),
-    createRpgInventoryNavButton(userId, 'gear', '🧰 장착', activeMode === 'gear'),
-    createRpgInventoryNavButton(userId, 'enhance', '🛠 강화', activeMode === 'enhance'),
-    createRpgInventoryNavButton(userId, 'disassemble', '♻️ 분해', activeMode === 'disassemble'),
+    createRpgInventoryNavButton(userId, 'inventory', '🎒 전체'),
+    createRpgInventoryNavButton(userId, 'gear', '🧰 장착'),
+    new ButtonBuilder()
+      .setCustomId(`rpg_gear_recommend:${userId}:balanced`)
+      .setLabel('⭐ 추천 장착')
+      .setStyle(ButtonStyle.Success),
+    createRpgInventoryNavButton(userId, 'enhance', '🛠 강화'),
+    createRpgInventoryNavButton(userId, 'disassemble', '♻️ 분해'),
     createRpgQuickButton(userId, 'menu', '🎮 허브', ButtonStyle.Secondary)
   ];
   return createButtonRows(buttons);
 }
 
-function createRpgInventoryNavButton(userId, action, label, disabled = false) {
-  return createRpgQuickButton(userId, action, label, ButtonStyle.Secondary)
-    .setDisabled(disabled);
+function createRpgInventoryNavButton(userId, action, label) {
+  return createRpgQuickButton(userId, action, label, ButtonStyle.Secondary);
 }
 
 function createRpgUsableItemRows(status, userId) {
@@ -5114,11 +5200,15 @@ function createRpgDungeonRows(result, userId) {
 
   buttons.push(
     new ButtonBuilder()
+      .setCustomId(`rpg_dungeon:${userId}:resume:${run.id}:${run.revision}:run`)
+      .setLabel('📜 상태')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
       .setCustomId(`rpg_dungeon:${userId}:abandon:${run.id}:${run.revision}:run`)
       .setLabel('🚪 포기')
       .setStyle(ButtonStyle.Secondary)
   );
-  return createButtonRows(buttons.slice(0, 5));
+  return createButtonRows(buttons);
 }
 
 function getRpgDungeonChoiceButtonStyle(choice) {
@@ -5148,6 +5238,78 @@ function getSortedRpgGears(status) {
       (b.power ?? 0) - (a.power ?? 0)
       || formatGearLabel(a).localeCompare(formatGearLabel(b), 'ko-KR')
     );
+}
+
+function getRecommendedRpgGearIds(status) {
+  return new Set(['weapon', 'armor', 'accessory']
+    .map((slot) => getRecommendedRpgGearForSlot(status, slot))
+    .filter((entry) => entry?.comparison?.scoreDelta > 0)
+    .map((entry) => entry.gear.id));
+}
+
+function getRecommendedRpgGearForSlot(status, slot) {
+  const candidates = Object.values(status.profile.rpg.gearInventory ?? {})
+    .filter((gear) => gear?.slot === slot)
+    .sort((a, b) =>
+      getRpgGearUiScore(b) - getRpgGearUiScore(a)
+      || formatGearLabel(a).localeCompare(formatGearLabel(b), 'ko-KR')
+      || String(a.id ?? '').localeCompare(String(b.id ?? ''))
+    );
+  const gear = candidates[0] ?? null;
+  if (!gear) return null;
+  return {
+    gear,
+    comparison: compareRpgGearWithEquipped(status, gear)
+  };
+}
+
+function compareRpgGearWithEquipped(status, gear) {
+  const currentGearId = status.profile.rpg.equippedGear?.[gear.slot];
+  const currentGear = currentGearId ? status.profile.rpg.gearInventory[currentGearId] ?? null : null;
+  return compareRpgGearStats(currentGear, gear);
+}
+
+function compareRpgGearStats(beforeGear, afterGear) {
+  const beforeStats = beforeGear?.stats ?? {};
+  const afterStats = afterGear?.stats ?? {};
+  return {
+    scoreBefore: getRpgGearUiScore(beforeGear),
+    scoreAfter: getRpgGearUiScore(afterGear),
+    scoreDelta: getRpgGearUiScore(afterGear) - getRpgGearUiScore(beforeGear),
+    statDelta: {
+      attack: (afterStats.attack ?? 0) - (beforeStats.attack ?? 0),
+      defense: (afterStats.defense ?? 0) - (beforeStats.defense ?? 0),
+      maxHp: (afterStats.maxHp ?? 0) - (beforeStats.maxHp ?? 0),
+      maxMp: (afterStats.maxMp ?? 0) - (beforeStats.maxMp ?? 0)
+    }
+  };
+}
+
+function getRpgGearUiScore(gear) {
+  if (!gear) return 0;
+  const stats = gear.stats ?? {};
+  return (
+    Math.max(1, Number(gear.power) || 1) * 10
+    + Math.max(0, Number(gear.enhanceLevel) || 0) * 4
+    + (stats.attack ?? 0) * 4
+    + (stats.defense ?? 0) * 3
+    + Math.floor((stats.maxHp ?? 0) / 8)
+    + Math.floor((stats.maxMp ?? 0) / 6)
+  );
+}
+
+function formatRpgGearComparison(comparison) {
+  if (!comparison) return '';
+  const deltas = [
+    ['공격', comparison.statDelta?.attack ?? 0],
+    ['방어', comparison.statDelta?.defense ?? 0],
+    ['HP', comparison.statDelta?.maxHp ?? 0],
+    ['MP', comparison.statDelta?.maxMp ?? 0]
+  ]
+    .filter(([, value]) => value !== 0)
+    .map(([label, value]) => `${label} ${value > 0 ? '+' : ''}${value}`);
+  const scoreText = `추천점수 ${comparison.scoreDelta > 0 ? '+' : ''}${comparison.scoreDelta}`;
+  return [scoreText, ...deltas].join(' · ');
 }
 
 function shortenButtonLabel(label, maxLength = 70) {

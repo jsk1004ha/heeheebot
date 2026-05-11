@@ -27,12 +27,12 @@ const HELP_CATEGORIES = Object.freeze({
     label: '시즌',
     emoji: '🏆',
     title: '통합 시즌 도움말',
-    description: 'RPG, 검 강화, 검배틀 같은 여러 콘텐츠를 하나의 시즌 포인트와 보상으로 묶는 장기 이벤트입니다.',
+    description: 'RPG, 검 강화, 검배틀 같은 여러 콘텐츠를 하나의 시즌 포인트와 시즌 칭호/한정 배지 보상으로 묶는 장기 이벤트입니다.',
     fields: Object.freeze([
       { name: '기본', value: '`/시즌 정보` — 내 점수, 오늘 획득량, 보상 현황 확인' },
       { name: '경쟁', value: '`/시즌 랭킹` — 서버 시즌 포인트 순위 확인' },
       { name: '과제', value: '`/시즌 과제` `/시즌 과제보상` — 오늘/주간 시즌 목표와 보너스 포인트 수령' },
-      { name: '보상', value: '`/시즌 보상` — 달성한 시즌 배지 보상 수령' }
+      { name: '보상', value: '`/시즌 보상` — 시즌 칭호, 한정 배지, 프로필 배지 수령' }
     ])
   }),
   rpg: Object.freeze({
@@ -43,6 +43,7 @@ const HELP_CATEGORIES = Object.freeze({
     fields: Object.freeze([
       { name: '시작/상태', value: '`/rpg 시작` `/rpg 튜토리얼` `/rpg 메뉴` `/rpg 프로필` `/rpg 지역`' },
       { name: '성장 루프', value: '`/rpg 사냥` `/rpg 탐사` `/rpg 던전` `/rpg 휴식` `/rpg 일일`' },
+      { name: '장비/성장 관리', value: '`/rpg 인벤토리` `/rpg 장비` `/rpg 강화` `/rpg 상점` `/rpg 제작` `/rpg 거래소`' },
       { name: '심화', value: '`/rpg 스토리` `/rpg 도감` `/rpg 전직` `/rpg 보스` `/rpg 레이드` `/rpg 길드레이드`' }
     ])
   }),
@@ -65,7 +66,7 @@ const HELP_CATEGORIES = Object.freeze({
     fields: Object.freeze([
       { name: '조회', value: '`/주식 시세` `/주식 전체시세` `/주식 신규상장` `/주식 보유`' },
       { name: '거래', value: '`/주식 매수` `/주식 매도` `/주식 지정가매수` `/주식 지정가매도`' },
-      { name: '심화', value: '`/주식 차트` `/주식 뉴스` `/주식 알림설정` `/주식 레버리지진입`' }
+      { name: '심화', value: '`/주식 차트` `/주식 뉴스` `/주식 배당금` `/주식 알림설정` `/주식 레버리지진입`' }
     ])
   }),
   life: Object.freeze({
@@ -74,7 +75,7 @@ const HELP_CATEGORIES = Object.freeze({
     title: '생활/서버 도움말',
     description: '학교 급식, 시간표, 오늘 정보, 커뮤니티 활동처럼 서버에서 자주 쓰는 편의 기능입니다.',
     fields: Object.freeze([
-      { name: '생활 정보', value: '`/급식` `/자동급식 상태` `/시간표` `/오늘` `/운세` `/선택` `/투표`' },
+      { name: '생활 정보', value: '`/급식` `/자동급식 상태` `/시간표` `/오늘할일` `/운세` `/선택` `/투표`' },
       { name: '전역 업적/커뮤니티', value: '`/업적` `/칭호` `/미션` `/복권` `/서버이벤트` `/활동요약` `/끝말잇기` `/초성게임`' },
       { name: '관리/안전', value: '`/청소` `/경고` 등 서버 권한 명령은 권한이 있을 때만 사용됩니다.' }
     ])
@@ -86,7 +87,7 @@ const HELP_CATEGORIES = Object.freeze({
     description: '골드와 성장 루프를 가볍게 즐기는 미니게임 묶음입니다.',
     fields: Object.freeze([
       { name: '낚시', value: '`/낚시` `/낚시도감` `/낚시강화` `/잠수` `/물고기팀설정` `/물고기배틀`' },
-      { name: '카지노', value: '`/카지노정보` `/슬롯` `/이모지경마` `/블랙잭` 등 카지노 명령' },
+      { name: '카지노', value: '`/카지노정보` `/슬롯` `/이모지경마` `/블랙잭` `/스크래치복권` 등 카지노 명령' },
       { name: '라이어게임', value: '`/라이어게임 시작` — 주제만 공개하고 제시어는 본인에게만 보이는 추리 파티 게임' },
       { name: '초성게임', value: '`/초성게임 시작` — 랜덤 2글자 초성을 보고 채팅에서 가장 먼저 단어 맞히기' },
       { name: '워들', value: '`/워들 도전` `/워들 상태` `/워들 랭킹` — 하루 한 번 비공개 영어 단어 퍼즐' },

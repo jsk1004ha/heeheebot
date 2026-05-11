@@ -12,6 +12,7 @@ export const DEFAULT_SEASON = Object.freeze({
 
 export const SEASON_POINT_SOURCES = Object.freeze({
   RPG_BATTLE_WIN: 'rpg_battle_win',
+  RPG_DUNGEON_CLEAR: 'rpg_dungeon_clear',
   RPG_DAILY_CLAIM: 'rpg_daily_claim',
   SWORD_ENHANCE: 'sword_enhance',
   SWORD_BATTLE_WIN: 'sword_battle_win',
@@ -26,6 +27,7 @@ export const SEASON_POINT_SOURCES = Object.freeze({
 
 export const SEASON_SOURCE_LABELS = Object.freeze({
   [SEASON_POINT_SOURCES.RPG_BATTLE_WIN]: 'RPG 전투 승리',
+  [SEASON_POINT_SOURCES.RPG_DUNGEON_CLEAR]: 'RPG 던전 클리어',
   [SEASON_POINT_SOURCES.RPG_DAILY_CLAIM]: 'RPG 일일 의뢰',
   [SEASON_POINT_SOURCES.SWORD_ENHANCE]: '검 강화',
   [SEASON_POINT_SOURCES.SWORD_BATTLE_WIN]: '검배틀 승리',
@@ -47,6 +49,15 @@ export const SEASON_CHALLENGES = Object.freeze([
     requiredPoints: 25,
     rewardPoints: 30,
     sources: [SEASON_POINT_SOURCES.RPG_BATTLE_WIN]
+  }),
+  seasonChallenge({
+    id: 'daily_rpg_dungeon',
+    period: 'daily',
+    label: '오늘의 던전 공략',
+    description: 'RPG 던전 클리어로 시즌 포인트 30점 획득',
+    requiredPoints: 30,
+    rewardPoints: 25,
+    sources: [SEASON_POINT_SOURCES.RPG_DUNGEON_CLEAR]
   }),
   seasonChallenge({
     id: 'daily_sword_enhance',
@@ -105,10 +116,10 @@ export const SEASON_CHALLENGES = Object.freeze([
     id: 'weekly_rpg_battle',
     period: 'weekly',
     label: '주간 던전 정복자',
-    description: '이번 주 RPG 전투 승리 포인트 125점 획득',
+    description: '이번 주 RPG 전투/던전 포인트 125점 획득',
     requiredPoints: 125,
     rewardPoints: 80,
-    sources: [SEASON_POINT_SOURCES.RPG_BATTLE_WIN]
+    sources: [SEASON_POINT_SOURCES.RPG_BATTLE_WIN, SEASON_POINT_SOURCES.RPG_DUNGEON_CLEAR]
   }),
   seasonChallenge({
     id: 'weekly_sword_master',
@@ -133,6 +144,7 @@ export const SEASON_CHALLENGES = Object.freeze([
     progressMode: 'distinct_sources',
     sources: [
       SEASON_POINT_SOURCES.RPG_BATTLE_WIN,
+      SEASON_POINT_SOURCES.RPG_DUNGEON_CLEAR,
       SEASON_POINT_SOURCES.SWORD_ENHANCE,
       SEASON_POINT_SOURCES.SWORD_BATTLE_PLAY,
       SEASON_POINT_SOURCES.SWORD_BATTLE_WIN,
@@ -149,20 +161,50 @@ export const SEASON_REWARDS = Object.freeze([
   Object.freeze({
     id: 'season_spark',
     label: '시즌 불씨',
+    kind: 'badge',
+    icon: '🔥',
     requiredPoints: 50,
     description: '시즌 참가를 증명하는 첫 번째 불씨 배지'
   }),
   Object.freeze({
     id: 'season_blaze',
     label: '시즌 화염',
+    kind: 'badge',
+    icon: '🏵️',
     requiredPoints: 150,
     description: '꾸준히 전투와 강화를 이어간 유저의 화염 배지'
   }),
   Object.freeze({
     id: 'season_crown',
     label: '시즌 왕관',
+    kind: 'profile_badge',
+    icon: '👑',
     requiredPoints: 500,
     description: '시즌 랭킹 상위권을 노릴 수 있는 왕관 배지'
+  }),
+  Object.freeze({
+    id: 'season_dungeon_title',
+    label: '던전 개척자',
+    kind: 'title',
+    icon: '🏰',
+    requiredPoints: 800,
+    description: '던전과 전투 시즌 루프를 꾸준히 돌파한 유저의 시즌 칭호'
+  }),
+  Object.freeze({
+    id: 'season_monkey_hunter_badge',
+    label: '원숭이 사냥꾼',
+    kind: 'badge',
+    icon: '🐒',
+    requiredPoints: 1_000,
+    description: '원숭이 대침공 시즌 한정 수집 배지'
+  }),
+  Object.freeze({
+    id: 'season_hero_profile',
+    label: '시즌 영웅 프로필 배지',
+    kind: 'profile_badge',
+    icon: '🌟',
+    requiredPoints: 1_200,
+    description: '프로필에서 시즌 성취를 보여줄 수 있는 최상위 프로필 배지'
   })
 ]);
 

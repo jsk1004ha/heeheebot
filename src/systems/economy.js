@@ -2117,6 +2117,9 @@ export class EconomyService {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
       const gear = resolveOwnedRpgGear(profile, gearId);
+      const previousGearId = profile.rpg.equippedGear[gear.slot] ?? null;
+      const previousGear = previousGearId ? profile.rpg.gearInventory[previousGearId] ?? null : null;
+      const comparison = compareRpgGears(previousGear, gear);
 
       profile.rpg.equippedGear[gear.slot] = gear.id;
       const derivedStats = getProfileRpgDerivedStats(profile);
@@ -2125,7 +2128,50 @@ export class EconomyService {
 
       return {
         gear,
+        previousGear: previousGear ? cloneRpgGear(previousGear) : null,
         slot: gear.slot,
+        comparison,
+        derivedStats,
+        profile: cloneProfile(profile)
+      };
+    });
+  }
+
+  async equipRecommendedRpgGear({ guildId, userId, username }) {
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, this);
+      const equipped = [];
+      const skipped = [];
+
+      for (const slot of Object.keys(getDefaultRpgEquipment())) {
+        const recommendation = findRecommendedRpgGearForSlot(profile, slot);
+        if (!recommendation?.gear) {
+          skipped.push({ slot, reason: 'candidate_missing' });
+          continue;
+        }
+
+        const { gear, previousGear, comparison } = recommendation;
+        if (gear.id === previousGear?.id || comparison.scoreDelta <= 0) {
+          skipped.push({ slot, reason: 'already_best', gear: cloneRpgGear(gear), comparison });
+          continue;
+        }
+
+        profile.rpg.equippedGear[slot] = gear.id;
+        equipped.push({
+          slot,
+          gear: cloneRpgGear(gear),
+          previousGear: previousGear ? cloneRpgGear(previousGear) : null,
+          comparison
+        });
+      }
+
+      const derivedStats = getProfileRpgDerivedStats(profile);
+      profile.rpg.hp = Math.min(profile.rpg.hp, derivedStats.maxHp);
+      profile.rpg.mp = Math.min(profile.rpg.mp, derivedStats.maxMp);
+
+      return {
+        equipped,
+        skipped,
         derivedStats,
         profile: cloneProfile(profile)
       };
@@ -5529,6 +5575,56 @@ function resolveOwnedRpgGear(profile, selector) {
   }
 
   throw new Error('보유한 인벤토리 장비를 찾을 수 없습니다. `/rpg 인벤토리 보기:장비`에서 번호 버튼을 확인하세요.');
+}
+
+function findRecommendedRpgGearForSlot(profile, slot) {
+  const candidates = Object.values(profile.rpg.gearInventory ?? {})
+    .filter((gear) => gear?.slot === slot)
+    .sort((a, b) =>
+      getRpgGearRecommendationScore(b) - getRpgGearRecommendationScore(a)
+      || String(a.label ?? '').localeCompare(String(b.label ?? ''), 'ko-KR')
+      || String(a.id ?? '').localeCompare(String(b.id ?? ''))
+    );
+  const gear = candidates[0] ?? null;
+  if (!gear) return null;
+  const previousGearId = profile.rpg.equippedGear?.[slot] ?? null;
+  const previousGear = previousGearId ? profile.rpg.gearInventory[previousGearId] ?? null : null;
+  return {
+    gear,
+    previousGear,
+    comparison: compareRpgGears(previousGear, gear)
+  };
+}
+
+function compareRpgGears(previousGear, nextGear) {
+  const beforeStats = normalizeGearStats(previousGear?.stats);
+  const afterStats = normalizeGearStats(nextGear?.stats);
+  return {
+    scoreBefore: getRpgGearRecommendationScore(previousGear),
+    scoreAfter: getRpgGearRecommendationScore(nextGear),
+    scoreDelta: getRpgGearRecommendationScore(nextGear) - getRpgGearRecommendationScore(previousGear),
+    statDelta: {
+      attack: afterStats.attack - beforeStats.attack,
+      defense: afterStats.defense - beforeStats.defense,
+      maxHp: afterStats.maxHp - beforeStats.maxHp,
+      maxMp: afterStats.maxMp - beforeStats.maxMp
+    }
+  };
+}
+
+function getRpgGearRecommendationScore(gear) {
+  if (!gear) return 0;
+  const stats = normalizeGearStats(gear.stats);
+  const power = Math.max(1, normalizeStoredNonNegativeInteger(gear.power) || 1);
+  const enhanceLevel = normalizeStoredNonNegativeInteger(gear.enhanceLevel);
+  return (
+    power * 10
+    + enhanceLevel * 4
+    + stats.attack * 4
+    + stats.defense * 3
+    + Math.floor(stats.maxHp / 8)
+    + Math.floor(stats.maxMp / 6)
+  );
 }
 
 function getSortedRpgGearList(profile) {
