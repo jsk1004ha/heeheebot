@@ -143,7 +143,7 @@ export class CommunityService {
       const guildCommunity = getOrCreateGuildCommunity(data, guildId, now);
       const guild = data.guilds?.[guildId] ?? {};
       const community = normalizeCommunityProfile(profile, now);
-      const achievementSources = getAchievementSources(guild, userId, profile);
+      const achievementSources = getAchievementSources(data, guild, userId, profile);
 
       return {
         profile: cloneCommunityProfile(profile, now),
@@ -216,7 +216,7 @@ export class CommunityService {
       const profile = getOrCreateProfile(data, guildId, userId, username, now);
       const guild = data.guilds?.[guildId] ?? {};
       const community = normalizeCommunityProfile(profile, now);
-      const achievementSources = getAchievementSources(guild, userId, profile);
+      const achievementSources = getAchievementSources(data, guild, userId, profile);
       const statuses = achievements.getAchievementStatuses(profile, community, achievementSources);
       const rewardResult = applyCompletedAchievementRewards({
         profile,
@@ -242,7 +242,7 @@ export class CommunityService {
       const profile = getOrCreateProfile(data, guildId, userId, username, now);
       const guild = data.guilds?.[guildId] ?? {};
       const community = normalizeCommunityProfile(profile, now);
-      const achievementSources = getAchievementSources(guild, userId, profile);
+      const achievementSources = getAchievementSources(data, guild, userId, profile);
       const statuses = achievements.getAchievementStatuses(profile, community, achievementSources);
       const rewardResult = applyCompletedAchievementRewards({
         profile,
@@ -271,7 +271,7 @@ export class CommunityService {
       const profile = getOrCreateProfile(data, guildId, userId, username, now);
       const guild = data.guilds?.[guildId] ?? {};
       const community = normalizeCommunityProfile(profile, now);
-      const achievementSources = getAchievementSources(guild, userId, profile);
+      const achievementSources = getAchievementSources(data, guild, userId, profile);
       const claimable = achievements
         .getAchievementStatuses(profile, community, achievementSources)
         .filter((status) => status.completed && !status.claimed);
@@ -1144,14 +1144,14 @@ function getOrCreateProfile(data, guildId, userId, username, now) {
   return profile;
 }
 
-function getAchievementSources(guild, userId, profile) {
+function getAchievementSources(data, guild, userId, profile) {
   const normalizedUserId = String(userId ?? profile?.userId ?? '').trim();
 
   return {
     rpg: profile?.rpg ?? null,
     sword: profile?.sword ?? null,
-    fishing: guild?.fishing?.users?.[normalizedUserId] ?? null,
-    stocks: guild?.stocks?.users?.[normalizedUserId] ?? null,
+    fishing: profile?.fishing ?? guild?.fishing?.users?.[normalizedUserId] ?? null,
+    stocks: data?.stocks?.users?.[normalizedUserId] ?? guild?.stocks?.users?.[normalizedUserId] ?? null,
     tamagotchi: guild?.tamagotchi?.users?.[normalizedUserId] ?? null
   };
 }

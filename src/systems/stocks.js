@@ -870,6 +870,7 @@ export class StockService {
       const quote = getTradableQuote(normalizedStockId, market);
       const alert = {
         id: createStockAlertId(now, stockUser.nextAlertSeq + 1),
+        guildId,
         userId,
         username: username || stockUser.username,
         stockId: normalizedStockId,
@@ -935,6 +936,7 @@ export class StockService {
         const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
 
         for (const alert of Object.values(stockUser.priceAlerts)) {
+          if (alert.guildId && alert.guildId !== guildId) continue;
           if (alert.status !== 'triggered' || alert.notifiedAt > 0 || !alert.channelId) continue;
           pending.push(clonePriceAlert(alert, market));
         }
@@ -962,7 +964,7 @@ export class StockService {
       const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
       const alert = stockUser.priceAlerts[normalizedAlertId];
 
-      if (!alert || alert.status !== 'triggered') {
+      if (!alert || alert.status !== 'triggered' || (alert.guildId && alert.guildId !== guildId)) {
         throw new Error('해당 가격 알림을 찾을 수 없습니다.');
       }
 
@@ -1450,12 +1452,176 @@ function getOrCreateGuild(data, guildId) {
   if (!guildId) throw new Error('서버에서만 사용할 수 있는 기능입니다.');
   data.guilds ??= {};
   data.guilds[guildId] ??= {};
-  return data.guilds[guildId];
+  return {
+    ...data.guilds[guildId],
+    stocks: getOrCreateGlobalStockState(data)
+  };
 }
 
 function getExistingGuild(data, guildId) {
   if (!guildId) throw new Error('서버에서만 사용할 수 있는 기능입니다.');
-  return data.guilds?.[guildId] ?? null;
+  if (!data.guilds?.[guildId] && !data.stocks) return null;
+  data.guilds ??= {};
+  data.guilds[guildId] ??= {};
+  return {
+    ...data.guilds[guildId],
+    stocks: getOrCreateGlobalStockState(data)
+  };
+}
+
+function getOrCreateGlobalStockState(data) {
+  data.stocks ??= {};
+  const globalStocks = data.stocks;
+  globalStocks.users ??= {};
+
+  for (const [sourceGuildId, guild] of Object.entries(data.guilds ?? {})) {
+    if (!guild?.stocks) continue;
+    mergeStockState(globalStocks, guild.stocks, sourceGuildId);
+    delete guild.stocks;
+  }
+
+  globalStocks.users ??= {};
+  return globalStocks;
+}
+
+function mergeStockState(target, source, sourceKey = 'legacy') {
+  if (!source || typeof source !== 'object') return target;
+
+  target.users ??= {};
+  for (const [userId, sourceUser] of Object.entries(source.users ?? {})) {
+    target.users[userId] = mergeStockUserState(target.users[userId], sourceUser, `${sourceKey}_${userId}`, sourceKey);
+  }
+
+  target.dynamicDefinitions ??= {};
+  for (const [stockId, definition] of Object.entries(source.dynamicDefinitions ?? {})) {
+    target.dynamicDefinitions[stockId] ??= structuredClone(definition);
+  }
+
+  target.delistedStocks ??= {};
+  for (const [stockId, record] of Object.entries(source.delistedStocks ?? {})) {
+    target.delistedStocks[stockId] ??= structuredClone(record);
+  }
+
+  target.nextDynamicStockSeq = Math.max(
+    normalizeNonNegativeInteger(target.nextDynamicStockSeq),
+    normalizeNonNegativeInteger(source.nextDynamicStockSeq)
+  );
+  target.marketNews = mergeStockRecordArray(target.marketNews, source.marketNews, `${sourceKey}_news`);
+
+  if (
+    source.market
+    && (!target.market || normalizeNonNegativeInteger(source.market.tickIndex) > normalizeNonNegativeInteger(target.market.tickIndex))
+  ) {
+    target.market = structuredClone(source.market);
+  }
+
+  return target;
+}
+
+function mergeStockUserState(targetUser, sourceUser, sourceKey = 'legacy_user', sourceGuildId = null) {
+  if (!sourceUser || typeof sourceUser !== 'object') return targetUser;
+
+  const merged = targetUser ?? createDefaultStockUser(sourceUser.userId, sourceUser.username);
+  merged.username = sourceUser.username || merged.username || 'Unknown';
+  merged.holdings = mergeStockHoldings(merged.holdings, sourceUser.holdings);
+  merged.limitOrders = mergeStockRecordMap(merged.limitOrders, sourceUser.limitOrders, `${sourceKey}_order`);
+  merged.priceAlerts = mergeStockRecordMap(
+    merged.priceAlerts,
+    withLegacyStockAlertGuildIds(sourceUser.priceAlerts, sourceGuildId),
+    `${sourceKey}_alert`
+  );
+  merged.leveragedPositions = mergeStockRecordMap(merged.leveragedPositions, sourceUser.leveragedPositions, `${sourceKey}_position`);
+  merged.tradeHistory = mergeStockRecordArray(merged.tradeHistory, sourceUser.tradeHistory, `${sourceKey}_trade`);
+  merged.dividendHistory = mergeStockRecordArray(merged.dividendHistory, sourceUser.dividendHistory, `${sourceKey}_dividend`);
+  merged.realizedProfit = normalizeInteger(merged.realizedProfit) + normalizeInteger(sourceUser.realizedProfit);
+  merged.realizedLeveragedProfit = normalizeInteger(merged.realizedLeveragedProfit) + normalizeInteger(sourceUser.realizedLeveragedProfit);
+  merged.pendingDividends = normalizeNonNegativeInteger(merged.pendingDividends) + normalizeNonNegativeInteger(sourceUser.pendingDividends);
+  merged.totalDividends = normalizeNonNegativeInteger(merged.totalDividends) + normalizeNonNegativeInteger(sourceUser.totalDividends);
+  merged.claimedDividends = normalizeNonNegativeInteger(merged.claimedDividends) + normalizeNonNegativeInteger(sourceUser.claimedDividends);
+  merged.tradeCount = normalizeNonNegativeInteger(merged.tradeCount) + normalizeNonNegativeInteger(sourceUser.tradeCount);
+  merged.leveragedTradeCount = normalizeNonNegativeInteger(merged.leveragedTradeCount) + normalizeNonNegativeInteger(sourceUser.leveragedTradeCount);
+  merged.nextOrderSeq = Math.max(normalizeNonNegativeInteger(merged.nextOrderSeq), normalizeNonNegativeInteger(sourceUser.nextOrderSeq));
+  merged.nextAlertSeq = Math.max(normalizeNonNegativeInteger(merged.nextAlertSeq), normalizeNonNegativeInteger(sourceUser.nextAlertSeq));
+  merged.nextPositionSeq = Math.max(normalizeNonNegativeInteger(merged.nextPositionSeq), normalizeNonNegativeInteger(sourceUser.nextPositionSeq));
+  merged.nextTradeSeq = Math.max(normalizeNonNegativeInteger(merged.nextTradeSeq), normalizeNonNegativeInteger(sourceUser.nextTradeSeq));
+  merged.nextDividendSeq = Math.max(normalizeNonNegativeInteger(merged.nextDividendSeq), normalizeNonNegativeInteger(sourceUser.nextDividendSeq));
+  merged.lastDividendTick = Math.max(normalizeNonNegativeInteger(merged.lastDividendTick), normalizeNonNegativeInteger(sourceUser.lastDividendTick));
+  merged.lastTradeAt = Math.max(normalizeNonNegativeInteger(merged.lastTradeAt), normalizeNonNegativeInteger(sourceUser.lastTradeAt));
+
+  return merged;
+}
+
+function withLegacyStockAlertGuildIds(priceAlerts = {}, guildId = null) {
+  const source = priceAlerts && typeof priceAlerts === 'object' ? priceAlerts : {};
+  if (!guildId) return source;
+
+  return Object.fromEntries(Object.entries(source).map(([alertId, alert]) => {
+    if (!alert || typeof alert !== 'object' || alert.guildId) return [alertId, alert];
+    return [alertId, { ...alert, guildId }];
+  }));
+}
+
+function mergeStockHoldings(targetHoldings = {}, sourceHoldings = {}) {
+  const merged = { ...(targetHoldings && typeof targetHoldings === 'object' ? targetHoldings : {}) };
+  const source = sourceHoldings && typeof sourceHoldings === 'object' ? sourceHoldings : {};
+
+  for (const [stockId, rawHolding] of Object.entries(source)) {
+    const holding = normalizeHolding(rawHolding);
+    if (holding.quantity <= 0) continue;
+    const existing = normalizeHolding(merged[stockId]);
+    const quantity = existing.quantity + holding.quantity;
+    merged[stockId] = {
+      quantity,
+      averageCost: quantity > 0
+        ? Math.round((existing.averageCost * existing.quantity + holding.averageCost * holding.quantity) / quantity)
+        : 0
+    };
+  }
+
+  return merged;
+}
+
+function mergeStockRecordMap(targetMap = {}, sourceMap = {}, sourceKey = 'legacy') {
+  const merged = { ...(targetMap && typeof targetMap === 'object' ? targetMap : {}) };
+  const source = sourceMap && typeof sourceMap === 'object' ? sourceMap : {};
+
+  for (const [recordId, record] of Object.entries(source)) {
+    const id = getMergedStockRecordId(merged, recordId, sourceKey);
+    const cloned = structuredClone(record);
+    if (cloned && typeof cloned === 'object') cloned.id = id;
+    merged[id] = cloned;
+  }
+
+  return merged;
+}
+
+function mergeStockRecordArray(targetArray = [], sourceArray = [], sourceKey = 'legacy') {
+  const merged = Array.isArray(targetArray) ? [...targetArray] : [];
+  const usedIds = new Set(merged.map((entry) => String(entry?.id ?? '')).filter(Boolean));
+  const source = Array.isArray(sourceArray) ? sourceArray : [];
+
+  for (const [index, record] of source.entries()) {
+    const fallbackId = `${sourceKey}_${index + 1}`;
+    const id = getMergedStockRecordId(Object.fromEntries([...usedIds].map((usedId) => [usedId, true])), record?.id ?? fallbackId, sourceKey);
+    usedIds.add(id);
+    const cloned = structuredClone(record);
+    if (cloned && typeof cloned === 'object') cloned.id = id;
+    merged.push(cloned);
+  }
+
+  return merged;
+}
+
+function getMergedStockRecordId(existingRecords, recordId, sourceKey) {
+  const baseId = String(recordId ?? sourceKey).trim() || sourceKey;
+  if (!Object.hasOwn(existingRecords, baseId)) return baseId;
+
+  for (let index = 1; index < 10_000; index += 1) {
+    const candidate = `${sourceKey}_${baseId}_${index}`;
+    if (!Object.hasOwn(existingRecords, candidate)) return candidate;
+  }
+
+  return `${sourceKey}_${baseId}_${Date.now()}`;
 }
 
 function getOrCreateMarket(guild, now) {
@@ -2286,30 +2452,7 @@ function createDefaultStockMoneyProfile(userId, username, now = Date.now()) {
 function getOrCreateStockUser(guild, userId, username, moneyProfile = null, now = Date.now()) {
   guild.stocks ??= { users: {} };
   guild.stocks.users ??= {};
-  guild.stocks.users[userId] ??= {
-    userId,
-    username,
-    holdings: {},
-    limitOrders: {},
-    priceAlerts: {},
-    leveragedPositions: {},
-    tradeHistory: [],
-    dividendHistory: [],
-    realizedProfit: 0,
-    realizedLeveragedProfit: 0,
-    pendingDividends: 0,
-    totalDividends: 0,
-    claimedDividends: 0,
-    tradeCount: 0,
-    leveragedTradeCount: 0,
-    nextOrderSeq: 0,
-    nextAlertSeq: 0,
-    nextPositionSeq: 0,
-    nextTradeSeq: 0,
-    nextDividendSeq: 0,
-    lastDividendTick: 0,
-    lastTradeAt: 0
-  };
+  guild.stocks.users[userId] ??= createDefaultStockUser(userId, username);
 
   const stockUser = guild.stocks.users[userId];
   stockUser.userId = userId;
@@ -2342,6 +2485,33 @@ function getOrCreateStockUser(guild, userId, username, moneyProfile = null, now 
   stockUser.lastTradeAt = normalizeNonNegativeInteger(stockUser.lastTradeAt);
   migrateLegacyStockLiabilitiesToGold(moneyProfile, stockUser, now);
   return stockUser;
+}
+
+function createDefaultStockUser(userId, username = 'Unknown') {
+  return {
+    userId,
+    username,
+    holdings: {},
+    limitOrders: {},
+    priceAlerts: {},
+    leveragedPositions: {},
+    tradeHistory: [],
+    dividendHistory: [],
+    realizedProfit: 0,
+    realizedLeveragedProfit: 0,
+    pendingDividends: 0,
+    totalDividends: 0,
+    claimedDividends: 0,
+    tradeCount: 0,
+    leveragedTradeCount: 0,
+    nextOrderSeq: 0,
+    nextAlertSeq: 0,
+    nextPositionSeq: 0,
+    nextTradeSeq: 0,
+    nextDividendSeq: 0,
+    lastDividendTick: 0,
+    lastTradeAt: 0
+  };
 }
 
 function migrateLegacyStockLiabilitiesToGold(profile, stockUser, now = Date.now()) {
@@ -2500,6 +2670,7 @@ function normalizePriceAlert(alert = {}, fallbackId = null, guild = null) {
 
   return {
     id,
+    guildId: normalizeOptionalStringId(safeAlert.guildId),
     userId: String(safeAlert.userId ?? '').trim(),
     username: String(safeAlert.username ?? 'Unknown').trim() || 'Unknown',
     stockId: guild ? normalizeStockIdForGuild(safeAlert.stockId, guild) : normalizeStockId(safeAlert.stockId),

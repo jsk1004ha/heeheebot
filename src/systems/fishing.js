@@ -134,9 +134,9 @@ export class FishingService {
   }
 
   async getProfile(guildId, userId, username = 'Unknown') {
-    const data = await this.store.load();
-    const profile = getOrCreateFishingProfile(data, guildId, userId, username);
-    return cloneFishingProfile(profile);
+    return this.store.update((data) =>
+      cloneFishingProfile(getOrCreateFishingProfile(data, guildId, userId, username))
+    );
   }
 
   async catchFish({ guildId, userId, username, now = Date.now() }) {
@@ -489,14 +489,16 @@ export function normalizeFishId(fishId) {
 }
 
 function getOrCreateFishingProfile(data, guildId, userId, username = 'Unknown') {
-  data.guilds ??= {};
-  data.guilds[guildId] ??= {};
-  const guild = data.guilds[guildId];
-  guild.fishing ??= { users: {} };
-  guild.fishing.users ??= {};
-  guild.fishing.users[userId] ??= createDefaultFishingProfile(userId, username);
+  const account = getOrCreateLinkedAccountProfile(data, {
+    guildId,
+    userId,
+    username,
+    now: Date.now(),
+    createDefaultProfile: createDefaultGoldProfile
+  });
+  account.fishing = migrateLegacyFishingProfiles(data, userId, username, account.fishing);
 
-  const profile = guild.fishing.users[userId];
+  const profile = account.fishing;
   profile.userId = userId;
   profile.username = username || profile.username || 'Unknown';
   profile.rod = normalizeRod(profile.rod);
@@ -510,6 +512,76 @@ function getOrCreateFishingProfile(data, guildId, userId, username = 'Unknown') 
   profile.createdAt = normalizeNonNegativeInteger(profile.createdAt) || Date.now();
 
   return profile;
+}
+
+function migrateLegacyFishingProfiles(data, userId, username, existingProfile = null) {
+  const merged = createDefaultFishingProfile(userId, username);
+  if (existingProfile) mergeFishingProfileInto(merged, existingProfile);
+
+  for (const guild of Object.values(data.guilds ?? {})) {
+    const legacyProfile = guild?.fishing?.users?.[userId];
+    if (!legacyProfile) continue;
+
+    mergeFishingProfileInto(merged, legacyProfile);
+    delete guild.fishing.users[userId];
+  }
+
+  return merged;
+}
+
+function mergeFishingProfileInto(target, source = {}) {
+  if (!source || typeof source !== 'object') return target;
+
+  target.username = source.username || target.username;
+  const sourceRod = normalizeRod(source.rod);
+  target.rod.level = Math.max(target.rod.level, sourceRod.level);
+  target.rod.destroyedCount += sourceRod.destroyedCount;
+  target.rod.totalEnhancementAttempts += sourceRod.totalEnhancementAttempts;
+  target.rod.lastEnhancedAt = Math.max(target.rod.lastEnhancedAt, sourceRod.lastEnhancedAt);
+
+  const sourceInventory = normalizeInventory(source.inventory);
+  for (const [fishId, count] of Object.entries(sourceInventory)) {
+    target.inventory[fishId] = (target.inventory[fishId] ?? 0) + count;
+  }
+
+  const sourceBestFish = normalizeBestFish(source.bestFish);
+  for (const [fishId, best] of Object.entries(sourceBestFish)) {
+    if (!target.bestFish[fishId] || best.size > target.bestFish[fishId].size) {
+      target.bestFish[fishId] = { ...best };
+    }
+  }
+
+  const sourceCollection = normalizeCollection(source.collection);
+  for (const [fishId, caughtAt] of Object.entries(sourceCollection)) {
+    target.collection[fishId] = target.collection[fishId]
+      ? Math.min(target.collection[fishId], caughtAt)
+      : caughtAt;
+  }
+
+  const sourceIdle = normalizeIdle(source.idle);
+  target.idle.totalMinutes += sourceIdle.totalMinutes;
+  target.idle.startedAt = Math.max(target.idle.startedAt, sourceIdle.startedAt);
+  target.idle.lastClaimedAt = Math.max(target.idle.lastClaimedAt, sourceIdle.lastClaimedAt);
+
+  const sourceTeam = normalizeTeam(source.team, sourceInventory);
+  if (target.team.length <= 0 && sourceTeam.length > 0) {
+    target.team = [...sourceTeam];
+  }
+
+  const sourceBattle = normalizeBattleStats(source.battle);
+  target.battle.wins += sourceBattle.wins;
+  target.battle.losses += sourceBattle.losses;
+  target.battle.draws += sourceBattle.draws;
+  target.battle.lastBattleAt = Math.max(target.battle.lastBattleAt, sourceBattle.lastBattleAt);
+
+  const sourceStats = normalizeStats(source.stats);
+  target.stats.totalCatches += sourceStats.totalCatches;
+  const sourceCreatedAt = normalizeNonNegativeInteger(source.createdAt);
+  target.createdAt = target.createdAt > 0 && sourceCreatedAt > 0
+    ? Math.min(target.createdAt, sourceCreatedAt)
+    : Math.max(target.createdAt, sourceCreatedAt);
+
+  return target;
 }
 
 function getOrCreateGoldProfile(data, guildId, userId, username = 'Unknown') {
@@ -908,12 +980,19 @@ function selectRandomFishingOpponentProfile({
   userId,
   randomInt
 }) {
-  const users = data.guilds?.[guildId]?.fishing?.users ?? {};
-  const candidates = Object.entries(users)
-    .filter(([candidateUserId]) => candidateUserId !== userId)
-    .map(([candidateUserId, candidate]) =>
-      getOrCreateFishingProfile(data, guildId, candidateUserId, candidate?.username ?? '상대')
-    )
+  const legacyUsers = data.guilds?.[guildId]?.fishing?.users ?? {};
+  const candidateUserIds = new Set([
+    ...Object.entries(data.accounts?.users ?? {})
+      .filter(([, account]) => account?.fishing)
+      .map(([candidateUserId]) => candidateUserId),
+    ...Object.keys(legacyUsers)
+  ]);
+  const candidates = [...candidateUserIds]
+    .filter((candidateUserId) => candidateUserId !== userId)
+    .map((candidateUserId) => {
+      const candidate = data.accounts?.users?.[candidateUserId] ?? legacyUsers[candidateUserId];
+      return getOrCreateFishingProfile(data, guildId, candidateUserId, candidate?.username ?? '상대');
+    })
     .filter((candidate) => hydrateTeam(candidate, `${candidate.username} 팀`).length > 0);
 
   if (candidates.length <= 0) {
