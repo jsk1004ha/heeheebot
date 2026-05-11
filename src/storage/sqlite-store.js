@@ -298,9 +298,15 @@ function deserializeNode(path, nodes, children) {
         .map((child) => [child.node_key, deserializeNode(child.path, nodes, children)]));
 
     case 'array': {
+      const sortedChildren = [...(children.get(path) ?? [])].sort(compareArrayNodeKeys);
       const array = [];
-      for (const child of [...(children.get(path) ?? [])].sort(compareArrayNodeKeys)) {
-        array[Number(child.node_key)] = deserializeNode(child.path, nodes, children);
+      for (let index = 0; index < sortedChildren.length; index += 1) {
+        const child = sortedChildren[index];
+        const childIndex = Number(child.node_key);
+        if (!Number.isSafeInteger(childIndex) || childIndex !== index) {
+          throw new Error(`SQLite state array is sparse or out of order at path: ${path || '<root>'}.`);
+        }
+        array.push(deserializeNode(child.path, nodes, children));
       }
       return array;
     }
@@ -326,6 +332,20 @@ function compareArrayNodeKeys(left, right) {
   return Number(left.node_key) - Number(right.node_key);
 }
 
+function assertDenseArray(value, path) {
+  const indexKeys = Object.keys(value).filter(isArrayIndexKey);
+
+  if (indexKeys.length !== value.length) {
+    throw new Error(`SQLite store state contains a sparse array at ${path}.`);
+  }
+}
+
+function isArrayIndexKey(key) {
+  if (!/^(0|[1-9]\d*)$/.test(key)) return false;
+  const index = Number(key);
+  return Number.isSafeInteger(index) && index >= 0 && index < 2 ** 32 - 1;
+}
+
 function toJsonCompatibleData(data) {
   return normalizeJsonCompatibleValue(data, '<root>');
 }
@@ -334,13 +354,13 @@ function normalizeJsonCompatibleValue(value, path) {
   if (value === null) return null;
 
   if (Array.isArray(value)) {
-    return Array.from({ length: value.length }, (_, index) => {
-      if (!Object.hasOwn(value, index)) {
-        throw new Error(`SQLite store state contains a sparse array slot at ${path}[${index}].`);
-      }
+    assertDenseArray(value, path);
 
-      return normalizeJsonCompatibleValue(value[index], `${path}[${index}]`);
-    });
+    const normalized = [];
+    for (let index = 0; index < value.length; index += 1) {
+      normalized.push(normalizeJsonCompatibleValue(value[index], `${path}[${index}]`));
+    }
+    return normalized;
   }
 
   switch (typeof value) {

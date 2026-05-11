@@ -33,8 +33,13 @@ const DEFAULT_MIN_CANDIDATES = 1;
 
 export class KoreanInitialDictionary {
   constructor(words) {
-    const normalizedWords = [...new Set(words.map(normalizeChoseongWord).filter(Boolean))]
-      .sort((a, b) => a.localeCompare(b, 'ko'));
+    const uniqueWords = new Set();
+    for (const word of words) {
+      const normalizedWord = normalizeChoseongWord(word);
+      if (normalizedWord) uniqueWords.add(normalizedWord);
+    }
+
+    const normalizedWords = [...uniqueWords].sort((a, b) => a.localeCompare(b, 'ko'));
 
     if (normalizedWords.length === 0) {
       throw new Error('초성게임 단어 목록이 비어 있습니다.');
@@ -46,10 +51,9 @@ export class KoreanInitialDictionary {
 
     for (const word of normalizedWords) {
       const initials = getInitialConsonants(word);
-      this.wordsByInitials.set(initials, [
-        ...(this.wordsByInitials.get(initials) ?? []),
-        word
-      ]);
+      const bucket = this.wordsByInitials.get(initials) ?? [];
+      bucket.push(word);
+      this.wordsByInitials.set(initials, bucket);
     }
   }
 
@@ -152,12 +156,11 @@ export class KoreanInitialDictionary {
     const normalizedLength = normalizeInitialLength(length);
     const counts = new Map();
 
-    for (const word of this.words) {
-      const initials = getInitialConsonants(word);
+    for (const [initials, words] of this.wordsByInitials) {
       if (initials.length < normalizedLength) continue;
 
       const prefix = initials.slice(0, normalizedLength);
-      counts.set(prefix, (counts.get(prefix) ?? 0) + 1);
+      counts.set(prefix, (counts.get(prefix) ?? 0) + words.length);
     }
 
     return [...counts.entries()]
@@ -172,9 +175,14 @@ export class KoreanInitialDictionary {
 
     if (!normalizedInitials) return [];
 
-    return this.words
-      .filter((word) => getInitialConsonants(word).startsWith(normalizedInitials))
-      .slice(0, normalizedLimit);
+    const answers = [];
+    for (const word of this.words) {
+      if (!getInitialConsonants(word).startsWith(normalizedInitials)) continue;
+      answers.push(word);
+      if (answers.length >= normalizedLimit) break;
+    }
+
+    return answers;
   }
 }
 
