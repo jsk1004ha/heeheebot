@@ -234,6 +234,52 @@ test('시즌 과제 보너스는 반복 활동 일일 상한에 막히지 않는
   }
 });
 
+test('시즌 과제는 낚시, 주식, 커뮤니티, 업적 출처를 진행도에 반영한다', async () => {
+  const fixture = await createFixture();
+  const now = Date.UTC(2026, 4, 11, 12);
+
+  try {
+    await fixture.seasons.awardPoints({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '시즌러',
+      source: SEASON_POINT_SOURCES.FISHING_CATCH,
+      points: 20,
+      now
+    });
+    await fixture.seasons.awardPoints({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '시즌러',
+      source: SEASON_POINT_SOURCES.STOCK_TRADE,
+      points: 15,
+      now
+    });
+    await fixture.seasons.awardPoints({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '시즌러',
+      source: SEASON_POINT_SOURCES.ACHIEVEMENT_EARN,
+      points: 10,
+      now
+    });
+
+    const board = await fixture.seasons.getChallenges({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '시즌러',
+      now
+    });
+
+    assert.equal(board.daily.find((challenge) => challenge.id === 'daily_fishing_catch').claimable, true);
+    assert.equal(board.daily.find((challenge) => challenge.id === 'daily_stock_trade').claimable, true);
+    assert.equal(board.daily.find((challenge) => challenge.id === 'daily_achievement_earn').claimable, true);
+    assert.equal(board.weekly.find((challenge) => challenge.id === 'weekly_three_categories').progress, 3);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 async function createFixture() {
   const directory = await mkdtemp(join(tmpdir(), 'heeheebot-seasons-'));
   const store = createSqliteStore(join(directory, 'profiles.sqlite'));
