@@ -397,7 +397,7 @@ async function handleSwordButton(interaction, economy, logger = console, service
       { components: [] }
     ));
   } catch (error) {
-    logger.error(error);
+    logUnexpectedInteractionError(logger, error, 'Sword sale button rejected');
     await interaction.update({
       content: `검판매 실패: ${error.message}`,
       components: []
@@ -479,8 +479,8 @@ async function handleSwordQuickButton(interaction, economy, logger = console, se
     });
     return true;
   } catch (error) {
-    logger.error(error);
-    await interaction.reply({
+    logUnexpectedInteractionError(logger, error, 'Sword quick button rejected');
+    await safeReplyToInteraction(interaction, {
       content: `검 시스템 처리 실패: ${error.message}`,
       flags: MessageFlags.Ephemeral
     });

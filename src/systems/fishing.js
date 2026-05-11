@@ -4,7 +4,10 @@ import {
   migrateLegacyWalletsToGold,
   normalizeWallets
 } from './currencies.js';
-import { getOrCreateLinkedAccountProfile } from './accounts.js';
+import {
+  getOrCreateLinkedAccountProfile,
+  getOrCreateLinkedFeatureUserProfile
+} from './accounts.js';
 
 const TEAM_SIZE = 3;
 const MAX_ROD_LEVEL = 20;
@@ -134,9 +137,10 @@ export class FishingService {
   }
 
   async getProfile(guildId, userId, username = 'Unknown') {
-    return this.store.update((data) =>
-      cloneFishingProfile(getOrCreateFishingProfile(data, guildId, userId, username))
-    );
+    return this.store.update((data) => {
+      const profile = getOrCreateFishingProfile(data, guildId, userId, username);
+      return cloneFishingProfile(profile);
+    });
   }
 
   async catchFish({ guildId, userId, username, now = Date.now() }) {
@@ -489,16 +493,15 @@ export function normalizeFishId(fishId) {
 }
 
 function getOrCreateFishingProfile(data, guildId, userId, username = 'Unknown') {
-  const account = getOrCreateLinkedAccountProfile(data, {
+  migrateLegacyFishingProfiles(data, userId, username);
+  const profile = getOrCreateLinkedFeatureUserProfile(data, {
+    featureKey: 'fishing',
     guildId,
     userId,
     username,
     now: Date.now(),
-    createDefaultProfile: createDefaultGoldProfile
+    createDefaultProfile: createDefaultFishingProfile
   });
-  account.fishing = migrateLegacyFishingProfiles(data, userId, username, account.fishing);
-
-  const profile = account.fishing;
   profile.userId = userId;
   profile.username = username || profile.username || 'Unknown';
   profile.rod = normalizeRod(profile.rod);
@@ -510,23 +513,49 @@ function getOrCreateFishingProfile(data, guildId, userId, username = 'Unknown') 
   profile.battle = normalizeBattleStats(profile.battle);
   profile.stats = normalizeStats(profile.stats);
   profile.createdAt = normalizeNonNegativeInteger(profile.createdAt) || Date.now();
+  mirrorFishingProfileToGuild(data, guildId, userId, profile);
 
   return profile;
 }
 
-function migrateLegacyFishingProfiles(data, userId, username, existingProfile = null) {
-  const merged = createDefaultFishingProfile(userId, username);
-  if (existingProfile) mergeFishingProfileInto(merged, existingProfile);
+function migrateLegacyFishingProfiles(data, userId, username) {
+  const normalizedUserId = String(userId ?? '').trim();
+  if (!normalizedUserId) return;
 
-  for (const guild of Object.values(data.guilds ?? {})) {
-    const legacyProfile = guild?.fishing?.users?.[userId];
-    if (!legacyProfile) continue;
+  data.fishing ??= {};
+  data.fishing.users ??= {};
 
-    mergeFishingProfileInto(merged, legacyProfile);
-    delete guild.fishing.users[userId];
+  const topLevelProfile = data.fishing.users[normalizedUserId] ?? null;
+  const accountProfile = data.accounts?.users?.[normalizedUserId]?.fishing ?? null;
+  const legacyGuildProfiles = Object.values(data.guilds ?? {})
+    .map((guild) => guild?.fishing?.users?.[normalizedUserId])
+    .filter(Boolean);
+
+  if (!topLevelProfile && !accountProfile && legacyGuildProfiles.length <= 0) return;
+
+  const merged = createDefaultFishingProfile(normalizedUserId, username);
+  if (topLevelProfile) mergeFishingProfileInto(merged, topLevelProfile);
+  if (accountProfile && !areJsonEquivalent(accountProfile, topLevelProfile)) {
+    mergeFishingProfileInto(merged, accountProfile);
   }
 
-  return merged;
+  for (const guild of Object.values(data.guilds ?? {})) {
+    const legacyProfile = guild?.fishing?.users?.[normalizedUserId];
+    if (!legacyProfile) continue;
+
+    const isMirroredProfile = guild.fishing.linkedUsers?.[normalizedUserId] === true
+      && (areJsonEquivalent(legacyProfile, topLevelProfile) || areJsonEquivalent(legacyProfile, accountProfile));
+    if (!isMirroredProfile && !areJsonEquivalent(legacyProfile, topLevelProfile) && !areJsonEquivalent(legacyProfile, accountProfile)) {
+      mergeFishingProfileInto(merged, legacyProfile);
+    }
+    delete guild.fishing.users[normalizedUserId];
+    if (guild.fishing.linkedUsers) delete guild.fishing.linkedUsers[normalizedUserId];
+  }
+
+  if (data.accounts?.users?.[normalizedUserId]?.fishing) {
+    delete data.accounts.users[normalizedUserId].fishing;
+  }
+  data.fishing.users[normalizedUserId] = merged;
 }
 
 function mergeFishingProfileInto(target, source = {}) {
@@ -584,6 +613,16 @@ function mergeFishingProfileInto(target, source = {}) {
   return target;
 }
 
+function mirrorFishingProfileToGuild(data, guildId, userId, profile) {
+  data.guilds ??= {};
+  data.guilds[guildId] ??= {};
+  data.guilds[guildId].fishing ??= { users: {} };
+  data.guilds[guildId].fishing.users ??= {};
+  data.guilds[guildId].fishing.linkedUsers ??= {};
+  data.guilds[guildId].fishing.users[userId] = profile;
+  data.guilds[guildId].fishing.linkedUsers[userId] = true;
+}
+
 function getOrCreateGoldProfile(data, guildId, userId, username = 'Unknown') {
   const now = Date.now();
   const profile = getOrCreateLinkedAccountProfile(data, {
@@ -614,7 +653,7 @@ function createDefaultGoldProfile(userId, username, now = Date.now()) {
   };
 }
 
-function createDefaultFishingProfile(userId, username) {
+function createDefaultFishingProfile(userId, username, now = Date.now()) {
   return {
     userId,
     username,
@@ -642,7 +681,7 @@ function createDefaultFishingProfile(userId, username) {
     stats: {
       totalCatches: 0
     },
-    createdAt: Date.now()
+    createdAt: now
   };
 }
 
@@ -982,6 +1021,7 @@ function selectRandomFishingOpponentProfile({
 }) {
   const legacyUsers = data.guilds?.[guildId]?.fishing?.users ?? {};
   const candidateUserIds = new Set([
+    ...Object.keys(data.fishing?.users ?? {}),
     ...Object.entries(data.accounts?.users ?? {})
       .filter(([, account]) => account?.fishing)
       .map(([candidateUserId]) => candidateUserId),
@@ -990,7 +1030,9 @@ function selectRandomFishingOpponentProfile({
   const candidates = [...candidateUserIds]
     .filter((candidateUserId) => candidateUserId !== userId)
     .map((candidateUserId) => {
-      const candidate = data.accounts?.users?.[candidateUserId] ?? legacyUsers[candidateUserId];
+      const candidate = data.fishing?.users?.[candidateUserId]
+        ?? data.accounts?.users?.[candidateUserId]?.fishing
+        ?? legacyUsers[candidateUserId];
       return getOrCreateFishingProfile(data, guildId, candidateUserId, candidate?.username ?? '상대');
     })
     .filter((candidate) => hydrateTeam(candidate, `${candidate.username} 팀`).length > 0);
@@ -1011,6 +1053,15 @@ function clampInteger(value, min, max) {
 function normalizeNonNegativeInteger(value) {
   const normalized = Number(value);
   return Number.isSafeInteger(normalized) && normalized >= 0 ? normalized : 0;
+}
+
+function areJsonEquivalent(left, right) {
+  if (!left || !right) return false;
+  try {
+    return JSON.stringify(left) === JSON.stringify(right);
+  } catch {
+    return left === right;
+  }
 }
 
 function randomInt(min, max) {

@@ -3,6 +3,7 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  PermissionFlagsBits,
   SlashCommandBuilder
 } from 'discord.js';
 import { getStockCatalog } from '../systems/stocks.js';
@@ -363,6 +364,64 @@ export const stockCommands = [
             .setName('금액')
             .setDescription('상환할 골드. 비우면 가능한 만큼 전액 상환')
             .setMinValue(1)
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('관리자상장')
+        .setDescription('관리자 권한으로 전 서버 공통 주식 종목을 상장합니다.')
+        .addStringOption((option) =>
+          option
+            .setName('이름')
+            .setDescription('상장할 종목 이름')
+            .setMaxLength(30)
+            .setRequired(true)
+        )
+        .addStringOption((option) =>
+          option
+            .setName('심볼')
+            .setDescription('영문/숫자 심볼 2~6자')
+            .setMaxLength(6)
+            .setRequired(true)
+        )
+        .addIntegerOption((option) =>
+          option
+            .setName('기준가')
+            .setDescription('상장 기준가')
+            .setMinValue(1)
+            .setMaxValue(1_000_000)
+            .setRequired(true)
+        )
+        .addStringOption((option) =>
+          option
+            .setName('업종')
+            .setDescription('표시할 업종')
+            .setMaxLength(20)
+        )
+        .addStringOption((option) =>
+          option
+            .setName('위험도')
+            .setDescription('가격 변동 성향')
+            .addChoices(
+              { name: '안정', value: 'stable' },
+              { name: '성장', value: 'growth' },
+              { name: '순환', value: 'cyclical' },
+              { name: '변동', value: 'volatile' },
+              { name: '밈', value: 'meme' }
+            )
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('관리자상장폐지')
+        .setDescription('관리자 권한으로 전 서버 공통 주식 종목을 상장폐지합니다.')
+        .addStringOption((option) =>
+          option
+            .setName('종목')
+            .setDescription('상장폐지할 종목명 또는 id')
+            .setMaxLength(50)
+            .setAutocomplete(true)
+            .setRequired(true)
         )
     )
 ];
@@ -736,7 +795,43 @@ async function routeStockCommand(interaction, stocks, services = {}) {
     return;
   }
 
+  if (subcommand === '관리자상장') {
+    assertStockAdmin(interaction);
+    const stock = await stocks.listAdminStock({
+      guildId,
+      name: interaction.options.getString('이름', true),
+      symbol: interaction.options.getString('심볼', true),
+      sector: interaction.options.getString('업종') ?? '관리자',
+      risk: interaction.options.getString('위험도') ?? 'stable',
+      basePrice: interaction.options.getInteger('기준가', true)
+    });
+    await replyStockContent(interaction, formatAdminListedStock(stock));
+    return;
+  }
+
+  if (subcommand === '관리자상장폐지') {
+    assertStockAdmin(interaction);
+    const stock = await stocks.delistAdminStock({
+      guildId,
+      stockId: interaction.options.getString('종목', true)
+    });
+    await replyStockContent(interaction, formatAdminDelistedStock(stock));
+    return;
+  }
+
   await replyStockContent(interaction, '알 수 없는 주식 명령입니다. `/주식 시세` 또는 `/주식 전체시세`로 다시 시도해주세요.');
+}
+
+function assertStockAdmin(interaction) {
+  const permissions = interaction.memberPermissions;
+  const hasPermission = permissions?.has?.(PermissionFlagsBits.ManageGuild)
+    || permissions?.has?.(PermissionFlagsBits.Administrator)
+    || permissions?.has?.('ManageGuild')
+    || permissions?.has?.('Administrator');
+
+  if (!hasPermission) {
+    throw new Error('이 주식 설정은 서버 관리자만 사용할 수 있습니다.');
+  }
 }
 
 function getLeverageCloseInput(interaction) {
@@ -1577,6 +1672,33 @@ function formatDebtRepaymentResult(user, result) {
       ? '남은 채무가 있어 새 레버리지 진입은 아직 막혀 있습니다.'
       : '채무를 모두 갚았습니다. 레버리지 진입 가능!'
   ].join('\n');
+}
+
+function formatAdminListedStock(stock) {
+  return [
+    '✅ **관리자 주식 상장 완료**',
+    `종목: **${stock.name}** \`${stock.symbol}\` (${stock.sector})`,
+    `기준가: **${stock.price.toLocaleString()}골드** / 위험도: **${formatRisk(stock.risk)}**`,
+    '이 종목은 전 서버 공통 주식 시장에 바로 반영됩니다.'
+  ].join('\n');
+}
+
+function formatAdminDelistedStock(stock) {
+  return [
+    '🛑 **관리자 주식 상장폐지 완료**',
+    `종목: **${stock.name}** \`${stock.symbol}\``,
+    '전 서버 공통 시장에서 거래가 중지되고 보유/주문/알림/레버리지 상태가 정리됩니다.'
+  ].join('\n');
+}
+
+function formatRisk(risk) {
+  return {
+    stable: '안정',
+    growth: '성장',
+    cyclical: '순환',
+    volatile: '변동',
+    meme: '밈'
+  }[risk] ?? risk;
 }
 
 function formatBankruptcyLine(bankruptcy) {

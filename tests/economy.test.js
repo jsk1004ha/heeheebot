@@ -315,6 +315,92 @@ test('여러 서버에 같은 유저 레거시 계정이 있으면 선택 후 �
   }
 });
 
+test('계정연동은 서버별 낚시와 주식 기록도 선택한 서버 기록으로 통합한다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await fixture.store.update((data) => {
+      data.guilds['guild-1'] = {
+        fishing: {
+          users: {
+            'user-1': {
+              userId: 'user-1',
+              username: '첫낚시',
+              rod: { level: 3 },
+              inventory: { carp: 1 },
+              collection: { carp: 1 },
+              stats: { totalCatches: 3 }
+            }
+          }
+        },
+        stocks: {
+          users: {
+            'user-1': {
+              userId: 'user-1',
+              username: '첫주식',
+              holdings: { monkeynix: { quantity: 2, averageCost: 100 } },
+              tradeCount: 2
+            }
+          }
+        }
+      };
+      data.guilds['guild-2'] = {
+        fishing: {
+          users: {
+            'user-1': {
+              userId: 'user-1',
+              username: '둘째낚시',
+              rod: { level: 9 },
+              inventory: { tuna: 4 },
+              collection: { tuna: 1 },
+              stats: { totalCatches: 9 }
+            }
+          }
+        },
+        stocks: {
+          users: {
+            'user-1': {
+              userId: 'user-1',
+              username: '둘째주식',
+              holdings: { heejin_electronics: { quantity: 7, averageCost: 500 } },
+              tradeCount: 7
+            }
+          }
+        }
+      };
+    });
+
+    const summary = await fixture.economy.getAccountLinkSummary({
+      guildId: 'guild-3',
+      userId: 'user-1',
+      username: '선택자'
+    });
+
+    assert.equal(summary.required, true);
+    assert.deepEqual(summary.candidates.map((candidate) => candidate.id), ['guild:guild-1', 'guild:guild-2']);
+
+    await fixture.economy.resolveAccountLink({
+      guildId: 'guild-3',
+      userId: 'user-1',
+      username: '선택자',
+      selectedAccountId: 'guild:guild-2',
+      now: 1234
+    });
+    const data = await fixture.store.load();
+
+    assert.equal(data.fishing.users['user-1'].rod.level, 9);
+    assert.equal(data.fishing.users['user-1'].inventory.tuna, 4);
+    assert.equal(data.stocks.users['user-1'].holdings.heejin_electronics.quantity, 7);
+    assert.equal(data.stocks.users['user-1'].tradeCount, 7);
+    assert.equal(data.guilds['guild-1'].fishing.users['user-1'], undefined);
+    assert.equal(data.guilds['guild-2'].fishing.users['user-1'], undefined);
+    assert.equal(data.guilds['guild-1'].stocks.users['user-1'], undefined);
+    assert.equal(data.guilds['guild-2'].stocks.users['user-1'], undefined);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 test('레벨 필요 경험치는 100 × 레벨^1.5 공식을 따른다', async () => {
   const fixture = await createFixture();
 

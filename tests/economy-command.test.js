@@ -363,6 +363,37 @@ test('프로필은 대상 유저와 RPG/검/주식/커뮤니티 통합 요약을
   assert.match(content, /주식: 총자산 \*\*12,000골드\*\* \/ 보유 \*\*2종\*\* \/ 레버리지 \*\*1개\*\* \/ 평가손익 \*\*\+300골드\*\* \/ 실현손익 \*\*-120골드\*\*/);
 });
 
+test('대상 유저 프로필은 이미 defer된 interaction을 editReply로 완료한다', async () => {
+  const targetUser = {
+    id: 'user-2',
+    username: '대상유저'
+  };
+  const economy = {
+    async getProfile() {
+      return {
+        userId: 'user-2',
+        username: '대상유저',
+        level: 1,
+        xp: 0,
+        totalXp: 0,
+        balance: 0,
+        dailyStreak: 0
+      };
+    }
+  };
+  const interaction = createInteraction('프로필', {
+    targetUser,
+    deferred: true,
+    throwOnReply: true
+  });
+
+  await handleEconomyCommand(interaction, economy);
+
+  assert.equal(interaction.replies.length, 0);
+  assert.equal(interaction.edits.length, 1);
+  assert.match(getReplyContent(interaction.edits[0]), /대상유저님의 프로필/);
+});
+
 test('재화정보 명령은 통합 골드 사용처와 기존 지갑 정산 기준을 안내한다', async () => {
   const interaction = createInteraction('재화정보');
   const handled = await handleEconomyCommand(interaction, {});
@@ -388,7 +419,11 @@ function createInteraction(commandName, options = {}) {
       id: 'user-1',
       username: '테스터'
     },
+    deferred: options.deferred ?? false,
+    replied: options.replied ?? false,
     replies: [],
+    edits: [],
+    followUps: [],
     isChatInputCommand() {
       return true;
     },
@@ -404,7 +439,18 @@ function createInteraction(commandName, options = {}) {
       }
     },
     async reply(message) {
+      if (options.throwOnReply) {
+        throw new Error('reply should not be used');
+      }
+      this.replied = true;
       this.replies.push(message);
+    },
+    async editReply(message) {
+      this.replied = true;
+      this.edits.push(message);
+    },
+    async followUp(message) {
+      this.followUps.push(message);
     }
   };
 }

@@ -1150,7 +1150,7 @@ function getAchievementSources(data, guild, userId, profile) {
   return {
     rpg: profile?.rpg ?? null,
     sword: profile?.sword ?? null,
-    fishing: profile?.fishing ?? guild?.fishing?.users?.[normalizedUserId] ?? null,
+    fishing: data?.fishing?.users?.[normalizedUserId] ?? profile?.fishing ?? guild?.fishing?.users?.[normalizedUserId] ?? null,
     stocks: data?.stocks?.users?.[normalizedUserId] ?? guild?.stocks?.users?.[normalizedUserId] ?? null,
     tamagotchi: guild?.tamagotchi?.users?.[normalizedUserId] ?? null
   };

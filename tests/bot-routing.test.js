@@ -4,6 +4,7 @@ import { SEASON_POINT_SOURCES } from '../src/systems/seasons.js';
 import test from 'node:test';
 import {
   isSupportedCommandInteraction,
+  shouldDeferBeforeCommandHandling,
   sendAutomaticAchievementNotice
 } from '../src/bot.js';
 
@@ -30,6 +31,34 @@ test('봇 라우팅은 명령/버튼/선택 메뉴가 아니면 무시한다', (
     isButton: () => false,
     isModalSubmit: () => false,
     isStringSelectMenu: () => false
+  }), false);
+});
+
+test('봇 라우팅은 오래 걸릴 수 있는 버튼/선택 메뉴도 처리 전에 즉시 defer한다', () => {
+  assert.equal(shouldDeferBeforeCommandHandling({
+    isChatInputCommand: () => false,
+    isModalSubmit: () => false,
+    isButton: () => true,
+    isStringSelectMenu: () => false,
+    customId: 'sword_quick:enhance:user-1'
+  }), true);
+
+  assert.equal(shouldDeferBeforeCommandHandling({
+    isChatInputCommand: () => false,
+    isModalSubmit: () => false,
+    isButton: () => false,
+    isStringSelectMenu: () => true,
+    customId: 'account_link_select:user-1'
+  }), true);
+});
+
+test('봇 라우팅은 모달을 띄워야 하는 라이어게임 버튼은 사전 defer하지 않는다', () => {
+  assert.equal(shouldDeferBeforeCommandHandling({
+    isChatInputCommand: () => false,
+    isModalSubmit: () => false,
+    isButton: () => true,
+    isStringSelectMenu: () => false,
+    customId: 'liar_guess:game-1'
   }), false);
 });
 

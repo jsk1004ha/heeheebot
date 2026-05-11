@@ -33,6 +33,7 @@ import {
   createAllowedMentionsForUsers,
   formatUserMention
 } from './ui.js';
+import { safeReplyToInteraction } from './interactions.js';
 
 export const economyCommands = [
   new SlashCommandBuilder()
@@ -121,7 +122,7 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
   if (interaction.commandName === '프로필') {
     const target = getProfileTargetUser(interaction, user);
     if (target.bot) {
-      await interaction.reply({
+      await safeReplyToInteraction(interaction, {
         content: '봇 프로필은 표시하지 않습니다.',
         flags: MessageFlags.Ephemeral
       });
@@ -133,7 +134,7 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
       profile = await economy.getProfile(guildId, target.id, target.username);
     } catch (error) {
       if (!isAccountSelectionRequiredError(error)) throw error;
-      await interaction.reply({
+      await safeReplyToInteraction(interaction, {
         content: target.id === user.id
           ? '계정이 여러 서버에 있습니다. `/계정연동`으로 사용할 계정 1개를 먼저 선택해주세요.'
           : '대상 유저에게 여러 서버 계정이 있어 프로필을 표시할 수 없습니다. 대상 유저가 `/계정연동`을 먼저 완료해야 합니다.',
@@ -146,7 +147,7 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
       target,
       stocks: services?.stocks
     });
-    await interaction.reply(createProfileReplyPayload(profile, profileContext));
+    await safeReplyToInteraction(interaction, createProfileReplyPayload(profile, profileContext));
     return true;
   }
 

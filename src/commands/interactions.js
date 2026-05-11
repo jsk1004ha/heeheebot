@@ -56,7 +56,8 @@ export async function safeReplyToInteraction(interaction, payload, options = {})
 
   try {
     if (interaction.deferred && !interaction.replied) {
-      if (isEphemeralInteractionPayload(responsePayload) && typeof interaction.followUp === 'function') {
+      if (shouldUseFollowUpAfterDeferredResponse(interaction, responsePayload)
+        && typeof interaction.followUp === 'function') {
         await interaction.followUp(toFollowOnInteractionPayload(responsePayload));
         await deleteDeferredReplyIfPossible(interaction);
       } else if (typeof interaction.editReply === 'function') {
@@ -521,6 +522,11 @@ function isEphemeralInteractionPayload(payload) {
   if (typeof flags?.has === 'function') return flags.has(EPHEMERAL_FLAG);
 
   return false;
+}
+
+function shouldUseFollowUpAfterDeferredResponse(interaction, payload) {
+  return interaction?.[GUARD_DEFER_KIND] === 'update'
+    || isEphemeralInteractionPayload(payload);
 }
 
 async function deleteDeferredReplyIfPossible(interaction) {

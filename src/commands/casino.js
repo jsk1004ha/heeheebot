@@ -56,6 +56,7 @@ import {
   formatUserMention
 } from './ui.js';
 import {
+  logUnexpectedInteractionError,
   safeDeferUpdate,
   safeReplyToInteraction,
   sendInteractionUpdate
@@ -379,7 +380,7 @@ export async function handleCasinoCommand(interaction, economy, logger = console
     try {
       await routeCasinoCommand(interaction, economy, logger, options);
     } catch (error) {
-      logger.error(error);
+      logUnexpectedInteractionError(logger, error, 'Casino command rejected');
       await safeReplyToInteraction(interaction, {
         content: `게임 실패: ${error.message}`,
         flags: MessageFlags.Ephemeral
@@ -1229,7 +1230,7 @@ async function handleDeadlineButton(interaction, economy, logger, options = {}) 
   const pending = pendingDeadlineGames.get(gameId);
 
   if (!pending) {
-    await interaction.reply({
+    await safeReplyToInteraction(interaction, {
       content: '이미 만료되었거나 처리된 데드라인입니다.',
       flags: MessageFlags.Ephemeral
     });
@@ -1237,12 +1238,44 @@ async function handleDeadlineButton(interaction, economy, logger, options = {}) 
   }
 
   if (interaction.user.id !== pending.userId) {
-    await interaction.reply({
+    await safeReplyToInteraction(interaction, {
       content: '이 데드라인 버튼은 게임을 시작한 유저만 누를 수 있습니다.',
       flags: MessageFlags.Ephemeral
     });
     return true;
   }
+
+  if (!['deadline_press', 'deadline_cashout'].includes(action)) {
+    await safeReplyToInteraction(interaction, {
+      content: '알 수 없는 데드라인 버튼입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  const acknowledged = await safeDeferUpdate(interaction);
+  if (!acknowledged) {
+    logger.warn?.('Deadline interaction expired before it could be acknowledged.');
+    return true;
+  }
+
+  if (pendingDeadlineGames.get(gameId) !== pending) {
+    await safeReplyToInteraction(interaction, {
+      content: '이미 만료되었거나 처리된 데드라인입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (pending.processing) {
+    await safeReplyToInteraction(interaction, {
+      content: '이전 데드라인 입력을 처리 중입니다. 잠시 후 다시 눌러주세요.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  pending.processing = true;
 
   try {
     if (Date.now() > pending.expiresAt) {
@@ -1256,11 +1289,14 @@ async function handleDeadlineButton(interaction, economy, logger, options = {}) 
         payout: game.payout
       });
       pending.reserved = false;
-      await interaction.update({
+      const updated = await sendInteractionUpdate(interaction, {
         content: formatDeadlineExpiredResult(interaction.user, game, settlement),
         allowedMentions: createAllowedMentionsForUsers([pending.userId]),
         components: []
       });
+      if (!updated) {
+        logger.warn?.('Deadline expired result could not be sent because the interaction expired.');
+      }
       return true;
     }
 
@@ -1275,19 +1311,14 @@ async function handleDeadlineButton(interaction, economy, logger, options = {}) 
         payout: game.payout
       });
       pending.reserved = false;
-      await interaction.update({
+      const updated = await sendInteractionUpdate(interaction, {
         content: formatDeadlineResult(interaction.user, game, settlement),
         allowedMentions: createAllowedMentionsForUsers([pending.userId]),
         components: []
       });
-      return true;
-    }
-
-    if (action !== 'deadline_press') {
-      await interaction.reply({
-        content: '알 수 없는 데드라인 버튼입니다.',
-        flags: MessageFlags.Ephemeral
-      });
+      if (!updated) {
+        logger.warn?.('Deadline cashout result could not be sent because the interaction expired.');
+      }
       return true;
     }
 
@@ -1298,7 +1329,13 @@ async function handleDeadlineButton(interaction, economy, logger, options = {}) 
 
     if (game.status === 'pressing') {
       pending.expiresAt = Date.now() + CHALLENGE_TTL_MS;
-      await interaction.update(createDeadlineProgressPayload(interaction.user, game, gameId));
+      const updated = await sendInteractionUpdate(
+        interaction,
+        createDeadlineProgressPayload(interaction.user, game, gameId)
+      );
+      if (!updated) {
+        logger.warn?.('Deadline progress could not be sent because the interaction expired.');
+      }
       return true;
     }
 
@@ -1311,11 +1348,14 @@ async function handleDeadlineButton(interaction, economy, logger, options = {}) 
       payout: game.payout
     });
     pending.reserved = false;
-    await interaction.update({
+    const updated = await sendInteractionUpdate(interaction, {
       content: formatDeadlineResult(interaction.user, game, settlement),
       allowedMentions: createAllowedMentionsForUsers([pending.userId]),
       components: []
     });
+    if (!updated) {
+      logger.warn?.('Deadline result could not be sent because the interaction expired.');
+    }
   } catch (error) {
     pendingDeadlineGames.delete(gameId);
     if (pending.reserved) {
@@ -1327,10 +1367,17 @@ async function handleDeadlineButton(interaction, economy, logger, options = {}) 
       }).catch((refundError) => logger.error('Failed to refund deadline wager:', refundError));
     }
     logger.error(error);
-    await interaction.update({
+    const updated = await sendInteractionUpdate(interaction, {
       content: `데드라인 실패: ${error.message}`,
       components: []
     });
+    if (!updated) {
+      logger.warn?.('Deadline failure could not be sent because the interaction expired.');
+    }
+  } finally {
+    if (pendingDeadlineGames.get(gameId) === pending) {
+      pending.processing = false;
+    }
   }
 
   return true;
@@ -1542,8 +1589,8 @@ async function handleCasinoQuickButton(interaction, economy, logger) {
       flags: MessageFlags.Ephemeral
     });
   } catch (error) {
-    logger.error(error);
-    await interaction.reply({
+    logUnexpectedInteractionError(logger, error, 'Casino quick button rejected');
+    await safeReplyToInteraction(interaction, {
       content: `게임 실패: ${error.message}`,
       flags: MessageFlags.Ephemeral
     });

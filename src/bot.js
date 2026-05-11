@@ -350,11 +350,22 @@ export function isSupportedCommandInteraction(interaction) {
   );
 }
 
-function shouldDeferBeforeCommandHandling(interaction) {
-  return Boolean(
-    interaction?.isChatInputCommand?.()
-    || interaction?.isModalSubmit?.()
-  );
+export function shouldDeferBeforeCommandHandling(interaction) {
+  if (interaction?.isChatInputCommand?.() || interaction?.isModalSubmit?.()) {
+    return true;
+  }
+
+  if (interaction?.isButton?.() || interaction?.isStringSelectMenu?.()) {
+    return !shouldKeepInitialComponentResponseOpen(interaction);
+  }
+
+  return false;
+}
+
+function shouldKeepInitialComponentResponseOpen(interaction) {
+  const customId = interaction?.customId ?? '';
+
+  return customId.startsWith('liar_guess:');
 }
 
 async function recordCommandActivity(interaction, economy, community, logger) {

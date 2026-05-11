@@ -143,6 +143,22 @@ test('safeReplyToInteraction은 deferred 초기 응답을 일반 메시지는 ed
   }]);
 });
 
+test('safeReplyToInteraction은 deferUpdate 된 컴포넌트 응답을 followUp으로 보낸다', async () => {
+  const interaction = createComponentInteraction();
+  const guard = guardInteractionResponse(interaction, {
+    deferAfterMs: 1_000,
+    logger: quietLogger
+  });
+
+  assert.equal(await guard.deferNow(), true);
+  assert.equal(await safeReplyToInteraction(interaction, '버튼 처리 완료'), true);
+  guard.stop();
+
+  assert.deepEqual(interaction.calls, ['deferUpdate', 'followUp']);
+  assert.deepEqual(interaction.followUps, [{ content: '버튼 처리 완료' }]);
+  assert.equal(interaction.edited, null);
+});
+
 function createInteraction({ deferred = false, replied = false } = {}) {
   return {
     commandName: '느린명령',

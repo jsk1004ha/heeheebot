@@ -17,6 +17,7 @@ import {
   getAccountUserIdsForGuild,
   getLinkedAccountUsername,
   getOrCreateLinkedAccountProfile,
+  getOrCreateLinkedFeatureUserProfile,
   isAccountSelectionRequiredError
 } from './accounts.js';
 
@@ -634,7 +635,7 @@ export class StockService {
       const market = syncMarket(data, guildId, guild, now, this);
       const normalizedStockId = normalizeStockIdForGuild(stockId, guild);
       const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
+      const stockUser = getOrCreateStockUser(data, guildId, guild, userId, username, profile, now);
       const quote = getTradableQuote(normalizedStockId, market);
       const subtotal = quote.price * normalizedQuantity;
       const fee = calculateFee(subtotal, this.feeBps);
@@ -692,7 +693,7 @@ export class StockService {
       const market = syncMarket(data, guildId, guild, now, this);
       const normalizedStockId = normalizeStockIdForGuild(stockId, guild);
       const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
+      const stockUser = getOrCreateStockUser(data, guildId, guild, userId, username, profile, now);
       const holding = stockUser.holdings[normalizedStockId];
 
       if (!holding || holding.quantity < normalizedQuantity) {
@@ -770,7 +771,7 @@ export class StockService {
       const market = syncMarket(data, guildId, guild, now, this);
       const normalizedStockId = normalizeStockIdForGuild(stockId, guild);
       const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
+      const stockUser = getOrCreateStockUser(data, guildId, guild, userId, username, profile, now);
       const quote = getTradableQuote(normalizedStockId, market);
       const order = {
         id: createStockOrderId(now, stockUser.nextOrderSeq + 1),
@@ -824,7 +825,7 @@ export class StockService {
       const guild = getOrCreateGuild(data, guildId);
       const market = syncMarket(data, guildId, guild, now, this);
       const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
+      const stockUser = getOrCreateStockUser(data, guildId, guild, userId, username, profile, now);
       return buildLimitOrderSummary(stockUser, market);
     });
   }
@@ -837,7 +838,7 @@ export class StockService {
       const guild = getOrCreateGuild(data, guildId);
       const market = syncMarket(data, guildId, guild, now, this);
       const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
+      const stockUser = getOrCreateStockUser(data, guildId, guild, userId, username, profile, now);
       const order = stockUser.limitOrders[normalizedOrderId];
 
       if (!order) throw new Error('해당 지정가 주문을 찾을 수 없습니다.');
@@ -866,13 +867,14 @@ export class StockService {
       const market = syncMarket(data, guildId, guild, now, this);
       const normalizedStockId = normalizeStockIdForGuild(stockId, guild);
       const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
+      const stockUser = getOrCreateStockUser(data, guildId, guild, userId, username, profile, now);
       const quote = getTradableQuote(normalizedStockId, market);
       const alert = {
         id: createStockAlertId(now, stockUser.nextAlertSeq + 1),
         guildId,
         userId,
         username: username || stockUser.username,
+        guildId,
         stockId: normalizedStockId,
         condition: normalizedCondition,
         targetPrice: normalizedTargetPrice,
@@ -896,7 +898,7 @@ export class StockService {
       const guild = getOrCreateGuild(data, guildId);
       const market = syncMarket(data, guildId, guild, now, this);
       const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
+      const stockUser = getOrCreateStockUser(data, guildId, guild, userId, username, profile, now);
       return buildPriceAlertSummary(stockUser, market);
     });
   }
@@ -909,7 +911,7 @@ export class StockService {
       const guild = getOrCreateGuild(data, guildId);
       const market = syncMarket(data, guildId, guild, now, this);
       const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
+      const stockUser = getOrCreateStockUser(data, guildId, guild, userId, username, profile, now);
       const alert = stockUser.priceAlerts[normalizedAlertId];
 
       if (!alert) throw new Error('해당 가격 알림을 찾을 수 없습니다.');
@@ -933,11 +935,12 @@ export class StockService {
         const username = rawStockUser?.username ?? getLinkedAccountUsername(data, userId);
         const profile = getOptionalMoneyProfile(data, guildId, userId, username, now);
         if (!profile) continue;
-        const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
+        const stockUser = getOrCreateStockUser(data, guildId, guild, userId, username, profile, now);
 
         for (const alert of Object.values(stockUser.priceAlerts)) {
           if (alert.guildId && alert.guildId !== guildId) continue;
           if (alert.status !== 'triggered' || alert.notifiedAt > 0 || !alert.channelId) continue;
+          if (alert.guildId && alert.guildId !== guildId) continue;
           pending.push(clonePriceAlert(alert, market));
         }
       }
@@ -1000,7 +1003,7 @@ export class StockService {
       const market = syncMarket(data, guildId, guild, now, this);
       const username = getLinkedAccountUsername(data, userId);
       const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
+      const stockUser = getOrCreateStockUser(data, guildId, guild, userId, username, profile, now);
       const alert = stockUser.priceAlerts[normalizedAlertId];
 
       if (!alert || alert.status !== 'triggered' || (alert.guildId && alert.guildId !== guildId)) {
@@ -1019,7 +1022,7 @@ export class StockService {
       const guild = getOrCreateGuild(data, guildId);
       const market = syncMarket(data, guildId, guild, now, this);
       const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
+      const stockUser = getOrCreateStockUser(data, guildId, guild, userId, username, profile, now);
       settleMaturedLeveragedPositions(profile, stockUser, market);
 
       return {
@@ -1055,7 +1058,7 @@ export class StockService {
       const guild = getOrCreateGuild(data, guildId);
       const market = syncMarket(data, guildId, guild, now, this);
       const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
+      const stockUser = getOrCreateStockUser(data, guildId, guild, userId, username, profile, now);
       settleMaturedLeveragedPositions(profile, stockUser, market);
       return buildDividendSummary(profile, stockUser, market, this);
     });
@@ -1066,7 +1069,7 @@ export class StockService {
       const guild = getOrCreateGuild(data, guildId);
       const market = syncMarket(data, guildId, guild, now, this);
       const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
+      const stockUser = getOrCreateStockUser(data, guildId, guild, userId, username, profile, now);
       settleMaturedLeveragedPositions(profile, stockUser, market);
 
       const claimedAmount = normalizeNonNegativeInteger(stockUser.pendingDividends);
@@ -1120,7 +1123,7 @@ export class StockService {
       const market = syncMarket(data, guildId, guild, now, this);
       const normalizedStockId = normalizeStockIdForGuild(stockId, guild);
       const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
+      const stockUser = getOrCreateStockUser(data, guildId, guild, userId, username, profile, now);
       const settled = settleMaturedLeveragedPositions(profile, stockUser, market);
       const quote = getTradableQuote(normalizedStockId, market);
       const fee = calculateFee(normalizedMargin, this.leverageFeeBps);
@@ -1194,7 +1197,7 @@ export class StockService {
       const guild = getOrCreateGuild(data, guildId);
       const market = syncMarket(data, guildId, guild, now, this);
       const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
+      const stockUser = getOrCreateStockUser(data, guildId, guild, userId, username, profile, now);
       const position = stockUser.leveragedPositions[positionId];
 
       if (!position) {
@@ -1242,7 +1245,7 @@ export class StockService {
       const guild = getOrCreateGuild(data, guildId);
       const market = syncMarket(data, guildId, guild, now, this);
       const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
+      const stockUser = getOrCreateStockUser(data, guildId, guild, userId, username, profile, now);
       const settled = settleMaturedLeveragedPositions(profile, stockUser, market);
       const before = getStockBankruptcySummary(profile);
       const repayment = repayStockBankruptcyDebt(profile, amount);
@@ -1267,7 +1270,7 @@ export class StockService {
       const guild = getOrCreateGuild(data, guildId);
       const market = syncMarket(data, guildId, guild, now, this);
       const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
+      const stockUser = getOrCreateStockUser(data, guildId, guild, userId, username, profile, now);
       const settled = settleMaturedLeveragedPositions(profile, stockUser, market);
       const positions = getEvaluatedLeveragedPositions(stockUser, market);
       const marginTotal = positions.reduce((sum, position) => sum + position.margin, 0);
@@ -1300,7 +1303,7 @@ export class StockService {
       const guild = getOrCreateGuild(data, guildId);
       const market = syncMarket(data, guildId, guild, now, this);
       const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
-      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
+      const stockUser = getOrCreateStockUser(data, guildId, guild, userId, username, profile, now);
       settleMaturedLeveragedPositions(profile, stockUser, market);
       return buildPortfolio(profile, stockUser, market);
     });
@@ -1327,7 +1330,7 @@ export class StockService {
             now
           );
           if (!profile) return null;
-          const stockUser = getOrCreateStockUser(guild, userId, profile.username, profile, now);
+          const stockUser = getOrCreateStockUser(data, guildId, guild, userId, profile.username, profile, now);
           settleMaturedLeveragedPositions(profile, stockUser, market);
           return buildPortfolio(profile, stockUser, market);
         })
@@ -1344,6 +1347,85 @@ export class StockService {
           return a.username.localeCompare(b.username, 'ko-KR');
         })
         .slice(0, safeLimit);
+    });
+  }
+
+  async listAdminStock({
+    guildId,
+    name,
+    symbol = '',
+    sector = '관리자',
+    risk = 'stable',
+    basePrice,
+    volatilityBps = 1_000,
+    eventChance = 10,
+    now = Date.now()
+  }) {
+    return this.store.update((data) => {
+      const guild = getOrCreateGuild(data, guildId);
+      const market = syncMarket(data, guildId, guild, now, this);
+      const definition = createAdminStockDefinition(guild, market, {
+        name,
+        symbol,
+        sector,
+        risk,
+        basePrice,
+        volatilityBps,
+        eventChance
+      });
+
+      guild.stocks.dynamicDefinitions[definition.id] = definition;
+      market.symbols[definition.id] = createInitialSymbolState(definition, now, 'ipo', market.tickIndex);
+      recordMarketNews(
+        guild,
+        definition,
+        `관리자 신규상장: ${definition.name}이(가) 시장에 등록되었습니다`,
+        market.tickIndex,
+        now,
+        market.tickIndex
+      );
+      mirrorGlobalStockStateToGuild(data, guildId);
+
+      return cloneQuote(definition.id, market.symbols[definition.id]);
+    });
+  }
+
+  async delistAdminStock({ guildId, stockId, now = Date.now() }) {
+    return this.store.update((data) => {
+      const guild = getOrCreateGuild(data, guildId);
+      const market = syncMarket(data, guildId, guild, now, this);
+      const normalizedStockId = normalizeStockIdForGuild(stockId, guild);
+      const quote = getListedQuote(normalizedStockId, market);
+      const state = market.symbols[normalizedStockId];
+
+      state.previousPrice = normalizeNonNegativeInteger(state.price || quote.price);
+      state.price = 0;
+      state.changeBps = -10_000;
+      state.news = `관리자 상장폐지: ${quote.name} 거래가 중지되었습니다`;
+      state.status = 'delisted';
+      state.eventType = 'delisted';
+      state.delistedAtTick = market.tickIndex;
+      state.dividendBps = 0;
+      state.dividendUpdatedAtTick = market.tickIndex;
+      state.updatedAt = normalizeNonNegativeInteger(now);
+      state.history = appendPriceHistory(state.history, {
+        tickIndex: market.tickIndex,
+        price: 0,
+        at: now
+      });
+
+      cleanupDelistedStockUsers(data, guildId, guild, market);
+      purgeDelistedMarketSymbols(data, guildId, guild, market);
+      mirrorGlobalStockStateToGuild(data, guildId);
+
+      return {
+        ...quote,
+        status: 'delisted',
+        eventType: 'delisted',
+        price: 0,
+        previousPrice: state.previousPrice,
+        news: state.news
+      };
     });
   }
 }
@@ -1372,6 +1454,16 @@ function normalizeStockIdForGuild(stockId, guild) {
       ...(definition.aliases ?? [])
     ].map(normalizeLookupKey);
     if (keys.includes(normalized)) return definition.id;
+  }
+
+  for (const record of Object.values(guild?.stocks?.delistedStocks ?? {})) {
+    const keys = [
+      record.id,
+      record.name,
+      record.symbol,
+      ...(record.aliases ?? [])
+    ].map(normalizeLookupKey);
+    if (keys.includes(normalized)) return record.id;
   }
 
   throw new Error('알 수 없는 가상주식 종목입니다. `/주식 전체시세`에서 종목명을 확인하세요.');
@@ -1493,34 +1585,66 @@ function getOrCreateGuild(data, guildId) {
   data.guilds[guildId] ??= {};
   return {
     ...data.guilds[guildId],
-    stocks: getOrCreateGlobalStockState(data)
+    stocks: getOrCreateGlobalStockState(data, guildId)
   };
 }
 
 function getExistingGuild(data, guildId) {
   if (!guildId) throw new Error('서버에서만 사용할 수 있는 기능입니다.');
-  if (!data.guilds?.[guildId] && !data.stocks) return null;
+  if (!data.stocks && !data.guilds?.[guildId]?.stocks) return null;
   data.guilds ??= {};
   data.guilds[guildId] ??= {};
   return {
     ...data.guilds[guildId],
-    stocks: getOrCreateGlobalStockState(data)
+    stocks: getOrCreateGlobalStockState(data, guildId)
   };
 }
 
-function getOrCreateGlobalStockState(data) {
+function getOrCreateGlobalStockState(data, preferredGuildId = null) {
   data.stocks ??= {};
-  const globalStocks = data.stocks;
-  globalStocks.users ??= {};
+  data.stocks.users ??= {};
+  migrateLegacyStockState(data, data.stocks, preferredGuildId);
+  mirrorGlobalStockStateToGuild(data, preferredGuildId);
+  return data.stocks;
+}
 
-  for (const [sourceGuildId, guild] of Object.entries(data.guilds ?? {})) {
-    if (!guild?.stocks) continue;
-    mergeStockState(globalStocks, guild.stocks, sourceGuildId);
+function migrateLegacyStockState(data, stockState, preferredGuildId = null) {
+  const entries = Object.entries(data?.guilds ?? {})
+    .filter(([, guild]) => guild?.stocks && guild.stocks !== stockState)
+    .sort(([leftGuildId], [rightGuildId]) => {
+      if (leftGuildId === preferredGuildId) return -1;
+      if (rightGuildId === preferredGuildId) return 1;
+      return 0;
+    });
+
+  for (const [sourceGuildId, guild] of entries) {
+    if (isMirroredGlobalStockState(stockState, guild.stocks)) {
+      delete guild.stocks;
+      continue;
+    }
+
+    mergeStockState(stockState, guild.stocks, sourceGuildId);
     delete guild.stocks;
   }
+}
 
-  globalStocks.users ??= {};
-  return globalStocks;
+function isMirroredGlobalStockState(stockState, guildStocks) {
+  if (!stockState || !guildStocks || guildStocks === stockState) return true;
+
+  const mirroredFields = [
+    'market',
+    'dynamicDefinitions',
+    'delistedStocks',
+    'nextDynamicStockSeq',
+    'marketNews',
+    'marketSourceGuildId'
+  ].every((key) => guildStocks[key] === undefined || areJsonEquivalent(guildStocks[key], stockState[key]));
+  const users = guildStocks.users ?? {};
+  const linkedUsers = guildStocks.linkedUsers ?? {};
+  const onlyLinkedUsers = Object.entries(users)
+    .every(([userId, user]) => linkedUsers[userId] === true && areJsonEquivalent(stockState.users?.[userId], user));
+
+  return mirroredFields && onlyLinkedUsers;
 }
 
 function mergeStockState(target, source, sourceKey = 'legacy') {
@@ -1528,6 +1652,7 @@ function mergeStockState(target, source, sourceKey = 'legacy') {
 
   target.users ??= {};
   for (const [userId, sourceUser] of Object.entries(source.users ?? {})) {
+    if (source.linkedUsers?.[userId] === true && areJsonEquivalent(target.users[userId], sourceUser)) continue;
     target.users[userId] = mergeStockUserState(target.users[userId], sourceUser, `${sourceKey}_${userId}`, sourceKey);
   }
 
@@ -1552,6 +1677,7 @@ function mergeStockState(target, source, sourceKey = 'legacy') {
     && (!target.market || normalizeNonNegativeInteger(source.market.tickIndex) > normalizeNonNegativeInteger(target.market.tickIndex))
   ) {
     target.market = structuredClone(source.market);
+    target.marketSourceGuildId ??= sourceKey;
   }
 
   return target;
@@ -1661,6 +1787,35 @@ function getMergedStockRecordId(existingRecords, recordId, sourceKey) {
   }
 
   return `${sourceKey}_${baseId}_${Date.now()}`;
+}
+
+function mirrorGlobalStockStateToGuild(data, guildId, userId = null) {
+  if (!guildId || !data?.stocks) return;
+  data.guilds ??= {};
+  data.guilds[guildId] ??= {};
+  const guild = data.guilds[guildId];
+  const legacyUsers = guild.stocks?.users ?? {};
+  guild.stocks ??= {};
+  mirrorOptionalStockField(guild.stocks, data.stocks, 'market');
+  mirrorOptionalStockField(guild.stocks, data.stocks, 'dynamicDefinitions');
+  mirrorOptionalStockField(guild.stocks, data.stocks, 'delistedStocks');
+  mirrorOptionalStockField(guild.stocks, data.stocks, 'nextDynamicStockSeq');
+  mirrorOptionalStockField(guild.stocks, data.stocks, 'marketNews');
+  mirrorOptionalStockField(guild.stocks, data.stocks, 'marketSourceGuildId');
+  guild.stocks.users = legacyUsers;
+  if (userId && data.stocks.users?.[userId]) {
+    guild.stocks.linkedUsers ??= {};
+    guild.stocks.users[userId] = data.stocks.users[userId];
+    guild.stocks.linkedUsers[userId] = true;
+  }
+}
+
+function mirrorOptionalStockField(target, source, key) {
+  if (source[key] === undefined) {
+    delete target[key];
+    return;
+  }
+  target[key] = source[key];
 }
 
 function getOrCreateMarket(guild, now) {
@@ -1934,6 +2089,7 @@ function syncMarket(data, guildId, guild, now, service) {
   advanceMarket(data, guildId, guild, market, now, service);
   cleanupDelistedStockUsers(data, guildId, guild, market);
   purgeDelistedMarketSymbols(data, guildId, guild, market);
+  mirrorGlobalStockStateToGuild(data, guildId);
   return market;
 }
 
@@ -2160,6 +2316,67 @@ function createAutomaticIpoSymbol(prefix, theme, sequence) {
   const prefixPart = AUTO_IPO_PREFIX_SYMBOLS[prefix] ?? createAsciiSymbolPart(prefix, 'IP', 2);
   const sectorPart = AUTO_IPO_SECTOR_SYMBOLS[theme.sector] ?? createAsciiSymbolPart(theme.sector, 'ST', 2);
   return `${prefixPart}${sectorPart}${formatSequenceSymbolPart(sequence)}`.slice(0, 6);
+}
+
+function createAdminStockDefinition(guild, market, {
+  name,
+  symbol,
+  sector,
+  risk,
+  basePrice,
+  volatilityBps,
+  eventChance
+}) {
+  const normalizedName = String(name ?? '').trim();
+  if (!normalizedName) throw new Error('상장할 종목 이름을 입력하세요.');
+
+  const normalizedSector = String(sector ?? '관리자').trim() || '관리자';
+  const normalizedRisk = normalizeStockRisk(risk);
+  const normalizedSymbol = normalizeAsciiStockSymbol(symbol) || createAsciiSymbolPart(normalizedName, 'AD', 4);
+  const normalizedBasePrice = normalizePositiveStoredInteger(basePrice, 500);
+  const normalizedVolatilityBps = clampInteger(normalizePositiveStoredInteger(volatilityBps, 1_000), 100, 3_000);
+  const normalizedEventChance = clampInteger(normalizePositiveStoredInteger(eventChance, 10), 1, 50);
+
+  const existingDefinitions = [
+    ...STOCK_DEFINITIONS,
+    ...getDynamicStockDefinitions(guild),
+    ...Object.values(guild.stocks?.delistedStocks ?? {})
+  ];
+  const existingNames = new Set(existingDefinitions.map((definition) => normalizeLookupKey(definition.name)));
+  const existingSymbols = new Set(existingDefinitions.map((definition) => normalizeAsciiStockSymbol(definition.symbol)));
+  if (existingNames.has(normalizeLookupKey(normalizedName))) {
+    throw new Error('이미 같은 이름의 종목이 있습니다.');
+  }
+  if (existingSymbols.has(normalizedSymbol)) {
+    throw new Error('이미 같은 심볼의 종목이 있습니다.');
+  }
+
+  const baseId = `admin_${normalizedSymbol.toLocaleLowerCase('en-US')}`;
+  let id = baseId;
+  let suffix = 1;
+  while (STOCKS_BY_ID[id]
+    || guild.stocks?.dynamicDefinitions?.[id]
+    || guild.stocks?.delistedStocks?.[id]
+    || market.symbols?.[id]) {
+    suffix += 1;
+    id = `${baseId}_${suffix}`;
+  }
+
+  return stock(
+    id,
+    normalizedName,
+    normalizedSector,
+    normalizedRisk,
+    normalizedBasePrice,
+    normalizedVolatilityBps,
+    normalizedEventChance,
+    [normalizedName, normalizedSymbol, `${normalizedName}상장`],
+    normalizedSymbol,
+    {
+      listedFromTick: normalizeNonNegativeInteger(market.tickIndex),
+      dynamic: true
+    }
+  );
 }
 
 function normalizeDynamicStockSymbol(rawSymbol, definition) {
@@ -2488,12 +2705,16 @@ function createDefaultStockMoneyProfile(userId, username, now = Date.now()) {
   };
 }
 
-function getOrCreateStockUser(guild, userId, username, moneyProfile = null, now = Date.now()) {
-  guild.stocks ??= { users: {} };
-  guild.stocks.users ??= {};
-  guild.stocks.users[userId] ??= createDefaultStockUser(userId, username);
-
-  const stockUser = guild.stocks.users[userId];
+function getOrCreateStockUser(data, guildId, guild, userId, username, moneyProfile = null, now = Date.now()) {
+  guild.stocks ??= getOrCreateGlobalStockState(data, guildId);
+  const stockUser = getOrCreateLinkedFeatureUserProfile(data, {
+    featureKey: 'stocks',
+    guildId,
+    userId,
+    username,
+    now,
+    createDefaultProfile: createDefaultStockUser
+  });
   stockUser.userId = userId;
   stockUser.username = username || stockUser.username || 'Unknown';
   stockUser.holdings = normalizeHoldings(stockUser.holdings, guild);
@@ -2523,6 +2744,7 @@ function getOrCreateStockUser(guild, userId, username, moneyProfile = null, now 
   stockUser.lastDividendTick = normalizeNonNegativeInteger(stockUser.lastDividendTick);
   stockUser.lastTradeAt = normalizeNonNegativeInteger(stockUser.lastTradeAt);
   migrateLegacyStockLiabilitiesToGold(moneyProfile, stockUser, now);
+  mirrorGlobalStockStateToGuild(data, guildId, userId);
   return stockUser;
 }
 
@@ -2721,6 +2943,7 @@ function normalizePriceAlert(alert = {}, fallbackId = null, guild = null) {
     guildId: normalizeOptionalStringId(safeAlert.guildId),
     userId: String(safeAlert.userId ?? '').trim(),
     username: String(safeAlert.username ?? 'Unknown').trim() || 'Unknown',
+    guildId: normalizeOptionalStringId(safeAlert.guildId),
     stockId: guild ? normalizeStockIdForGuild(safeAlert.stockId, guild) : normalizeStockId(safeAlert.stockId),
     condition: normalizeAlertCondition(safeAlert.condition),
     targetPrice: normalizePositiveStoredInteger(safeAlert.targetPrice, 1),
@@ -3355,7 +3578,7 @@ function processMarketSideEffects(data, guildId, guild, market, service) {
     const username = rawStockUser?.username ?? getLinkedAccountUsername(data, userId);
     const profile = getOptionalMoneyProfile(data, guildId, userId, username, market.lastTickAt);
     if (!profile) continue;
-    const stockUser = getOrCreateStockUser(guild, userId, username, profile, market.lastTickAt);
+    const stockUser = getOrCreateStockUser(data, guildId, guild, userId, username, profile, market.lastTickAt);
     processLimitOrders(profile, stockUser, market, service);
     cleanupDelistedStockUserState(stockUser, market);
     accrueDividends(stockUser, market, service);
@@ -3369,7 +3592,7 @@ function cleanupDelistedStockUsers(data, guildId, guild, market) {
   for (const [userId, rawStockUser] of Object.entries(users)) {
     const username = rawStockUser?.username ?? getLinkedAccountUsername(data, userId);
     const profile = getOptionalMoneyProfile(data, guildId, userId, username, market.lastTickAt);
-    const stockUser = getOrCreateStockUser(guild, userId, username, profile, market.lastTickAt);
+    const stockUser = getOrCreateStockUser(data, guildId, guild, userId, username, profile, market.lastTickAt);
     cleanupDelistedLimitOrders(profile, stockUser, market);
     cleanupDelistedStockUserState(stockUser, market);
     if (profile) {
@@ -4052,6 +4275,15 @@ function normalizeOptionalStringId(value) {
 function normalizeInteger(value) {
   const normalized = Number(value);
   return Number.isSafeInteger(normalized) ? normalized : 0;
+}
+
+function areJsonEquivalent(left, right) {
+  if (!left || !right) return false;
+  try {
+    return JSON.stringify(left) === JSON.stringify(right);
+  } catch {
+    return left === right;
+  }
 }
 
 function clampInteger(value, min, max) {

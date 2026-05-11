@@ -125,26 +125,31 @@ test('낚시는 신규 도감 등록 물고기에 발견 보너스 XP를 한 번
   }
 });
 
-test('낚시 진행도는 같은 유저면 다른 서버에서도 이어진다', async () => {
+test('낚시 프로필은 사용자 기준으로 모든 서버에서 공유된다', async () => {
   const fixture = await createFixture({ randomInt: sequenceRandom(1, 0, 20) });
 
   try {
-    await fixture.fishing.catchFish(createInput({
+    const caught = await fixture.fishing.catchFish({
       guildId: 'guild-1',
       userId: 'user-1',
-      username: '테스터',
+      username: '공유어부',
       now: 10_000
-    }));
-
-    const profile = await fixture.fishing.getProfile('guild-2', 'user-1', '테스터');
+    });
+    const otherGuildProfile = await fixture.fishing.getProfile('guild-2', 'user-1', '공유어부');
+    const summary = await fixture.economy.getAccountLinkSummary({
+      guildId: 'guild-2',
+      userId: 'user-1',
+      username: '공유어부'
+    });
     const data = await fixture.store.load();
 
-    assert.equal(profile.inventory.crucian_carp, 1);
-    assert.equal(profile.collection.crucian_carp, 10_000);
-    assert.equal(profile.bestFish.crucian_carp.size, 20);
-    assert.equal(profile.stats.totalCatches, 1);
-    assert.equal(data.guilds['guild-1'].fishing?.users?.['user-1'], undefined);
-    assert.equal(data.accounts.users['user-1'].fishing.inventory.crucian_carp, 1);
+    assert.equal(caught.fishId, 'crucian_carp');
+    assert.equal(otherGuildProfile.inventory.crucian_carp, 1);
+    assert.equal(otherGuildProfile.collection.crucian_carp, 10_000);
+    assert.equal(otherGuildProfile.bestFish.crucian_carp.size, 20);
+    assert.equal(otherGuildProfile.stats.totalCatches, 1);
+    assert.equal(summary.required, false);
+    assert.equal(data.fishing.users['user-1'].inventory.crucian_carp, 1);
   } finally {
     await fixture.cleanup();
   }
@@ -550,7 +555,7 @@ test('랜덤 물고기배틀은 다른 서버에 있는 같은 전역 낚시 기
 
     assert.equal(result.opponentUserId, 'user-2');
     assert.equal(result.opponentProfile.username, '상대어부');
-    assert.equal(data.accounts.users['user-2'].fishing.team[0].fishId, 'carp');
+    assert.equal(data.fishing.users['user-2'].team[0].fishId, 'carp');
     assert.equal(data.guilds['guild-2'].fishing?.users?.['user-2'], undefined);
   } finally {
     await fixture.cleanup();
