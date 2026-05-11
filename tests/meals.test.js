@@ -1,4 +1,4 @@
-import { MessageFlags } from 'discord.js';
+import { MessageFlags, PermissionFlagsBits } from 'discord.js';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -31,6 +31,7 @@ test('급식 명령 payload는 /급식을 등록한다', () => {
   assert.match(mealPayload.description, /인천과학고등학교/);
   assert.deepEqual(mealOption.choices.map((choice) => choice.value), ['all', '1', '2', '3']);
   assert.deepEqual(autoMealPayload.options.map((option) => option.name), ['설정', '해제', '상태']);
+  assert.equal(autoMealPayload.default_member_permissions, undefined);
 });
 
 test('나이스 급식 URL은 인천과학고등학교 코드로 고정된다', () => {
@@ -149,6 +150,51 @@ test('자동급식 명령은 서버별 알림 채널을 설정, 확인, 해제�
     await handleMealCommand(unsetInteraction, fixture.meals);
     assert.match(unsetInteraction.replies[0], /해제/);
     assert.deepEqual(await fixture.meals.listAutoAnnouncementTargets(), []);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('자동급식 설정 변경은 서버 관리 권한이 필요하지만 상태는 확인할 수 있다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    const blockedSetInteraction = createInteraction('자동급식', {
+      guildId: 'guild-1',
+      subcommand: '설정',
+      channel: { id: 'channel-1' },
+      canManageGuild: false
+    });
+    const statusInteraction = createInteraction('자동급식', {
+      guildId: 'guild-1',
+      subcommand: '상태',
+      canManageGuild: false
+    });
+
+    await fixture.meals.setAutoAnnouncementChannel('guild-1', 'channel-existing');
+    const blockedUnsetInteraction = createInteraction('자동급식', {
+      guildId: 'guild-1',
+      subcommand: '해제',
+      canManageGuild: false
+    });
+
+    await handleMealCommand(blockedSetInteraction, fixture.meals);
+    assert.equal(blockedSetInteraction.replies[0].flags, MessageFlags.Ephemeral);
+    assert.match(blockedSetInteraction.replies[0].content, /서버 관리 권한/);
+    assert.deepEqual(await fixture.meals.listAutoAnnouncementTargets(), [
+      { guildId: 'guild-1', channelId: 'channel-existing' }
+    ]);
+
+    await handleMealCommand(statusInteraction, fixture.meals);
+    assert.equal(statusInteraction.replies[0].flags, MessageFlags.Ephemeral);
+    assert.match(statusInteraction.replies[0].content, /<#channel-existing>/);
+
+    await handleMealCommand(blockedUnsetInteraction, fixture.meals);
+    assert.equal(blockedUnsetInteraction.replies[0].flags, MessageFlags.Ephemeral);
+    assert.match(blockedUnsetInteraction.replies[0].content, /서버 관리 권한/);
+    assert.deepEqual(await fixture.meals.listAutoAnnouncementTargets(), [
+      { guildId: 'guild-1', channelId: 'channel-existing' }
+    ]);
   } finally {
     await fixture.cleanup();
   }
@@ -304,12 +350,18 @@ function createInteraction(commandName, {
   guildId = 'guild-1',
   subcommand = null,
   channel = null,
-  stringOptions = {}
+  stringOptions = {},
+  canManageGuild = true
 } = {}) {
   return {
     commandName,
     guildId,
     replies: [],
+    memberPermissions: {
+      has(permission) {
+        return permission === PermissionFlagsBits.ManageGuild && canManageGuild;
+      }
+    },
     isChatInputCommand() {
       return true;
     },

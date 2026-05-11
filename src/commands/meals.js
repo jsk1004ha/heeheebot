@@ -37,7 +37,6 @@ export const mealCommands = [
   new SlashCommandBuilder()
     .setName('자동급식')
     .setDescription('매일 00:00 급식 자동 알림 채널을 설정합니다.')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand((subcommand) =>
       subcommand
         .setName('설정')
@@ -102,6 +101,11 @@ async function handleAutoMealCommand(interaction, meals) {
   const subcommand = interaction.options.getSubcommand();
 
   if (subcommand === '설정') {
+    if (!canManageGuild(interaction)) {
+      await replyWithAutoMealPermissionError(interaction);
+      return;
+    }
+
     const channel = interaction.options.getChannel('채널', true);
     const settings = await meals.setAutoAnnouncementChannel(interaction.guildId, channel.id);
     await interaction.reply(
@@ -111,6 +115,11 @@ async function handleAutoMealCommand(interaction, meals) {
   }
 
   if (subcommand === '해제') {
+    if (!canManageGuild(interaction)) {
+      await replyWithAutoMealPermissionError(interaction);
+      return;
+    }
+
     await meals.disableAutoAnnouncement(interaction.guildId);
     await interaction.reply('✅ 급식 자동 알림을 해제했습니다.');
     return;
@@ -126,6 +135,17 @@ async function handleAutoMealCommand(interaction, meals) {
       flags: MessageFlags.Ephemeral
     });
   }
+}
+
+function canManageGuild(interaction) {
+  return Boolean(interaction.memberPermissions?.has?.(PermissionFlagsBits.ManageGuild));
+}
+
+async function replyWithAutoMealPermissionError(interaction) {
+  await interaction.reply({
+    content: '서버 관리 권한이 있어야 급식 자동 알림을 변경할 수 있습니다.',
+    flags: MessageFlags.Ephemeral
+  });
 }
 
 export function formatMealMessage(dailyMeals, { mealFilter = 'all' } = {}) {
