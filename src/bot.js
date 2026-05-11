@@ -538,13 +538,26 @@ async function rewardChatActivity(message, economy, community, logger) {
 
 async function sendStockAlertAnnouncements(client, stocks, logger) {
   const guilds = [...(client.guilds?.cache?.values?.() ?? [])];
+  const guildIds = guilds.map((guild) => guild.id);
+  let batchedAlerts = null;
+
+  if (typeof stocks.getPendingTriggeredPriceAlertsByGuild === 'function') {
+    try {
+      batchedAlerts = await stocks.getPendingTriggeredPriceAlertsByGuild({ guildIds });
+    } catch (error) {
+      logger.error('Failed to collect batched stock alerts:', error);
+      batchedAlerts = null;
+    }
+  }
 
   for (const guild of guilds) {
     let alerts = [];
     try {
-      alerts = await stocks.getPendingTriggeredPriceAlerts({
-        guildId: guild.id
-      });
+      alerts = batchedAlerts
+        ? batchedAlerts[guild.id] ?? []
+        : await stocks.getPendingTriggeredPriceAlerts({
+            guildId: guild.id
+          });
     } catch (error) {
       logger.error(`Failed to collect stock alerts for guild ${guild.id}:`, error);
       continue;

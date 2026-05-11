@@ -63,6 +63,7 @@ import {
 
 const CHALLENGE_TTL_MS = 60_000;
 const SCRATCH_TICKET_TTL_MS = 5 * 60_000;
+const CASINO_PENDING_CLEANUP_MIN_DELAY_MS = 1_000;
 const EMOJI_RACE_FRAME_DELAY_MS = 500;
 const pendingBlackjackChallenges = new Map();
 const pendingDeadlineGames = new Map();
@@ -70,6 +71,7 @@ const pendingTimingGames = new Map();
 const pendingAiBlackjackGames = new Map();
 const pendingPlayerBlackjackGames = new Map();
 const pendingScratchTickets = new Map();
+let pendingCasinoCleanupTimer = null;
 
 export const casinoCommands = [
   new SlashCommandBuilder()
@@ -337,45 +339,204 @@ export function getCasinoCommandPayloads() {
 }
 
 export async function handleCasinoCommand(interaction, economy, logger = console, options = {}) {
-  if (interaction.isButton()) {
-    if (interaction.customId?.startsWith('casino_quick:')) {
-      return handleCasinoQuickButton(interaction, economy, logger);
-    }
-    if (interaction.customId?.startsWith('deadline_')) {
-      return handleDeadlineButton(interaction, economy, logger, options);
-    }
-    if (interaction.customId?.startsWith('timing_')) {
-      return handleTimingButton(interaction, economy, logger, options);
-    }
-    if (interaction.customId?.startsWith('scratch_')) {
-      return handleScratchTicketButton(interaction, economy, logger);
-    }
-    return handleBlackjackButton(interaction, economy, logger);
-  }
-
-  if (!interaction.isChatInputCommand() || !isCasinoCommand(interaction.commandName)) {
+  if (!isCasinoInteraction(interaction)) {
     return false;
   }
 
-  if (!interaction.inGuild()) {
-    await interaction.reply({
-      content: '서버에서만 사용할 수 있는 명령어입니다.',
-      flags: MessageFlags.Ephemeral
-    });
-    return true;
-  }
+  await cleanupExpiredCasinoGames(economy, logger).catch((error) =>
+    logger.error?.('Failed to cleanup expired casino games:', error)
+  );
 
   try {
-    await routeCasinoCommand(interaction, economy, logger, options);
-  } catch (error) {
-    logger.error(error);
-    await safeReplyToInteraction(interaction, {
-      content: `게임 실패: ${error.message}`,
-      flags: MessageFlags.Ephemeral
-    });
+    if (interaction.isButton()) {
+      if (interaction.customId?.startsWith('casino_quick:')) {
+        return await handleCasinoQuickButton(interaction, economy, logger);
+      }
+      if (interaction.customId?.startsWith('deadline_')) {
+        return await handleDeadlineButton(interaction, economy, logger, options);
+      }
+      if (interaction.customId?.startsWith('timing_')) {
+        return await handleTimingButton(interaction, economy, logger, options);
+      }
+      if (interaction.customId?.startsWith('scratch_')) {
+        return await handleScratchTicketButton(interaction, economy, logger);
+      }
+      return await handleBlackjackButton(interaction, economy, logger);
+    }
+
+    if (!interaction.isChatInputCommand() || !isCasinoCommand(interaction.commandName)) {
+      return false;
+    }
+
+    if (!interaction.inGuild()) {
+      await interaction.reply({
+        content: '서버에서만 사용할 수 있는 명령어입니다.',
+        flags: MessageFlags.Ephemeral
+      });
+      return true;
+    }
+
+    try {
+      await routeCasinoCommand(interaction, economy, logger, options);
+    } catch (error) {
+      logger.error(error);
+      await safeReplyToInteraction(interaction, {
+        content: `게임 실패: ${error.message}`,
+        flags: MessageFlags.Ephemeral
+      });
+    }
+
+    return true;
+  } finally {
+    scheduleCasinoPendingCleanup(economy, logger);
+  }
+}
+
+function isCasinoInteraction(interaction) {
+  if (interaction.isButton()) return isCasinoButtonId(interaction.customId);
+  return interaction.isChatInputCommand() && isCasinoCommand(interaction.commandName);
+}
+
+function isCasinoButtonId(customId) {
+  return [
+    'blackjack_',
+    'casino_quick:',
+    'deadline_',
+    'scratch_',
+    'timing_'
+  ].some((prefix) => customId?.startsWith(prefix));
+}
+
+export async function cleanupExpiredCasinoGames(economy, logger = console, now = Date.now()) {
+  let removed = 0;
+  let refunded = 0;
+
+  for (const pendingGames of [
+    pendingScratchTickets,
+    pendingTimingGames,
+    pendingDeadlineGames,
+    pendingAiBlackjackGames
+  ]) {
+    const result = await cleanupExpiredCasinoPendingMap(
+      pendingGames,
+      economy,
+      logger,
+      now,
+      refundReservedCasinoWager
+    );
+    removed += result.removed;
+    refunded += result.refunded;
   }
 
-  return true;
+  for (const [challengeId, challenge] of pendingBlackjackChallenges.entries()) {
+    if (challenge.expiresAt > now) continue;
+    pendingBlackjackChallenges.delete(challengeId);
+    removed += 1;
+  }
+
+  const playerResult = await cleanupExpiredCasinoPendingMap(
+    pendingPlayerBlackjackGames,
+    economy,
+    logger,
+    now,
+    refundReservedPlayerCasinoPot
+  );
+  removed += playerResult.removed;
+  refunded += playerResult.refunded;
+
+  if (removed > 0) {
+    logger.debug?.(`Cleaned up ${removed} expired casino game(s); refunded ${refunded} reserved wager(s).`);
+  }
+
+  scheduleCasinoPendingCleanup(economy, logger, now);
+  return { removed, refunded };
+}
+
+async function cleanupExpiredCasinoPendingMap(pendingGames, economy, logger, now, refundReserved) {
+  let removed = 0;
+  let refunded = 0;
+
+  for (const [gameId, pending] of pendingGames.entries()) {
+    if (pending.expiresAt > now) continue;
+
+    const refundCount = await refundReserved(economy, logger, pending);
+    if (pending?.reserved) continue;
+
+    pendingGames.delete(gameId);
+    removed += 1;
+    refunded += refundCount;
+  }
+
+  return { removed, refunded };
+}
+
+function scheduleCasinoPendingCleanup(economy, logger = console, now = Date.now()) {
+  if (pendingCasinoCleanupTimer) {
+    clearTimeout(pendingCasinoCleanupTimer);
+    pendingCasinoCleanupTimer = null;
+  }
+
+  const nextExpiresAt = getNextPendingCasinoExpiry();
+  if (!nextExpiresAt) return;
+
+  const delayMs = Math.max(CASINO_PENDING_CLEANUP_MIN_DELAY_MS, nextExpiresAt - now + 10);
+  pendingCasinoCleanupTimer = setTimeout(async () => {
+    pendingCasinoCleanupTimer = null;
+    await cleanupExpiredCasinoGames(economy, logger).catch((error) =>
+      logger.error?.('Failed to cleanup expired casino games:', error)
+    );
+  }, delayMs);
+  pendingCasinoCleanupTimer.unref?.();
+}
+
+function getNextPendingCasinoExpiry() {
+  const expiries = [
+    ...[...pendingScratchTickets.values()].map((pending) => pending.expiresAt),
+    ...[...pendingTimingGames.values()].map((pending) => pending.expiresAt),
+    ...[...pendingDeadlineGames.values()].map((pending) => pending.expiresAt),
+    ...[...pendingAiBlackjackGames.values()].map((pending) => pending.expiresAt),
+    ...[...pendingBlackjackChallenges.values()].map((pending) => pending.expiresAt),
+    ...[...pendingPlayerBlackjackGames.values()].map((pending) => pending.expiresAt)
+  ].filter((expiresAt) => Number.isFinite(expiresAt) && expiresAt > 0);
+
+  return expiries.length > 0 ? Math.min(...expiries) : null;
+}
+
+async function refundReservedCasinoWager(economy, logger, pending) {
+  if (!pending?.reserved || typeof economy?.refundReservedWager !== 'function') return 0;
+
+  try {
+    await economy.refundReservedWager({
+      guildId: pending.guildId,
+      userId: pending.userId,
+      username: pending.username,
+      bet: pending.bet ?? pending.price
+    });
+    pending.reserved = false;
+    return 1;
+  } catch (error) {
+    logger.error?.('Failed to refund expired casino wager:', error);
+    return 0;
+  }
+}
+
+async function refundReservedPlayerCasinoPot(economy, logger, pending) {
+  if (!pending?.reserved || typeof economy?.resolveReservedPlayerPot !== 'function') return 0;
+
+  try {
+    await economy.resolveReservedPlayerPot({
+      guildId: pending.guildId,
+      challenger: pending.challenger,
+      opponent: pending.opponent,
+      bet: pending.bet,
+      winnerUserId: null
+    });
+    pending.reserved = false;
+    return 2;
+  } catch (error) {
+    logger.error?.('Failed to refund expired player casino pot:', error);
+    return 0;
+  }
 }
 
 async function routeCasinoCommand(interaction, economy, logger = console, options = {}) {

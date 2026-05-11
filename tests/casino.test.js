@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import {
+  cleanupExpiredCasinoGames,
   getCasinoCommandPayloads,
   handleCasinoCommand
 } from '../src/commands/casino.js';
@@ -200,6 +201,16 @@ test('단순 도박 결과만 같은 베팅 재시도 버튼을 제공하고 카
   assert.match(otherUserButton.replied.content, /명령어를 실행한 유저만/);
 });
 
+test('카지노 핸들러는 다른 기능 버튼을 건드리지 않는다', async () => {
+  const interaction = createCasinoButtonInteraction({
+    customId: 'fishing_cast:user-1'
+  });
+  const handled = await handleCasinoCommand(interaction, null, quietLogger);
+
+  assert.equal(handled, false);
+  assert.equal(interaction.replied, undefined);
+});
+
 
 test('데드라인은 안전 누름마다 골드 보상과 꽝 확률이 커지고 수령할 수 있다', () => {
   const round = createDeadlineRound({ bet: 100 });
@@ -331,6 +342,49 @@ test('데드라인 버튼은 시작한 유저만 누를 수 있고 꽝이면 예
   assert.equal(calls[1][1].payout, 0);
   assert.match(bust.updated.content, /데드라인 폭발/);
   assert.match(bust.updated.content, /지급: 0골드/);
+});
+
+test('만료된 수동 카지노 게임은 예약금을 환불하고 대기 상태를 지운다', async () => {
+  const calls = [];
+  const fakeEconomy = {
+    async reserveWager(payload) {
+      calls.push(['reserve', payload]);
+      return { bet: payload.bet, profile: { balance: 900 } };
+    },
+    async resolveReservedWager(payload) {
+      calls.push(['resolve', payload]);
+      return {
+        bet: payload.bet,
+        payout: payload.payout,
+        profit: payload.payout - payload.bet,
+        profile: { balance: 900 + payload.payout }
+      };
+    },
+    async refundReservedWager(payload) {
+      calls.push(['refund', payload]);
+      return { bet: payload.bet, payout: payload.bet, profit: 0, profile: { balance: 1000 } };
+    }
+  };
+
+  await cleanupExpiredCasinoGames(fakeEconomy, quietLogger, Number.MAX_SAFE_INTEGER);
+  calls.length = 0;
+
+  const interaction = createChatInputInteraction('데드라인', {
+    integers: { 돈: 100 }
+  });
+
+  assert.equal(await handleCasinoCommand(interaction, fakeEconomy, quietLogger), true);
+  const pressButtonId = interaction.replied.components[0].components[0].data.custom_id;
+  const cleanup = await cleanupExpiredCasinoGames(fakeEconomy, quietLogger, Date.now() + 120_000);
+
+  assert.equal(cleanup.removed, 1);
+  assert.equal(cleanup.refunded, 1);
+  assert.deepEqual(calls.map(([type]) => type), ['reserve', 'refund']);
+  assert.equal(calls[1][1].bet, 100);
+
+  const latePress = createCasinoButtonInteraction({ customId: pressButtonId });
+  assert.equal(await handleCasinoCommand(latePress, fakeEconomy, quietLogger), true);
+  assert.match(latePress.replied.content, /이미 만료/);
 });
 
 

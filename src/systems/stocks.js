@@ -948,6 +948,45 @@ export class StockService {
     });
   }
 
+  async getPendingTriggeredPriceAlertsByGuild({ guildIds = [], now = Date.now(), limitPerGuild = RECENT_ALERT_LIMIT } = {}) {
+    const normalizedGuildIds = [...new Set(
+      (Array.isArray(guildIds) ? guildIds : [])
+        .map((guildId) => String(guildId ?? '').trim())
+        .filter(Boolean)
+    )];
+    const safeLimit = Math.min(50, Math.max(1, Number(limitPerGuild) || RECENT_ALERT_LIMIT));
+
+    if (normalizedGuildIds.length === 0) return {};
+
+    return this.store.update((data) => {
+      const primaryGuildId = normalizedGuildIds[0];
+      const guild = getExistingGuild(data, primaryGuildId);
+      if (!guild?.stocks) return Object.fromEntries(normalizedGuildIds.map((guildId) => [guildId, []]));
+
+      const market = syncMarket(data, primaryGuildId, guild, now, this);
+      const guildIdSet = new Set(normalizedGuildIds);
+      const pendingByGuild = Object.fromEntries(normalizedGuildIds.map((guildId) => [guildId, []]));
+
+      for (const rawStockUser of Object.values(guild.stocks.users ?? {})) {
+        const stockUser = normalizeStockUserForAlertScan(rawStockUser, guild);
+
+        for (const alert of Object.values(stockUser.priceAlerts)) {
+          if (!alert.guildId || !guildIdSet.has(alert.guildId)) continue;
+          if (alert.status !== 'triggered' || alert.notifiedAt > 0 || !alert.channelId) continue;
+          pendingByGuild[alert.guildId].push(clonePriceAlert(alert, market));
+        }
+      }
+
+      for (const guildId of normalizedGuildIds) {
+        pendingByGuild[guildId] = pendingByGuild[guildId]
+          .sort((a, b) => (a.triggeredAt - b.triggeredAt) || a.id.localeCompare(b.id))
+          .slice(0, safeLimit);
+      }
+
+      return pendingByGuild;
+    });
+  }
+
   async markPriceAlertNotified({ guildId, userId, alertId, now = Date.now() }) {
     const normalizedAlertId = String(alertId ?? '').trim();
     if (!normalizedAlertId) throw new Error('알림 id를 입력하세요.');
@@ -2484,6 +2523,15 @@ function getOrCreateStockUser(guild, userId, username, moneyProfile = null, now 
   stockUser.lastDividendTick = normalizeNonNegativeInteger(stockUser.lastDividendTick);
   stockUser.lastTradeAt = normalizeNonNegativeInteger(stockUser.lastTradeAt);
   migrateLegacyStockLiabilitiesToGold(moneyProfile, stockUser, now);
+  return stockUser;
+}
+
+function normalizeStockUserForAlertScan(rawStockUser, guild) {
+  const stockUser = rawStockUser && typeof rawStockUser === 'object'
+    ? rawStockUser
+    : createDefaultStockUser('', 'Unknown');
+
+  stockUser.priceAlerts = normalizePriceAlerts(stockUser.priceAlerts, guild);
   return stockUser;
 }
 
