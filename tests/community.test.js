@@ -267,9 +267,49 @@ test('자동 업적 수령은 완료 업적 보상을 한 번만 지급한다', 
     });
 
     assert.equal(first.claimed.some((achievement) => achievement.id === 'commands_50'), true);
-    assert.equal(first.totalCoins, 1_000);
+    assert.equal(first.claimed.some((achievement) => achievement.id === 'level_2'), true);
+    assert.equal(first.totalCoins, 1_300);
     assert.equal(first.totalXp, 120);
     assert.equal(first.profile.community.ownedTitles.includes('commander'), true);
+    assert.equal(second.claimed.length, 0);
+    assert.equal(second.totalCoins, 0);
+    assert.equal(second.totalXp, 0);
+    assert.equal(second.profile.balance, first.profile.balance);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+
+test('자동 업적 수령은 보상으로 새로 완료된 업적도 같은 지급에 포함한다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await seedProfile(fixture.store, {
+      balance: 9_500,
+      community: { stats: { commandsUsed: 50 } }
+    });
+
+    const first = await fixture.community.grantCompletedAchievements({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '연쇄러'
+    });
+    const second = await fixture.community.grantCompletedAchievements({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '연쇄러'
+    });
+    const claimedIds = first.claimed.map((achievement) => achievement.id);
+
+    assert.deepEqual(claimedIds, ['commands_50', 'level_2', 'balance_10000']);
+    assert.equal(first.totalClaimed, 3);
+    assert.equal(first.totalCoins, 1_800);
+    assert.equal(first.totalXp, 170);
+    assert.equal(first.levelReward, 200);
+    assert.equal(first.profile.balance, 11_500);
+    assert.equal(first.profile.community.ownedTitles.includes('commander'), true);
+    assert.equal(first.profile.community.ownedTitles.includes('rich'), true);
     assert.equal(second.claimed.length, 0);
     assert.equal(second.totalCoins, 0);
     assert.equal(second.totalXp, 0);

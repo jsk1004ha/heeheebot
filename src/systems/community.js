@@ -1449,24 +1449,40 @@ function applyCompletedAchievementRewards({ profile, community, statuses, getSta
   const claimed = [];
   let totalCoins = 0;
   let totalXp = 0;
+  let levelResult = {
+    leveledUp: false,
+    levelsGained: 0,
+    levelReward: 0
+  };
 
-  for (const status of statuses) {
-    if (!status.completed || status.claimed) continue;
-    community.claimedAchievements[status.id] = true;
-    totalCoins += status.reward.coins;
-    totalXp += status.reward.xp;
-    if (status.reward.titleId) addOwnedTitle(community, status.reward.titleId);
-    claimed.push(status);
-  }
+  let pendingStatuses = statuses;
+  while (true) {
+    const newlyClaimed = pendingStatuses.filter((status) => status.completed && !status.claimed);
+    if (newlyClaimed.length <= 0) break;
 
-  if (totalCoins > 0) profile.balance += totalCoins;
-  const levelResult = addXp(profile, totalXp);
-
-  if (claimed.length > 0 && typeof getStatusesAfterReward === 'function') {
-    for (const status of getStatusesAfterReward()) {
-      if (!status.completed || status.claimed) continue;
+    let batchCoins = 0;
+    let batchXp = 0;
+    for (const status of newlyClaimed) {
       community.claimedAchievements[status.id] = true;
+      batchCoins += status.reward.coins;
+      batchXp += status.reward.xp;
+      if (status.reward.titleId) addOwnedTitle(community, status.reward.titleId);
+      claimed.push(status);
     }
+
+    if (batchCoins > 0) profile.balance += batchCoins;
+    const batchLevelResult = addXp(profile, batchXp);
+
+    totalCoins += batchCoins;
+    totalXp += batchXp;
+    levelResult = {
+      leveledUp: levelResult.leveledUp || batchLevelResult.leveledUp,
+      levelsGained: levelResult.levelsGained + batchLevelResult.levelsGained,
+      levelReward: levelResult.levelReward + batchLevelResult.levelReward
+    };
+
+    if (typeof getStatusesAfterReward !== 'function') break;
+    pendingStatuses = getStatusesAfterReward();
   }
 
   return {
