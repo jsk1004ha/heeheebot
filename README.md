@@ -4,7 +4,7 @@
 
 **희희봇은 라이빗을 침공한 터미네이터 희진이다.**
 
-![Version](https://img.shields.io/badge/version-v0.8.0-orange)
+![Version](https://img.shields.io/badge/version-v0.8.1-orange)
 ![Status](https://img.shields.io/badge/status-pre--1.0-yellow)
 ![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.5-339933?logo=nodedotjs&logoColor=white)
 ![discord.js](https://img.shields.io/badge/discord.js-v14-5865F2?logo=discord&logoColor=white)
@@ -47,8 +47,8 @@
 | 명령어 등록 | `npm start` 시 자동 동기화, 수동은 `npm run register` |
 | 테스트 | `node --test` 기반 도메인/라우팅/커맨드 테스트 |
 | 현재 커맨드 규모 | 최상위 slash command 82개 + 다수 subcommand |
-| 현재 버전 | `v0.8.0` — 1.0 이전 개발 버전 |
-| 버전 산정 근거 | Git tag가 아직 없어 48개 커밋을 8개 기능 마일스톤으로 묶어 `0.8.0`으로 산정 |
+| 현재 버전 | `v0.8.1` — 1.0 이전 개발 버전 |
+| 버전 산정 근거 | `v0.8.0` 기능 기준선에 정규화 SQLite 저장소 패치를 더해 `v0.8.1`로 산정 |
 
 ### 추천 첫 동선
 
@@ -149,11 +149,11 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 현재 버전 | `v0.8.0` |
-| npm package version | `0.8.0` |
-| 기준 커밋 범위 | `d6b539a` → `2ece970` |
-| 기준 커밋 수 | 48 commits |
-| 최신 기준 커밋 | `2ece970` — `feat: enhance automatic meal command with permission checks and update help command` |
+| 현재 버전 | `v0.8.1` |
+| npm package version | `0.8.1` |
+| 기준 커밋 범위 | `d6b539a` → `6bfed97` |
+| 기준 커밋 수 | 99 commits |
+| 최신 기준 커밋 | `6bfed97` — `Make profile cards feel like character sheets` |
 | 릴리스 상태 | Pre-1.0: 기능 확장과 안정화가 동시에 진행 중 |
 
 ### 버전 규칙
@@ -172,7 +172,7 @@ vMAJOR.MINOR.PATCH
 
 ### 커밋 기록 기반 마일스톤
 
-커밋이 단순 초기 작업 수준을 넘어 여러 기능군을 단계적으로 쌓았기 때문에, 현재 버전은 `0.1.0`이 아니라 `0.8.0`으로 둡니다.
+커밋이 단순 초기 작업 수준을 넘어 여러 기능군을 단계적으로 쌓았기 때문에, 기능 기준선은 `0.8.0`으로 두고 저장소 호환 패치는 `0.8.1`로 관리합니다.
 
 | 마일스톤 | 커밋 범위 | 핵심 변화 |
 | --- | --- | --- |
@@ -186,6 +186,13 @@ vMAJOR.MINOR.PATCH
 | `0.8` | `f8fa883` → `2ece970` | 계정 연동, 워들/숫자야구/투표 테스트, command startup sync, 자동급식 권한 체크, 도움말 개선 |
 
 ### 커밋 기록 기반 릴리스 노트
+
+#### `v0.8.1` — 정규화 SQLite 저장소
+
+- **DB 방식 변경**: 범용 `bot_state_nodes` 경로 행 저장에서 root/global/guild/user/feature 단위 정규화 테이블로 전환
+- **기존 데이터 이전**: 이전 `bot_state_nodes`, 구 SQLite 단일 JSON(`bot_state`), legacy JSON 파일을 빈 새 스키마로 자동 마이그레이션
+- **호환성 유지**: 기존 서비스의 `load/view/save/update` API와 도메인 상태 shape는 유지
+- **저장소 테스트**: 정규화 persistence, legacy migration, rollback, sparse array 방어, 행 단위 delta 갱신 검증
 
 #### `v0.8.0` — 통합 기능 기준선
 
@@ -507,7 +514,7 @@ heeheebot/
 │  ├─ config.js                 # 환경변수 파싱
 │  ├─ commands/                 # slash command 정의와 interaction handler
 │  ├─ systems/                  # 도메인 로직: 경제, RPG, 주식, 시즌, 게임 등
-│  └─ storage/                  # SQLite 저장소와 migration
+│  └─ storage/                  # 정규화 SQLite 저장소와 migration
 ├─ assets/                      # RPG/희진/낚시/검/프로필 이미지 자산
 ├─ data/                        # DB, 단어 목록, 게임 데이터
 ├─ docs/                        # 자산 파이프라인 문서
@@ -521,7 +528,7 @@ heeheebot/
 
 - `src/commands/*`: Discord 입력, 옵션, embed/button 응답 조립
 - `src/systems/*`: 순수 게임/경제/관리 로직과 상태 계산
-- `src/storage/sqlite-store.js`: 영속성, SQLite schema, legacy JSON migration
+- `src/storage/sqlite-store.js`: 영속성, 정규화 SQLite schema, legacy migration
 - `assets/*` + `tools/*`: 봇 응답에 붙는 이미지와 생성 파이프라인
 - `tests/*`: 커맨드 등록, 라우팅, 도메인 규칙 검증
 
@@ -552,7 +559,8 @@ npm start         # 명령어 자동 동기화 후 봇 시작
 ### 저장소·마이그레이션
 
 - 기본 SQLite 경로는 `data/profiles.sqlite`입니다.
-- 기존 `data/profiles.json`이 있고 SQLite DB가 비어 있으면 첫 실행 때 가져올 수 있습니다.
+- v0.8.1부터 새 저장 데이터는 root/global/guild/user/feature 정규화 테이블에 기록됩니다.
+- 기존 `bot_state_nodes` 행 저장소, 구 SQLite 단일 JSON(`bot_state`), `data/profiles.json`은 새 DB가 비어 있으면 첫 실행 때 자동으로 가져옵니다.
 - DB 경로를 바꾸려면 `BOT_SQLITE_PATH`를 사용하세요.
 
 ### 자동 스케줄러
