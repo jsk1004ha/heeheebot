@@ -463,8 +463,8 @@ function isEligibleMutatingButton(customId, userId) {
     return parts[1] === userId && ['battle', 'explore', 'dungeon', 'raid', 'guild_raid', 'rest'].includes(parts[2]);
   }
 
-  if (['rpg_daily', 'rpg_quest', 'rpg_skill', 'rpg_boss_action', 'rpg_raid_lobby'].includes(parts[0])) {
-    return true;
+  if (['rpg_daily', 'rpg_quest', 'rpg_skill'].includes(parts[0])) {
+    return parts[1] === userId;
   }
 
   if (parts[0] === 'sword_quick') {
