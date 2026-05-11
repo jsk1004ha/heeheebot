@@ -181,6 +181,11 @@ export function createBot({
 
     const responseGuard = guardInteractionResponse(interaction, { logger });
     try {
+      if (shouldDeferBeforeCommandHandling(interaction)) {
+        const deferred = await responseGuard.deferNow();
+        if (!deferred) return;
+      }
+
       const handledAccountLinkComponent = await handleAccountLinkComponent(interaction, economy);
       if (handledAccountLinkComponent) return;
 
@@ -342,6 +347,13 @@ export function isSupportedCommandInteraction(interaction) {
     || interaction?.isButton?.()
     || interaction?.isModalSubmit?.()
     || interaction?.isStringSelectMenu?.()
+  );
+}
+
+function shouldDeferBeforeCommandHandling(interaction) {
+  return Boolean(
+    interaction?.isChatInputCommand?.()
+    || interaction?.isModalSubmit?.()
   );
 }
 

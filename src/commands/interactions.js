@@ -2,6 +2,7 @@ import { MessageFlags } from 'discord.js';
 
 export const EPHEMERAL_FLAG = MessageFlags.Ephemeral;
 export const DEFAULT_INTERACTION_DEFER_AFTER_MS = 1_000;
+const GUARD_DEFER_KIND = Symbol('guardDeferKind');
 
 export function isUnknownInteractionError(error) {
   return Boolean(
@@ -57,6 +58,7 @@ export async function safeReplyToInteraction(interaction, payload, options = {})
     if (interaction.deferred && !interaction.replied) {
       if (isEphemeralInteractionPayload(responsePayload) && typeof interaction.followUp === 'function') {
         await interaction.followUp(toFollowOnInteractionPayload(responsePayload));
+        await deleteDeferredReplyIfPossible(interaction);
       } else if (typeof interaction.editReply === 'function') {
         await interaction.editReply(toFollowOnInteractionPayload(responsePayload));
       } else if (typeof interaction.followUp === 'function') {
@@ -101,11 +103,31 @@ export function guardInteractionResponse(interaction, {
   const originalFollowUp = typeof interaction?.followUp === 'function'
     ? interaction.followUp.bind(interaction)
     : null;
+  const originalUpdate = typeof interaction?.update === 'function'
+    ? interaction.update.bind(interaction)
+    : null;
+  const originalDeferUpdate = typeof interaction?.deferUpdate === 'function'
+    ? interaction.deferUpdate.bind(interaction)
+    : null;
+  const originalShowModal = typeof interaction?.showModal === 'function'
+    ? interaction.showModal.bind(interaction)
+    : null;
+  const originalDeleteReply = typeof interaction?.deleteReply === 'function'
+    ? interaction.deleteReply.bind(interaction)
+    : null;
+  const canDeferReply = Boolean(
+    originalReply
+      && originalDeferReply
+      && (interaction?.isChatInputCommand?.() || interaction?.isModalSubmit?.())
+  );
+  const canDeferUpdate = Boolean(
+    originalUpdate
+      && originalDeferUpdate
+      && (interaction?.isButton?.() || interaction?.isStringSelectMenu?.())
+  );
   const shouldGuard = Boolean(
     enabled
-      && originalReply
-      && originalDeferReply
-      && interaction?.isChatInputCommand?.()
+      && (canDeferReply || canDeferUpdate)
       && Number.isFinite(deferAfterMs)
       && deferAfterMs >= 0
   );
@@ -113,6 +135,9 @@ export function guardInteractionResponse(interaction, {
   if (!shouldGuard) {
     return {
       stop() {},
+      async deferNow() {
+        return true;
+      },
       get autoDeferred() {
         return false;
       }
@@ -125,9 +150,17 @@ export function guardInteractionResponse(interaction, {
   let autoDeferred = false;
   let deferredByGuard = false;
   let repliedByGuard = false;
+  let updatedByGuard = false;
+  let modalShownByGuard = false;
+  let deferKind = null;
 
   const hasDeferred = () => Boolean(interaction.deferred || deferredByGuard);
-  const hasReplied = () => Boolean(interaction.replied || repliedByGuard);
+  const hasReplied = () => Boolean(
+    interaction.replied
+      || repliedByGuard
+      || updatedByGuard
+      || modalShownByGuard
+  );
   const hasResponded = () => hasDeferred() || hasReplied();
 
   const clearAutoDeferTimer = () => {
@@ -138,79 +171,182 @@ export function guardInteractionResponse(interaction, {
   };
 
   const waitForAutoDefer = async () => {
-    if (autoDeferPromise) await autoDeferPromise;
+    if (!autoDeferPromise) return true;
+    return autoDeferPromise;
+  };
+
+  const preferredAutoDeferKind = () => (
+    canDeferUpdate ? 'update' : 'reply'
+  );
+
+  const deferInitialResponse = async ({
+    auto = false,
+    kind = preferredAutoDeferKind()
+  } = {}) => {
+    if (stopped || hasResponded()) return true;
+
+    try {
+      if (kind === 'update' && canDeferUpdate) {
+        await originalDeferUpdate();
+        deferKind = 'update';
+      } else if (canDeferReply) {
+        await originalDeferReply();
+        deferKind = 'reply';
+      } else if (canDeferUpdate) {
+        await originalDeferUpdate();
+        deferKind = 'update';
+      } else {
+        return true;
+      }
+
+      autoDeferred = auto;
+      deferredByGuard = true;
+      interaction[GUARD_DEFER_KIND] = deferKind;
+      logger.debug?.(
+        auto
+          ? 'Auto-deferred Discord interaction before the response window closed.'
+          : 'Deferred Discord interaction before command handling.',
+        {
+          commandName: interaction.commandName,
+          customId: interaction.customId,
+          deferKind
+        }
+      );
+      return true;
+    } catch (error) {
+      if (isUnknownInteractionError(error)) {
+        logger.warn?.(
+          auto
+            ? 'Interaction expired before automatic defer could be sent.'
+            : 'Interaction expired before initial defer could be sent.'
+        );
+        return false;
+      }
+
+      if (auto) {
+        logger.warn?.('Failed to automatically defer interaction:', error);
+        return false;
+      }
+
+      throw error;
+    }
   };
 
   const startAutoDefer = () => {
     if (stopped || hasResponded() || autoDeferPromise) return;
-
-    autoDeferPromise = (async () => {
-      try {
-        if (stopped || hasResponded()) return false;
-        await originalDeferReply();
-        autoDeferred = true;
-        deferredByGuard = true;
-        logger.debug?.('Auto-deferred Discord command interaction before the response window closed.', {
-          commandName: interaction.commandName
-        });
-        return true;
-      } catch (error) {
-        if (isUnknownInteractionError(error)) {
-          logger.warn?.('Interaction expired before automatic defer could be sent.');
-        } else {
-          logger.warn?.('Failed to automatically defer interaction:', error);
-        }
-        return false;
-      }
-    })();
+    autoDeferPromise = deferInitialResponse({ auto: true });
   };
 
   timer = setTimeout(startAutoDefer, deferAfterMs);
   timer.unref?.();
 
-  interaction.deferReply = async function guardedDeferReply(...args) {
-    clearAutoDeferTimer();
-    await waitForAutoDefer();
-    if (hasResponded()) return null;
+  if (originalDeferReply) {
+    interaction.deferReply = async function guardedDeferReply(...args) {
+      clearAutoDeferTimer();
+      await waitForAutoDefer();
+      if (hasResponded()) return null;
 
-    const result = await originalDeferReply(...args);
-    deferredByGuard = true;
-    return result;
-  };
+      const result = await originalDeferReply(...args);
+      deferredByGuard = true;
+      deferKind = 'reply';
+      interaction[GUARD_DEFER_KIND] = deferKind;
+      return result;
+    };
+  }
 
-  interaction.reply = async function guardedReply(payload) {
-    clearAutoDeferTimer();
-    await waitForAutoDefer();
+  if (originalDeferUpdate) {
+    interaction.deferUpdate = async function guardedDeferUpdate(...args) {
+      clearAutoDeferTimer();
+      await waitForAutoDefer();
+      if (hasResponded()) return null;
 
-    if (hasDeferred() && !hasReplied()) {
+      const result = await originalDeferUpdate(...args);
+      deferredByGuard = true;
+      deferKind = 'update';
+      interaction[GUARD_DEFER_KIND] = deferKind;
+      return result;
+    };
+  }
+
+  if (originalReply) {
+    interaction.reply = async function guardedReply(payload) {
+      clearAutoDeferTimer();
+      await waitForAutoDefer();
+
+      if (hasDeferred() && !hasReplied()) {
+        const followOnPayload = toFollowOnInteractionPayload(payload);
+        if (deferKind === 'update') {
+          if (originalFollowUp) {
+            const result = await originalFollowUp(followOnPayload);
+            repliedByGuard = true;
+            return result;
+          }
+          if (originalEditReply) {
+            const result = await originalEditReply(followOnPayload);
+            repliedByGuard = true;
+            return result;
+          }
+        }
+        if (isEphemeralInteractionPayload(followOnPayload) && originalFollowUp) {
+          const result = await originalFollowUp(followOnPayload);
+          repliedByGuard = true;
+          await deleteOriginalDeferredReply();
+          return result;
+        }
+        if (originalEditReply) {
+          const result = await originalEditReply(followOnPayload);
+          repliedByGuard = true;
+          return result;
+        }
+        if (originalFollowUp) {
+          const result = await originalFollowUp(followOnPayload);
+          repliedByGuard = true;
+          return result;
+        }
+      }
+
+      if (hasReplied()) {
+        const followOnPayload = toFollowOnInteractionPayload(payload);
+        if (originalFollowUp) return originalFollowUp(followOnPayload);
+        if (originalEditReply) return originalEditReply(followOnPayload);
+      }
+
+      const result = await originalReply(payload);
+      repliedByGuard = true;
+      return result;
+    };
+  }
+
+  if (originalUpdate) {
+    interaction.update = async function guardedUpdate(payload) {
+      clearAutoDeferTimer();
+      await waitForAutoDefer();
+
       const followOnPayload = toFollowOnInteractionPayload(payload);
-      if (isEphemeralInteractionPayload(followOnPayload) && originalFollowUp) {
-        const result = await originalFollowUp(followOnPayload);
-        repliedByGuard = true;
-        return result;
-      }
-      if (originalEditReply) {
-        const result = await originalEditReply(followOnPayload);
-        repliedByGuard = true;
-        return result;
-      }
-      if (originalFollowUp) {
-        const result = await originalFollowUp(followOnPayload);
-        repliedByGuard = true;
-        return result;
-      }
-    }
 
-    if (hasReplied()) {
-      const followOnPayload = toFollowOnInteractionPayload(payload);
-      if (originalFollowUp) return originalFollowUp(followOnPayload);
-      if (originalEditReply) return originalEditReply(followOnPayload);
-    }
+      if (hasDeferred() && !hasReplied()) {
+        if (originalEditReply) {
+          const result = await originalEditReply(followOnPayload);
+          updatedByGuard = true;
+          return result;
+        }
+        if (originalFollowUp) {
+          const result = await originalFollowUp(followOnPayload);
+          updatedByGuard = true;
+          return result;
+        }
+      }
 
-    const result = await originalReply(payload);
-    repliedByGuard = true;
-    return result;
-  };
+      if (hasReplied()) {
+        if (originalEditReply) return originalEditReply(followOnPayload);
+        if (originalFollowUp) return originalFollowUp(followOnPayload);
+      }
+
+      const result = await originalUpdate(payload);
+      updatedByGuard = true;
+      return result;
+    };
+  }
 
   if (originalEditReply) {
     interaction.editReply = async function guardedEditReply(payload) {
@@ -232,10 +368,42 @@ export function guardInteractionResponse(interaction, {
     };
   }
 
+  if (originalShowModal) {
+    interaction.showModal = async function guardedShowModal(...args) {
+      clearAutoDeferTimer();
+      await waitForAutoDefer();
+      if (hasResponded()) {
+        logger.warn?.('Cannot show modal after the interaction was already acknowledged.');
+        return null;
+      }
+
+      const result = await originalShowModal(...args);
+      modalShownByGuard = true;
+      return result;
+    };
+  }
+
+  const deleteOriginalDeferredReply = async () => {
+    if (deferKind !== 'reply' || !originalDeleteReply) return;
+    try {
+      await originalDeleteReply();
+    } catch (error) {
+      logger.debug?.('Failed to delete deferred interaction placeholder:', error);
+    }
+  };
+
   return {
     stop() {
       stopped = true;
       clearAutoDeferTimer();
+    },
+    async deferNow() {
+      clearAutoDeferTimer();
+      if (hasResponded()) return true;
+      if (!autoDeferPromise) {
+        autoDeferPromise = deferInitialResponse({ auto: false });
+      }
+      return waitForAutoDefer();
     },
     get autoDeferred() {
       return autoDeferred;
@@ -353,4 +521,15 @@ function isEphemeralInteractionPayload(payload) {
   if (typeof flags?.has === 'function') return flags.has(EPHEMERAL_FLAG);
 
   return false;
+}
+
+async function deleteDeferredReplyIfPossible(interaction) {
+  if (interaction?.[GUARD_DEFER_KIND] !== 'reply') return;
+  if (typeof interaction?.deleteReply !== 'function') return;
+
+  try {
+    await interaction.deleteReply();
+  } catch {
+    // Best-effort cleanup only. The user-facing follow-up was already sent.
+  }
 }
