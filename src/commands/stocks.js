@@ -1357,7 +1357,7 @@ function formatStockNews(news) {
   const body = news.entries.length > 0
     ? news.entries.map(formatStockNewsLine)
       .join('\n')
-    : '최근 시장 뉴스/공시가 없습니다.';
+    : '최근 시장 뉴스/공시가 없다.';
 
   return [
     `🗞️ **주식 뉴스/공시**`,
@@ -1371,7 +1371,7 @@ function formatStockNewsLine(entry) {
 
 function stripStockNewsPrefix(message, stockName = '') {
   let text = String(message ?? '').trim();
-  if (!text) return '내용 없음';
+  if (!text) return '내용이 확인되지 않았다.';
 
   let previous;
   do {
@@ -1380,7 +1380,7 @@ function stripStockNewsPrefix(message, stockName = '') {
     text = stripLeadingStockName(text, stockName);
   } while (text !== previous);
 
-  return text || '내용 없음';
+  return text || '내용이 확인되지 않았다.';
 }
 
 function stripLeadingStockName(message, stockName) {

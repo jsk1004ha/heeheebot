@@ -5,6 +5,9 @@ import {
   getCommunityTitles,
   getEventTypes,
   getLotteryDrawScheduleText,
+  getLotteryMaxPurchaseQuantity,
+  getLotteryMaxRoundTickets,
+  getLotteryMaxRoundTicketsPerUser,
   getLotteryPrizeTiers,
   getLotteryTicketCost,
   getShopItems
@@ -122,20 +125,22 @@ export const communityCommands = [
         .addIntegerOption((option) =>
           option
             .setName('장수')
-            .setDescription('구매할 복권 장수(보유 골드 한도 내 제한 없음)')
+            .setDescription(`구매할 복권 장수(최대 ${getLotteryMaxPurchaseQuantity().toLocaleString()}장)`)
             .setMinValue(1)
+            .setMaxValue(getLotteryMaxPurchaseQuantity())
             .setRequired(true)
         )
     )
     .addSubcommand((subcommand) =>
       subcommand
         .setName('대량구매')
-        .setDescription('복권을 한 번에 여러 장 구매합니다. 보유 골드 한도 내 제한 없음.')
+        .setDescription(`복권을 한 번에 여러 장 구매합니다. 최대 ${getLotteryMaxPurchaseQuantity().toLocaleString()}장.`)
         .addIntegerOption((option) =>
           option
             .setName('장수')
             .setDescription('구매할 복권 장수(2장 이상)')
             .setMinValue(2)
+            .setMaxValue(getLotteryMaxPurchaseQuantity())
             .setRequired(true)
         )
     )
@@ -670,7 +675,7 @@ function formatLotteryStatus(lottery) {
   return [
     '🎟️ **서버 복권 6/45**',
     `장당 가격: ${getLotteryTicketCost().toLocaleString()}골드`,
-    '구매 제한: 보유 골드 한도 내 제한 없음',
+    `구매 제한: 1회 최대 ${getLotteryMaxPurchaseQuantity().toLocaleString()}장, 회차당 1인 최대 ${getLotteryMaxRoundTicketsPerUser().toLocaleString()}장, 전체 최대 ${getLotteryMaxRoundTickets().toLocaleString()}장`,
     `현재 잭팟: **${lottery.jackpot.toLocaleString()}골드**`,
     `판매된 복권: ${lottery.totalTickets.toLocaleString()}장`,
     `다음 자동 추첨: ${formatLotteryDrawTime(lottery.nextDrawAt)}`,
@@ -702,7 +707,7 @@ function formatBasisPoints(basisPoints) {
 
 function formatLotteryBuy(result) {
   const entries = formatLotteryEntries(result.entries, 5);
-  const hiddenCount = Math.max(0, result.entries.length - 5);
+  const hiddenCount = Math.max(0, result.hiddenCount ?? result.quantity - result.entries.length);
   return [
     '🎟️ **복권 구매 완료**',
     `${result.quantity.toLocaleString()}장 구매 / 지출 ${result.totalCost.toLocaleString()}골드`,

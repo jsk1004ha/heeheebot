@@ -48,6 +48,7 @@ const DEFAULT_MAX_DYNAMIC_STOCKS = 50;
 const DEFAULT_DIVIDEND_INTERVAL_TICKS = 10;
 const DEFAULT_DIVIDEND_REVIEW_INTERVAL_TICKS = 6;
 const DEFAULT_DIVIDEND_CHANGE_CHANCE_BPS = 2_000;
+const MARKET_DELISTED_STOCKS = Symbol('marketDelistedStocks');
 
 const DIVIDEND_BPS_BY_RISK = Object.freeze({
   stable: 25,
@@ -613,7 +614,7 @@ export class StockService {
       const guild = getOrCreateGuild(data, guildId);
       const market = syncMarket(data, guildId, guild, now, this);
       const normalizedStockId = normalizeStockIdForGuild(stockId, guild);
-      return cloneQuote(normalizedStockId, market.symbols[normalizedStockId]);
+      return getListedQuote(normalizedStockId, market);
     });
   }
 
@@ -621,7 +622,7 @@ export class StockService {
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
       const market = syncMarket(data, guildId, guild, now, this);
-      return buildListingSummary(market);
+      return buildListingSummary(market, guild);
     });
   }
 
@@ -1045,7 +1046,7 @@ export class StockService {
       const guild = getOrCreateGuild(data, guildId);
       const market = syncMarket(data, guildId, guild, now, this);
       const normalizedStockId = normalizeStockIdForGuild(stockId, guild);
-      const stock = cloneQuote(normalizedStockId, market.symbols[normalizedStockId]);
+      const stock = getListedQuote(normalizedStockId, market);
       const history = normalizePriceHistory(market.symbols[normalizedStockId]?.history, market.symbols[normalizedStockId], market.tickIndex, market.lastTickAt)
         .slice(-safePoints);
 
@@ -1159,7 +1160,8 @@ export class StockService {
         throw new Error('해당 레버리지 포지션을 찾을 수 없습니다.');
       }
 
-      const quote = cloneQuote(position.stockId, market.symbols[position.stockId]);
+      const quote = safeCloneQuote(position.stockId, market);
+      if (!quote) throw new Error('해당 레버리지 종목을 찾을 수 없습니다.');
       const evaluated = evaluateLeveragedPosition(position, quote, {
         currentTick: market.tickIndex,
         forceSettlement: true
@@ -1440,7 +1442,8 @@ function normalizeDynamicStockDefinition(definition = {}, fallbackId = null) {
 }
 
 function getDynamicStockDefinitions(guild) {
-  return Object.values(guild?.stocks?.dynamicDefinitions ?? {});
+  return Object.values(guild?.stocks?.dynamicDefinitions ?? {})
+    .filter((definition) => !isDelistedStockId(guild, definition.id));
 }
 
 function getOrCreateGuild(data, guildId) {
@@ -1459,38 +1462,52 @@ function getOrCreateMarket(guild, now) {
   guild.stocks ??= {};
   guild.stocks.users ??= {};
   guild.stocks.dynamicDefinitions = normalizeDynamicStockDefinitions(guild.stocks.dynamicDefinitions);
+  guild.stocks.delistedStocks = normalizeDelistedStockRecords(guild.stocks.delistedStocks);
   guild.stocks.nextDynamicStockSeq = normalizeNonNegativeInteger(guild.stocks.nextDynamicStockSeq);
   guild.stocks.marketNews = normalizeMarketNews(guild.stocks.marketNews, guild);
 
   if (!guild.stocks.market) {
-    guild.stocks.market = createInitialMarket(now);
+    guild.stocks.market = createInitialMarket(now, guild);
   }
 
   guild.stocks.market.symbols ??= {};
   guild.stocks.market.lastTickAt = normalizeNonNegativeInteger(guild.stocks.market.lastTickAt);
   guild.stocks.market.tickIndex = normalizeNonNegativeInteger(guild.stocks.market.tickIndex);
   for (const definition of STOCK_DEFINITIONS) {
+    if (isDelistedStockId(guild, definition.id)) {
+      delete guild.stocks.market.symbols[definition.id];
+      continue;
+    }
     const existingState = guild.stocks.market.symbols[definition.id];
     if (!existingState && definition.listedFromTick > guild.stocks.market.tickIndex) continue;
     guild.stocks.market.symbols[definition.id] = normalizeSymbolState(existingState, definition, now);
   }
   for (const definition of getDynamicStockDefinitions(guild)) {
+    if (isDelistedStockId(guild, definition.id)) {
+      delete guild.stocks.market.symbols[definition.id];
+      delete guild.stocks.dynamicDefinitions[definition.id];
+      continue;
+    }
     guild.stocks.market.symbols[definition.id] = normalizeSymbolState(
       guild.stocks.market.symbols[definition.id],
       definition,
       now
     );
   }
-  return guild.stocks.market;
+  for (const stockId of Object.keys(guild.stocks.delistedStocks)) {
+    delete guild.stocks.market.symbols[stockId];
+    delete guild.stocks.dynamicDefinitions?.[stockId];
+  }
+  return attachDelistedStockRecords(guild.stocks.market, guild.stocks.delistedStocks);
 }
 
-function createInitialMarket(now) {
+function createInitialMarket(now, guild = null) {
   return {
     lastTickAt: normalizeNonNegativeInteger(now),
     tickIndex: 0,
     symbols: Object.fromEntries(
       STOCK_DEFINITIONS
-        .filter((definition) => definition.listedFromTick <= 0)
+        .filter((definition) => definition.listedFromTick <= 0 && !isDelistedStockId(guild, definition.id))
         .map((definition) => [
           definition.id,
           createInitialSymbolState(definition, now)
@@ -1562,10 +1579,156 @@ function normalizeSymbolState(state, definition, now) {
   };
 }
 
+function attachDelistedStockRecords(market, records) {
+  market[MARKET_DELISTED_STOCKS] = records ?? {};
+  return market;
+}
+
+function getMarketDelistedStockRecord(market, stockId) {
+  return market?.[MARKET_DELISTED_STOCKS]?.[stockId] ?? null;
+}
+
+function isDelistedStockId(guild, stockId) {
+  const normalizedStockId = normalizeStoredDelistedStockId(stockId);
+  return Boolean(normalizedStockId && guild?.stocks?.delistedStocks?.[normalizedStockId]);
+}
+
+function purgeDelistedMarketSymbols(data, guildId, guild, market) {
+  guild.stocks ??= {};
+  guild.stocks.delistedStocks = normalizeDelistedStockRecords(guild.stocks.delistedStocks);
+  attachDelistedStockRecords(market, guild.stocks.delistedStocks);
+
+  const delistedEntries = Object.entries(market.symbols ?? {})
+    .filter(([, state]) => state?.status === 'delisted');
+  if (delistedEntries.length === 0) return;
+
+  cleanupDelistedStockUsers(data, guildId, guild, market);
+
+  for (const [stockId, state] of delistedEntries) {
+    if (state?.status !== 'delisted') continue;
+
+    const record = createDelistedStockRecord(stockId, state, market);
+    guild.stocks.delistedStocks[record.id] = record;
+    delete market.symbols[stockId];
+
+    if (record.dynamic) {
+      delete guild.stocks.dynamicDefinitions?.[stockId];
+    }
+  }
+
+  attachDelistedStockRecords(market, guild.stocks.delistedStocks);
+}
+
+function createDelistedStockRecord(stockId, state, market) {
+  let quote = null;
+  try {
+    quote = cloneQuote(stockId, state);
+  } catch {
+    quote = null;
+  }
+
+  const fallbackDefinition = STOCKS_BY_ID[stockId] ??
+    (state?.definition ? normalizeDynamicStockDefinition(state.definition, stockId) : null);
+  const name = quote?.name ?? fallbackDefinition?.name ?? stockId;
+
+  return normalizeDelistedStockRecord({
+    id: stockId,
+    name,
+    symbol: quote?.symbol ?? fallbackDefinition?.symbol ?? createSymbol(stockId),
+    sector: quote?.sector ?? fallbackDefinition?.sector ?? '알 수 없음',
+    risk: quote?.risk ?? fallbackDefinition?.risk ?? 'meme',
+    aliases: quote?.aliases ?? fallbackDefinition?.aliases ?? [],
+    dynamic: Boolean(quote?.dynamic ?? fallbackDefinition?.dynamic),
+    listedAtTick: quote?.listedAtTick ?? state?.listedAtTick,
+    delistedAtTick: quote?.delistedAtTick ?? market.tickIndex,
+    deletedAt: state?.updatedAt ?? market.lastTickAt,
+    previousPrice: quote?.previousPrice ?? state?.previousPrice,
+    news: quote?.news ?? `시황: ${name} 상장폐지 처리로 DB에서 자동 삭제되었습니다`
+  }, stockId);
+}
+
+function normalizeDelistedStockRecords(records = {}) {
+  const safeRecords = records && typeof records === 'object' ? records : {};
+  const entries = [];
+
+  for (const [stockId, record] of Object.entries(safeRecords)) {
+    try {
+      const normalized = normalizeDelistedStockRecord(record, stockId);
+      entries.push([normalized.id, normalized]);
+    } catch {
+      // Ignore invalid legacy delisting records.
+    }
+  }
+
+  return Object.fromEntries(entries);
+}
+
+function normalizeDelistedStockRecord(record = {}, fallbackId = null) {
+  const safeRecord = record && typeof record === 'object' ? record : {};
+  const id = normalizeStoredDelistedStockId(safeRecord.id ?? safeRecord.stockId ?? fallbackId);
+  if (!id) throw new Error('상장폐지 종목 id가 없습니다.');
+
+  const staticDefinition = STOCKS_BY_ID[id];
+  const name = String(safeRecord.name ?? staticDefinition?.name ?? id).trim() || id;
+  const symbol = normalizeAsciiStockSymbol(safeRecord.symbol ?? staticDefinition?.symbol ?? createSymbol(id)) || createSymbol(id);
+  const aliases = Array.isArray(safeRecord.aliases)
+    ? safeRecord.aliases.map((alias) => String(alias).trim()).filter(Boolean)
+    : [...(staticDefinition?.aliases ?? [])];
+
+  return {
+    id,
+    name,
+    symbol,
+    sector: String(safeRecord.sector ?? staticDefinition?.sector ?? '알 수 없음').trim() || '알 수 없음',
+    risk: normalizeStockRisk(safeRecord.risk ?? staticDefinition?.risk ?? 'meme'),
+    aliases,
+    dynamic: Boolean(safeRecord.dynamic ?? staticDefinition?.dynamic),
+    listedAtTick: normalizeNonNegativeInteger(safeRecord.listedAtTick ?? staticDefinition?.listedFromTick),
+    delistedAtTick: normalizeNonNegativeInteger(safeRecord.delistedAtTick),
+    deletedAt: normalizeNonNegativeInteger(safeRecord.deletedAt),
+    previousPrice: normalizeNonNegativeInteger(safeRecord.previousPrice),
+    news: String(safeRecord.news ?? `시황: ${name} 상장폐지 처리로 DB에서 자동 삭제되었습니다`).trim()
+  };
+}
+
+function normalizeStoredDelistedStockId(stockId) {
+  const rawStockId = String(stockId ?? '').trim();
+  if (!rawStockId) return null;
+  return STOCK_LOOKUP.get(normalizeLookupKey(rawStockId)) ?? rawStockId;
+}
+
+function cloneDelistedStockRecord(record) {
+  const normalized = normalizeDelistedStockRecord(record, record?.id ?? record?.stockId);
+  return {
+    ...normalized,
+    price: 0,
+    previousPrice: normalized.previousPrice,
+    changeBps: -10_000,
+    changePercent: -100,
+    news: normalized.news,
+    status: 'delisted',
+    eventType: 'delisted',
+    dividendBps: 0,
+    dividendPercent: 0,
+    dividendUpdatedAtTick: normalized.delistedAtTick,
+    updatedAt: normalized.deletedAt
+  };
+}
+
+function getListedQuote(stockId, market) {
+  const quote = safeCloneQuote(stockId, market);
+  if (quote?.status === 'delisted') {
+    throw new Error(`${quote.name}은(는) 상장폐지되어 DB에서 삭제되었습니다.`);
+  }
+  if (quote) return quote;
+  return cloneQuote(stockId, market.symbols[stockId]);
+}
+
 function syncMarket(data, guildId, guild, now, service) {
   const market = getOrCreateMarket(guild, now);
   advanceMarket(data, guildId, guild, market, now, service);
   cleanupDelistedStockUsers(data, guildId, guild, market);
+  purgeDelistedMarketSymbols(data, guildId, guild, market);
   return market;
 }
 
@@ -1591,6 +1754,7 @@ function advanceMarket(data, guildId, guild, market, now, service) {
     listScheduledStocks(guild, market);
     maybeAutoListStock(guild, market, service);
     processMarketSideEffects(data, guildId, guild, market, service);
+    purgeDelistedMarketSymbols(data, guildId, guild, market);
   }
 }
 
@@ -1718,6 +1882,7 @@ function calculateNextDividendBps(definition, currentBps, tickIndex) {
 
 function listScheduledStocks(guild, market) {
   for (const definition of STOCK_DEFINITIONS) {
+    if (isDelistedStockId(guild, definition.id)) continue;
     if (market.symbols[definition.id]) continue;
     if (definition.listedFromTick > market.tickIndex) continue;
     market.symbols[definition.id] = createInitialSymbolState(
@@ -1762,7 +1927,8 @@ function createAutomaticIpoDefinition(guild, market, randomIntFn) {
   const baseName = `${prefix}${nameModifier}${theme.suffix}`;
   const existingNames = new Set([
     ...STOCK_DEFINITIONS.map((definition) => definition.name),
-    ...getDynamicStockDefinitions(guild).map((definition) => definition.name)
+    ...getDynamicStockDefinitions(guild).map((definition) => definition.name),
+    ...Object.values(guild.stocks.delistedStocks ?? {}).map((record) => record.name)
   ]);
   const name = existingNames.has(baseName) ? `${baseName}${nextSequence}호` : baseName;
   const id = `auto_ipo_${market.tickIndex}_${nextSequence}`;
@@ -2910,14 +3076,14 @@ function cloneStockUser(stockUser) {
   };
 }
 
-function buildListingSummary(market) {
+function buildListingSummary(market, guild = null) {
   const recent = Object.entries(market.symbols)
     .map(([stockId, state]) => cloneQuote(stockId, state))
     .filter((stock) => stock.eventType === 'ipo' && stock.status === 'listed')
     .sort((a, b) => b.listedAtTick - a.listedAtTick)
     .slice(0, 10);
   const upcoming = STOCK_DEFINITIONS
-    .filter((definition) => !market.symbols[definition.id])
+    .filter((definition) => !market.symbols[definition.id] && !isDelistedStockId(guild, definition.id))
     .sort((a, b) => a.listedFromTick - b.listedFromTick)
     .slice(0, 10)
     .map((definition) => ({
@@ -2961,11 +3127,7 @@ function buildPriceAlertSummary(stockUser, market) {
 }
 
 function getTradableQuote(stockId, market) {
-  const quote = cloneQuote(stockId, market.symbols[stockId]);
-  if (quote.status === 'delisted') {
-    throw new Error(`${quote.name}은(는) 상장폐지되어 신규 매수할 수 없습니다.`);
-  }
-  return quote;
+  return getListedQuote(stockId, market);
 }
 
 function processMarketSideEffects(data, guildId, guild, market, service) {
@@ -2988,15 +3150,28 @@ function cleanupDelistedStockUsers(data, guildId, guild, market) {
   for (const [userId, rawStockUser] of Object.entries(users)) {
     const username = rawStockUser?.username ?? getLinkedAccountUsername(data, userId);
     const profile = getOptionalMoneyProfile(data, guildId, userId, username, market.lastTickAt);
-    if (!profile) continue;
     const stockUser = getOrCreateStockUser(guild, userId, username, profile, market.lastTickAt);
+    cleanupDelistedLimitOrders(profile, stockUser, market);
     cleanupDelistedStockUserState(stockUser, market);
+    if (profile) {
+      settleDelistedLeveragedPositions(profile, stockUser, market);
+    }
   }
 }
 
 function cleanupDelistedStockUserState(stockUser, market) {
   cleanupDelistedHoldings(stockUser, market);
   cleanupDelistedPriceAlerts(stockUser, market);
+}
+
+function cleanupDelistedLimitOrders(profile, stockUser, market) {
+  for (const order of Object.values(stockUser.limitOrders)) {
+    if (order.status !== 'open') continue;
+    const quote = safeCloneQuote(order.stockId, market);
+    if (!quote || quote.status !== 'delisted') continue;
+    if (!profile && order.side === 'buy' && order.reservedCash > 0) continue;
+    cancelOpenLimitOrder(profile, stockUser, order, market.lastTickAt, '상장폐지');
+  }
 }
 
 function cleanupDelistedHoldings(stockUser, market) {
@@ -3207,6 +3382,10 @@ function triggerPriceAlerts(stockUser, market) {
 
 function safeCloneQuote(stockId, market) {
   try {
+    if (!market?.symbols?.[stockId]) {
+      const delistedRecord = getMarketDelistedStockRecord(market, stockId);
+      return delistedRecord ? cloneDelistedStockRecord(delistedRecord) : null;
+    }
     return cloneQuote(stockId, market.symbols[stockId]);
   } catch {
     return null;
@@ -3273,11 +3452,12 @@ function removeHolding(stockUser, stockId, quantity) {
 
 function getEvaluatedLeveragedPositions(stockUser, market) {
   return Object.values(stockUser.leveragedPositions)
-    .map((position) => evaluateLeveragedPosition(
-      position,
-      cloneQuote(position.stockId, market.symbols[position.stockId]),
-      { currentTick: market.tickIndex }
-    ))
+    .map((position) => {
+      const quote = safeCloneQuote(position.stockId, market);
+      if (!quote || quote.status === 'delisted') return null;
+      return evaluateLeveragedPosition(position, quote, { currentTick: market.tickIndex });
+    })
+    .filter(Boolean)
     .filter((position) => !position.liquidated)
     .sort((a, b) => b.equity - a.equity);
 }
@@ -3304,7 +3484,8 @@ function settleMaturedLeveragedPositions(profile, stockUser, market) {
   const settled = [];
 
   for (const position of Object.values(stockUser.leveragedPositions)) {
-    const quote = cloneQuote(position.stockId, market.symbols[position.stockId]);
+    const quote = safeCloneQuote(position.stockId, market);
+    if (!quote) continue;
     const delisted = quote.status === 'delisted';
     const evaluated = evaluateLeveragedPosition(position, quote, {
       currentTick: market.tickIndex,
@@ -3315,6 +3496,27 @@ function settleMaturedLeveragedPositions(profile, stockUser, market) {
     settled.push(settleLeveragedPosition(profile, stockUser, position, evaluated, {
       at: market.lastTickAt,
       tradeType: getAutoLeverageSettlementTradeType(position, evaluated, delisted),
+      autoSettled: true
+    }));
+  }
+
+  return settled;
+}
+
+function settleDelistedLeveragedPositions(profile, stockUser, market) {
+  const settled = [];
+
+  for (const position of Object.values(stockUser.leveragedPositions)) {
+    const quote = safeCloneQuote(position.stockId, market);
+    if (!quote || quote.status !== 'delisted') continue;
+
+    const evaluated = evaluateLeveragedPosition(position, quote, {
+      currentTick: market.tickIndex,
+      forceSettlement: true
+    });
+    settled.push(settleLeveragedPosition(profile, stockUser, position, evaluated, {
+      at: market.lastTickAt,
+      tradeType: getAutoLeverageSettlementTradeType(position, evaluated, true),
       autoSettled: true
     }));
   }

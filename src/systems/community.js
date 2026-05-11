@@ -23,6 +23,10 @@ const LOTTERY_EVENT_JACKPOT_BPS = 10_000;
 const LOTTERY_NUMBER_MIN = 1;
 const LOTTERY_NUMBER_MAX = 45;
 const LOTTERY_PICK_COUNT = 6;
+const LOTTERY_MAX_PURCHASE_QUANTITY = 1_000;
+const LOTTERY_MAX_ROUND_TICKETS_PER_USER = 1_000;
+const LOTTERY_MAX_ROUND_TICKETS = 10_000;
+const LOTTERY_PURCHASE_PREVIEW_ENTRY_COUNT = 5;
 const LOTTERY_DRAW_DAYS = Object.freeze([3, 6]); // Wednesday and Saturday in Korea Standard Time.
 const LOTTERY_DRAW_HOUR = 21;
 const LOTTERY_DRAW_MINUTE = 0;
@@ -337,6 +341,17 @@ export class CommunityService {
       const activeEvent = getActiveEvent(guildCommunity, now);
       const totalCost = calculateLotteryPurchaseCost(normalizedQuantity);
       const entries = [];
+      const currentUserTickets = lottery.tickets[userId]?.count ?? 0;
+      const remainingUserTickets = LOTTERY_MAX_ROUND_TICKETS_PER_USER - currentUserTickets;
+      const remainingRoundTickets = LOTTERY_MAX_ROUND_TICKETS - lottery.totalTickets;
+
+      if (normalizedQuantity > remainingUserTickets) {
+        throw new Error(`이번 회차에는 1인당 최대 ${LOTTERY_MAX_ROUND_TICKETS_PER_USER.toLocaleString()}장까지만 구매할 수 있습니다. 남은 구매 가능 장수: ${Math.max(0, remainingUserTickets).toLocaleString()}장`);
+      }
+
+      if (normalizedQuantity > remainingRoundTickets) {
+        throw new Error(`이번 회차 전체 복권은 최대 ${LOTTERY_MAX_ROUND_TICKETS.toLocaleString()}장까지만 판매됩니다. 남은 판매 장수: ${Math.max(0, remainingRoundTickets).toLocaleString()}장`);
+      }
 
       debitBalance(profile, totalCost);
       const jackpotBps = activeEvent?.type === 'lottery_bonus'
@@ -353,13 +368,25 @@ export class CommunityService {
       };
       lottery.tickets[userId].username = profile.username;
       lottery.tickets[userId].entries ??= [];
+      lottery.tickets[userId].batches ??= [];
       lottery.tickets[userId].legacyCount = normalizeStoredNonNegativeInteger(lottery.tickets[userId].legacyCount);
-      for (let index = 0; index < normalizedQuantity; index += 1) {
+      const previewEntryCount = Math.min(normalizedQuantity, LOTTERY_PURCHASE_PREVIEW_ENTRY_COUNT);
+      const hiddenEntryCount = normalizedQuantity - previewEntryCount;
+      for (let index = 0; index < previewEntryCount; index += 1) {
         const entry = createLotteryEntry(lottery, this.randomInt, now);
         lottery.tickets[userId].entries.push(entry);
         entries.push({ ...entry, numbers: [...entry.numbers] });
       }
-      lottery.tickets[userId].count = lottery.tickets[userId].entries.length + lottery.tickets[userId].legacyCount;
+      if (hiddenEntryCount > 0) {
+        lottery.tickets[userId].batches.push(createLotteryBatch({
+          lottery,
+          count: hiddenEntryCount,
+          purchasedAt: now,
+          userId,
+          randomInt: this.randomInt
+        }));
+      }
+      lottery.tickets[userId].count = getLotteryTicketCount(lottery.tickets[userId]);
       lottery.totalTickets += normalizedQuantity;
       community.stats.lotteryTickets += normalizedQuantity;
       community.daily.lotteryTickets += normalizedQuantity;
@@ -370,6 +397,7 @@ export class CommunityService {
         jackpotAdded,
         eventBonus: jackpotBps > LOTTERY_BASE_JACKPOT_BPS,
         entries,
+        hiddenCount: hiddenEntryCount,
         profile: cloneCommunityProfile(profile, now),
         lottery: getLotteryStatus(lottery)
       };
@@ -609,6 +637,18 @@ export function getLotteryTicketCost() {
   return LOTTERY_TICKET_COST;
 }
 
+export function getLotteryMaxPurchaseQuantity() {
+  return LOTTERY_MAX_PURCHASE_QUANTITY;
+}
+
+export function getLotteryMaxRoundTickets() {
+  return LOTTERY_MAX_ROUND_TICKETS;
+}
+
+export function getLotteryMaxRoundTicketsPerUser() {
+  return LOTTERY_MAX_ROUND_TICKETS_PER_USER;
+}
+
 export function getLotteryPrizeTiers() {
   return LOTTERY_PRIZE_TIERS.map((tier) => ({ ...tier }));
 }
@@ -830,12 +870,19 @@ function collectLotteryEntries(lottery, randomInt, now) {
 
   for (const ticket of Object.values(lottery.tickets)) {
     ticket.entries ??= [];
+    ticket.batches ??= [];
     const legacyCount = normalizeStoredNonNegativeInteger(ticket.legacyCount);
     for (let index = 0; index < legacyCount; index += 1) {
-      ticket.entries.push(createLotteryEntry(lottery, randomInt, now));
+      const entry = createLotteryEntry(lottery, randomInt, now);
+      entries.push({
+        id: entry.id,
+        userId: ticket.userId,
+        username: ticket.username,
+        numbers: [...entry.numbers],
+        purchasedAt: entry.purchasedAt
+      });
     }
     ticket.legacyCount = 0;
-    ticket.count = ticket.entries.length;
 
     for (const entry of ticket.entries) {
       entries.push({
@@ -846,6 +893,21 @@ function collectLotteryEntries(lottery, randomInt, now) {
         purchasedAt: entry.purchasedAt
       });
     }
+
+    for (const batch of ticket.batches) {
+      for (let index = 0; index < batch.count; index += 1) {
+        const entry = createLotteryBatchEntry(batch, index);
+        entries.push({
+          id: entry.id,
+          userId: ticket.userId,
+          username: ticket.username,
+          numbers: [...entry.numbers],
+          purchasedAt: entry.purchasedAt
+        });
+      }
+    }
+
+    ticket.count = getLotteryTicketCount(ticket);
   }
 
   lottery.totalTickets = entries.length;
@@ -858,6 +920,33 @@ function createLotteryEntry(lottery, randomInt, purchasedAt) {
     id: `L${String(lottery.nextTicketSeq).padStart(6, '0')}`,
     numbers: drawLotteryPick(randomInt),
     purchasedAt
+  };
+}
+
+function createLotteryBatch({ lottery, count, purchasedAt, userId, randomInt }) {
+  const normalizedCount = normalizeLotteryBatchCount(count);
+  const startSeq = normalizeStoredNonNegativeInteger(lottery.nextTicketSeq) + 1;
+  lottery.nextTicketSeq = startSeq + normalizedCount - 1;
+
+  return {
+    startSeq,
+    count: normalizedCount,
+    purchasedAt,
+    seed: createLotteryBatchSeed({ userId, purchasedAt, startSeq, count: normalizedCount, randomInt })
+  };
+}
+
+function createLotteryBatchSeed({ userId, purchasedAt, startSeq, count, randomInt }) {
+  const nonce = normalizeStoredNonNegativeInteger(randomInt(0, 2 ** 32 - 1));
+  return `${userId}:${purchasedAt}:${startSeq}:${count}:${nonce}`;
+}
+
+function createLotteryBatchEntry(batch, index) {
+  const sequence = batch.startSeq + index;
+  return {
+    id: `L${String(sequence).padStart(6, '0')}`,
+    numbers: drawDeterministicLotteryPick(`${batch.seed}:${index}`),
+    purchasedAt: batch.purchasedAt
   };
 }
 
@@ -876,6 +965,19 @@ function drawLotteryPick(randomInt) {
   return drawLotteryPickFromPool(createLotteryNumberPool(), randomInt, LOTTERY_PICK_COUNT);
 }
 
+function drawDeterministicLotteryPick(seed) {
+  const random = createDeterministicRandom(seed);
+  const pool = createLotteryNumberPool();
+  const picks = [];
+
+  while (picks.length < LOTTERY_PICK_COUNT) {
+    const index = Math.floor(random() * pool.length);
+    picks.push(pool.splice(index, 1)[0]);
+  }
+
+  return picks.sort((a, b) => a - b);
+}
+
 function drawLotteryPickFromPool(pool, randomInt, count) {
   const picks = [];
   while (picks.length < count) {
@@ -892,6 +994,27 @@ function createLotteryNumberPool() {
     { length: LOTTERY_NUMBER_MAX - LOTTERY_NUMBER_MIN + 1 },
     (_, index) => LOTTERY_NUMBER_MIN + index
   );
+}
+
+function createDeterministicRandom(seed) {
+  let state = hashStringToUint32(seed);
+
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4_294_967_296;
+  };
+}
+
+function hashStringToUint32(value) {
+  let hash = 0x811c9dc5;
+  for (const char of String(value)) {
+    hash ^= char.codePointAt(0);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash;
 }
 
 function evaluateLotteryEntry(entry, winningNumbers, bonusNumber) {
@@ -1117,18 +1240,22 @@ function normalizeLottery(lottery, now = Date.now()) {
 
   for (const [userId, ticket] of Object.entries(safeLottery.tickets ?? {})) {
     const entries = normalizeLotteryEntries(ticket?.entries);
+    const batches = normalizeLotteryBatches(ticket?.batches);
+    const batchCount = batches.reduce((sum, batch) => sum + batch.count, 0);
     const storedCount = normalizeStoredNonNegativeInteger(ticket?.count);
-    const legacyCount = Math.max(0, storedCount - entries.length);
-    const count = entries.length + legacyCount;
-    if (count <= 0) continue;
+    const storedLegacyCount = normalizeStoredNonNegativeInteger(ticket?.legacyCount);
+    const legacyCount = Math.max(storedLegacyCount, storedCount - entries.length - batchCount);
+    const totalCount = entries.length + batchCount + legacyCount;
+    if (totalCount <= 0) continue;
     tickets[userId] = {
       userId,
       username: ticket?.username || 'Unknown',
-      count,
+      count: totalCount,
       entries,
+      batches,
       legacyCount
     };
-    totalTickets += count;
+    totalTickets += totalCount;
   }
 
   safeLottery.jackpot = Math.max(DEFAULT_LOTTERY_JACKPOT, normalizeStoredNonNegativeInteger(safeLottery.jackpot, DEFAULT_LOTTERY_JACKPOT));
@@ -1187,6 +1314,44 @@ function normalizeLotteryEntries(entries) {
       };
     })
     .filter(Boolean);
+}
+
+function normalizeLotteryBatches(batches) {
+  if (!Array.isArray(batches)) return [];
+
+  return batches
+    .map((batch) => {
+      const safeBatch = batch && typeof batch === 'object' ? batch : {};
+      const startSeq = normalizeStoredPositiveInteger(safeBatch.startSeq, 0);
+      const count = normalizeLotteryBatchCount(safeBatch.count);
+      const seed = String(safeBatch.seed ?? '');
+
+      if (startSeq <= 0 || count <= 0 || !seed) return null;
+
+      return {
+        startSeq,
+        count,
+        seed,
+        purchasedAt: normalizeStoredNonNegativeInteger(safeBatch.purchasedAt)
+      };
+    })
+    .filter(Boolean);
+}
+
+function normalizeLotteryBatchCount(value) {
+  const normalized = Number(value);
+  if (!Number.isSafeInteger(normalized) || normalized < 1 || normalized > LOTTERY_MAX_PURCHASE_QUANTITY) {
+    return 0;
+  }
+  return normalized;
+}
+
+function getLotteryTicketCount(ticket) {
+  const entryCount = Array.isArray(ticket.entries) ? ticket.entries.length : 0;
+  const batchCount = Array.isArray(ticket.batches)
+    ? ticket.batches.reduce((sum, batch) => sum + normalizeLotteryBatchCount(batch.count), 0)
+    : 0;
+  return entryCount + batchCount + normalizeStoredNonNegativeInteger(ticket.legacyCount);
 }
 
 function normalizeLotteryNumbers(numbers) {
@@ -1319,14 +1484,37 @@ function getLotteryStatus(lottery) {
       userId: ticket.userId,
       username: ticket.username,
       count: ticket.count,
-      entries: ticket.entries.map((entry) => ({
-        ...entry,
-        numbers: [...entry.numbers]
-      }))
+      entries: getLotteryTicketPreviewEntries(ticket, LOTTERY_PURCHASE_PREVIEW_ENTRY_COUNT)
     })),
     lastWinner: lottery.lastWinner ? { ...lottery.lastWinner } : null,
     lastDraw: lottery.lastDraw ? cloneLotteryLastDraw(lottery.lastDraw) : null
   };
+}
+
+function getLotteryTicketPreviewEntries(ticket, limit) {
+  const entries = [];
+  const normalizedLimit = normalizeStoredPositiveInteger(limit, LOTTERY_PURCHASE_PREVIEW_ENTRY_COUNT);
+
+  for (const entry of ticket.entries ?? []) {
+    entries.push({
+      ...entry,
+      numbers: [...entry.numbers]
+    });
+    if (entries.length >= normalizedLimit) return entries;
+  }
+
+  for (const batch of ticket.batches ?? []) {
+    for (let index = 0; index < batch.count; index += 1) {
+      const entry = createLotteryBatchEntry(batch, index);
+      entries.push({
+        ...entry,
+        numbers: [...entry.numbers]
+      });
+      if (entries.length >= normalizedLimit) return entries;
+    }
+  }
+
+  return entries;
 }
 
 function cloneLotteryLastDraw(lastDraw) {
@@ -1522,12 +1710,11 @@ function normalizeMissionType(type) {
 
 function normalizeLotteryPurchaseQuantity(value) {
   const normalized = Number(value);
-  const maxQuantityBySafeCost = Math.floor(Number.MAX_SAFE_INTEGER / LOTTERY_TICKET_COST);
   if (!Number.isSafeInteger(normalized) || normalized < 1) {
     throw new Error('복권 장수는 1장 이상의 정수여야 합니다.');
   }
-  if (normalized > maxQuantityBySafeCost) {
-    throw new Error('복권 구매 금액이 안전한 골드 범위를 초과합니다.');
+  if (normalized > LOTTERY_MAX_PURCHASE_QUANTITY) {
+    throw new Error(`복권은 한 번에 최대 ${LOTTERY_MAX_PURCHASE_QUANTITY.toLocaleString()}장까지만 구매할 수 있습니다.`);
   }
   return normalized;
 }
