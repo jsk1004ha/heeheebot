@@ -9,10 +9,12 @@ import {
   handleFishingCommand
 } from '../src/commands/fishing.js';
 import { createSqliteStore } from '../src/storage/sqlite-store.js';
+import { EconomyService } from '../src/systems/economy.js';
 import {
   FishingService,
   getFishCount,
   getFishConfig,
+  getFishDiscoveryXp,
   getFishOptions,
   getMaxIdleRewardMs
 } from '../src/systems/fishing.js';
@@ -87,20 +89,36 @@ test('물고기 카탈로그는 100종 이상과 히든 물고기를 포함하�
   assert.equal(getFishOptions().length, 25);
 });
 
-test('낚시는 결정적 난수로 물고기를 잡고 인벤토리만 갱신한다', async () => {
-  const fixture = await createFixture({ randomInt: sequenceRandom(1, 0, 20) });
+test('낚시는 신규 도감 등록 물고기에 발견 보너스 XP를 한 번만 지급한다', async () => {
+  const fixture = await createFixture({ randomInt: sequenceRandom(1, 0, 20, 1, 0, 21) });
 
   try {
     const result = await fixture.fishing.catchFish(createInput({ now: 10_000 }));
+    const discoveryXp = getFishDiscoveryXp('붕어');
 
     assert.equal(result.fishId, 'crucian_carp');
     assert.equal(result.size, 20);
     assert.equal(result.pointsGained, undefined);
+    assert.equal(result.newDiscovery, true);
+    assert.equal(result.discoveryXpGained, discoveryXp);
+    assert.equal(result.discoveryXpReward.xpGained, discoveryXp);
+    assert.equal(result.discoveryXpReward.profile.totalXp, discoveryXp);
     assert.equal(result.profile.inventory.crucian_carp, 1);
     assert.equal(result.profile.collection.crucian_carp, 10_000);
     assert.equal(result.profile.bestFish.crucian_carp.size, 20);
     assert.equal(result.profile.stats.totalCatches, 1);
     assert.equal(result.profile.stats.fishingPoints, undefined);
+
+    const repeated = await fixture.fishing.catchFish(createInput({ now: 20_000 }));
+    const economyProfile = await fixture.economy.getProfile('guild-1', 'user-1', '테스터');
+
+    assert.equal(repeated.fishId, 'crucian_carp');
+    assert.equal(repeated.newDiscovery, false);
+    assert.equal(repeated.discoveryXpGained, 0);
+    assert.equal(repeated.discoveryXpReward, undefined);
+    assert.equal(repeated.profile.inventory.crucian_carp, 2);
+    assert.equal(repeated.profile.collection.crucian_carp, 10_000);
+    assert.equal(economyProfile.totalXp, discoveryXp);
   } finally {
     await fixture.cleanup();
   }
@@ -180,6 +198,9 @@ test('잠수는 토글 방식으로 시작하고 최대 12시간 보상을 정�
     assert.equal(claimed.cappedElapsedMs, getMaxIdleRewardMs());
     assert.equal(claimed.minutes, 720);
     assert.equal(claimed.fishCount, 24);
+    assert.equal(claimed.discoveries.length, 1);
+    assert.equal(claimed.discoveryXpGained, getFishConfig('붕어').value);
+    assert.equal(claimed.discoveryXpReward.xpGained, getFishConfig('붕어').value);
     assert.equal(claimed.profile.idle.startedAt, 0);
     assert.equal(claimed.profile.idle.totalMinutes, 720);
     assert.equal(claimed.profile.stats.totalCatches, 24);
@@ -259,6 +280,8 @@ test('낚시 명령 핸들러는 /낚시 응답을 이미지 embed 카드로 반
     assert.equal(typeof payload, 'object');
     assert.match(payload.embeds[0].data.title, /낚시 성공/);
     assert.match(payload.embeds[0].data.description, /붕어/);
+    assert.match(payload.embeds[0].data.description, /새 물고기 발견/);
+    assert.match(payload.embeds[0].data.description, /\+8 XP/);
     assert.equal(payload.embeds[0].data.image.url, 'attachment://icon.png');
     assert.deepEqual(payload.files, [getFishConfig('붕어').imagePath]);
     assert.equal(payload.content, undefined);
@@ -679,9 +702,14 @@ function maxRandom(_min, max) {
 async function createFixture(options = {}) {
   const directory = await mkdtemp(join(tmpdir(), 'heeheebot-fishing-'));
   const store = createSqliteStore(join(directory, 'profiles.sqlite'));
-  const fishing = new FishingService(store, options);
+  const economy = options.economy ?? new EconomyService(store);
+  const fishing = new FishingService(store, {
+    ...options,
+    economy
+  });
 
   return {
+    economy,
     fishing,
     store,
     async cleanup() {

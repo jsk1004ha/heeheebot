@@ -10,6 +10,7 @@ const TEAM_SIZE = 3;
 const MAX_ROD_LEVEL = 20;
 const MAX_IDLE_REWARD_MS = 12 * 60 * 60 * 1000;
 const IDLE_FISH_INTERVAL_MS = 30 * 60 * 1000;
+const FISHING_DISCOVERY_XP_SOURCE = '낚시 도감 발견';
 
 const RARITIES = Object.freeze({
   common: Object.freeze({ label: '일반', weight: 6500, powerBonus: 0 }),
@@ -129,6 +130,7 @@ export class FishingService {
   constructor(store, options = {}) {
     this.store = store;
     this.randomInt = options.randomInt ?? randomInt;
+    this.economy = options.economy ?? null;
   }
 
   async getProfile(guildId, userId, username = 'Unknown') {
@@ -138,15 +140,28 @@ export class FishingService {
   }
 
   async catchFish({ guildId, userId, username, now = Date.now() }) {
-    return this.store.update((data) => {
+    const result = await this.store.update((data) => {
       const profile = getOrCreateFishingProfile(data, guildId, userId, username);
       const catchResult = rollCatch(profile, this.randomInt, now);
-      applyCatch(profile, catchResult, now);
+      const catchUpdate = applyCatch(profile, catchResult, now);
+      const discoveryXpGained = catchUpdate.newDiscovery
+        ? getFishDiscoveryXp(catchResult.fish)
+        : 0;
 
       return {
         ...catchResult,
+        ...catchUpdate,
+        discoveryXpGained,
         profile: cloneFishingProfile(profile)
       };
+    });
+
+    return this.applyDiscoveryXpReward({
+      guildId,
+      userId,
+      username,
+      now,
+      result
     });
   }
 
@@ -206,7 +221,7 @@ export class FishingService {
   }
 
   async toggleIdle({ guildId, userId, username, now = Date.now() }) {
-    return this.store.update((data) => {
+    const result = await this.store.update((data) => {
       const profile = getOrCreateFishingProfile(data, guildId, userId, username);
 
       if (!profile.idle.startedAt) {
@@ -224,11 +239,27 @@ export class FishingService {
       const minutes = Math.floor(cappedElapsedMs / 60_000);
       const fishCount = Math.max(1, Math.floor(cappedElapsedMs / IDLE_FISH_INTERVAL_MS));
       const catches = [];
+      const discoveries = [];
+      let discoveryXpGained = 0;
 
       for (let index = 0; index < fishCount; index += 1) {
         const catchResult = rollCatch(profile, this.randomInt, now);
-        applyCatch(profile, catchResult, now);
-        catches.push(catchResult);
+        const catchUpdate = applyCatch(profile, catchResult, now);
+        const catchDiscoveryXp = catchUpdate.newDiscovery
+          ? getFishDiscoveryXp(catchResult.fish)
+          : 0;
+        const catchEntry = {
+          ...catchResult,
+          ...catchUpdate,
+          discoveryXpGained: catchDiscoveryXp
+        };
+
+        if (catchUpdate.newDiscovery) {
+          discoveries.push(catchEntry);
+          discoveryXpGained += catchDiscoveryXp;
+        }
+
+        catches.push(catchEntry);
       }
 
       profile.idle.startedAt = 0;
@@ -243,9 +274,47 @@ export class FishingService {
         minutes,
         fishCount,
         catches,
+        discoveries,
+        discoveryXpGained,
         profile: cloneFishingProfile(profile)
       };
     });
+
+    return this.applyDiscoveryXpReward({
+      guildId,
+      userId,
+      username,
+      now,
+      result
+    });
+  }
+
+  async applyDiscoveryXpReward({ guildId, userId, username, now, result }) {
+    const xpGained = normalizeNonNegativeInteger(result.discoveryXpGained);
+    if (xpGained <= 0 || typeof this.economy?.grantXp !== 'function') {
+      return result;
+    }
+
+    try {
+      const discoveryXpReward = await this.economy.grantXp({
+        guildId,
+        userId,
+        username,
+        xp: xpGained,
+        source: FISHING_DISCOVERY_XP_SOURCE,
+        now
+      });
+
+      return {
+        ...result,
+        discoveryXpReward
+      };
+    } catch (error) {
+      return {
+        ...result,
+        discoveryXpRewardError: error.message
+      };
+    }
   }
 
   async setTeamSlot({ guildId, userId, username, slot, fishId }) {
@@ -392,6 +461,13 @@ export function getRarityLabel(rarity) {
   return RARITIES[rarity]?.label ?? rarity;
 }
 
+export function getFishDiscoveryXp(fishOrId) {
+  const fish = typeof fishOrId === 'string'
+    ? getFishConfig(fishOrId)
+    : fishOrId;
+  return normalizeNonNegativeInteger(fish?.value);
+}
+
 export function getMaxIdleRewardMs() {
   return MAX_IDLE_REWARD_MS;
 }
@@ -517,13 +593,23 @@ function rollCatch(profile, randomIntFn, now) {
 
 function applyCatch(profile, catchResult, now) {
   const { fishId, size } = catchResult;
+  const newDiscovery = !isFishRegisteredInCollection(profile, fishId);
+
   profile.inventory[fishId] = (profile.inventory[fishId] ?? 0) + 1;
-  profile.collection[fishId] ??= now;
+  if (newDiscovery) {
+    profile.collection[fishId] = now;
+  }
   profile.stats.totalCatches += 1;
 
   if (!profile.bestFish[fishId] || profile.bestFish[fishId].size < size) {
     profile.bestFish[fishId] = { size, caughtAt: now };
   }
+
+  return { newDiscovery };
+}
+
+function isFishRegisteredInCollection(profile, fishId) {
+  return normalizeNonNegativeInteger(profile.collection?.[fishId]) > 0;
 }
 
 function rollRarity(profile, randomIntFn) {

@@ -108,7 +108,7 @@ export function createBot({
   });
   const community = new CommunityService(store);
   const economy = new EconomyService(store);
-  const fishing = new FishingService(store);
+  const fishing = new FishingService(store, { economy });
   const fortune = new FortuneService();
   const meals = new MealService({ store, apiKey: neisApiKey });
   const stocks = new StockService(store);

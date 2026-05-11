@@ -344,6 +344,24 @@ export class EconomyService {
     });
   }
 
+  async grantXp({ guildId, userId, username, xp, source = '경험치', now = Date.now() }) {
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, this, now);
+      const xpGained = normalizeStoredNonNegativeInteger(xp);
+      const levelResult = addXp(profile, xpGained, this);
+
+      return {
+        awarded: xpGained > 0,
+        source: String(source || '경험치'),
+        xpGained,
+        totalXpGained: xpGained,
+        moneyGained: 0,
+        ...levelResult,
+        profile: cloneProfile(profile)
+      };
+    });
+  }
+
   async claimDaily({ guildId, userId, username, now = Date.now() }) {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);

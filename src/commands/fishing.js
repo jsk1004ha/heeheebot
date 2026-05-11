@@ -290,14 +290,16 @@ async function routeFishingCommand(interaction, fishing) {
 
 function formatCatchResult(user, result) {
   const count = result.profile.inventory[result.fishId] ?? 0;
+  const discoveryLine = formatDiscoveryBonus(result);
 
   return [
     `🎣 **낚시 성공** — ${formatUserMention(user, user.username)}`,
     `획득: **${result.fish.label}** (${getRarityLabel(result.rarity)} / ${result.fish.type})`,
     `크기: **${result.size.toLocaleString()}cm**`,
+    discoveryLine,
     `보유 ${result.fish.label}: **${count.toLocaleString()}마리**`,
     `낚싯대: **${formatRodName(result.profile.rod.level)}**`
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
 
 function formatEnhancementResult(user, result) {
@@ -335,12 +337,46 @@ function formatIdleResult(user, result) {
   }
 
   const catchSummary = summarizeCatches(result.catches);
+  const discoveryLine = formatIdleDiscoveryBonus(result);
 
   return [
     `🌊 **잠수 보상 정산** — ${formatUserMention(user, user.username)}`,
     `잠수 시간: **${formatMinutes(result.minutes)}** / 획득 물고기: **${result.fishCount.toLocaleString()}마리**`,
+    discoveryLine,
     `획득 목록: ${catchSummary}`
-  ].join('\n');
+  ].filter(Boolean).join('\n');
+}
+
+function formatDiscoveryBonus(result) {
+  if (!result?.newDiscovery) return null;
+  if (result.discoveryXpRewardError) {
+    return `🆕 **새 물고기 발견!** 도감에 등록했습니다. XP 지급 실패: ${result.discoveryXpRewardError}`;
+  }
+
+  const reward = result.discoveryXpReward;
+  const xpGained = reward?.xpGained ?? result.discoveryXpGained ?? 0;
+  const levelText = reward?.leveledUp
+    ? ` / 🎉 Lv.${reward.profile.level} 레벨업! 보너스 ${reward.levelReward.toLocaleString()}골드`
+    : '';
+
+  return `🆕 **새 물고기 발견!** 도감에 등록하고 보너스 **+${xpGained.toLocaleString()} XP**를 획득했습니다${levelText}.`;
+}
+
+function formatIdleDiscoveryBonus(result) {
+  const discoveries = Array.isArray(result?.discoveries) ? result.discoveries : [];
+  if (discoveries.length <= 0) return null;
+
+  const labels = discoveries
+    .map((discovery) => discovery.fish.label)
+    .join(', ');
+  const base = formatDiscoveryBonus({
+    newDiscovery: true,
+    discoveryXpGained: result.discoveryXpGained,
+    discoveryXpReward: result.discoveryXpReward,
+    discoveryXpRewardError: result.discoveryXpRewardError
+  });
+
+  return `${base}\n새 발견: ${labels}`;
 }
 
 function formatTeamResult(user, result) {
