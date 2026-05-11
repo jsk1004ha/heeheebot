@@ -8,6 +8,7 @@ import {
   handleSeasonCommand
 } from '../src/commands/seasons.js';
 import { createSqliteStore } from '../src/storage/sqlite-store.js';
+import { CommunityService } from '../src/systems/community.js';
 import {
   DEFAULT_SEASON_ID,
   SEASON_REWARDS,
@@ -331,6 +332,48 @@ test('시즌패스는 칭호와 한정 배지를 포함한 다단계 보상을 �
   }
 });
 
+test('시즌 보상 수령은 커뮤니티 칭호와 프로필 배지를 실제 지급한다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    for (let day = 0; day < 4; day += 1) {
+      await fixture.seasons.awardPoints({
+        guildId: 'guild-1',
+        userId: 'user-1',
+        username: '시즌러',
+        source: SEASON_POINT_SOURCES.RPG_DUNGEON_CLEAR,
+        points: 300,
+        now: Date.UTC(2026, 4, 11 + day, 12)
+      });
+    }
+
+    const claim = await fixture.seasons.claimRewards({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '시즌러',
+      now: Date.UTC(2026, 4, 15, 12)
+    });
+    const overview = await fixture.community.getOverview({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '시즌러',
+      now: Date.UTC(2026, 4, 15, 12)
+    });
+
+    assert.ok(claim.appliedRewards.some((reward) => reward.titleId === 'season_dungeon_title'));
+    assert.ok(claim.appliedRewards.some((reward) => reward.badgeId === 'season_hero_profile'));
+    assert.ok(overview.community.ownedTitles.includes('season_dungeon_title'));
+    assert.ok(overview.community.cosmetics.badges.includes('season_spark'));
+    assert.ok(overview.community.cosmetics.badges.includes('season_blaze'));
+    assert.ok(overview.community.cosmetics.badges.includes('season_crown'));
+    assert.ok(overview.community.cosmetics.badges.includes('season_monkey_hunter_badge'));
+    assert.ok(overview.community.cosmetics.badges.includes('season_hero_profile'));
+    assert.equal(overview.titles.find((title) => title.id === 'season_dungeon_title').owned, true);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 test('시즌 과제는 RPG 던전 클리어 출처도 별도 활동으로 반영한다', async () => {
   const fixture = await createFixture();
   const now = Date.UTC(2026, 4, 13, 12);
@@ -443,9 +486,11 @@ async function createFixture() {
   const directory = await mkdtemp(join(tmpdir(), 'heeheebot-seasons-'));
   const store = createSqliteStore(join(directory, 'profiles.sqlite'));
   const seasons = new SeasonService(store);
+  const community = new CommunityService(store);
 
   return {
     seasons,
+    community,
     store,
     async cleanup() {
       store.close();

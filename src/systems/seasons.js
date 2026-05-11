@@ -1,3 +1,7 @@
+import { getOrCreateLinkedAccountProfile } from './accounts.js';
+import { addOwnedTitle, isCommunityTitleId } from './achievements.js';
+import { normalizeWallets } from './currencies.js';
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
 const KOREA_TIME_OFFSET_MS = 9 * 60 * 60 * 1000;
@@ -163,6 +167,7 @@ export const SEASON_REWARDS = Object.freeze([
     label: '시즌 불씨',
     kind: 'badge',
     icon: '🔥',
+    badgeId: 'season_spark',
     requiredPoints: 50,
     description: '시즌 참가를 증명하는 첫 번째 불씨 배지'
   }),
@@ -171,6 +176,7 @@ export const SEASON_REWARDS = Object.freeze([
     label: '시즌 화염',
     kind: 'badge',
     icon: '🏵️',
+    badgeId: 'season_blaze',
     requiredPoints: 150,
     description: '꾸준히 전투와 강화를 이어간 유저의 화염 배지'
   }),
@@ -179,6 +185,7 @@ export const SEASON_REWARDS = Object.freeze([
     label: '시즌 왕관',
     kind: 'profile_badge',
     icon: '👑',
+    badgeId: 'season_crown',
     requiredPoints: 500,
     description: '시즌 랭킹 상위권을 노릴 수 있는 왕관 배지'
   }),
@@ -187,6 +194,7 @@ export const SEASON_REWARDS = Object.freeze([
     label: '던전 개척자',
     kind: 'title',
     icon: '🏰',
+    titleId: 'season_dungeon_title',
     requiredPoints: 800,
     description: '던전과 전투 시즌 루프를 꾸준히 돌파한 유저의 시즌 칭호'
   }),
@@ -195,6 +203,7 @@ export const SEASON_REWARDS = Object.freeze([
     label: '원숭이 사냥꾼',
     kind: 'badge',
     icon: '🐒',
+    badgeId: 'season_monkey_hunter_badge',
     requiredPoints: 1_000,
     description: '원숭이 대침공 시즌 한정 수집 배지'
   }),
@@ -203,6 +212,7 @@ export const SEASON_REWARDS = Object.freeze([
     label: '시즌 영웅 프로필 배지',
     kind: 'profile_badge',
     icon: '🌟',
+    badgeId: 'season_hero_profile',
     requiredPoints: 1_200,
     description: '프로필에서 시즌 성취를 보여줄 수 있는 최상위 프로필 배지'
   })
@@ -343,15 +353,25 @@ export class SeasonService {
       const profile = getOrCreateSeasonProfile(seasons, userId, username);
       const claimable = buildRewardStatuses(profile)
         .filter((reward) => reward.claimable);
+      const appliedRewards = [];
 
       for (const reward of claimable) {
         profile.claimedRewardIds[reward.id] = now;
+        const applied = applySeasonRewardToLinkedProfile(data, {
+          guildId,
+          userId,
+          username,
+          reward,
+          now
+        });
+        if (applied) appliedRewards.push(applied);
       }
       profile.updatedAt = now;
 
       return {
         season: { ...DEFAULT_SEASON },
         claimed: claimable.map((reward) => ({ ...reward, claimed: true, claimable: false })),
+        appliedRewards,
         profile: cloneSeasonProfile(profile),
         rewards: buildRewardStatuses(profile)
       };
@@ -397,6 +417,92 @@ function getOrCreateSeasonProfile(seasons, userId, username) {
   profile.daily ??= {};
   profile.weekly ??= {};
   return profile;
+}
+
+function applySeasonRewardToLinkedProfile(data, { guildId, userId, username, reward, now }) {
+  if (!reward || !['badge', 'profile_badge', 'title'].includes(reward.kind)) {
+    return null;
+  }
+
+  const profile = getOrCreateLinkedAccountProfile(data, {
+    guildId,
+    userId,
+    username,
+    now,
+    createDefaultProfile: createDefaultSeasonRewardProfile
+  });
+  const community = getOrCreateRewardCommunity(profile);
+
+  if (reward.kind === 'title') {
+    const titleId = reward.titleId ?? reward.id;
+    if (!isCommunityTitleId(titleId)) return null;
+
+    const alreadyOwned = community.ownedTitles.includes(titleId);
+    addOwnedTitle(community, titleId);
+    if (!community.equippedTitle) {
+      community.equippedTitle = titleId;
+    }
+
+    return {
+      rewardId: reward.id,
+      kind: reward.kind,
+      titleId,
+      label: reward.label,
+      newlyApplied: !alreadyOwned
+    };
+  }
+
+  const badgeId = reward.badgeId ?? reward.id;
+  const alreadyOwned = community.cosmetics.badges.includes(badgeId);
+  if (!alreadyOwned) {
+    community.cosmetics.badges.push(badgeId);
+  }
+
+  return {
+    rewardId: reward.id,
+    kind: reward.kind,
+    badgeId,
+    label: reward.label,
+    newlyApplied: !alreadyOwned
+  };
+}
+
+function createDefaultSeasonRewardProfile(userId, username, now = Date.now()) {
+  return {
+    userId,
+    username,
+    level: 1,
+    xp: 0,
+    totalXp: 0,
+    balance: 0,
+    wallets: normalizeWallets(),
+    lastMessageRewardAt: 0,
+    lastDailyAt: 0,
+    lastDailyDay: null,
+    dailyStreak: 0,
+    lastFirstMessageBonusDay: null,
+    lastFortuneXpDay: null,
+    createdAt: now
+  };
+}
+
+function getOrCreateRewardCommunity(profile) {
+  profile.community ??= {};
+  const community = profile.community;
+  community.ownedTitles = normalizeUniqueStringArray(community.ownedTitles)
+    .filter((titleId) => isCommunityTitleId(titleId));
+  community.equippedTitle = community.ownedTitles.includes(community.equippedTitle)
+    ? community.equippedTitle
+    : null;
+  community.cosmetics = {
+    badges: normalizeUniqueStringArray(community.cosmetics?.badges)
+  };
+  return community;
+}
+
+function normalizeUniqueStringArray(value) {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.map((item) => String(item ?? '').trim()).filter(Boolean))];
 }
 
 function getOrCreateDailyBucket(profile, dayKey) {

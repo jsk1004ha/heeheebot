@@ -46,6 +46,7 @@ export const COMMUNITY_TITLES = Object.freeze([
   title('collector', '💎 수집가', '상점에서 구매', { rarity: 'legendary', category: 'collection', source: '상점' }),
   title('rpg_adventurer', '🧭 모험가', 'RPG 캐릭터를 시작한 기록으로 획득', { rarity: 'common', category: 'rpg', source: 'RPG 업적' }),
   title('dungeon_breaker', '🏰 던전 돌파자', 'RPG 던전 클리어 업적으로 획득', { rarity: 'epic', category: 'rpg', source: 'RPG 업적' }),
+  title('season_dungeon_title', '🏰 던전 개척자', '희희봇 시즌 1 보상으로 획득', { rarity: 'legendary', category: 'rpg', source: '시즌 1' }),
   title('angler', '🎣 강태공', '낚시 업적으로 획득', { rarity: 'rare', category: 'fishing', source: '낚시 업적' }),
   title('blade_master', '⚔️ 검의 주인', '검강화 업적으로 획득', { rarity: 'epic', category: 'sword', source: '검강화 업적' }),
   title('market_maker', '📈 시장 감시자', '주식 거래 업적으로 획득', { rarity: 'rare', category: 'stocks', source: '주식 업적' }),

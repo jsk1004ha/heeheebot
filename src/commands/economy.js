@@ -10,6 +10,7 @@ import {
   isAccountSelectionRequiredError
 } from '../systems/accounts.js';
 import { getCommunityTitle } from '../systems/achievements.js';
+import { getCommunityCosmeticBadge } from '../systems/community.js';
 import { formatCurrencyAmount } from '../systems/currencies.js';
 import {
   getCurrentProfileLevelBadge,
@@ -315,11 +316,6 @@ function createAccountLinkSelectionPayload(summary, ownerId) {
   };
 }
 
-const PROFILE_SHOP_BADGE_LABELS = Object.freeze({
-  badge_luck: '행운 배지',
-  badge_gold: '골드 배지'
-});
-
 export function createProfileReplyPayload(profile, context = {}) {
   const profileText = formatProfile(profile, context);
   const displayBadge = getDisplayProfileLevelBadge(profile.level);
@@ -590,8 +586,14 @@ function formatShopBadgeGallery(profile) {
   if (badgeIds.length === 0) return '없음';
 
   return badgeIds
-    .map((badgeId) => PROFILE_SHOP_BADGE_LABELS[badgeId] ?? badgeId)
+    .map(formatCommunityBadgeName)
     .join(' / ');
+}
+
+function formatCommunityBadgeName(badgeId) {
+  const badge = getCommunityCosmeticBadge(badgeId);
+  const label = badge?.label ?? badgeId;
+  return label.replace(/^[^\p{L}\p{N}]+/u, '').trim() || label;
 }
 
 function formatCurrencyInfo() {

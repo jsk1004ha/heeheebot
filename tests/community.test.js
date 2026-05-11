@@ -58,6 +58,7 @@ test('커뮤니티 명령 payload는 업적, 칭호, 미션, 복권, 상점, 서
   assert.ok(getAchievementCategories().some((category) => category.id === 'sword' && category.label === '검강화'));
   assert.ok(getCommunityTitles().some((title) => title.id === 'tycoon' && title.rarityLabel === '전설'));
   assert.ok(getCommunityTitles().some((title) => title.id === 'pet_guardian' && title.category === 'tamagotchi'));
+  assert.ok(getCommunityTitles().some((title) => title.id === 'season_dungeon_title' && title.source === '시즌 1'));
 });
 
 test('칭호 선택 autocomplete는 보유 칭호만 이름으로 보여주고 내부 id를 노출하지 않는다', async () => {

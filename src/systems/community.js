@@ -7,6 +7,7 @@ import {
 } from './currencies.js';
 import { getOrCreateLinkedAccountProfile } from './accounts.js';
 import * as achievements from './achievements.js';
+import { SEASON_REWARDS } from './seasons.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
@@ -55,6 +56,26 @@ export const EVENT_TYPES = Object.freeze([
 
 const SHOP_ITEM_BY_ID = new Map(SHOP_ITEMS.map((item) => [item.id, item]));
 const EVENT_TYPE_BY_ID = new Map(EVENT_TYPES.map((item) => [item.id, item]));
+const COMMUNITY_COSMETIC_BADGES = Object.freeze([
+  ...SHOP_ITEMS
+    .filter((item) => item.type === 'badge')
+    .map((item) => Object.freeze({
+      id: item.id,
+      label: item.label,
+      source: '상점',
+      kind: 'shop_badge'
+    })),
+  ...SEASON_REWARDS
+    .filter((reward) => ['badge', 'profile_badge'].includes(reward.kind))
+    .map((reward) => Object.freeze({
+      id: reward.badgeId ?? reward.id,
+      label: `${reward.icon ?? ''} ${reward.label}`.trim(),
+      source: '시즌 1',
+      kind: reward.kind,
+      rewardId: reward.id
+    }))
+]);
+const COMMUNITY_COSMETIC_BADGE_BY_ID = new Map(COMMUNITY_COSMETIC_BADGES.map((badge) => [badge.id, badge]));
 
 const DAILY_MISSIONS = Object.freeze([
   mission(
@@ -629,6 +650,19 @@ export function getShopItems() {
   return SHOP_ITEMS.map((item) => ({ ...item }));
 }
 
+export function getCommunityCosmeticBadge(badgeId) {
+  const badge = COMMUNITY_COSMETIC_BADGE_BY_ID.get(String(badgeId));
+  return badge ? { ...badge } : null;
+}
+
+export function getCommunityCosmeticBadges() {
+  return COMMUNITY_COSMETIC_BADGES.map((badge) => ({ ...badge }));
+}
+
+export function isCommunityCosmeticBadgeId(badgeId) {
+  return COMMUNITY_COSMETIC_BADGE_BY_ID.has(String(badgeId));
+}
+
 export function getEventTypes() {
   return EVENT_TYPES.map((item) => ({ ...item }));
 }
@@ -1161,7 +1195,7 @@ function normalizeCommunityProfile(profile, now = Date.now()) {
     ? community.equippedTitle
     : null;
   community.cosmetics = {
-    badges: normalizeStringArray(community.cosmetics?.badges).filter((itemId) => SHOP_ITEM_BY_ID.get(itemId)?.type === 'badge')
+    badges: normalizeStringArray(community.cosmetics?.badges).filter((itemId) => isCommunityCosmeticBadgeId(itemId))
   };
   community.missions ??= {};
   community.missions.daily = normalizeMissionPeriodState(community.missions.daily, getDayIndex(now));

@@ -152,9 +152,14 @@ function formatSeasonRewardClaim(result) {
     ].join('\n');
   }
 
+  const appliedText = result.appliedRewards?.length > 0
+    ? `적용: ${result.appliedRewards.map(formatSeasonRewardEffect).join(', ')}`
+    : '적용: 이미 보유한 시즌 꾸미기와 칭호는 중복 지급하지 않았습니다.';
+
   return [
     `🎁 **시즌 보상 수령**`,
     `수령 보상: ${result.claimed.map((reward) => `${reward.icon ?? '🎁'} **${reward.label}** · ${formatSeasonRewardKind(reward.kind)}`).join(', ')}`,
+    appliedText,
     `현재 점수: **${result.profile.totalPoints.toLocaleString()}점**`
   ].join('\n');
 }
@@ -213,4 +218,11 @@ function formatSeasonRewardKind(kind) {
     title: '시즌 칭호',
     profile_badge: '프로필 배지'
   }[kind] ?? '보상';
+}
+
+function formatSeasonRewardEffect(reward) {
+  if (reward.titleId) return `칭호 **${reward.label}**`;
+  if (reward.kind === 'profile_badge') return `프로필 배지 **${reward.label}**`;
+  if (reward.badgeId) return `한정 배지 **${reward.label}**`;
+  return `보상 **${reward.label}**`;
 }
