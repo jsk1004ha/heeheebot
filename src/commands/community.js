@@ -10,6 +10,8 @@ import {
   getShopItems
 } from '../systems/community.js';
 import { formatDuration } from './economy.js';
+import { formatSeasonAwardLine } from './seasons.js';
+import { SEASON_POINT_SOURCES } from '../systems/seasons.js';
 import {
   logUnexpectedInteractionError,
   safeAutocompleteRespond,
@@ -259,7 +261,7 @@ export async function handleCommunityAutocomplete(interaction, community) {
   return true;
 }
 
-export async function handleCommunityCommand(interaction, community, logger = console) {
+export async function handleCommunityCommand(interaction, community, logger = console, services = {}) {
   if (!interaction.isChatInputCommand()) return false;
   if (!communityCommandNames.has(interaction.commandName)) return false;
 
@@ -272,7 +274,7 @@ export async function handleCommunityCommand(interaction, community, logger = co
   }
 
   try {
-    await routeCommunityCommand(interaction, community);
+    await routeCommunityCommand(interaction, community, services);
   } catch (error) {
     logUnexpectedInteractionError(logger, error, 'Community command rejected');
     await safeReplyToInteraction(interaction, `처리 실패: ${error.message}`, {
@@ -283,7 +285,7 @@ export async function handleCommunityCommand(interaction, community, logger = co
   return true;
 }
 
-async function routeCommunityCommand(interaction, community) {
+async function routeCommunityCommand(interaction, community, services = {}) {
   const guildId = interaction.guildId;
   const user = interaction.user;
   const base = {
@@ -323,7 +325,8 @@ async function routeCommunityCommand(interaction, community) {
       ...base,
       type
     });
-    await interaction.reply(formatMissions(result));
+    const seasonAward = await awardCommunityMissionSeasonPoints(services, interaction, result);
+    await interaction.reply(withSeasonAward(formatMissions(result), seasonAward));
     return;
   }
 
@@ -419,6 +422,29 @@ async function routeCommunityCommand(interaction, community) {
     await sendCommunityReply(interaction, formatWeeklyActivitySummary(result));
     return;
   }
+}
+
+
+async function awardCommunityMissionSeasonPoints(services, interaction, result) {
+  if (!Array.isArray(result?.claimed) || result.claimed.length <= 0) return null;
+  if (typeof services?.seasons?.awardPoints !== 'function') return null;
+
+  try {
+    return await services.seasons.awardPoints({
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username,
+      source: SEASON_POINT_SOURCES.COMMUNITY_MISSION_CLAIM,
+      points: Math.min(40, result.claimed.length * 15)
+    });
+  } catch (error) {
+    services.logger?.debug?.('Failed to award community mission season points:', error);
+    return null;
+  }
+}
+
+function withSeasonAward(content, award) {
+  return [content, formatSeasonAwardLine(award)].filter(Boolean).join('\n');
 }
 
 async function deferInteractionReplyIfSupported(interaction) {

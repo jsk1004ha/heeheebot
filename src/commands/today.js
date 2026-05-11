@@ -6,6 +6,8 @@ import {
   SlashCommandBuilder
 } from 'discord.js';
 import { formatDuration } from './economy.js';
+import { SEASON_POINT_SOURCES } from '../systems/seasons.js';
+import { formatSeasonAwardLine } from './seasons.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const FORTUNE_DAY_OFFSET_MS = 9 * 60 * 60 * 1000;
@@ -80,8 +82,9 @@ async function handleTodayButton(interaction, services) {
       ...createBaseContext(interaction),
       type: 'daily'
     });
+    const seasonAward = await awardCommunityMissionSeasonPoints(services, interaction, result);
     await interaction.update(await createTodayPayload(interaction, services, {
-      notice: formatCommunityMissionClaimNotice(result)
+      notice: formatCommunityMissionClaimNotice(result, seasonAward)
     }));
     return true;
   }
@@ -190,6 +193,9 @@ export function formatTodayChecklist(context) {
     `🗓️ **오늘 할 일** — ${user.username}`,
     notice ? `> ${notice}` : null,
     '',
+    '🚀 **시작하기**',
+    formatOnboardingHint({ profile, rpgStatus, swordStatus, seasonOverview }),
+    '',
     '🎁 **일일 보상**',
     `${dailyClaimed ? '✅' : '🎁'} **출석 보상** — ${dailyClaimed ? `수령 완료 · 연속 ${profile.dailyStreak.toLocaleString()}일` : '수령 가능'} (\`/출석\`)`,
     `${fortuneClaimed ? '✅' : '⬜'} **운세 XP** — ${fortuneClaimed ? '오늘 XP 수령 완료' : '오늘 운세 보고 XP 받기'} (\`/운세\`)`,
@@ -289,13 +295,46 @@ function formatDailyClaimNotice(result) {
   return `✅ 출석 완료: +${result.xpGained.toLocaleString()} XP, +${result.reward.toLocaleString()}원${streakText}`;
 }
 
-function formatCommunityMissionClaimNotice(result) {
+function formatCommunityMissionClaimNotice(result, seasonAward = null) {
   const claimed = result.claimed ?? [];
   if (claimed.length === 0) {
     return '수령 가능한 커뮤니티 일일 미션 보상이 없습니다.';
   }
 
-  return `📋 커뮤니티 일일 미션 보상 수령: ${claimed.map((mission) => mission.title).join(', ')} · +${result.totalXp.toLocaleString()} XP, +${result.totalCoins.toLocaleString()}원`;
+  return [
+    `📋 커뮤니티 일일 미션 보상 수령: ${claimed.map((mission) => mission.title).join(', ')} · +${result.totalXp.toLocaleString()} XP, +${result.totalCoins.toLocaleString()}원`,
+    formatSeasonAwardLine(seasonAward)
+  ].filter(Boolean).join('\n> ');
+}
+
+async function awardCommunityMissionSeasonPoints(services, interaction, result) {
+  const claimed = result.claimed ?? [];
+  if (claimed.length === 0 || typeof services.seasons?.awardPoints !== 'function') return null;
+
+  try {
+    return await services.seasons.awardPoints({
+      ...createBaseContext(interaction),
+      source: SEASON_POINT_SOURCES.COMMUNITY_MISSION_CLAIM,
+      points: Math.min(40, claimed.length * 15)
+    });
+  } catch (error) {
+    services.logger?.debug?.('Failed to award today mission season points:', error);
+    return null;
+  }
+}
+
+function formatOnboardingHint({ profile, rpgStatus, swordStatus, seasonOverview }) {
+  const rpg = rpgStatus?.profile?.rpg ?? profile.rpg ?? {};
+  const steps = [
+    { label: '출석 받기', command: '`/출석`', complete: profile.lastDailyDay !== null && profile.lastDailyDay !== undefined },
+    { label: 'RPG 시작', command: '`/rpg 시작`', complete: Number(rpg.startedAt) > 0 },
+    { label: '검 선물받기', command: '`/선물받기`', complete: swordStatus?.giftAvailable === false },
+    { label: '시즌 정보 확인', command: '`/시즌 정보`', complete: (seasonOverview?.profile?.totalPoints ?? 0) > 0 }
+  ];
+  const next = steps.find((step) => !step.complete);
+
+  if (!next) return '✅ 기본 루트 완료 · `/시즌 과제`로 장기 목표를 이어가세요.';
+  return `🎯 다음 단계: **${next.label}** ${next.command} · 전체 루트는 \`/시작하기\``;
 }
 
 function formatCommunityMissionSummary(missions = []) {

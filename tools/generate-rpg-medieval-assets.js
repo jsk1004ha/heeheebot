@@ -1,11 +1,12 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { deflateSync } from 'node:zlib';
 import { getRpgAssetById } from '../src/systems/rpg-assets.js';
 
 const ROOT = process.cwd();
 const MANIFEST_PATH = join(ROOT, 'assets/rpg/asset-manifest.json');
-const GENERATED_WITH = 'codex:procedural-medieval-rpg';
+const CODEX_HOME = process.env.CODEX_HOME || join(process.env.HOME || '/home/jio', '.codex');
+const GENERATED_SOURCE_ROOT = join(CODEX_HOME, 'generated_images/rpg-forge-source-complete');
 const MAGENTA = [255, 0, 255, 255];
 
 const HERO_IDS = [
@@ -37,6 +38,7 @@ const MAP_IDS = [
 ];
 
 const ITEM_IDS = [
+  'item_enhancement_stone_icon',
   'item_card_deck_icon',
   'item_lucky_dice_icon',
   'item_blacksmith_hammer_icon',
@@ -162,6 +164,22 @@ function createCanvas(width, height, fill = [0, 0, 0, 0]) {
 function savePng(path, canvas) {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, encodePng(canvas.width, canvas.height, canvas.data));
+}
+
+function getGeneratedWith(asset) {
+  return `agent-sprite-forge:${asset.skill}`;
+}
+
+function getSourcePath(asset) {
+  const filename = asset.kind === 'map' ? 'background.png' : 'raw-sheet.png';
+  return join(GENERATED_SOURCE_ROOT, asset.id, filename);
+}
+
+function copyGeneratedSource(asset, generatedPath) {
+  const sourcePath = getSourcePath(asset);
+  mkdirSync(dirname(sourcePath), { recursive: true });
+  copyFileSync(generatedPath, sourcePath);
+  return sourcePath;
 }
 
 function setPixel(canvas, x, y, color) {
@@ -589,6 +607,17 @@ function drawRuneIcon(canvas, palette) {
   line(canvas, 126, 116, 96, 146, palette.trim, 4);
 }
 
+function drawEnhancementStoneIcon(canvas) {
+  triangle(canvas, 95, 178, 128, 48, 162, 178, [72, 64, 168, 255]);
+  triangle(canvas, 106, 170, 128, 70, 150, 170, [100, 79, 205, 255]);
+  line(canvas, 128, 84, 128, 151, [229, 191, 81, 255], 4);
+  line(canvas, 128, 116, 152, 96, [229, 191, 81, 255], 4);
+  line(canvas, 128, 126, 104, 150, [229, 191, 81, 255], 4);
+  for (const [x, y] of [[103, 92], [156, 132], [116, 172], [145, 70]]) {
+    ellipse(canvas, x, y, 3, 3, [252, 224, 132, 255]);
+  }
+}
+
 function drawItemIcon(id) {
   const raw = createCanvas(256, 256, MAGENTA);
   const clean = createCanvas(256, 256, [0, 0, 0, 0]);
@@ -627,6 +656,8 @@ function drawItemIcon(id) {
       drawStaffIcon(c, palette, id.includes('wand'), id.includes('censer'));
     } else if (id.includes('mace') || id.includes('hammer')) {
       drawHammerIcon(c, palette, id.includes('mace'));
+    } else if (id.includes('enhancement')) {
+      drawEnhancementStoneIcon(c);
     } else if (id.includes('rune')) {
       drawRuneIcon(c, palette);
     } else if (id.includes('ore')) {
@@ -666,13 +697,16 @@ function writeSpriteAsset(asset) {
     savePng(join(out, 'processed/clean.png'), clean);
   }
 
+  const rawPath = join(out, 'raw/raw-sheet.png');
+  const source = copyGeneratedSource(asset, rawPath);
   const meta = {
     id: asset.id,
     label: asset.label,
     category: asset.category,
     kind: 'sprite',
     sheet: asset.sheet,
-    generatedWith: GENERATED_WITH,
+    generatedWith: getGeneratedWith(asset),
+    source,
     outputSize: asset.sheet === '2x2' ? [512, 512] : [256, 256]
   };
   writeFileSync(join(out, 'processed/pipeline-meta.json'), `${JSON.stringify(meta, null, 2)}\n`);
@@ -685,13 +719,16 @@ function writeMapAsset(asset) {
   mkdirSync(join(out, 'processed'), { recursive: true });
   writeFileSync(join(out, 'prompt-used.txt'), `${asset.prompt}\n`);
   const scene = drawMapScene(asset.id);
-  savePng(join(out, 'raw/background.png'), scene);
+  const rawPath = join(out, 'raw/background.png');
+  savePng(rawPath, scene);
+  const source = copyGeneratedSource(asset, rawPath);
   const meta = {
     id: asset.id,
     label: asset.label,
     category: asset.category,
     kind: 'map',
-    generatedWith: GENERATED_WITH,
+    generatedWith: getGeneratedWith(asset),
+    source,
     outputSize: [1024, 576]
   };
   writeFileSync(join(out, 'processed/pipeline-meta.json'), `${JSON.stringify(meta, null, 2)}\n`);
@@ -722,7 +759,8 @@ function updateManifest() {
       label: asset.label,
       category: asset.category,
       kind: asset.kind,
-      generatedWith: GENERATED_WITH,
+      generatedWith: getGeneratedWith(asset),
+      source: getSourcePath(asset),
       prompt: `${asset.outputDir}/prompt-used.txt`,
       meta: `${asset.outputDir}/processed/pipeline-meta.json`
     };

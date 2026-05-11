@@ -1,12 +1,20 @@
 {
   "id": "map_royal_south_plains",
-  "label": "왕도 남쪽 초원 배경",
   "category": "map",
   "kind": "map",
-  "generatedWith": "codex:procedural-medieval-rpg",
+  "raw": "assets/rpg/maps/royal-south-plains/raw/background.png",
+  "status": "generated",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "meta": "assets/rpg/maps/royal-south-plains/processed/pipeline-meta.json",
+  "label": "왕도 남쪽 초원 배경",
+  "prompt": "assets/rpg/maps/royal-south-plains/prompt-used.txt",
   "outputSize": [
     1024,
     576
   ],
-  "prompt": "Medieval kingdom south plains hunting ground, 16:9 game background, no text."
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  },
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_royal_south_plains/background.png"
 }

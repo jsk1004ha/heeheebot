@@ -1,0 +1,20 @@
+{
+  "id": "hero_female_saint_idle",
+  "label": "여성 성자 전직 이미지",
+  "category": "hero",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "outputSize": [
+    128,
+    128
+  ],
+  "prompt": "Use $generate2dsprite to create a clean HD 2D RPG female saint advanced class hero, single full-body sprite centered, luminous white-gold robes, holy staff kept close, soft halo motif contained, solid #FF00FF background, no text.",
+  "source": "/home/jio/.codex/generated_images/019dfd64-811e-7561-a000-5b3212cc9327/ig_0be8125a22524a6e0169fc2ae43048819194033095fa3a6e25.png",
+  "raw": "assets/rpg/heroes/advanced/female/saint/idle/raw/raw-sheet.png",
+  "clean": "assets/rpg/heroes/advanced/female/saint/idle/processed/clean.png",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
+}

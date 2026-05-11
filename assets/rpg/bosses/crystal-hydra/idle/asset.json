@@ -1,6 +1,6 @@
 {
   "id": "boss_crystal_hydra_idle",
-  "label": "수정 히드라 대기 모션",
+  "label": "늪지 히드라 대기 모션",
   "category": "monster",
   "kind": "sprite",
   "sheet": "3x3",
@@ -12,5 +12,14 @@
   "processorStdout": "assets/rpg/bosses/crystal-hydra/idle/processed",
   "meta": "assets/rpg/bosses/crystal-hydra/idle/processed/pipeline-meta.json",
   "transparentSheet": "assets/rpg/bosses/crystal-hydra/idle/processed/sheet-transparent.png",
-  "animation": "assets/rpg/bosses/crystal-hydra/idle/processed/animation.gif"
+  "animation": "assets/rpg/bosses/crystal-hydra/idle/processed/animation.gif",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "outputSize": [
+    480,
+    480
+  ],
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

@@ -1,6 +1,5 @@
 {
   "id": "map_wildflower_plains",
-  "label": "들꽃 평원 전투 배경",
   "category": "map",
   "kind": "map",
   "raw": "assets/rpg/maps/wildflower-plains/raw/background.png",
@@ -8,9 +7,31 @@
   "status": "generated",
   "generatedWith": "agent-sprite-forge:$generate2dmap",
   "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc535652448191bd5fb5748c490748.png",
+  "crop": {
+    "contactSheetColumns": 4,
+    "contactSheetRows": 3,
+    "cellIndex": 0,
+    "cellColumn": 0,
+    "cellRow": 0,
+    "sourceCell": [
+      0,
+      0,
+      362,
+      362
+    ],
+    "outputSize": [
+      1024,
+      576
+    ]
+  },
+  "label": "고블린 숲 입구 전투 배경",
   "meta": "assets/rpg/maps/wildflower-plains/processed/pipeline-meta.json",
   "outputSize": [
     1024,
     576
-  ]
+  ],
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

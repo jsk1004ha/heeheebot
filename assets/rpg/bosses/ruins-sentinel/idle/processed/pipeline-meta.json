@@ -1,7 +1,7 @@
 {
   "target": "creature",
   "mode": "idle",
-  "prompt": "",
+  "prompt": "Use $generate2dsprite to create a clean HD ancient ruins sentinel raid boss idle animation, 3x3 grid, stone guardian construct with glowing runes, full body centered, same scale, solid #FF00FF background, no text.",
   "role": "",
   "input": "assets/rpg/bosses/ruins-sentinel/idle/raw/raw-sheet.png",
   "threshold": 100,
@@ -320,5 +320,23 @@
       2,
       2
     ]
-  ]
+  ],
+  "id": "boss_ruins_sentinel_idle",
+  "label": "유적 감시자 대기 모션",
+  "category": "monster",
+  "kind": "sprite",
+  "sheet": "3x3",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "outputSize": [
+    480,
+    480
+  ],
+  "source": "/home/jio/.codex/generated_images/019dffb5-dcb4-7ab3-a969-b44a2c3e55d2/ig_094151999effdb840169fc4d50ef248191912c6aee540a33dc.png",
+  "raw": "assets/rpg/bosses/ruins-sentinel/idle/raw/raw-sheet.png",
+  "transparentSheet": "assets/rpg/bosses/ruins-sentinel/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/bosses/ruins-sentinel/idle/processed/animation.gif",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

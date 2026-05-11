@@ -52,6 +52,7 @@ test('명령 등록 함수는 공유 레지스트리 payload를 Discord REST에 
   assert.ok(result.commands.some((command) => command.name === '워들'));
   assert.ok(result.commands.some((command) => command.name === '숫자야구'));
   assert.ok(result.commands.some((command) => command.name === '투표'));
+  assert.ok(result.commands.some((command) => command.name === '시작하기'));
   assert.equal(result.scope, 'guild');
   assert.match(logs[0], /Registered \d+ guild commands/);
 });

@@ -11,5 +11,15 @@
   "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/monsters/mini-dragon/idle/processed",
   "meta": "assets/rpg/monsters/mini-dragon/idle/processed/pipeline-meta.json",
   "transparentSheet": "assets/rpg/monsters/mini-dragon/idle/processed/sheet-transparent.png",
-  "animation": "assets/rpg/monsters/mini-dragon/idle/processed/animation.gif"
+  "animation": "assets/rpg/monsters/mini-dragon/idle/processed/animation.gif",
+  "label": "새끼 용 대기 모션",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "outputSize": [
+    384,
+    384
+  ],
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

@@ -201,7 +201,8 @@ function formatSeasonChallengeClaim(result) {
 
 function formatSeasonChallengeRow(challenge) {
   const marker = challenge.claimed ? '✅' : challenge.claimable ? '🎁' : challenge.completed ? '⬜' : '🔒';
+  const unit = challenge.progressMode === 'distinct_sources' ? '종' : '점';
   return [
-    `- ${marker} **${challenge.label}** — ${challenge.progress.toLocaleString()} / ${challenge.requiredPoints.toLocaleString()}점 · +${challenge.rewardPoints.toLocaleString()}점`
+    `- ${marker} **${challenge.label}** — ${challenge.progress.toLocaleString()} / ${challenge.requiredPoints.toLocaleString()}${unit} · +${challenge.rewardPoints.toLocaleString()}점`
   ].join('\n');
 }

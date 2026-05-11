@@ -15,6 +15,7 @@ import { getNumberBaseballCommandPayloads } from './commands/number-baseball.js'
 import { getPollCommandPayloads } from './commands/poll.js';
 import { getRpgCommandPayloads } from './commands/rpg.js';
 import { getSeasonCommandPayloads } from './commands/seasons.js';
+import { getStartCommandPayloads } from './commands/start.js';
 import { getStockCommandPayloads } from './commands/stocks.js';
 import { getSwordCommandPayloads } from './commands/sword.js';
 import { getTamagotchiCommandPayloads } from './commands/tamagotchi.js';
@@ -31,6 +32,7 @@ export function getApplicationCommandPayloads() {
     ...getChoiceCommandPayloads(),
     ...getCompatibilityCommandPayloads(),
     ...getFortuneCommandPayloads(),
+    ...getStartCommandPayloads(),
     ...getTodayCommandPayloads(),
     ...getPollCommandPayloads(),
     ...getModerationCommandPayloads(),

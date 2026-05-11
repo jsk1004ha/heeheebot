@@ -234,6 +234,148 @@ test('시즌 과제 보너스는 반복 활동 일일 상한에 막히지 않는
   }
 });
 
+test('시즌 과제는 낚시, 주식, 커뮤니티, 업적 출처를 진행도에 반영한다', async () => {
+  const fixture = await createFixture();
+  const now = Date.UTC(2026, 4, 11, 12);
+
+  try {
+    await fixture.seasons.awardPoints({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '시즌러',
+      source: SEASON_POINT_SOURCES.FISHING_CATCH,
+      points: 20,
+      now
+    });
+    await fixture.seasons.awardPoints({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '시즌러',
+      source: SEASON_POINT_SOURCES.STOCK_TRADE,
+      points: 15,
+      now
+    });
+    await fixture.seasons.awardPoints({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '시즌러',
+      source: SEASON_POINT_SOURCES.ACHIEVEMENT_EARN,
+      points: 10,
+      now
+    });
+    await fixture.seasons.awardPoints({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '시즌러',
+      source: SEASON_POINT_SOURCES.COMMUNITY_MISSION_CLAIM,
+      points: 5,
+      now
+    });
+    await fixture.seasons.awardPoints({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '시즌러',
+      source: SEASON_POINT_SOURCES.TODAY_CHECKLIST,
+      points: 5,
+      now
+    });
+
+    const board = await fixture.seasons.getChallenges({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '시즌러',
+      now
+    });
+
+    assert.equal(board.daily.find((challenge) => challenge.id === 'daily_fishing_catch').claimable, true);
+    assert.equal(board.daily.find((challenge) => challenge.id === 'daily_stock_trade').claimable, true);
+    assert.equal(board.daily.find((challenge) => challenge.id === 'daily_achievement_earn').claimable, true);
+    assert.equal(board.weekly.find((challenge) => challenge.id === 'weekly_three_categories').progress, 5);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('주간 카테고리 과제는 검배틀 승리 출처를 서로 다른 활동으로 센다', async () => {
+  const fixture = await createFixture();
+  const now = Date.UTC(2026, 4, 12, 12);
+
+  try {
+    await fixture.seasons.awardPoints({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '검투낚시러',
+      source: SEASON_POINT_SOURCES.RPG_BATTLE_WIN,
+      points: 25,
+      now
+    });
+    await fixture.seasons.awardPoints({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '검투낚시러',
+      source: SEASON_POINT_SOURCES.SWORD_BATTLE_WIN,
+      points: 8,
+      now
+    });
+    await fixture.seasons.awardPoints({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '검투낚시러',
+      source: SEASON_POINT_SOURCES.FISHING_CATCH,
+      points: 20,
+      now
+    });
+
+    const board = await fixture.seasons.getChallenges({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '검투낚시러',
+      now
+    });
+
+    assert.equal(board.weekly.find((challenge) => challenge.id === 'weekly_three_categories').progress, 3);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('시즌 과제 명령은 서로 다른 활동 진행도를 종 단위로 표시한다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await fixture.seasons.awardPoints({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      source: SEASON_POINT_SOURCES.RPG_BATTLE_WIN,
+      points: 25
+    });
+    await fixture.seasons.awardPoints({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      source: SEASON_POINT_SOURCES.FISHING_CATCH,
+      points: 20
+    });
+    await fixture.seasons.awardPoints({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      source: SEASON_POINT_SOURCES.STOCK_TRADE,
+      points: 15
+    });
+
+    const board = createSeasonInteraction('과제');
+
+    assert.equal(await handleSeasonCommand(board, fixture.seasons), true);
+    assert.match(board.replies[0], /주간 만능 플레이어/);
+    assert.match(board.replies[0], /3 \/ 3종/);
+    assert.doesNotMatch(board.replies[0], /3 \/ 3점/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 async function createFixture() {
   const directory = await mkdtemp(join(tmpdir(), 'heeheebot-seasons-'));
   const store = createSqliteStore(join(directory, 'profiles.sqlite'));

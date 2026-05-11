@@ -1,7 +1,7 @@
 {
   "target": "creature",
   "mode": "idle",
-  "prompt": "",
+  "prompt": "Use $generate2dsprite to create a clean HD marsh behemoth raid boss idle animation, 3x3 grid, bulky swamp beast with mossy horns, readable silhouette, full body centered, same scale, solid #FF00FF background, no text.",
   "role": "",
   "input": "assets/rpg/bosses/marsh-behemoth/idle/raw/raw-sheet.png",
   "threshold": 100,
@@ -311,5 +311,23 @@
       ]
     }
   ],
-  "edge_touch_frames": []
+  "edge_touch_frames": [],
+  "id": "boss_marsh_behemoth_idle",
+  "label": "늪지 베헤모스 대기 모션",
+  "category": "monster",
+  "kind": "sprite",
+  "sheet": "3x3",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "outputSize": [
+    480,
+    480
+  ],
+  "source": "/home/jio/.codex/generated_images/019dffb5-dcb4-7ab3-a969-b44a2c3e55d2/ig_094151999effdb840169fc4ca99370819194932abf8af31c53.png",
+  "raw": "assets/rpg/bosses/marsh-behemoth/idle/raw/raw-sheet.png",
+  "transparentSheet": "assets/rpg/bosses/marsh-behemoth/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/bosses/marsh-behemoth/idle/processed/animation.gif",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

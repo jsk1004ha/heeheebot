@@ -1,16 +1,20 @@
 {
   "id": "map_shadow_marsh",
-  "label": "그림자 늪 전투 배경",
   "category": "map",
   "kind": "map",
+  "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_0bd4e574af6750910169fbef9abc708191bcc139a8539bb94e.png",
   "raw": "assets/rpg/maps/shadow-marsh/raw/background.png",
   "prompt": "assets/rpg/maps/shadow-marsh/prompt-used.txt",
   "status": "generated",
   "generatedWith": "agent-sprite-forge:$generate2dmap",
-  "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_0bd4e574af6750910169fbef9abc708191bcc139a8539bb94e.png",
+  "label": "그림자 늪 전투 배경",
   "meta": "assets/rpg/maps/shadow-marsh/processed/pipeline-meta.json",
   "outputSize": [
     1024,
     576
-  ]
+  ],
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

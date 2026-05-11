@@ -4,9 +4,17 @@
   "category": "item",
   "kind": "sprite",
   "sheet": "single",
-  "generatedWith": "codex:procedural-medieval-rpg",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/item_blacksmith_hammer_icon/raw-sheet.png",
   "outputSize": [
     256,
     256
-  ]
+  ],
+  "prompt": "Use $generate2dsprite to create a clean HD transparent medieval fantasy blacksmith hammer icon, single asset, centered iron hammer with leather grip, solid #FF00FF background, no text.",
+  "raw": "assets/rpg/items/blacksmith-hammer/raw/raw-sheet.png",
+  "clean": "assets/rpg/items/blacksmith-hammer/processed/clean.png",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

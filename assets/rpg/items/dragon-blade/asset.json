@@ -9,5 +9,16 @@
   "processedDir": "assets/rpg/items/dragon-blade/processed",
   "status": "processed",
   "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/dragon-blade/processed",
-  "meta": "assets/rpg/items/dragon-blade/processed/pipeline-meta.json"
+  "meta": "assets/rpg/items/dragon-blade/processed/pipeline-meta.json",
+  "label": "용비늘 대검 아이콘",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "clean": "assets/rpg/items/dragon-blade/processed/clean.png",
+  "outputSize": [
+    256,
+    256
+  ],
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

@@ -3,11 +3,22 @@
   "label": "은빛 장검 아이콘",
   "category": "item",
   "kind": "sprite",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "prompt": "assets/rpg/items/silver-longsword/prompt-used.txt",
+  "meta": "assets/rpg/items/silver-longsword/processed/pipeline-meta.json",
   "sheet": "single",
-  "generatedWith": "codex:procedural-medieval-rpg",
+  "raw": "assets/rpg/items/silver-longsword/raw/raw-sheet.png",
+  "processedDir": "assets/rpg/items/silver-longsword/processed",
+  "status": "processed",
+  "processorStdout": "assets/rpg/items/silver-longsword/processed",
+  "clean": "assets/rpg/items/silver-longsword/processed/clean.png",
   "outputSize": [
     256,
     256
   ],
-  "prompt": "Use $generate2dsprite to create a clean HD transparent medieval fantasy 은빛 장검 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text."
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  },
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/item_silver_longsword_icon/raw-sheet.png"
 }

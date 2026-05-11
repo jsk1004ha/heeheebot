@@ -5,6 +5,7 @@ export const CURRENCY_SWORD = 'sword';
 export const CURRENCY_STOCK = 'stock';
 
 export const UNIFIED_GOLD_MIGRATION_VERSION = 1;
+export const STOCK_BANKRUPTCY_REPAYMENT_BPS = 2_500;
 
 export const WALLET_CURRENCY_IDS = Object.freeze([
   CURRENCY_CASINO,
@@ -186,10 +187,22 @@ export function setCurrencyBalance(profile, currencyId, amount) {
 }
 
 export function creditCurrency(profile, currencyId, amount) {
+  return creditCurrencyWithReceipt(profile, currencyId, amount).balance;
+}
+
+export function creditCurrencyWithReceipt(profile, currencyId, amount) {
   normalizeCurrencyId(currencyId);
   const normalizedAmount = normalizeNonNegativeInteger(amount);
+  const repayment = applyStockBankruptcyRepayment(profile, normalizedAmount);
   const current = getCurrencyBalance(profile, CURRENCY_MAIN);
-  return setCurrencyBalance(profile, CURRENCY_MAIN, current + normalizedAmount);
+  const balance = setCurrencyBalance(profile, CURRENCY_MAIN, current + repayment.net);
+  return {
+    gross: normalizedAmount,
+    net: repayment.net,
+    repayment: repayment.repayment,
+    balance,
+    bankruptcy: getStockBankruptcySummary(profile)
+  };
 }
 
 export function debitCurrency(profile, currencyId, amount, errorMessage = null) {
@@ -240,6 +253,57 @@ export function formatCurrencyAmount(amount, currencyId) {
   return `${normalizeNonNegativeInteger(amount).toLocaleString()}골드`;
 }
 
+export function getStockBankruptcySummary(profile) {
+  const state = ensureStockBankruptcyState(profile);
+  return {
+    debt: state.debt,
+    paid: state.paid,
+    count: state.count,
+    lastAt: state.lastAt,
+    repaymentBps: STOCK_BANKRUPTCY_REPAYMENT_BPS,
+    blocked: state.debt > 0
+  };
+}
+
+export function addStockBankruptcyDebt(profile, amount, now = Date.now()) {
+  const debtAdded = normalizeNonNegativeInteger(amount);
+  const state = ensureStockBankruptcyState(profile);
+  if (debtAdded <= 0) return getStockBankruptcySummary(profile);
+
+  state.debt += debtAdded;
+  state.count += 1;
+  state.lastAt = normalizeNonNegativeInteger(now);
+  return getStockBankruptcySummary(profile);
+}
+
+export function hasStockBankruptcyDebt(profile) {
+  return getStockBankruptcySummary(profile).debt > 0;
+}
+
+export function repayStockBankruptcyDebt(profile, amount = null) {
+  const state = ensureStockBankruptcyState(profile);
+  const debtBefore = state.debt;
+  const balanceBefore = getCurrencyBalance(profile, CURRENCY_MAIN);
+  const requested = amount === null || amount === undefined
+    ? debtBefore
+    : normalizePositiveInteger(amount, '상환 금액');
+  const repaid = Math.min(debtBefore, balanceBefore, requested);
+
+  if (repaid > 0) {
+    state.debt -= repaid;
+    state.paid += repaid;
+    setCurrencyBalance(profile, CURRENCY_MAIN, balanceBefore - repaid);
+  }
+
+  return {
+    requested,
+    repaid,
+    balanceBefore,
+    balance: getCurrencyBalance(profile, CURRENCY_MAIN),
+    bankruptcy: getStockBankruptcySummary(profile)
+  };
+}
+
 function createUnifiedLegacyConfig(currencyId) {
   const legacy = LEGACY_WALLET_CONFIGS[currencyId];
   return Object.freeze({
@@ -265,6 +329,40 @@ function normalizeCurrencyMigration(value = {}) {
     ...migration,
     unifiedGoldVersion: normalizeNonNegativeInteger(migration.unifiedGoldVersion),
     unifiedGoldAt: migration.unifiedGoldAt ?? null
+  };
+}
+
+function applyStockBankruptcyRepayment(profile, grossIncome) {
+  const gross = normalizeNonNegativeInteger(grossIncome);
+  if (gross <= 0) return { gross, repayment: 0, net: 0 };
+
+  const state = ensureStockBankruptcyState(profile);
+  if (state.debt <= 0) return { gross, repayment: 0, net: gross };
+
+  const repayment = Math.min(
+    state.debt,
+    gross,
+    Math.floor(gross * STOCK_BANKRUPTCY_REPAYMENT_BPS / 10_000)
+  );
+  if (repayment <= 0) return { gross, repayment: 0, net: gross };
+
+  state.debt -= repayment;
+  state.paid += repayment;
+  return { gross, repayment, net: gross - repayment };
+}
+
+function ensureStockBankruptcyState(profile) {
+  profile.stockBankruptcy = normalizeStockBankruptcyState(profile.stockBankruptcy);
+  return profile.stockBankruptcy;
+}
+
+function normalizeStockBankruptcyState(value = {}) {
+  const state = value && typeof value === 'object' ? value : {};
+  return {
+    debt: normalizeNonNegativeInteger(state.debt ?? state.bankruptcyDebt),
+    paid: normalizeNonNegativeInteger(state.paid ?? state.bankruptcyDebtPaid),
+    count: normalizeNonNegativeInteger(state.count ?? state.bankruptcyCount),
+    lastAt: normalizeNonNegativeInteger(state.lastAt ?? state.lastBankruptcyAt)
   };
 }
 

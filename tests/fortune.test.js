@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import {
+  formatFortuneResult
+} from '../src/commands/fortune.js';
+import {
   FORTUNE_MESSAGES,
   FortuneService
 } from '../src/systems/fortune.js';
@@ -79,6 +82,17 @@ test('운세 문구는 직접 쓴 자연스러운 존댓말 문장이다', () =>
     for (const pattern of bannedPatterns) {
       assert.doesNotMatch(fortune.text, pattern, fortune.text);
     }
+  }
+});
+
+test('운세 출력 문장은 예시처럼 충분한 길이의 자연스러운 단락이다', () => {
+  for (const fortune of FORTUNE_MESSAGES) {
+    const text = renderFortuneForTest(fortune, 'today');
+
+    assert.ok(text.length >= 120, `출력 운세가 너무 짧습니다: ${text}`);
+    assert.ok(text.length <= 360, `출력 운세가 너무 깁니다: ${text}`);
+    assert.ok(splitSentences(text).length >= 3, `운세가 단락처럼 읽히지 않습니다: ${text}`);
+    assert.doesNotMatch(text, /어제은|어제이|어제을|모레|내일은 쉬세요|어제는 쉬세요|오늘은 쉬세요/);
   }
 });
 
@@ -192,6 +206,76 @@ test('내일운세는 한국시간 기준 다음날 날짜를 사용한다', () 
   assert.equal(tomorrow.dateKey, '2026-05-07');
 });
 
+test('내일운세와 어제운세는 본문 날짜 표현도 선택한 날짜에 맞춘다', () => {
+  const fortune = new FortuneService({
+    fortunes: [
+      {
+        kind: '행운',
+        text: '{dayTopic} 마음먹기에 따라서 모든 것이 순조롭게 풀리는 날입니다. 주변의 도움도 기대되니 천천히 움직이세요.'
+      }
+    ]
+  });
+  const now = Date.UTC(2026, 4, 6, 0, 0, 0);
+
+  const tomorrow = fortune.getDailyFortune({
+    guildId: 'guild-1',
+    userId: 'user-1',
+    date: 'tomorrow',
+    now
+  });
+  const yesterday = fortune.getDailyFortune({
+    guildId: 'guild-1',
+    userId: 'user-1',
+    date: 'yesterday',
+    now
+  });
+
+  assert.match(tomorrow.text, /^내일은/);
+  assert.doesNotMatch(tomorrow.text, /오늘은/);
+  assert.match(yesterday.text, /^어제는/);
+  assert.doesNotMatch(yesterday.text, /오늘은/);
+});
+
+test('운세 출력은 날짜 치환 흔적 없이 오늘/어제/내일 문맥을 유지한다', () => {
+  const fortune = new FortuneService();
+  const now = Date.UTC(2026, 4, 11, 0, 0, 0);
+
+  for (const date of ['today', 'yesterday', 'tomorrow']) {
+    for (let userNumber = 1; userNumber <= 60; userNumber += 1) {
+      const result = fortune.getDailyFortune({
+        guildId: 'guild-1',
+        userId: `user-${userNumber}`,
+        date,
+        now
+      });
+
+      assert.doesNotMatch(
+        result.text,
+        /어제은|어제이|어제을|모레|내일은 쉬세요|어제는 쉬세요|오늘은 쉬세요/,
+        `${date}: ${result.text}`
+      );
+    }
+  }
+});
+
+test('운세 응답은 예시처럼 행운의 숫자를 함께 보여준다', () => {
+  const content = formatFortuneResult({
+    fortune: {
+      username: '테스터',
+      label: '내일 운세',
+      dateKey: '2026-05-07',
+      kind: '吉(길)',
+      text: '내일은 주변의 도움도 기대되는 하루입니다.',
+      luckyNumber: 14
+    },
+    target: { toString: () => '<@user-1>' },
+    viewer: { toString: () => '<@user-1>' },
+    xpResult: null
+  });
+
+  assert.match(content, /행운의 숫자 ✨\n14/);
+});
+
 test('오늘운세는 같은 유저의 어제운세 문구를 반복하지 않는다', () => {
   const fortune = new FortuneService();
   const now = Date.UTC(2026, 4, 6, 0, 0, 0);
@@ -271,4 +355,13 @@ function groupMessagesByKind(fortunes) {
     messagesByKind.set(fortune.kind, messages);
     return messagesByKind;
   }, new Map());
+}
+
+function renderFortuneForTest(fortune, date = 'today') {
+  return new FortuneService({ fortunes: [fortune] }).getDailyFortune({
+    guildId: 'guild-1',
+    userId: 'user-1',
+    date,
+    now: Date.UTC(2026, 4, 6, 0, 0, 0)
+  }).text;
 }

@@ -12,5 +12,14 @@
   "processorStdout": "assets/rpg/bosses/void-knights/idle/processed",
   "meta": "assets/rpg/bosses/void-knights/idle/processed/pipeline-meta.json",
   "transparentSheet": "assets/rpg/bosses/void-knights/idle/processed/sheet-transparent.png",
-  "animation": "assets/rpg/bosses/void-knights/idle/processed/animation.gif"
+  "animation": "assets/rpg/bosses/void-knights/idle/processed/animation.gif",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "outputSize": [
+    480,
+    480
+  ],
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

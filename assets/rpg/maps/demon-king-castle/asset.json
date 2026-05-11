@@ -1,12 +1,20 @@
 {
   "id": "map_demon_king_castle",
-  "label": "마왕성 내부 배경",
   "category": "map",
   "kind": "map",
-  "generatedWith": "codex:procedural-medieval-rpg",
+  "raw": "assets/rpg/maps/demon-king-castle/raw/background.png",
+  "status": "generated",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "meta": "assets/rpg/maps/demon-king-castle/processed/pipeline-meta.json",
+  "label": "마왕성 내부 배경",
+  "prompt": "assets/rpg/maps/demon-king-castle/prompt-used.txt",
   "outputSize": [
     1024,
     576
   ],
-  "prompt": "Demon king castle interior final dungeon, 16:9 game background, no text."
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  },
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_demon_king_castle/background.png"
 }

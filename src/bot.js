@@ -34,7 +34,11 @@ import {
 import { handleNumberBaseballCommand } from './commands/number-baseball.js';
 import { handlePollCommand, PollManager } from './commands/poll.js';
 import { handleRpgCommand } from './commands/rpg.js';
-import { handleSeasonCommand } from './commands/seasons.js';
+import {
+  formatSeasonAwardLine,
+  handleSeasonCommand
+} from './commands/seasons.js';
+import { handleStartCommand } from './commands/start.js';
 import { handleSwordCommand } from './commands/sword.js';
 import {
   handleTamagotchiAutocomplete,
@@ -78,7 +82,7 @@ import {
   StockService,
   scheduleStockAlertAnnouncements
 } from './systems/stocks.js';
-import { SeasonService } from './systems/seasons.js';
+import { SeasonService, SEASON_POINT_SOURCES } from './systems/seasons.js';
 import { TamagotchiService } from './systems/tamagotchi.js';
 import { TimetableService } from './systems/timetable.js';
 import { WordleService } from './systems/wordle.js';
@@ -195,11 +199,11 @@ export function createBot({
           }).catch((error) => logger.error('Failed to record casino activity:', error));
         }
         await recordCommandActivity(interaction, economy, community, logger);
-        await sendClaimableAchievementNotice(interaction, community, logger);
+        await sendAutomaticAchievementNotice(interaction, community, logger, seasons);
         return;
       }
 
-      const handled = await handleCommunityCommand(interaction, community, logger)
+      const handled = await handleCommunityCommand(interaction, community, logger, { seasons, logger })
         || await handleChoiceCommand(interaction)
         || await handleCompatibilityCommand(interaction)
         || await handleHelpCommand(interaction)
@@ -211,13 +215,14 @@ export function createBot({
         || await handleWordleCommand(interaction, wordle, economy)
         || await handleNumberBaseballCommand(interaction, numberBaseball, economy)
         || await handleFortuneCommand(interaction, fortune, economy)
-        || await handleTodayCommand(interaction, { economy, community, seasons })
+        || await handleStartCommand(interaction, { economy, community, fishing, stocks, seasons, logger })
+        || await handleTodayCommand(interaction, { economy, community, seasons, logger })
         || await handleMealCommand(interaction, meals)
         || await handleTimetableCommand(interaction, timetable)
         || await handleSeasonCommand(interaction, seasons, logger)
-        || await handleStockCommand(interaction, stocks)
+        || await handleStockCommand(interaction, stocks, { seasons, logger })
         || await handleTamagotchiCommand(interaction, tamagotchi, logger)
-        || await handleFishingCommand(interaction, fishing)
+        || await handleFishingCommand(interaction, fishing, { seasons, logger })
         || await handleSwordCommand(interaction, economy, logger, { seasons })
         || await handleRpgCommand(interaction, economy, { seasons })
         || await handleEconomyCommand(interaction, economy, { stocks });
@@ -228,7 +233,7 @@ export function createBot({
         });
       } else {
         await recordCommandActivity(interaction, economy, community, logger);
-        await sendClaimableAchievementNotice(interaction, community, logger);
+        await sendAutomaticAchievementNotice(interaction, community, logger, seasons);
       }
     } catch (error) {
       if (isUnknownInteractionError(error)) {
@@ -375,40 +380,106 @@ async function recordCommandActivity(interaction, economy, community, logger) {
   }
 }
 
-export async function sendClaimableAchievementNotice(interaction, community, logger = console) {
-  if (!interaction.isChatInputCommand?.() || !interaction.inGuild?.()) return false;
-  if (interaction.commandName === '업적') return false;
-  if (typeof community?.getClaimableAchievements !== 'function') return false;
+export async function sendAutomaticAchievementNotice(interaction, community, logger = console, seasons = null) {
+  if (!isAutomaticAchievementEligibleInteraction(interaction)) return false;
+  if (typeof community?.grantCompletedAchievements !== 'function') return false;
 
   let result = null;
   try {
-    result = await community.getClaimableAchievements({
+    result = await community.grantCompletedAchievements({
       guildId: interaction.guildId,
       userId: interaction.user.id,
       username: interaction.user.username,
       limit: 3
     });
   } catch (error) {
-    logger.debug?.('Failed to collect claimable achievement notice:', error);
+    logger.debug?.('Failed to grant automatic achievement rewards:', error);
     return false;
   }
 
-  if (!result?.total || !Array.isArray(result.achievements) || result.achievements.length <= 0) {
+  if (!result?.totalClaimed || !Array.isArray(result.displayed) || result.displayed.length <= 0) {
     return false;
   }
 
-  const achievementText = result.achievements
+  let seasonAward = null;
+  if (typeof seasons?.awardPoints === 'function') {
+    try {
+      seasonAward = await seasons.awardPoints({
+        guildId: interaction.guildId,
+        userId: interaction.user.id,
+        username: interaction.user.username,
+        source: SEASON_POINT_SOURCES.ACHIEVEMENT_EARN,
+        points: Math.min(30, result.totalClaimed * 10)
+      });
+    } catch (error) {
+      logger.debug?.('Failed to award achievement season points:', error);
+    }
+  }
+
+  const achievementText = result.displayed
     .map((achievement) => `**${achievement.title}**`)
     .join(', ');
-  const hiddenCount = Math.max(0, result.total - result.achievements.length);
+  const hiddenCount = Math.max(0, result.hiddenCount ?? result.totalClaimed - result.displayed.length);
   const moreText = hiddenCount > 0 ? ` 외 ${hiddenCount.toLocaleString()}개` : '';
+  const rewards = [];
+  if (result.totalCoins > 0) rewards.push(`${result.totalCoins.toLocaleString()}골드`);
+  if (result.totalXp > 0) rewards.push(`${result.totalXp.toLocaleString()} XP`);
+  const rewardText = rewards.length > 0 ? rewards.join(', ') : '보상 없음';
 
   return safeReplyToInteraction(interaction, [
-    `🏆 달성 가능한 업적: ${achievementText}${moreText}`,
-    '`/업적 보기:수령 가능`으로 보상을 수령하세요.'
-  ].join('\n'), {
+    `🏆 업적 자동 수령: ${achievementText}${moreText}`,
+    `보상: ${rewardText}`,
+    formatSeasonAwardLine(seasonAward)
+  ].filter(Boolean).join('\n'), {
     flags: MessageFlags.Ephemeral
   });
+}
+
+function isAutomaticAchievementEligibleInteraction(interaction) {
+  if (!interaction.inGuild?.()) return false;
+
+  if (interaction.isChatInputCommand?.()) {
+    return interaction.commandName !== '업적';
+  }
+
+  if (!interaction.isButton?.()) return false;
+
+  const customId = interaction.customId ?? '';
+  return isEligibleMutatingButton(customId, interaction.user?.id);
+}
+
+function isEligibleMutatingButton(customId, userId) {
+  const parts = customId.split(':');
+
+  if (parts[0] === 'fishing_quick') {
+    return parts[1] === 'fish' && (!parts[2] || parts[2] === userId);
+  }
+
+  if (parts[0] === 'today_checkin' || parts[0] === 'today_missions') {
+    return !parts[1] || parts[1] === userId;
+  }
+
+  if (parts[0] === 'rpg_quick') {
+    return parts[1] === userId && ['battle', 'explore', 'dungeon', 'raid', 'guild_raid', 'rest'].includes(parts[2]);
+  }
+
+  if (['rpg_daily', 'rpg_quest', 'rpg_skill'].includes(parts[0])) {
+    return parts[1] === userId;
+  }
+
+  if (parts[0] === 'sword_quick') {
+    return ['enhance', 'advanced'].includes(parts[1]) && parts[2] === userId;
+  }
+
+  if (parts[0] === 'sword_sell_confirm') {
+    return parts[1] === userId;
+  }
+
+  if (parts[0] === 'casino_quick') {
+    return ['slots', 'odd_even', 'dice'].includes(parts[1]) && (!parts[4] || parts[4] === userId);
+  }
+
+  return false;
 }
 
 async function rewardChatActivity(message, economy, community, logger) {

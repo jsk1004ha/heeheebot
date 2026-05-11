@@ -3,11 +3,22 @@
   "label": "서리수호 갑옷 아이콘",
   "category": "item",
   "kind": "sprite",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "prompt": "assets/rpg/items/frost-guard-armor/prompt-used.txt",
+  "meta": "assets/rpg/items/frost-guard-armor/processed/pipeline-meta.json",
   "sheet": "single",
-  "generatedWith": "codex:procedural-medieval-rpg",
+  "raw": "assets/rpg/items/frost-guard-armor/raw/raw-sheet.png",
+  "processedDir": "assets/rpg/items/frost-guard-armor/processed",
+  "status": "processed",
+  "processorStdout": "assets/rpg/items/frost-guard-armor/processed",
+  "clean": "assets/rpg/items/frost-guard-armor/processed/clean.png",
   "outputSize": [
     256,
     256
   ],
-  "prompt": "Use $generate2dsprite to create a clean HD transparent medieval fantasy 서리수호 갑옷 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text."
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  },
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/item_frost_guard_armor_icon/raw-sheet.png"
 }

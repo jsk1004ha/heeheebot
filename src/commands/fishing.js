@@ -16,11 +16,13 @@ import {
   getFishConfig,
   getRarityLabel
 } from '../systems/fishing.js';
+import { SEASON_POINT_SOURCES } from '../systems/seasons.js';
 import {
   createAllowedMentionsForUsers,
   formatUserMention,
   truncateEmbedDescription
 } from './ui.js';
+import { formatSeasonAwardLine } from './seasons.js';
 
 const FISHING_CODEX_PAGE_SIZE = 12;
 const FISHING_CODEX_PAGE_BUTTON_PREFIX = 'fishing_codex_page';
@@ -85,9 +87,9 @@ export function getFishingCommandPayloads() {
   return fishingCommands.map((command) => command.toJSON());
 }
 
-export async function handleFishingCommand(interaction, fishing) {
+export async function handleFishingCommand(interaction, fishing, services = {}) {
   if (interaction.isButton?.()) {
-    return handleFishingButton(interaction, fishing);
+    return handleFishingButton(interaction, fishing, services);
   }
 
   if (!interaction.isChatInputCommand() || !isFishingCommand(interaction.commandName)) {
@@ -103,7 +105,7 @@ export async function handleFishingCommand(interaction, fishing) {
   }
 
   try {
-    await routeFishingCommand(interaction, fishing);
+    await routeFishingCommand(interaction, fishing, services);
   } catch (error) {
     await interaction.reply({
       content: `낚시 처리 실패: ${error.message}`,
@@ -114,7 +116,7 @@ export async function handleFishingCommand(interaction, fishing) {
   return true;
 }
 
-async function handleFishingButton(interaction, fishing) {
+async function handleFishingButton(interaction, fishing, services = {}) {
   if (interaction.customId?.startsWith(`${FISHING_CODEX_PAGE_BUTTON_PREFIX}:`)) {
     return handleFishingCodexPageButton(interaction, fishing);
   }
@@ -145,7 +147,8 @@ async function handleFishingButton(interaction, fishing) {
         userId: interaction.user.id,
         username: interaction.user.username
       });
-      await replyWithFishCard(interaction, formatCatchResult(interaction.user, result), result.fish, interaction.user.id);
+      const seasonAward = await awardFishingCatchSeasonPoints(services, interaction);
+      await replyWithFishCard(interaction, withSeasonAward(formatCatchResult(interaction.user, result), seasonAward), result.fish, interaction.user.id);
       return true;
     }
 
@@ -216,7 +219,7 @@ async function handleFishingCodexPageButton(interaction, fishing) {
   }
 }
 
-async function routeFishingCommand(interaction, fishing) {
+async function routeFishingCommand(interaction, fishing, services = {}) {
   const guildId = interaction.guildId;
   const user = interaction.user;
 
@@ -226,7 +229,8 @@ async function routeFishingCommand(interaction, fishing) {
       userId: user.id,
       username: user.username
     });
-    await replyWithFishCard(interaction, formatCatchResult(user, result), result.fish, user.id);
+    const seasonAward = await awardFishingCatchSeasonPoints(services, interaction);
+    await replyWithFishCard(interaction, withSeasonAward(formatCatchResult(user, result), seasonAward), result.fish, user.id);
     return;
   }
 
@@ -286,6 +290,28 @@ async function routeFishingCommand(interaction, fishing) {
     await interaction.reply(formatBattleResult(user, opponent, result));
     return;
   }
+}
+
+
+async function awardFishingCatchSeasonPoints(services, interaction) {
+  if (typeof services?.seasons?.awardPoints !== 'function') return null;
+
+  try {
+    return await services.seasons.awardPoints({
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username,
+      source: SEASON_POINT_SOURCES.FISHING_CATCH,
+      points: 20
+    });
+  } catch (error) {
+    services.logger?.debug?.('Failed to award fishing season points:', error);
+    return null;
+  }
+}
+
+function withSeasonAward(content, award) {
+  return [content, formatSeasonAwardLine(award)].filter(Boolean).join('\n');
 }
 
 function formatCatchResult(user, result) {

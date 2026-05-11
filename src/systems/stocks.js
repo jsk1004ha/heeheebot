@@ -1,12 +1,17 @@
 import {
   CURRENCY_STOCK,
+  addStockBankruptcyDebt,
   cloneWallets,
   convertLegacyCurrencyAmountToGold,
   creditCurrency,
+  creditCurrencyWithReceipt,
   debitCurrency,
   getCurrencyBalance,
+  getStockBankruptcySummary,
+  hasStockBankruptcyDebt,
   migrateLegacyWalletsToGold,
-  normalizeWallets
+  normalizeWallets,
+  repayStockBankruptcyDebt
 } from './currencies.js';
 import {
   getAccountUserIdsForGuild,
@@ -700,7 +705,7 @@ export class StockService {
       const realizedProfit = proceeds - holding.averageCost * normalizedQuantity;
       const remainingQuantity = holding.quantity - normalizedQuantity;
 
-      creditCurrency(profile, CURRENCY_STOCK, proceeds);
+      const credit = creditCurrencyWithReceipt(profile, CURRENCY_STOCK, proceeds);
       stockUser.realizedProfit += realizedProfit;
       stockUser.tradeCount += 1;
       stockUser.lastTradeAt = now;
@@ -734,6 +739,9 @@ export class StockService {
         subtotal,
         fee,
         proceeds,
+        repayment: credit.repayment,
+        netProceeds: credit.net,
+        bankruptcy: credit.bankruptcy,
         realizedProfit,
         profile: cloneMoneyProfile(profile),
         holding: cloneHolding(stockUser.holdings[normalizedStockId] ?? createEmptyHolding()),
@@ -1078,6 +1086,7 @@ export class StockService {
       const exposure = calculateLeveragedExposure(normalizedMargin, normalizedLeverage);
 
       assertNoOpposingLeveragedPosition(stockUser, normalizedStockId, normalizedSide, quote);
+      assertNoStockBankruptcyDebt(profile);
 
       if (getCurrencyBalance(profile, CURRENCY_STOCK) < totalCost) {
         throw new Error(`골드가 부족합니다. 필요 금액: ${totalCost.toLocaleString()}골드`);
@@ -1174,9 +1183,38 @@ export class StockService {
         autoSettled: closed.autoSettled,
         position: closed,
         payout: closed.payout,
+        repayment: closed.repayment,
+        netPayout: closed.netPayout,
+        bankruptcy: closed.bankruptcy,
+        bankruptcyDebtAdded: closed.bankruptcyDebtAdded,
         realizedProfit: closed.realizedProfit,
         profile: cloneMoneyProfile(profile),
         stockUser: cloneStockUser(stockUser)
+      };
+    });
+  }
+
+  async repayBankruptcyDebt({ guildId, userId, username, amount = null, now = Date.now() }) {
+    return this.store.update((data) => {
+      const guild = getOrCreateGuild(data, guildId);
+      const market = syncMarket(data, guildId, guild, now, this);
+      const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
+      const settled = settleMaturedLeveragedPositions(profile, stockUser, market);
+      const before = getStockBankruptcySummary(profile);
+      const repayment = repayStockBankruptcyDebt(profile, amount);
+
+      return {
+        userId: profile.userId,
+        username: profile.username,
+        requested: repayment.requested,
+        repaid: repayment.repaid,
+        debtBefore: before.debt,
+        balanceBefore: repayment.balanceBefore,
+        bankruptcy: repayment.bankruptcy,
+        settled,
+        liquidated: settled.filter((entry) => entry.liquidated),
+        profile: cloneMoneyProfile(profile)
       };
     });
   }
@@ -1199,6 +1237,7 @@ export class StockService {
         userId: profile.userId,
         username: profile.username,
         cash: getCurrencyBalance(profile, CURRENCY_STOCK),
+        bankruptcy: getStockBankruptcySummary(profile),
         positions,
         settled,
         liquidated: settled.filter((entry) => entry.liquidated),
@@ -2398,7 +2437,8 @@ function normalizeTradeHistoryEntry(entry = {}, fallbackId = null, guild = null)
     positionId: typeof safeEntry.positionId === 'string' ? safeEntry.positionId : null,
     side: typeof safeEntry.side === 'string' ? safeEntry.side : null,
     leverage: normalizeNonNegativeInteger(safeEntry.leverage),
-    margin: normalizeNonNegativeInteger(safeEntry.margin)
+    margin: normalizeNonNegativeInteger(safeEntry.margin),
+    bankruptcyDebtAdded: normalizeNonNegativeInteger(safeEntry.bankruptcyDebtAdded)
   };
 }
 
@@ -2744,6 +2784,7 @@ function buildPortfolio(profile, stockUser, market) {
     userId: profile.userId,
     username: profile.username,
     cash: getCurrencyBalance(profile, CURRENCY_STOCK),
+    bankruptcy: getStockBankruptcySummary(profile),
     stockValue,
     leveragedEquity,
     leveragedDebt,
@@ -2836,6 +2877,7 @@ function cloneMoneyProfile(profile) {
     userId: profile.userId,
     username: profile.username,
     balance: getCurrencyBalance(profile, CURRENCY_STOCK),
+    bankruptcy: getStockBankruptcySummary(profile),
     wallets: cloneWallets(profile.wallets)
   };
 }
@@ -3108,9 +3150,11 @@ function fillLimitOrder(profile, stockUser, order, quote, service, now) {
   } else {
     const proceeds = subtotal - fee;
     const realizedProfit = proceeds - order.averageCost * order.quantity;
-    creditCurrency(profile, CURRENCY_STOCK, proceeds);
+    const credit = creditCurrencyWithReceipt(profile, CURRENCY_STOCK, proceeds);
     stockUser.realizedProfit += realizedProfit;
     order.realizedProfit = realizedProfit;
+    order.repayment = credit.repayment;
+    order.netProceeds = credit.net;
     order.reservedQuantity = 0;
     recordTrade(stockUser, {
       type: 'limit_sell_fill',
@@ -3249,6 +3293,13 @@ function assertNoOpposingLeveragedPosition(stockUser, stockId, side, quote = nul
   throw new Error(`같은 종목(${stockName})의 반대 방향 레버리지 포지션이 이미 열려 있습니다. 롱/숏 양방향 돈복사를 막기 위해 먼저 기존 포지션을 청산하세요.`);
 }
 
+function assertNoStockBankruptcyDebt(profile) {
+  const bankruptcy = getStockBankruptcySummary(profile);
+  if (bankruptcy.debt <= 0 && !hasStockBankruptcyDebt(profile)) return;
+
+  throw new Error(`파산채무 ${bankruptcy.debt.toLocaleString()}골드가 남아 있어 새 레버리지 진입이 막혔습니다. 골드 수익을 받으면 25%가 자동 상환됩니다.`);
+}
+
 function settleMaturedLeveragedPositions(profile, stockUser, market) {
   const settled = [];
 
@@ -3294,9 +3345,14 @@ function settleLeveragedPosition(profile, stockUser, position, evaluated, {
   const costs = applySettlementCosts(grossPayout, settlementCosts);
   const payout = costs.payout;
   const realizedProfit = payout - position.margin;
-  if (payout > 0) {
-    creditCurrency(profile, CURRENCY_STOCK, payout);
-  }
+  const bankruptcyDebtAdded = evaluated.liquidated ? calculateLeverageBankruptcyDebt(position) : 0;
+  const bankruptcyAfterDebt = bankruptcyDebtAdded > 0
+    ? addStockBankruptcyDebt(profile, bankruptcyDebtAdded, at)
+    : getStockBankruptcySummary(profile);
+  const credit = payout > 0
+    ? creditCurrencyWithReceipt(profile, CURRENCY_STOCK, payout)
+    : { repayment: 0, net: 0, bankruptcy: bankruptcyAfterDebt };
+
   stockUser.realizedLeveragedProfit += realizedProfit;
   stockUser.leveragedTradeCount += 1;
   stockUser.lastTradeAt = normalizeNonNegativeInteger(at);
@@ -3314,7 +3370,8 @@ function settleLeveragedPosition(profile, stockUser, position, evaluated, {
     positionId: position.id,
     side: position.side,
     leverage: position.leverage,
-    margin: position.margin
+    margin: position.margin,
+    bankruptcyDebtAdded
   });
 
   return {
@@ -3322,6 +3379,10 @@ function settleLeveragedPosition(profile, stockUser, position, evaluated, {
     ...evaluated,
     grossPayout,
     payout,
+    repayment: credit.repayment,
+    netPayout: credit.net,
+    bankruptcy: credit.bankruptcy,
+    bankruptcyDebtAdded,
     closingFee: costs.closingFee,
     penalty: costs.penalty,
     settlementCostTotal: costs.total,
@@ -3362,6 +3423,20 @@ function applySettlementCosts(grossPayout, settlementCosts = {}) {
 
 function isEarlyClose(position, evaluated) {
   return hasLeveragedPositionExpiry(position) && !evaluated.expired;
+}
+
+function calculateLeverageBankruptcyDebt(position) {
+  const margin = normalizeNonNegativeInteger(position?.margin);
+  if (margin <= 0) return 0;
+  return Math.floor(margin * getLeverageBankruptcyPenaltyBps(position?.leverage) / 10_000);
+}
+
+function getLeverageBankruptcyPenaltyBps(leverage) {
+  const safeLeverage = normalizeLeverage(leverage);
+  if (safeLeverage <= 10) return 500;
+  if (safeLeverage <= 30) return 1_000;
+  if (safeLeverage <= 70) return 2_000;
+  return 3_500;
 }
 
 function evaluateLeveragedPosition(position, quote, options = {}) {

@@ -1,7 +1,7 @@
 {
   "target": "creature",
   "mode": "idle",
-  "prompt": "",
+  "prompt": "Use $generate2dsprite to create a clean HD frost lich raid boss idle animation, 3x3 grid, skeletal ice mage in tattered robes, blue frost aura attached to body only, full body centered, same scale, solid #FF00FF background, no text.",
   "role": "",
   "input": "assets/rpg/bosses/frost-lich/idle/raw/raw-sheet.png",
   "threshold": 100,
@@ -311,5 +311,23 @@
       ]
     }
   ],
-  "edge_touch_frames": []
+  "edge_touch_frames": [],
+  "id": "boss_frost_lich_idle",
+  "label": "빙결 리치 대기 모션",
+  "category": "monster",
+  "kind": "sprite",
+  "sheet": "3x3",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "outputSize": [
+    480,
+    480
+  ],
+  "source": "/home/jio/.codex/generated_images/019dffb5-dcb4-7ab3-a969-b44a2c3e55d2/ig_094151999effdb840169fc4fff088081918e1ab91d935e9950.png",
+  "raw": "assets/rpg/bosses/frost-lich/idle/raw/raw-sheet.png",
+  "transparentSheet": "assets/rpg/bosses/frost-lich/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/bosses/frost-lich/idle/processed/animation.gif",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

@@ -6,11 +6,13 @@ import {
   SlashCommandBuilder
 } from 'discord.js';
 import { getStockCatalog } from '../systems/stocks.js';
+import { SEASON_POINT_SOURCES } from '../systems/seasons.js';
 import {
   safeAutocompleteRespond,
   toInteractionPayload
 } from './interactions.js';
 import { createPagedButtonRow, formatUserMention } from './ui.js';
+import { formatSeasonAwardLine } from './seasons.js';
 
 const STOCK_AUTOCOMPLETE_LIMIT = 25;
 const DISCORD_CONTENT_MAX_LENGTH = 2000;
@@ -352,6 +354,17 @@ export const stockCommands = [
             .setDescription('확인할 유저. 비우면 본인')
         )
     )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('채무상환')
+        .setDescription('내 골드로 레버리지 파산채무를 직접 상환합니다.')
+        .addIntegerOption((option) =>
+          option
+            .setName('금액')
+            .setDescription('상환할 골드. 비우면 가능한 만큼 전액 상환')
+            .setMinValue(1)
+        )
+    )
 ];
 
 export function getStockCommandPayloads() {
@@ -390,7 +403,7 @@ export async function handleStockAutocomplete(interaction, stocks) {
   return true;
 }
 
-export async function handleStockCommand(interaction, stocks) {
+export async function handleStockCommand(interaction, stocks, services = {}) {
   if (interaction.isButton?.()) {
     try {
       if (interaction.customId?.startsWith('stock_quick:')) {
@@ -419,7 +432,7 @@ export async function handleStockCommand(interaction, stocks) {
   }
 
   try {
-    await routeStockCommand(interaction, stocks);
+    await routeStockCommand(interaction, stocks, services);
   } catch (error) {
     await safeReply(interaction, `주식 처리 실패: ${error.message}`, true);
   }
@@ -427,7 +440,29 @@ export async function handleStockCommand(interaction, stocks) {
   return true;
 }
 
-async function routeStockCommand(interaction, stocks) {
+
+async function awardStockTradeSeasonPoints(services, interaction) {
+  if (typeof services?.seasons?.awardPoints !== 'function') return null;
+
+  try {
+    return await services.seasons.awardPoints({
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username,
+      source: SEASON_POINT_SOURCES.STOCK_TRADE,
+      points: 15
+    });
+  } catch (error) {
+    services.logger?.debug?.('Failed to award stock trade season points:', error);
+    return null;
+  }
+}
+
+function withSeasonAward(content, award) {
+  return [content, formatSeasonAwardLine(award)].filter(Boolean).join('\n');
+}
+
+async function routeStockCommand(interaction, stocks, services = {}) {
   const subcommand = interaction.options.getSubcommand(true);
   const guildId = interaction.guildId;
   const user = interaction.user;
@@ -471,7 +506,8 @@ async function routeStockCommand(interaction, stocks) {
       stockId: interaction.options.getString('종목', true),
       quantity: interaction.options.getInteger('수량', true)
     });
-    await replyStockContent(interaction, formatBuyResult(user, result), {
+    const seasonAward = await awardStockTradeSeasonPoints(services, interaction);
+    await replyStockContent(interaction, withSeasonAward(formatBuyResult(user, result), seasonAward), {
       components: createStockQuickRows(user.id)
     });
     return;
@@ -485,7 +521,8 @@ async function routeStockCommand(interaction, stocks) {
       stockId: interaction.options.getString('종목', true),
       quantity: interaction.options.getInteger('수량', true)
     });
-    await replyStockContent(interaction, formatSellResult(user, result), {
+    const seasonAward = await awardStockTradeSeasonPoints(services, interaction);
+    await replyStockContent(interaction, withSeasonAward(formatSellResult(user, result), seasonAward), {
       components: createStockQuickRows(user.id)
     });
     return;
@@ -682,6 +719,19 @@ async function routeStockCommand(interaction, stocks) {
     });
     await replyStockContent(interaction, formatLeveragePortfolio(target, portfolio), {
       components: target.id === user.id ? createLeveragePortfolioRows(user.id, portfolio) : []
+    });
+    return;
+  }
+
+  if (subcommand === '채무상환') {
+    const result = await stocks.repayBankruptcyDebt({
+      guildId,
+      userId: user.id,
+      username: user.username,
+      amount: interaction.options.getInteger('금액')
+    });
+    await replyStockContent(interaction, formatDebtRepaymentResult(user, result), {
+      components: createStockQuickRows(user.id)
     });
     return;
   }
@@ -1186,8 +1236,9 @@ function formatSellResult(user, result) {
     `💸 **가상주식 매도 완료** — ${formatUserMention(user, user.username)}`,
     `종목: **${result.stock.name}** × ${result.quantity.toLocaleString()}주`,
     `단가: ${result.price.toLocaleString()}골드 / 매도금액: ${result.subtotal.toLocaleString()}골드 / 수수료: ${result.fee.toLocaleString()}골드`,
+    formatRepaymentLine(result),
     `실현손익: **${formatSignedMoney(result.realizedProfit)}** / 골드: **${result.profile.balance.toLocaleString()}골드** / 남은 보유: ${result.holding.quantity.toLocaleString()}주`
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
 
 function formatLimitOrderPlaced(user, result) {
@@ -1371,6 +1422,7 @@ function formatPortfolio(user, portfolio) {
   return [
     `💼 **${user.username}님의 가상주식 보유 현황**`,
     `골드: **${portfolio.cash.toLocaleString()}골드**`,
+    formatBankruptcyLine(portfolio.bankruptcy),
     `주식 평가액: **${portfolio.stockValue.toLocaleString()}골드**`,
     `레버리지 평가금: **${portfolio.leveragedEquity.toLocaleString()}골드** / 부채 노출: **${(portfolio.leveragedDebt ?? 0).toLocaleString()}골드**`,
     `미수 배당금: **${pendingDividends.toLocaleString()}골드** / 누적 배당금: **${totalDividends.toLocaleString()}골드**`,
@@ -1378,7 +1430,7 @@ function formatPortfolio(user, portfolio) {
     `평가손익: **${formatSignedMoney(portfolio.unrealizedProfit)}** / 레버리지 손익: **${formatSignedMoney(portfolio.leveragedUnrealizedProfit)}**`,
     `실현손익: **${formatSignedMoney(portfolio.realizedProfit)}** / 레버리지 실현손익: **${formatSignedMoney(portfolio.realizedLeveragedProfit)}**`,
     positions
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
 
 function formatLeaderboard(rows) {
@@ -1439,6 +1491,9 @@ function formatCloseLeverageResult(user, result) {
       `종목: **${position.stock.name}** / ${formatLeverageSide(position.side)} ${position.leverage}배${formatLeverageTermSuffix(position)}`,
       costs,
       `손익: **${formatSignedMoney(result.realizedProfit)}** / 지급액: 0골드`,
+      result.bankruptcyDebtAdded > 0
+        ? `파산채무 추가: **${result.bankruptcyDebtAdded.toLocaleString()}골드** / 남은 채무: **${result.bankruptcy.debt.toLocaleString()}골드**`
+        : null,
       `골드: **${result.profile.balance.toLocaleString()}골드**`
     ].filter(Boolean).join('\n');
   }
@@ -1449,6 +1504,7 @@ function formatCloseLeverageResult(user, result) {
     `진입가: ${position.entryPrice.toLocaleString()}골드 → 청산가: ${position.currentPrice.toLocaleString()}골드`,
     costs,
     `손익: **${formatSignedMoney(result.realizedProfit)}** / 지급액: **${result.payout.toLocaleString()}골드**`,
+    formatRepaymentLine(result),
     `골드: **${result.profile.balance.toLocaleString()}골드**`
   ].filter(Boolean).join('\n');
 }
@@ -1489,10 +1545,50 @@ function formatLeveragePortfolio(user, portfolio) {
   return [
     `⚡ **${user.username}님의 레버리지 보유 현황**`,
     `골드: **${portfolio.cash.toLocaleString()}골드**`,
+    formatBankruptcyLine(portfolio.bankruptcy),
     `증거금 합계: **${portfolio.marginTotal.toLocaleString()}골드** / 부채 노출: **${portfolio.debtTotal.toLocaleString()}골드** / 명목가: **${portfolio.notionalTotal.toLocaleString()}골드** / 평가금: **${portfolio.equityTotal.toLocaleString()}골드**`,
     `미실현손익: **${formatSignedMoney(portfolio.unrealizedProfit)}** / 누적실현손익: **${formatSignedMoney(portfolio.realizedLeveragedProfit)}**`,
     positions + settledText
+  ].filter(Boolean).join('\n');
+}
+
+function formatDebtRepaymentResult(user, result) {
+  if (result.debtBefore <= 0) {
+    return [
+      `✅ **파산채무 상환 상태** — ${formatUserMention(user, user.username)}`,
+      '상환할 파산채무가 없습니다.',
+      `골드: **${result.profile.balance.toLocaleString()}골드** / 레버리지 진입 가능`
+    ].join('\n');
+  }
+
+  if (result.repaid <= 0) {
+    return [
+      `⚠️ **파산채무 상환 실패** — ${formatUserMention(user, user.username)}`,
+      `남은 채무: **${result.bankruptcy.debt.toLocaleString()}골드**`,
+      '상환에 사용할 골드가 부족합니다. 골드 수익을 받으면 25%가 자동 상환됩니다.'
+    ].join('\n');
+  }
+
+  return [
+    `✅ **파산채무 상환 완료** — ${formatUserMention(user, user.username)}`,
+    `상환: **${result.repaid.toLocaleString()}골드** / 남은 채무: **${result.bankruptcy.debt.toLocaleString()}골드**`,
+    `골드: **${result.profile.balance.toLocaleString()}골드**`,
+    result.bankruptcy.debt > 0
+      ? '남은 채무가 있어 새 레버리지 진입은 아직 막혀 있습니다.'
+      : '채무를 모두 갚았습니다. 레버리지 진입 가능!'
   ].join('\n');
+}
+
+function formatBankruptcyLine(bankruptcy) {
+  if (!bankruptcy || bankruptcy.debt <= 0) return null;
+  return `파산채무: **${bankruptcy.debt.toLocaleString()}골드** / 골드 수익 25% 자동 상환 / 새 레버리지 진입 불가`;
+}
+
+function formatRepaymentLine(result) {
+  if (!result?.repayment || result.repayment <= 0) return null;
+  const debt = result.bankruptcy?.debt ?? result.profile?.bankruptcy?.debt ?? 0;
+  const net = result.netPayout ?? result.netProceeds ?? 0;
+  return `파산채무 자동 상환: **${result.repayment.toLocaleString()}골드** / 실수령: **${net.toLocaleString()}골드** / 남은 채무: **${debt.toLocaleString()}골드**`;
 }
 
 function formatMarketLine(stock) {

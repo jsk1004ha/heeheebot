@@ -26,6 +26,7 @@ import {
   getFishingRodAssetForLevel,
   getFishingRodAssets
 } from '../src/systems/fishing-assets.js';
+import { SEASON_POINT_SOURCES } from '../src/systems/seasons.js';
 
 test('낚시 명령 payload는 요청한 명령들을 등록한다', () => {
   const payloads = getFishingCommandPayloads();
@@ -273,7 +274,8 @@ test('낚시 명령 핸들러는 /낚시 응답을 이미지 embed 카드로 반
 
   try {
     const interaction = createInteraction('낚시');
-    const handled = await handleFishingCommand(interaction, fixture.fishing);
+    const seasons = createSeasonSpy();
+    const handled = await handleFishingCommand(interaction, fixture.fishing, { seasons });
     const payload = interaction.lastReply;
 
     assert.equal(handled, true);
@@ -287,6 +289,33 @@ test('낚시 명령 핸들러는 /낚시 응답을 이미지 embed 카드로 반
     assert.equal(payload.content, undefined);
     assert.equal(payload.embeds[0].data.footer, undefined);
     assert.doesNotMatch(payload.embeds[0].data.description, /이미지 에셋|fish_/);
+    assert.deepEqual(seasons.awards.map(({ source, points }) => ({ source, points })), [
+      { source: SEASON_POINT_SOURCES.FISHING_CATCH, points: 20 }
+    ]);
+    assert.match(payload.embeds[0].data.description, /시즌: 테스트 시즌/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+
+test('낚시 시즌 포인트 지급 실패는 기록하고 기본 낚시 응답은 유지한다', async () => {
+  const fixture = await createFixture({ randomInt: sequenceRandom(1, 0, 20) });
+
+  try {
+    const interaction = createInteraction('낚시');
+    const logs = [];
+    const logger = { debug: (...args) => logs.push(args) };
+    const seasons = createRejectingSeasonSpy();
+
+    const handled = await handleFishingCommand(interaction, fixture.fishing, { seasons, logger });
+
+    assert.equal(handled, true);
+    assert.match(interaction.lastReply.embeds[0].data.title, /낚시 성공/);
+    assert.match(interaction.lastReply.embeds[0].data.description, /붕어/);
+    assert.doesNotMatch(interaction.lastReply.embeds[0].data.description, /시즌:/);
+    assert.equal(logs.length, 1);
+    assert.match(logs[0][0], /Failed to award fishing season points/);
   } finally {
     await fixture.cleanup();
   }
@@ -482,11 +511,16 @@ test('낚시 카드 버튼은 같은 유저가 낚시와 강화 흐름을 이어
       updates,
       replies
     });
-    await handleFishingCommand(fishButton, fixture.fishing);
+    const seasons = createSeasonSpy();
+    await handleFishingCommand(fishButton, fixture.fishing, { seasons });
 
     assert.equal(updates.length, 0);
     assert.match(replies[0].embeds[0].data.title, /낚시 성공/);
-    assert.doesNotMatch(replies[0].embeds[0].data.description, /포인트|점수/);
+    assert.deepEqual(seasons.awards.map(({ source, points }) => ({ source, points })), [
+      { source: SEASON_POINT_SOURCES.FISHING_CATCH, points: 20 }
+    ]);
+    assert.match(replies[0].embeds[0].data.description, /시즌: 테스트 시즌/);
+    assert.doesNotMatch(replies[0].embeds[0].data.description, /이미지 에셋|fish_/);
     assert.deepEqual(
       replies[0].components[0].components.map((component) => component.data.label),
       ['낚시', '낚싯대 강화', '도감']
@@ -718,6 +752,32 @@ async function createFixture(options = {}) {
         recursive: true,
         force: true
       });
+    }
+  };
+}
+
+function createSeasonSpy() {
+  const awards = [];
+  return {
+    awards,
+    async awardPoints(input) {
+      awards.push(input);
+      return {
+        awarded: true,
+        points: input.points,
+        requestedPoints: input.points,
+        totalPoints: input.points,
+        sourceLabel: '테스트 시즌',
+        newlyClaimableRewards: []
+      };
+    }
+  };
+}
+
+function createRejectingSeasonSpy() {
+  return {
+    async awardPoints() {
+      throw new Error('season ledger unavailable');
     }
   };
 }

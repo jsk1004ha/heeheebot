@@ -11,5 +11,15 @@
   "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/female/warrior/idle/processed",
   "meta": "assets/rpg/heroes/female/warrior/idle/processed/pipeline-meta.json",
   "transparentSheet": "assets/rpg/heroes/female/warrior/idle/processed/sheet-transparent.png",
-  "animation": "assets/rpg/heroes/female/warrior/idle/processed/animation.gif"
+  "animation": "assets/rpg/heroes/female/warrior/idle/processed/animation.gif",
+  "label": "여성 검사 대기 모션",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "outputSize": [
+    256,
+    256
+  ],
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

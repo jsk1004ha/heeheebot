@@ -1,7 +1,7 @@
 {
   "target": "creature",
   "mode": "idle",
-  "prompt": "",
+  "prompt": "Use $generate2dsprite to create a clean HD royal guardian golem raid boss idle animation, 3x3 grid, gold-white stone golem with royal crest armor, centered, same scale, solid #FF00FF background, no text.",
   "role": "",
   "input": "assets/rpg/bosses/sky-golem/idle/raw/raw-sheet.png",
   "threshold": 100,
@@ -311,5 +311,23 @@
       ]
     }
   ],
-  "edge_touch_frames": []
+  "edge_touch_frames": [],
+  "id": "boss_sky_golem_idle",
+  "label": "왕국 수호 골렘 대기 모션",
+  "category": "monster",
+  "kind": "sprite",
+  "sheet": "3x3",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "outputSize": [
+    480,
+    480
+  ],
+  "source": "/home/jio/.codex/generated_images/019dffb5-dcb4-7ab3-a969-b44a2c3e55d2/ig_094151999effdb840169fc5229ca148191b50ba4e381ee49b4.png",
+  "raw": "assets/rpg/bosses/sky-golem/idle/raw/raw-sheet.png",
+  "transparentSheet": "assets/rpg/bosses/sky-golem/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/bosses/sky-golem/idle/processed/animation.gif",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

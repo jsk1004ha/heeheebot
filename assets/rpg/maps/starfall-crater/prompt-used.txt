@@ -1,1 +1,1 @@
-Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: starfall crater, meteor fragments, lava cracks, open impact arena center, no characters, no UI, no text.
+Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: guild training ground, wooden dummies, banners, open packed-earth arena center, no characters, no UI, no text.

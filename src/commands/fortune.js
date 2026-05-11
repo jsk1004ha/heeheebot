@@ -67,7 +67,10 @@ export function formatFortuneResult({ fortune, target, viewer, xpResult }) {
     `🔮 **${targetText}님의 ${fortune.label}** (${fortune.dateKey})`,
     `운세: **${fortune.kind}**`,
     '',
-    fortune.text
+    fortune.text,
+    '',
+    '행운의 숫자 ✨',
+    String(fortune.luckyNumber)
   ];
 
   if (xpResult?.claimed) {

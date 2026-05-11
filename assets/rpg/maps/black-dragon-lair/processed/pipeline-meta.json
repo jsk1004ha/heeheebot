@@ -3,9 +3,16 @@
   "label": "검은 용의 둥지 배경",
   "category": "map",
   "kind": "map",
-  "generatedWith": "codex:procedural-medieval-rpg",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_black_dragon_lair/background.png",
   "outputSize": [
     1024,
     576
-  ]
+  ],
+  "prompt": "Black dragon lair with lava and treasure, 16:9 game background, no text.",
+  "raw": "assets/rpg/maps/black-dragon-lair/raw/background.png",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

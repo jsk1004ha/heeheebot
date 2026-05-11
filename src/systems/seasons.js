@@ -16,6 +16,11 @@ export const SEASON_POINT_SOURCES = Object.freeze({
   SWORD_ENHANCE: 'sword_enhance',
   SWORD_BATTLE_WIN: 'sword_battle_win',
   SWORD_BATTLE_PLAY: 'sword_battle_play',
+  FISHING_CATCH: 'fishing_catch',
+  STOCK_TRADE: 'stock_trade',
+  COMMUNITY_MISSION_CLAIM: 'community_mission_claim',
+  ACHIEVEMENT_EARN: 'achievement_earn',
+  TODAY_CHECKLIST: 'today_checklist',
   SEASON_CHALLENGE_CLAIM: 'season_challenge_claim'
 });
 
@@ -25,6 +30,11 @@ export const SEASON_SOURCE_LABELS = Object.freeze({
   [SEASON_POINT_SOURCES.SWORD_ENHANCE]: '검 강화',
   [SEASON_POINT_SOURCES.SWORD_BATTLE_WIN]: '검배틀 승리',
   [SEASON_POINT_SOURCES.SWORD_BATTLE_PLAY]: '검배틀 참가',
+  [SEASON_POINT_SOURCES.FISHING_CATCH]: '낚시 성공',
+  [SEASON_POINT_SOURCES.STOCK_TRADE]: '주식 거래',
+  [SEASON_POINT_SOURCES.COMMUNITY_MISSION_CLAIM]: '커뮤니티 미션',
+  [SEASON_POINT_SOURCES.ACHIEVEMENT_EARN]: '업적 달성',
+  [SEASON_POINT_SOURCES.TODAY_CHECKLIST]: '오늘 할 일',
   [SEASON_POINT_SOURCES.SEASON_CHALLENGE_CLAIM]: '시즌 과제 보상'
 });
 
@@ -57,6 +67,33 @@ export const SEASON_CHALLENGES = Object.freeze([
     sources: [SEASON_POINT_SOURCES.SWORD_BATTLE_PLAY, SEASON_POINT_SOURCES.SWORD_BATTLE_WIN]
   }),
   seasonChallenge({
+    id: 'daily_fishing_catch',
+    period: 'daily',
+    label: '오늘의 첫 낚시',
+    description: '낚시로 시즌 포인트 20점 획득',
+    requiredPoints: 20,
+    rewardPoints: 20,
+    sources: [SEASON_POINT_SOURCES.FISHING_CATCH]
+  }),
+  seasonChallenge({
+    id: 'daily_stock_trade',
+    period: 'daily',
+    label: '시장 출석',
+    description: '주식 거래로 시즌 포인트 15점 획득',
+    requiredPoints: 15,
+    rewardPoints: 20,
+    sources: [SEASON_POINT_SOURCES.STOCK_TRADE]
+  }),
+  seasonChallenge({
+    id: 'daily_achievement_earn',
+    period: 'daily',
+    label: '업적 하나 더',
+    description: '자동 업적 수령으로 시즌 포인트 10점 획득',
+    requiredPoints: 10,
+    rewardPoints: 15,
+    sources: [SEASON_POINT_SOURCES.ACHIEVEMENT_EARN]
+  }),
+  seasonChallenge({
     id: 'weekly_any_activity',
     period: 'weekly',
     label: '주간 시즌 러너',
@@ -84,6 +121,26 @@ export const SEASON_CHALLENGES = Object.freeze([
       SEASON_POINT_SOURCES.SWORD_ENHANCE,
       SEASON_POINT_SOURCES.SWORD_BATTLE_PLAY,
       SEASON_POINT_SOURCES.SWORD_BATTLE_WIN
+    ]
+  }),
+  seasonChallenge({
+    id: 'weekly_three_categories',
+    period: 'weekly',
+    label: '주간 만능 플레이어',
+    description: '이번 주 서로 다른 콘텐츠 3종에서 시즌 포인트 획득',
+    requiredPoints: 3,
+    rewardPoints: 120,
+    progressMode: 'distinct_sources',
+    sources: [
+      SEASON_POINT_SOURCES.RPG_BATTLE_WIN,
+      SEASON_POINT_SOURCES.SWORD_ENHANCE,
+      SEASON_POINT_SOURCES.SWORD_BATTLE_PLAY,
+      SEASON_POINT_SOURCES.SWORD_BATTLE_WIN,
+      SEASON_POINT_SOURCES.FISHING_CATCH,
+      SEASON_POINT_SOURCES.STOCK_TRADE,
+      SEASON_POINT_SOURCES.COMMUNITY_MISSION_CLAIM,
+      SEASON_POINT_SOURCES.ACHIEVEMENT_EARN,
+      SEASON_POINT_SOURCES.TODAY_CHECKLIST
     ]
   })
 ]);
@@ -487,6 +544,12 @@ function buildChallengeStatus(challenge, bucket, profile, periodKey) {
 
 function getChallengeProgress(challenge, bucket) {
   const sources = bucket.sources ?? {};
+  if (challenge.progressMode === 'distinct_sources') {
+    return challenge.sources
+      .filter((source) => normalizeStoredPoints(sources[source]) > 0)
+      .length;
+  }
+
   if (challenge.sources.length > 0) {
     return challenge.sources.reduce((sum, source) => sum + normalizeStoredPoints(sources[source]), 0);
   }
@@ -539,7 +602,8 @@ function seasonChallenge({
   description,
   requiredPoints,
   rewardPoints,
-  sources = []
+  sources = [],
+  progressMode = 'points'
 }) {
   return Object.freeze({
     id,
@@ -548,6 +612,7 @@ function seasonChallenge({
     description,
     requiredPoints,
     rewardPoints,
+    progressMode,
     sources: Object.freeze([...sources])
   });
 }

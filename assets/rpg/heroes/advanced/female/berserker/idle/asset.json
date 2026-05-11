@@ -8,11 +8,20 @@
   "prompt": "assets/rpg/heroes/advanced/female/berserker/idle/prompt-used.txt",
   "processedDir": "assets/rpg/heroes/advanced/female/berserker/idle/processed",
   "status": "processed",
-  "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/advanced/female/berserker/idle/processed",
-  "meta": "assets/rpg/heroes/advanced/roster/processed/pipeline-meta.json",
+  "processorStdout": "assets/rpg/heroes/advanced/female/berserker/idle/processed",
+  "meta": "assets/rpg/heroes/advanced/female/berserker/idle/processed/pipeline-meta.json",
   "advancedClass": "berserker",
   "gender": "female",
-  "label": "여성 광전사",
+  "label": "여성 광전사 전직 이미지",
   "rosterFrame": 2,
-  "clean": "assets/rpg/heroes/advanced/female/berserker/idle/processed/clean.png"
+  "clean": "assets/rpg/heroes/advanced/female/berserker/idle/processed/clean.png",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "outputSize": [
+    128,
+    128
+  ],
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

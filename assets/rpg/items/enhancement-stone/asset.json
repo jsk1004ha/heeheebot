@@ -1,0 +1,24 @@
+{
+  "id": "item_enhancement_stone_icon",
+  "label": "강화석 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "prompt": "assets/rpg/items/enhancement-stone/prompt-used.txt",
+  "meta": "assets/rpg/items/enhancement-stone/processed/pipeline-meta.json",
+  "raw": "assets/rpg/items/enhancement-stone/raw/raw-sheet.png",
+  "status": "processed",
+  "processedDir": "assets/rpg/items/enhancement-stone/processed",
+  "processorStdout": "assets/rpg/items/enhancement-stone/processed",
+  "clean": "assets/rpg/items/enhancement-stone/processed/clean.png",
+  "outputSize": [
+    256,
+    256
+  ],
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  },
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/item_enhancement_stone_icon/raw-sheet.png"
+}

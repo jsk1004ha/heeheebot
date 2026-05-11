@@ -1,12 +1,20 @@
 {
   "id": "map_red_canyon",
-  "label": "붉은 협곡 배경",
   "category": "map",
   "kind": "map",
-  "generatedWith": "codex:procedural-medieval-rpg",
+  "raw": "assets/rpg/maps/red-canyon/raw/background.png",
+  "status": "generated",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "meta": "assets/rpg/maps/red-canyon/processed/pipeline-meta.json",
+  "label": "붉은 협곡 배경",
+  "prompt": "assets/rpg/maps/red-canyon/prompt-used.txt",
   "outputSize": [
     1024,
     576
   ],
-  "prompt": "Red canyon orc and wyvern battlefield, 16:9 game background, no text."
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  },
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_red_canyon/background.png"
 }

@@ -1,1 +1,1 @@
-Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: floating sky foundry, gold gears and cloud furnaces, open metal platform center, no characters, no UI, no text.
+Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: royal blacksmith forge, bellows and anvils, open metal platform center, no characters, no UI, no text.

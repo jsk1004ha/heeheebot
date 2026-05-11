@@ -17,6 +17,19 @@ test('도움말 명령 payload는 분류 선택과 통합 도움말 이름을 �
   assert.ok(payload.options[0].choices.some((choice) => choice.value === 'season'));
 });
 
+test('도움말 홈은 시작하기와 오늘할일 진입점을 보여준다', async () => {
+  const interaction = createHelpInteraction();
+
+  const handled = await handleHelpCommand(interaction);
+
+  assert.equal(handled, true);
+  const homeHelpText = interaction.replies[0].embeds[0].data.fields
+    .map((field) => `${field.name} ${field.value}`)
+    .join('\n');
+  assert.match(homeHelpText, /\/시작하기/);
+  assert.match(homeHelpText, /\/오늘할일/);
+});
+
 test('도움말 명령은 카테고리 버튼과 선택 분류 embed를 보여준다', async () => {
   const interaction = createHelpInteraction({
     stringOptions: { 분류: 'sword' }

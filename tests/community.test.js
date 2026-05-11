@@ -16,6 +16,7 @@ import {
   getCommunityTitles,
   getNextLotteryDrawAt
 } from '../src/systems/community.js';
+import { SEASON_POINT_SOURCES } from '../src/systems/seasons.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const quietLogger = { error() {} };
@@ -246,6 +247,79 @@ test('히든 업적과 히든 칭호는 조건 달성 전에는 숨기고 달성
     assert.ok(claimed.titles.find((title) => title.id === 'blacksmith_nightmare').owned);
     assert.ok(claimed.titles.find((title) => title.id === 'abyss_angler').owned);
     assert.ok(claimed.titles.find((title) => title.id === 'reborn_guardian').owned);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+
+test('자동 업적 수령은 완료 업적 보상을 한 번만 지급한다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await seedProfile(fixture.store, {
+      community: { stats: { commandsUsed: 50 } }
+    });
+
+    const first = await fixture.community.grantCompletedAchievements({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '자동러'
+    });
+    const second = await fixture.community.grantCompletedAchievements({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '자동러'
+    });
+
+    assert.equal(first.claimed.some((achievement) => achievement.id === 'commands_50'), true);
+    assert.equal(first.claimed.some((achievement) => achievement.id === 'level_2'), true);
+    assert.equal(first.totalCoins, 1_300);
+    assert.equal(first.totalXp, 120);
+    assert.equal(first.profile.community.ownedTitles.includes('commander'), true);
+    assert.equal(second.claimed.length, 0);
+    assert.equal(second.totalCoins, 0);
+    assert.equal(second.totalXp, 0);
+    assert.equal(second.profile.balance, first.profile.balance);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+
+test('자동 업적 수령은 보상으로 새로 완료된 업적도 같은 지급에 포함한다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await seedProfile(fixture.store, {
+      balance: 9_500,
+      community: { stats: { commandsUsed: 50 } }
+    });
+
+    const first = await fixture.community.grantCompletedAchievements({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '연쇄러'
+    });
+    const second = await fixture.community.grantCompletedAchievements({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '연쇄러'
+    });
+    const claimedIds = first.claimed.map((achievement) => achievement.id);
+
+    assert.deepEqual(claimedIds, ['commands_50', 'level_2', 'balance_10000']);
+    assert.equal(first.totalClaimed, 3);
+    assert.equal(first.totalCoins, 1_800);
+    assert.equal(first.totalXp, 170);
+    assert.equal(first.levelReward, 200);
+    assert.equal(first.profile.balance, 11_500);
+    assert.equal(first.profile.community.ownedTitles.includes('commander'), true);
+    assert.equal(first.profile.community.ownedTitles.includes('rich'), true);
+    assert.equal(second.claimed.length, 0);
+    assert.equal(second.totalCoins, 0);
+    assert.equal(second.totalXp, 0);
+    assert.equal(second.profile.balance, first.profile.balance);
   } finally {
     await fixture.cleanup();
   }
@@ -701,6 +775,39 @@ test('활동요약 명령은 오래 걸릴 수 있는 조회 전에 먼저 defer
   assert.match(interaction.edited.content, /최근 7일 활동 요약/);
 });
 
+
+test('미션 일일 완료 수령은 시즌 포인트를 지급하고 응답에 시즌 라인을 표시한다', async () => {
+  const today = Math.floor(Date.now() / DAY_MS);
+  const fixture = await createFixture();
+
+  try {
+    await seedProfile(fixture.store, {
+      lastDailyDay: today,
+      lastFortuneXpDay: today,
+      community: {
+        daily: {
+          day: today,
+          lotteryTickets: 1
+        }
+      }
+    });
+    const seasons = createSeasonSpy();
+    const interaction = createInteraction('미션', {
+      strings: { '종류': 'daily' }
+    });
+
+    const handled = await handleCommunityCommand(interaction, fixture.community, quietLogger, { seasons });
+
+    assert.equal(handled, true);
+    assert.deepEqual(seasons.awards.map(({ source, points }) => ({ source, points })), [
+      { source: SEASON_POINT_SOURCES.COMMUNITY_MISSION_CLAIM, points: 40 }
+    ]);
+    assert.match(interaction.replied.content, /시즌: 테스트 시즌/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 test('커뮤니티 명령 핸들러는 복권 구매와 미션 응답을 반환한다', async () => {
   const fixture = await createFixture();
 
@@ -1039,6 +1146,24 @@ async function createFixture(options = {}) {
     async cleanup() {
       store.close();
       await rm(directory, { recursive: true, force: true });
+    }
+  };
+}
+
+function createSeasonSpy() {
+  const awards = [];
+  return {
+    awards,
+    async awardPoints(input) {
+      awards.push(input);
+      return {
+        awarded: true,
+        points: input.points,
+        requestedPoints: input.points,
+        totalPoints: input.points,
+        sourceLabel: '테스트 시즌',
+        newlyClaimableRewards: []
+      };
     }
   };
 }

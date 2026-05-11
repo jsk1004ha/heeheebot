@@ -17,5 +17,14 @@
   ],
   "normalization": "lanczos resize to project 16:9 map contract",
   "auditReason": "procedural fallback replaced with one-map agent-sprite-forge baked_scene output",
-  "recordedAt": "2026-05-07T10:22:16Z"
+  "recordedAt": "2026-05-07T10:22:16Z",
+  "id": "map_ruins_obelisk",
+  "label": "유적 방첨탑 전투 배경",
+  "category": "map",
+  "kind": "map",
+  "prompt": "Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: ancient obelisk arena, broken rune pillars, sunset gold light, open stone center, no characters, no UI, no text.",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

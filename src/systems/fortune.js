@@ -4,9 +4,9 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export const KOREA_TIME_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 export const FORTUNE_DATE_CHOICES = Object.freeze({
-  today: Object.freeze({ label: '오늘 운세', dayOffset: 0 }),
-  yesterday: Object.freeze({ label: '어제 운세', dayOffset: -1 }),
-  tomorrow: Object.freeze({ label: '내일 운세', dayOffset: 1 })
+  today: Object.freeze({ label: '오늘 운세', dayOffset: 0, dayWord: '오늘' }),
+  yesterday: Object.freeze({ label: '어제 운세', dayOffset: -1, dayWord: '어제' }),
+  tomorrow: Object.freeze({ label: '내일 운세', dayOffset: 1, dayWord: '내일' })
 });
 
 export const FORTUNE_MESSAGES = Object.freeze([
@@ -368,6 +368,122 @@ export const FORTUNE_MESSAGES = Object.freeze([
   createFortune("大凶(대흉)", "오늘은 하루를 작게 쓰세요. 버티고 정리하고 쉬었다면 큰 문제를 피한 겁니다.")
 ]);
 
+const DEFAULT_FORTUNE_NARRATIVE = Object.freeze({
+  openers: Object.freeze([
+    '{dayTopic} 평소보다 마음의 방향을 먼저 정해야 결과가 덜 흔들리는 날입니다.',
+    '{dayTopic} 큰 사건보다 작은 선택들이 하루 분위기를 차근차근 만드는 날입니다.',
+    '{dayTopic} 서두르기보다 상황을 한 번 더 살피면 필요한 길이 보이는 날입니다.',
+    '{dayTopic} 주변의 말과 자신의 판단 사이에서 균형을 잡는 태도가 중요합니다.'
+  ]),
+  closers: Object.freeze([
+    '오늘의 결과만 급하게 판단하지 말고, 필요한 말과 행동을 차분히 남기는 편이 좋습니다.',
+    '무엇을 얻을지보다 무엇을 무리하지 않을지 정해두면 하루가 훨씬 안정적으로 지나갑니다.',
+    '작은 확인과 부드러운 말투를 챙기면 예상보다 편안한 마무리를 만들 수 있습니다.',
+    '마음이 급해질수록 기본을 다시 확인하세요. 그 과정이 뜻밖의 실수를 줄여줍니다.'
+  ])
+});
+
+const FORTUNE_NARRATIVES = Object.freeze({
+  '大吉(대길)': Object.freeze({
+    openers: Object.freeze([
+      '{dayTopic} 기대하던 일이 밝은 쪽으로 움직이며 마음에 힘이 붙는 날입니다.',
+      '{dayTopic} 노력한 만큼 결과가 선명하게 돌아오고 주변의 반응도 따뜻해지는 날입니다.',
+      '{dayTopic} 막혀 있던 길이 조금씩 열리며 좋은 제안까지 기대해볼 수 있습니다.',
+      '{dayTopic} 평소보다 선택의 감각이 또렷해지고 작은 기회도 크게 살아나는 날입니다.'
+    ]),
+    closers: Object.freeze([
+      '다만 좋은 기운에만 기대기보다 약속과 마무리를 차분히 챙기면 기쁨이 더 오래 갑니다.',
+      '중요한 부탁이나 제안은 예의를 갖춰 꺼내보세요. 생각보다 긍정적인 답이 돌아올 수 있습니다.',
+      '기회가 보일 때 바로 기록해두면 다음 단계까지 자연스럽게 이어가기 좋습니다.',
+      '들뜬 마음은 잠깐 눌러두고 확실한 조건부터 확인하면 얻는 것이 더 커집니다.'
+    ])
+  }),
+  '吉(길)': Object.freeze({
+    openers: Object.freeze([
+      '{dayTopic} 큰 욕심을 내지 않아도 무난한 만족이 따라오는 날입니다.',
+      '{dayTopic} 익숙한 방식과 차분한 태도가 좋은 결과를 만들어주는 날입니다.',
+      '{dayTopic} 작게 챙긴 성실함이 생각보다 기분 좋은 흐름으로 이어집니다.',
+      '{dayTopic} 주변 분위기가 부드럽게 맞아 들어가며 부담이 조금 가벼워집니다.'
+    ]),
+    closers: Object.freeze([
+      '괜히 무리해서 크게 바꾸기보다, 이미 잘 맞는 방법을 안정적으로 이어가는 편이 좋습니다.',
+      '말투를 조금만 부드럽게 고르면 관계도 편해지고 해야 할 일도 수월하게 풀립니다.',
+      '작은 완료감을 하나라도 남겨두면 하루 끝에 생각보다 괜찮았다는 느낌이 듭니다.',
+      '기대치를 너무 높이지 않으면 필요한 만큼 얻고 편안하게 마무리할 수 있습니다.'
+    ])
+  }),
+  '中吉(중길)': Object.freeze({
+    openers: Object.freeze([
+      '{dayTopic} 조건을 잘 맞출수록 좋은 쪽으로 기울어지는 날입니다.',
+      '{dayTopic} 처음부터 빠르게 풀리지는 않아도 순서를 잡으면 안정감이 생깁니다.',
+      '{dayTopic} 기회와 변수가 함께 있으니 확인하는 태도가 가장 큰 힘이 됩니다.',
+      '{dayTopic} 마음만 앞세우기보다 준비를 점검할수록 결과가 좋아지는 날입니다.'
+    ]),
+    closers: Object.freeze([
+      '조금 느리더라도 필요한 조건을 하나씩 맞추면 후반으로 갈수록 길이 분명해집니다.',
+      '상대의 말도 끝까지 듣고 내 기준도 차분히 세우면 불필요한 흔들림을 줄일 수 있습니다.',
+      '지금 당장 결론을 내리기보다 한 단계만 더 확인하면 더 좋은 선택이 가능합니다.',
+      '작은 기록과 점검이 도움이 됩니다. 머릿속에만 두지 말고 눈에 보이게 정리해보세요.'
+    ])
+  }),
+  '小吉(소길)': Object.freeze({
+    openers: Object.freeze([
+      '{dayTopic} 크지는 않아도 분명히 챙길 만한 작은 이득이 있는 날입니다.',
+      '{dayTopic} 소소한 친절과 작은 정리가 하루를 편안하게 만드는 날입니다.',
+      '{dayTopic} 큰 기대보다 기본을 지킬 때 안정적인 만족이 따라옵니다.',
+      '{dayTopic} 눈에 띄는 변화가 적어도 마음을 가볍게 하는 일이 생길 수 있습니다.'
+    ]),
+    closers: Object.freeze([
+      '작은 성과를 가볍게 넘기지 마세요. 그런 만족이 쌓이면 다음 움직임도 한결 쉬워집니다.',
+      '무리해서 더 얻으려 하기보다 지금 손에 잡히는 것을 단정하게 챙기는 편이 좋습니다.',
+      '짧은 휴식이나 간단한 정리처럼 부담 없는 행동이 의외로 큰 도움이 됩니다.',
+      '기분 좋은 말 한마디를 아끼지 않으면 관계에서도 소소한 행운이 돌아올 수 있습니다.'
+    ])
+  }),
+  '末吉(말길)': Object.freeze({
+    openers: Object.freeze([
+      '{dayTopic} 초반에는 답답해도 시간이 지나며 조금씩 풀릴 가능성이 있습니다.',
+      '{dayTopic} 바로 결과를 보려 하면 지치기 쉬우니 느린 흐름을 받아들이는 편이 좋습니다.',
+      '{dayTopic} 서두른 만큼 꼬일 수 있지만 기다리면 필요한 단서가 뒤늦게 보입니다.',
+      '{dayTopic} 당장의 성과보다 늦게 찾아오는 안정감을 믿어야 하는 날입니다.'
+    ]),
+    closers: Object.freeze([
+      '조급한 결론은 잠시 미뤄두세요. 차분히 기다린 만큼 후반의 선택지가 더 나아집니다.',
+      '마음이 급할수록 작은 할 일부터 닫아두면 나중에 편해지는 흐름을 만들 수 있습니다.',
+      '늦게 풀리는 날이라고 해서 나쁜 날은 아닙니다. 속도를 낮추면 필요한 것은 남습니다.',
+      '기대가 바로 채워지지 않아도 너무 실망하지 마세요. 천천히 정리하면 손해를 줄입니다.'
+    ])
+  }),
+  '凶(흉)': Object.freeze({
+    openers: Object.freeze([
+      '{dayTopic} 작은 실수도 커질 수 있으니 평소보다 신중함이 필요한 날입니다.',
+      '{dayTopic} 마음이 예민해지기 쉬워 말과 선택의 속도를 낮추는 편이 좋습니다.',
+      '{dayTopic} 무리하게 밀어붙이면 손해가 생길 수 있으니 한 걸음 물러서야 합니다.',
+      '{dayTopic} 중요한 일일수록 바로 결정하지 말고 확인 시간을 따로 두는 편이 안전합니다.'
+    ]),
+    closers: Object.freeze([
+      '겁을 먹을 필요는 없지만, 오늘은 과감함보다 조심스러운 태도가 더 큰 보호막이 됩니다.',
+      '대화가 날카로워질 것 같다면 짧게 멈추세요. 시간을 두면 피할 수 있는 오해가 많습니다.',
+      '큰 욕심을 내려놓고 기본만 지켜도 충분합니다. 손해를 막는 것이 가장 좋은 선택입니다.',
+      '몸과 마음이 피곤하면 판단도 흐려집니다. 중요한 일은 여유가 생긴 뒤 다시 보는 편이 좋습니다.'
+    ])
+  }),
+  '大凶(대흉)': Object.freeze({
+    openers: Object.freeze([
+      '{dayTopic} 억지로 밀어붙이면 작은 문제가 크게 번질 수 있으니 속도를 낮춰야 합니다.',
+      '{dayTopic} 중요한 결정과 감정적인 대화는 가능한 한 미루는 편이 안전한 날입니다.',
+      '{dayTopic} 무리한 도전보다 손해를 피하고 상황을 보존하는 태도가 더 필요합니다.',
+      '{dayTopic} 평소라면 넘길 일도 크게 느껴질 수 있으니 방어적으로 움직이는 편이 좋습니다.'
+    ]),
+    closers: Object.freeze([
+      '괜히 증명하려 들기보다 쉬어 갈 명분을 만드는 편이 낫습니다. 안전하게 넘기면 충분합니다.',
+      '큰 성과를 내려고 하기보다 문제를 키우지 않는 데 집중하세요. 그것만으로도 의미가 있습니다.',
+      '말을 줄이고 약속과 물건을 다시 확인하면 피할 수 있는 손해가 확실히 줄어듭니다.',
+      '오늘을 작게 쓰는 것이 도망은 아닙니다. 힘을 아껴두면 다음 선택을 더 안전하게 할 수 있습니다.'
+    ])
+  })
+});
+
 export class FortuneService {
   constructor(options = {}) {
     this.fortunes = options.fortunes ?? FORTUNE_MESSAGES;
@@ -405,7 +521,12 @@ export class FortuneService {
       label: dateChoice.label,
       index: fortuneIndex,
       kind: fortune.kind,
-      text: fortune.text
+      text: renderFortuneText(fortune, dateChoice, fortuneIndex),
+      luckyNumber: getLuckyNumber({
+        guildId,
+        userId,
+        dateKey
+      })
     };
   }
 }
@@ -446,6 +567,90 @@ function getDailyFortuneIndex({ guildId, userId, dayIndex, fortunes }) {
     dayIndex,
     fortunes
   });
+}
+
+function renderFortuneText(fortune, dateChoice, fortuneIndex) {
+  if (String(fortune.text).includes('{day')) {
+    return normalizeRenderedText(renderFortuneTokens(fortune.text, dateChoice));
+  }
+
+  return renderNarrativeFortune(fortune, dateChoice, fortuneIndex);
+}
+
+function renderNarrativeFortune(fortune, dateChoice, fortuneIndex) {
+  const narrative = FORTUNE_NARRATIVES[fortune.kind] ?? DEFAULT_FORTUNE_NARRATIVE;
+  const seed = `${fortune.kind}:${fortune.text}:${fortuneIndex}`;
+  const opener = renderFortuneTokens(pickNarrativeLine(narrative.openers, `${seed}:opener`), dateChoice);
+  const core = normalizeFortuneBaseText(fortune.text);
+  const closer = renderFortuneTokens(pickNarrativeLine(narrative.closers, `${seed}:closer`), dateChoice);
+
+  return normalizeRenderedText(`${opener} ${core} ${closer}`);
+}
+
+function renderFortuneTokens(text, dateChoice) {
+  const dayWord = dateChoice.dayWord;
+
+  return String(text)
+    .replaceAll('{dayTopic}', `${dayWord}${getTopicParticle(dayWord)}`)
+    .replaceAll('{daySubject}', `${dayWord}${getSubjectParticle(dayWord)}`)
+    .replaceAll('{dayObject}', `${dayWord}${getObjectParticle(dayWord)}`)
+    .replaceAll('{day}', dayWord);
+}
+
+function normalizeFortuneBaseText(text) {
+  const normalized = String(text)
+    .replaceAll('오늘은 쉬세요.', '무리하지 말고 쉬는 편이 좋습니다.')
+    .replaceAll('내일 보면', '시간을 두고 보면')
+    .replaceAll('내일 편합니다', '나중에 편합니다')
+    .replaceAll('내일은', '시간이 지나면')
+    .replaceAll('내일이', '다음 흐름이')
+    .replaceAll('내일을', '다음 흐름을')
+    .replaceAll('내일의', '다음의')
+    .replaceAll('내일로', '나중으로')
+    .replaceAll('내일', '나중')
+    .replaceAll('오늘은', '이 흐름에서는')
+    .replaceAll('오늘이', '이 흐름이')
+    .replaceAll('오늘을', '이 흐름을')
+    .replaceAll('오늘의', '지금의')
+    .replaceAll('오늘도', '이번에도')
+    .replaceAll('오늘', '지금');
+
+  return ensureSentenceEnding(normalizeRenderedText(normalized));
+}
+
+function pickNarrativeLine(lines, seed) {
+  return lines[getStableIndex(seed, lines.length)];
+}
+
+function normalizeRenderedText(text) {
+  return String(text).replace(/\s+/g, ' ').trim();
+}
+
+function ensureSentenceEnding(text) {
+  if (/[.!?。]$/.test(text)) return text;
+  return `${text}.`;
+}
+
+function getLuckyNumber({ guildId, userId, dateKey }) {
+  return getStableIndex(`${guildId}:${userId}:${dateKey}:lucky-number`, 99) + 1;
+}
+
+function getTopicParticle(word) {
+  return hasFinalConsonant(word) ? '은' : '는';
+}
+
+function getSubjectParticle(word) {
+  return hasFinalConsonant(word) ? '이' : '가';
+}
+
+function getObjectParticle(word) {
+  return hasFinalConsonant(word) ? '을' : '를';
+}
+
+function hasFinalConsonant(word) {
+  const lastCharCode = String(word).charCodeAt(String(word).length - 1);
+  if (lastCharCode < 0xac00 || lastCharCode > 0xd7a3) return false;
+  return (lastCharCode - 0xac00) % 28 !== 0;
 }
 
 function getBucketedStableIndex({ guildId, userId, dayIndex, max }) {

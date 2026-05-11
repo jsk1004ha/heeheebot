@@ -1,17 +1,1 @@
-Create a clean HD 2D fantasy RPG advanced-class hero roster sprite sheet, exact 3 rows x 4 columns, twelve separate full-body character sprites, solid #FF00FF background everywhere, no text, no labels, no borders, no UI. Each character centered in its cell, same scale, full body visible, stable feet/bottom anchor, generous magenta padding, no weapon, cape, hair, wings, aura, or spell effect crossing cell edges. Style: polished hand-painted game sprite, readable Discord bot RPG asset, transparent-ready magenta background.
-
-Row-major order, one unique advanced class per cell:
-1 male Berserker: brutal warrior upgrade, massive two-handed axe, red-black battle armor, wild crimson hair, rage aura tightly attached.
-2 female Berserker: fierce warrior upgrade, heavy axe, red-black armor, wild crimson hair, compact rage aura.
-3 male Archmage: elite mage upgrade, ornate blue-violet robe, floating crystal staff kept close, arcane halo tightly attached.
-4 female Archmage: elite mage upgrade, elegant blue-violet robe, crystal staff kept close, compact arcane glow.
-5 male Sniper: ranger upgrade, longbow/crossbow hybrid kept inside silhouette, green-brown cloak, eagle-feather hood, focused marksman pose.
-6 female Sniper: ranger upgrade, precise longbow/crossbow, green-brown cloak, feather hood, elegant focused pose.
-7 male Crusader: paladin upgrade, white-gold heavy armor, holy tower shield and sword kept close, compact sacred glow.
-8 female Crusader: paladin upgrade, white-gold heavy armor, holy shield and sword, compact sacred glow.
-9 male Shadow: rogue upgrade, black-purple assassin coat, twin daggers held close, smoky shadow aura tightly attached.
-10 female Shadow: rogue upgrade, black-purple assassin coat, twin daggers, compact smoky shadow aura.
-11 male Saint: priest upgrade, luminous white-gold robes, holy staff kept close, soft wings/halo motif tightly contained.
-12 female Saint: priest upgrade, luminous white-gold robes, holy staff, soft wings/halo motif tightly contained.
-
-Important: all twelve silhouettes must be visibly different from the base classes and from each other. Do not write any labels or numbers.
+Use $generate2dsprite to create a clean HD 2D RPG female saint advanced class hero, single full-body sprite centered, luminous white-gold robes, holy staff kept close, soft halo motif contained, solid #FF00FF background, no text.

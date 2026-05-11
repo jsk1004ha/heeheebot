@@ -3,11 +3,22 @@
   "label": "악마뼈 도끼 아이콘",
   "category": "item",
   "kind": "sprite",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "prompt": "assets/rpg/items/demonbone-axe/prompt-used.txt",
+  "meta": "assets/rpg/items/demonbone-axe/processed/pipeline-meta.json",
   "sheet": "single",
-  "generatedWith": "codex:procedural-medieval-rpg",
+  "raw": "assets/rpg/items/demonbone-axe/raw/raw-sheet.png",
+  "processedDir": "assets/rpg/items/demonbone-axe/processed",
+  "status": "processed",
+  "processorStdout": "assets/rpg/items/demonbone-axe/processed",
+  "clean": "assets/rpg/items/demonbone-axe/processed/clean.png",
   "outputSize": [
     256,
     256
   ],
-  "prompt": "Use $generate2dsprite to create a clean HD transparent medieval fantasy 악마뼈 도끼 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text."
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  },
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/item_demonbone_axe_icon/raw-sheet.png"
 }

@@ -1,13 +1,24 @@
 {
   "id": "hero_tazza_idle",
-  "label": "타짜 대기 모션",
   "category": "hero",
   "kind": "sprite",
+  "raw": "assets/rpg/heroes/tazza/idle/raw/raw-sheet.png",
+  "status": "processed",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "meta": "assets/rpg/heroes/tazza/idle/processed/pipeline-meta.json",
   "sheet": "2x2",
-  "generatedWith": "codex:procedural-medieval-rpg",
+  "label": "타짜 대기 모션",
+  "prompt": "assets/rpg/heroes/tazza/idle/prompt-used.txt",
+  "processedDir": "assets/rpg/heroes/tazza/idle/processed",
+  "processorStdout": "assets/rpg/heroes/tazza/idle/processed",
+  "transparentSheet": "assets/rpg/heroes/tazza/idle/processed/sheet-transparent.png",
   "outputSize": [
     512,
     512
   ],
-  "prompt": "Use $generate2dsprite to create a clean HD medieval fantasy tazza card-and-dice trickster hero idle animation, 2x2 grid, full-body sprite centered in each cell, deck pouch, bone dice, cloak, solid #FF00FF background, no text."
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  },
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/hero_tazza_idle/raw-sheet.png"
 }
