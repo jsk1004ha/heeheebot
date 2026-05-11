@@ -3,6 +3,7 @@ import { MessageFlags } from 'discord.js';
 export const EPHEMERAL_FLAG = MessageFlags.Ephemeral;
 export const DEFAULT_INTERACTION_DEFER_AFTER_MS = 1_000;
 const GUARD_DEFER_KIND = Symbol('guardDeferKind');
+const GUARD_ORIGINAL_REPLY_FILLED = Symbol('guardOriginalReplyFilled');
 
 export function isUnknownInteractionError(error) {
   return Boolean(
@@ -180,6 +181,12 @@ export function guardInteractionResponse(interaction, {
     canDeferUpdate ? 'update' : 'reply'
   );
 
+  const markOriginalReplyFilled = () => {
+    if (deferKind === 'reply') {
+      interaction[GUARD_ORIGINAL_REPLY_FILLED] = true;
+    }
+  };
+
   const deferInitialResponse = async ({
     auto = false,
     kind = preferredAutoDeferKind()
@@ -203,16 +210,16 @@ export function guardInteractionResponse(interaction, {
       autoDeferred = auto;
       deferredByGuard = true;
       interaction[GUARD_DEFER_KIND] = deferKind;
-      logger.debug?.(
-        auto
-          ? 'Auto-deferred Discord interaction before the response window closed.'
-          : 'Deferred Discord interaction before command handling.',
-        {
-          commandName: interaction.commandName,
-          customId: interaction.customId,
-          deferKind
-        }
-      );
+      if (auto) {
+        logger.debug?.(
+          'Auto-deferred Discord interaction before the response window closed.',
+          {
+            commandName: interaction.commandName,
+            customId: interaction.customId,
+            deferKind
+          }
+        );
+      }
       return true;
     } catch (error) {
       if (isUnknownInteractionError(error)) {
@@ -296,6 +303,7 @@ export function guardInteractionResponse(interaction, {
         }
         if (originalEditReply) {
           const result = await originalEditReply(followOnPayload);
+          markOriginalReplyFilled();
           repliedByGuard = true;
           return result;
         }
@@ -313,6 +321,7 @@ export function guardInteractionResponse(interaction, {
       }
 
       const result = await originalReply(payload);
+      if (!hasDeferred()) interaction[GUARD_ORIGINAL_REPLY_FILLED] = true;
       repliedByGuard = true;
       return result;
     };
@@ -328,6 +337,7 @@ export function guardInteractionResponse(interaction, {
       if (hasDeferred() && !hasReplied()) {
         if (originalEditReply) {
           const result = await originalEditReply(followOnPayload);
+          markOriginalReplyFilled();
           updatedByGuard = true;
           return result;
         }
@@ -344,6 +354,7 @@ export function guardInteractionResponse(interaction, {
       }
 
       const result = await originalUpdate(payload);
+      if (!hasDeferred()) interaction[GUARD_ORIGINAL_REPLY_FILLED] = true;
       updatedByGuard = true;
       return result;
     };
@@ -354,6 +365,7 @@ export function guardInteractionResponse(interaction, {
       clearAutoDeferTimer();
       await waitForAutoDefer();
       const result = await originalEditReply(toFollowOnInteractionPayload(payload));
+      markOriginalReplyFilled();
       repliedByGuard = true;
       return result;
     };
@@ -386,6 +398,7 @@ export function guardInteractionResponse(interaction, {
 
   const deleteOriginalDeferredReply = async () => {
     if (deferKind !== 'reply' || !originalDeleteReply) return;
+    if (interaction[GUARD_ORIGINAL_REPLY_FILLED]) return;
     try {
       await originalDeleteReply();
     } catch (error) {
@@ -531,6 +544,7 @@ function shouldUseFollowUpAfterDeferredResponse(interaction, payload) {
 
 async function deleteDeferredReplyIfPossible(interaction) {
   if (interaction?.[GUARD_DEFER_KIND] !== 'reply') return;
+  if (interaction?.[GUARD_ORIGINAL_REPLY_FILLED]) return;
   if (typeof interaction?.deleteReply !== 'function') return;
 
   try {

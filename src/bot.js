@@ -179,8 +179,13 @@ export function createBot({
 
     if (!isSupportedCommandInteraction(interaction)) return;
 
-    const responseGuard = guardInteractionResponse(interaction, { logger });
+    let responseGuard = { stop() {} };
     try {
+      const checkedAccountSelectionBeforeDefer = interaction.isChatInputCommand?.();
+      const preDeferAccountSelection = await replyWithAccountLinkSelectionIfNeeded(interaction, economy);
+      if (preDeferAccountSelection) return;
+
+      responseGuard = guardInteractionResponse(interaction, { logger });
       if (shouldDeferBeforeCommandHandling(interaction)) {
         const deferred = await responseGuard.deferNow();
         if (!deferred) return;
@@ -189,8 +194,10 @@ export function createBot({
       const handledAccountLinkComponent = await handleAccountLinkComponent(interaction, economy);
       if (handledAccountLinkComponent) return;
 
-      const needsAccountSelection = await replyWithAccountLinkSelectionIfNeeded(interaction, economy);
-      if (needsAccountSelection) return;
+      if (!checkedAccountSelectionBeforeDefer) {
+        const needsAccountSelection = await replyWithAccountLinkSelectionIfNeeded(interaction, economy);
+        if (needsAccountSelection) return;
+      }
 
       const handledCasino = await handleCasinoCommand(interaction, economy, logger);
       if (handledCasino) {
@@ -352,6 +359,9 @@ export function isSupportedCommandInteraction(interaction) {
 
 export function shouldDeferBeforeCommandHandling(interaction) {
   if (interaction?.isChatInputCommand?.() || interaction?.isModalSubmit?.()) {
+    if (interaction?.isChatInputCommand?.() && interaction.commandName === '계정연동') {
+      return false;
+    }
     return true;
   }
 
