@@ -1,4 +1,10 @@
-import { migrateLegacyWalletsToGold, normalizeWallets } from './currencies.js';
+import {
+  CURRENCY_MAIN,
+  creditCurrency,
+  getStockBankruptcySummary,
+  migrateLegacyWalletsToGold,
+  normalizeWallets
+} from './currencies.js';
 import { getOrCreateLinkedAccountProfile } from './accounts.js';
 import * as achievements from './achievements.js';
 
@@ -305,7 +311,7 @@ export class CommunityService {
       }
 
       community.stats.missionsCompleted += claimed.length;
-      if (totalCoins > 0) profile.balance += totalCoins;
+      if (totalCoins > 0) creditCurrency(profile, CURRENCY_MAIN, totalCoins);
       const levelResult = addXp(profile, totalXp);
 
       return {
@@ -912,7 +918,7 @@ function evaluateLotteryEntry(entry, winningNumbers, bonusNumber) {
 
 function payLotteryWinner(data, guildId, entry, tier, amount, payoutLedger, now) {
   const winnerProfile = getOrCreateProfile(data, guildId, entry.userId, entry.username, now);
-  winnerProfile.balance += amount;
+  creditCurrency(winnerProfile, CURRENCY_MAIN, amount);
 
   const summary = payoutLedger.get(entry.userId) ?? {
     userId: winnerProfile.userId,
@@ -1381,6 +1387,7 @@ function cloneCommunityProfile(profile, now = Date.now()) {
     xp: profile.xp,
     totalXp: profile.totalXp,
     balance: profile.balance,
+    bankruptcy: getStockBankruptcySummary(profile),
     dailyStreak: profile.dailyStreak,
     lastDailyDay: profile.lastDailyDay,
     lastFortuneXpDay: profile.lastFortuneXpDay,
@@ -1470,7 +1477,7 @@ function applyCompletedAchievementRewards({ profile, community, statuses, getSta
       claimed.push(status);
     }
 
-    if (batchCoins > 0) profile.balance += batchCoins;
+    if (batchCoins > 0) creditCurrency(profile, CURRENCY_MAIN, batchCoins);
     const batchLevelResult = addXp(profile, batchXp);
 
     totalCoins += batchCoins;
@@ -1586,7 +1593,7 @@ function addXp(profile, xp) {
     profile.level += 1;
     const reward = getLevelReward(profile.level);
     levelReward += reward;
-    profile.balance += reward;
+    creditCurrency(profile, CURRENCY_MAIN, reward);
   }
 
   return {

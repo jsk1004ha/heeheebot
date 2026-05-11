@@ -10,6 +10,7 @@ import {
   handleStockCommand
 } from '../src/commands/stocks.js';
 import { createSqliteStore } from '../src/storage/sqlite-store.js';
+import { CURRENCY_MAIN, creditCurrency } from '../src/systems/currencies.js';
 import {
   StockService,
   getStockCatalog,
@@ -1448,6 +1449,97 @@ test('레버리지 포지션은 가격 변동에 배율 손익을 적용하고 1
     assert.equal(portfolio.liquidated[0].positionId, opened.position.id);
     assert.equal(portfolio.realizedLeveragedProfit, -10_000);
     assert.equal(portfolio.cash, 89_800);
+    assert.equal(portfolio.bankruptcy.debt, 3_500);
+    assert.equal(portfolio.liquidated[0].bankruptcyDebtAdded, 3_500);
+  }, { randomInt: deterministicRandomInt([100, 100]) });
+});
+
+test('파산채무가 남으면 새 레버리지 진입을 막고 이후 골드 수익에서 자동 상환한다', async () => {
+  await withFixture(async ({ stocks, store }) => {
+    await seedBalance(store, 'guild-1', 'user-1', '희희', 100_000);
+    await stocks.openLeveragedPosition({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '희희',
+      stockId: '희진전자',
+      side: 'short',
+      leverage: 100,
+      margin: 10_000,
+      now: 0
+    });
+
+    const liquidated = await stocks.getLeveragePortfolio({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '희희',
+      now: 3 * 60 * 1000
+    });
+
+    assert.equal(liquidated.bankruptcy.debt, 3_500);
+    assert.equal(liquidated.bankruptcy.count, 1);
+
+    await assert.rejects(
+      stocks.openLeveragedPosition({
+        guildId: 'guild-1',
+        userId: 'user-1',
+        username: '희희',
+        stockId: '도훈건설',
+        side: 'long',
+        leverage: 2,
+        margin: 1_000,
+        now: 3 * 60 * 1000
+      }),
+      /파산채무|상환/
+    );
+
+    await store.update((data) => {
+      const profile = data.accounts?.users?.['user-1'] ?? data.guilds['guild-1'].users['user-1'];
+      const before = profile.balance;
+      const after = creditCurrency(profile, CURRENCY_MAIN, 1_000);
+      assert.equal(after, before + 750);
+    });
+
+    const repaid = await stocks.getPortfolio({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '희희',
+      now: 3 * 60 * 1000
+    });
+
+    assert.equal(repaid.bankruptcy.debt, 3_250);
+    assert.equal(repaid.bankruptcy.paid, 250);
+    assert.equal(repaid.cash, 90_550);
+  }, { randomInt: deterministicRandomInt([100, 100]) });
+});
+
+test('레버리지 명령 화면은 파산채무와 진입 제한을 안내한다', async () => {
+  await withFixture(async ({ stocks, store }) => {
+    await seedBalance(store, 'guild-1', 'user-1', '희희', 100_000);
+    await stocks.openLeveragedPosition({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '희희',
+      stockId: '희진전자',
+      side: 'short',
+      leverage: 100,
+      margin: 10_000,
+      now: 0
+    });
+
+    const portfolioInteraction = createStockInteraction('레버리지보유');
+    await handleStockCommand(portfolioInteraction, stocks);
+
+    assert.match(portfolioInteraction.replies[0], /파산채무: \*\*3,500골드\*\*/);
+    assert.match(portfolioInteraction.replies[0], /새 레버리지 진입 불가/);
+
+    const openInteraction = createStockInteraction('레버리지진입', {
+      strings: { 종목: '도훈건설', 방향: '롱' },
+      integers: { 배율: 2, 증거금: 1_000 }
+    });
+    await handleStockCommand(openInteraction, stocks);
+
+    assert.match(openInteraction.replies[0], /파산채무 3,500골드/);
+    assert.match(openInteraction.replies[0], /자동 상환/);
   }, { randomInt: deterministicRandomInt([100, 100]) });
 });
 

@@ -457,6 +457,50 @@ test('출석 보상은 100 XP와 랜덤 100~1000 골드를 하루 한 번만 지
   }
 });
 
+test('출석 골드 보상은 남은 파산채무를 자동 상환한다', async () => {
+  const fixture = await createFixture({
+    dailyCoinReward: 1_000,
+    dailyXpReward: 0,
+    levelBaseXp: 10_000
+  });
+
+  try {
+    await fixture.store.update((data) => {
+      data.guilds['guild-1'] = {
+        users: {
+          'user-1': {
+            userId: 'user-1',
+            username: '테스터',
+            level: 1,
+            xp: 0,
+            totalXp: 0,
+            balance: 0,
+            stockBankruptcy: { debt: 1_000, paid: 0, count: 1, lastAt: 1 }
+          }
+        }
+      };
+    });
+
+    const result = await fixture.economy.claimDaily({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '테스터',
+      now: 1_000
+    });
+
+    assert.equal(result.coinReward, 1_000);
+    assert.equal(result.profile.balance, 750);
+
+    await fixture.store.update((data) => {
+      const profile = data.accounts?.users?.['user-1'] ?? data.guilds['guild-1'].users['user-1'];
+      assert.equal(profile.stockBankruptcy.debt, 750);
+      assert.equal(profile.stockBankruptcy.paid, 250);
+    });
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 test('연속 출석 3일과 5일에는 추가 경험치를 지급한다', async () => {
   const fixture = await createFixture({
     dailyStreakXpBonuses: {

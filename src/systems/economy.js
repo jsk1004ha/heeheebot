@@ -91,6 +91,7 @@ import {
   resolveSwordEnhancement
 } from './sword.js';
 import {
+  CURRENCY_MAIN,
   CURRENCY_CASINO,
   CURRENCY_RPG,
   CURRENCY_SWORD,
@@ -100,6 +101,7 @@ import {
   exchangeCurrency,
   getCurrencyBalance,
   getCurrencyBalances,
+  getStockBankruptcySummary,
   migrateLegacyWalletsToGold,
   normalizeWallets
 } from './currencies.js';
@@ -383,7 +385,7 @@ export class EconomyService {
       const xpGained = this.options.dailyXpReward + streakBonusXp;
       const coinReward = getDailyCoinReward(this);
 
-      profile.balance += coinReward;
+      creditCurrency(profile, CURRENCY_MAIN, coinReward);
       profile.lastDailyAt = now;
       profile.lastDailyDay = today;
       profile.dailyStreak = streak;
@@ -435,7 +437,7 @@ export class EconomyService {
           : 0;
 
         if (moneyGained > 0) {
-          profile.balance += moneyGained;
+          creditCurrency(profile, CURRENCY_MAIN, moneyGained);
         }
 
         return {
@@ -476,7 +478,7 @@ export class EconomyService {
         const levelResult = addXp(profile, xpGained, this);
 
         if (moneyGained > 0) {
-          profile.balance += moneyGained;
+          creditCurrency(profile, CURRENCY_MAIN, moneyGained);
         }
 
         return {
@@ -547,7 +549,7 @@ export class EconomyService {
 
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
-      profile.balance += moneyGained;
+      creditCurrency(profile, CURRENCY_MAIN, moneyGained);
       const levelResult = addXp(profile, xpGained, this);
 
       return {
@@ -566,7 +568,7 @@ export class EconomyService {
 
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
-      profile.balance += moneyGained;
+      creditCurrency(profile, CURRENCY_MAIN, moneyGained);
       const levelResult = addXp(profile, xpGained, this);
 
       return {
@@ -2897,7 +2899,7 @@ export class EconomyService {
       }
 
       from.balance -= normalizedAmount;
-      to.balance += normalizedAmount;
+      creditCurrency(to, CURRENCY_MAIN, normalizedAmount);
 
       return {
         amount: normalizedAmount,
@@ -3316,6 +3318,7 @@ function cloneProfile(profile) {
     xp: profile.xp,
     totalXp: profile.totalXp,
     balance: profile.balance,
+    bankruptcy: getStockBankruptcySummary(profile),
     wallets: cloneWallets(profile.wallets),
     currencyBalances: getCurrencyBalances(profile),
     currencyMigration: structuredClone(profile.currencyMigration ?? null),
@@ -3434,7 +3437,7 @@ function addXp(profile, xp, economy, options = {}) {
       levelRewardCapped = levelRewardCapped || grantedReward < reward;
     } else {
       levelReward += reward;
-      profile.balance += reward;
+      creditCurrency(profile, CURRENCY_MAIN, reward);
     }
   }
 

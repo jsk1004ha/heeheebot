@@ -1158,8 +1158,9 @@ function formatSellResult(user, result) {
     `💸 **가상주식 매도 완료** — ${formatUserMention(user, user.username)}`,
     `종목: **${result.stock.name}** × ${result.quantity.toLocaleString()}주`,
     `단가: ${result.price.toLocaleString()}골드 / 매도금액: ${result.subtotal.toLocaleString()}골드 / 수수료: ${result.fee.toLocaleString()}골드`,
+    formatRepaymentLine(result),
     `실현손익: **${formatSignedMoney(result.realizedProfit)}** / 골드: **${result.profile.balance.toLocaleString()}골드** / 남은 보유: ${result.holding.quantity.toLocaleString()}주`
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
 
 function formatLimitOrderPlaced(user, result) {
@@ -1315,13 +1316,14 @@ function formatPortfolio(user, portfolio) {
   return [
     `💼 **${user.username}님의 가상주식 보유 현황**`,
     `골드: **${portfolio.cash.toLocaleString()}골드**`,
+    formatBankruptcyLine(portfolio.bankruptcy),
     `주식 평가액: **${portfolio.stockValue.toLocaleString()}골드**`,
     `레버리지 평가금: **${portfolio.leveragedEquity.toLocaleString()}골드** / 부채 노출: **${(portfolio.leveragedDebt ?? 0).toLocaleString()}골드**`,
     `총자산: **${portfolio.totalAssets.toLocaleString()}골드**`,
     `평가손익: **${formatSignedMoney(portfolio.unrealizedProfit)}** / 레버리지 손익: **${formatSignedMoney(portfolio.leveragedUnrealizedProfit)}**`,
     `실현손익: **${formatSignedMoney(portfolio.realizedProfit)}** / 레버리지 실현손익: **${formatSignedMoney(portfolio.realizedLeveragedProfit)}**`,
     positions
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
 
 function formatLeaderboard(rows) {
@@ -1379,8 +1381,11 @@ function formatCloseLeverageResult(user, result) {
       `💥 **레버리지 자동 청산** — ${formatUserMention(user, user.username)}`,
       `종목: **${position.stock.name}** / ${formatLeverageSide(position.side)} ${position.leverage}배`,
       `손익: **${formatSignedMoney(result.realizedProfit)}** / 지급액: 0골드`,
+      result.bankruptcyDebtAdded > 0
+        ? `파산채무 추가: **${result.bankruptcyDebtAdded.toLocaleString()}골드** / 남은 채무: **${result.bankruptcy.debt.toLocaleString()}골드**`
+        : null,
       `골드: **${result.profile.balance.toLocaleString()}골드**`
-    ].join('\n');
+    ].filter(Boolean).join('\n');
   }
 
   return [
@@ -1388,8 +1393,9 @@ function formatCloseLeverageResult(user, result) {
     `종목: **${position.stock.name}** / ${formatLeverageSide(position.side)} ${position.leverage}배`,
     `진입가: ${position.entryPrice.toLocaleString()}골드 → 청산가: ${position.currentPrice.toLocaleString()}골드`,
     `손익: **${formatSignedMoney(result.realizedProfit)}** / 지급액: **${result.payout.toLocaleString()}골드**`,
+    formatRepaymentLine(result),
     `골드: **${result.profile.balance.toLocaleString()}골드**`
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
 
 function formatCloseLeverageWithPortfolio(user, result, portfolio) {
@@ -1427,10 +1433,23 @@ function formatLeveragePortfolio(user, portfolio) {
   return [
     `⚡ **${user.username}님의 레버리지 보유 현황**`,
     `골드: **${portfolio.cash.toLocaleString()}골드**`,
+    formatBankruptcyLine(portfolio.bankruptcy),
     `증거금 합계: **${portfolio.marginTotal.toLocaleString()}골드** / 부채 노출: **${portfolio.debtTotal.toLocaleString()}골드** / 명목가: **${portfolio.notionalTotal.toLocaleString()}골드** / 평가금: **${portfolio.equityTotal.toLocaleString()}골드**`,
     `미실현손익: **${formatSignedMoney(portfolio.unrealizedProfit)}** / 누적실현손익: **${formatSignedMoney(portfolio.realizedLeveragedProfit)}**`,
     positions + liquidatedText
-  ].join('\n');
+  ].filter(Boolean).join('\n');
+}
+
+function formatBankruptcyLine(bankruptcy) {
+  if (!bankruptcy || bankruptcy.debt <= 0) return null;
+  return `파산채무: **${bankruptcy.debt.toLocaleString()}골드** / 골드 수익 25% 자동 상환 / 새 레버리지 진입 불가`;
+}
+
+function formatRepaymentLine(result) {
+  if (!result?.repayment || result.repayment <= 0) return null;
+  const debt = result.bankruptcy?.debt ?? result.profile?.bankruptcy?.debt ?? 0;
+  const net = result.netPayout ?? result.netProceeds ?? 0;
+  return `파산채무 자동 상환: **${result.repayment.toLocaleString()}골드** / 실수령: **${net.toLocaleString()}골드** / 남은 채무: **${debt.toLocaleString()}골드**`;
 }
 
 function formatMarketLine(stock) {
