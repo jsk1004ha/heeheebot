@@ -10,7 +10,8 @@ export const DEADLINE_ROLL_MAX = 10_000;
 const DEADLINE_BASE_BUST_CHANCE_BPS = 1_000;
 const DEADLINE_BUST_CHANCE_STEP_BPS = 750;
 const DEADLINE_MAX_BUST_CHANCE_BPS = 8_500;
-const DEADLINE_REWARD_STEP_BPS = 5_000;
+const DEADLINE_BASE_REWARD_BPS = 1_000;
+const DEADLINE_REWARD_STEP_BPS = 1_000;
 export const TIMING_TARGET_MIN_SECONDS = 5;
 export const TIMING_TARGET_MAX_SECONDS = 20;
 export const TIMING_PAYOUT_TIERS = Object.freeze([
@@ -538,7 +539,7 @@ export function getDeadlineBustChanceBps(presses) {
 export function getDeadlineNextReward(bet, presses) {
   const normalizedBet = normalizeDeadlineBet(bet);
   const normalizedPresses = normalizeNonNegativeSafeInteger(presses, '누른 횟수');
-  const rewardBps = 10_000 + normalizedPresses * DEADLINE_REWARD_STEP_BPS;
+  const rewardBps = DEADLINE_BASE_REWARD_BPS + normalizedPresses * DEADLINE_REWARD_STEP_BPS;
 
   return Math.max(1, Math.floor(normalizedBet * rewardBps / 10_000));
 }

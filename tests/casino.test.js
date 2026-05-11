@@ -215,19 +215,19 @@ test('데드라인은 안전 누름마다 골드 보상과 꽝 확률이 커지�
   });
 
   assert.equal(round.reward, 0);
-  assert.equal(round.nextReward, 100);
-  assert.equal(getDeadlineNextReward(100, 1), 150);
+  assert.equal(round.nextReward, 10);
+  assert.equal(getDeadlineNextReward(100, 1), 20);
   assert.equal(getDeadlineBustChanceBps(0), 1000);
   assert.equal(getDeadlineBustChanceBps(1), 1750);
   assert.equal(firstSafe.status, 'pressing');
-  assert.equal(firstSafe.reward, 100);
-  assert.equal(firstSafe.nextReward, 150);
+  assert.equal(firstSafe.reward, 10);
+  assert.equal(firstSafe.nextReward, 20);
   assert.equal(firstSafe.bustChanceBps, 1750);
-  assert.equal(secondSafe.reward, 250);
+  assert.equal(secondSafe.reward, 30);
   assert.equal(cashedOut.status, 'cashed_out');
-  assert.equal(cashedOut.payout, 350);
+  assert.equal(cashedOut.payout, 130);
   assert.equal(busted.status, 'busted');
-  assert.equal(busted.lostReward, 250);
+  assert.equal(busted.lostReward, 30);
   assert.equal(busted.payout, 0);
 });
 
@@ -275,16 +275,16 @@ test('데드라인 명령은 골드를 예약하고 버튼 안전 누름 후 수
     randomInt: () => 1001
   }), true);
   assert.equal(calls.length, 1);
-  assert.match(press.updated.content, /방금 안전했습니다: \*\*\+100골드\*\*/);
+  assert.match(press.updated.content, /방금 안전했습니다: \*\*\+10골드\*\*/);
   assert.equal(press.updated.components[0].components[1].data.disabled, false);
 
   const cashOutButtonId = press.updated.components[0].components[1].data.custom_id;
   const cashOut = createCasinoButtonInteraction({ customId: cashOutButtonId });
   assert.equal(await handleCasinoCommand(cashOut, fakeEconomy, quietLogger), true);
   assert.deepEqual(calls.map(([type]) => type), ['reserve', 'resolve']);
-  assert.equal(calls[1][1].payout, 200);
+  assert.equal(calls[1][1].payout, 110);
   assert.match(cashOut.updated.content, /데드라인 수령/);
-  assert.match(cashOut.updated.content, /지급: 200골드/);
+  assert.match(cashOut.updated.content, /지급: 110골드/);
 });
 
 test('데드라인 버튼은 시작한 유저만 누를 수 있고 꽝이면 예약 베팅만 잃는다', async () => {
