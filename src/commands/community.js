@@ -12,6 +12,7 @@ import {
 import { formatDuration } from './economy.js';
 import {
   logUnexpectedInteractionError,
+  safeAutocompleteRespond,
   safeReplyToInteraction
 } from './interactions.js';
 
@@ -46,6 +47,8 @@ const TITLE_VIEW_LABELS = Object.freeze({
   locked: '미보유'
 });
 
+const TITLE_AUTOCOMPLETE_LIMIT = 25;
+
 export const communityCommands = [
   new SlashCommandBuilder()
     .setName('업적')
@@ -77,11 +80,8 @@ export const communityCommands = [
     .addStringOption((option) =>
       option
         .setName('선택')
-        .setDescription('장착할 칭호')
-        .addChoices(
-          { name: '칭호 해제', value: 'none' },
-          ...getCommunityTitles().map((title) => ({ name: title.label, value: title.id }))
-        )
+        .setDescription('장착할 보유 칭호를 검색')
+        .setAutocomplete(true)
     )
     .addStringOption((option) =>
       option
@@ -219,6 +219,46 @@ export const communityCommands = [
 
 export function getCommunityCommandPayloads() {
   return communityCommands.map((command) => command.toJSON());
+}
+
+export async function handleCommunityAutocomplete(interaction, community) {
+  if (!interaction.isAutocomplete?.() || interaction.commandName !== '칭호') {
+    return false;
+  }
+
+  if (!interaction.guildId || interaction.inGuild?.() === false) {
+    await safeAutocompleteRespond(interaction, []);
+    return true;
+  }
+
+  const focused = interaction.options.getFocused(true);
+  if (focused.name !== '선택') {
+    await safeAutocompleteRespond(interaction, []);
+    return true;
+  }
+
+  const overview = await community.getOverview({
+    guildId: interaction.guildId,
+    userId: interaction.user.id,
+    username: interaction.user.username
+  });
+  const query = normalizeSearchText(focused.value);
+  const ownedTitles = overview.titles.filter((title) => title.owned);
+  const matchedTitles = ownedTitles
+    .filter((title) => query.length <= 0 || normalizeTitleSearchText(title).includes(query))
+    .sort((a, b) => Number(b.equipped) - Number(a.equipped)
+      || a.categoryLabel.localeCompare(b.categoryLabel)
+      || a.label.localeCompare(b.label));
+  const choices = [
+    { name: '칭호 해제', value: 'none' },
+    ...matchedTitles.map((title) => ({
+      name: formatTitleAutocompleteName(title),
+      value: title.id
+    }))
+  ].slice(0, TITLE_AUTOCOMPLETE_LIMIT);
+
+  await safeAutocompleteRespond(interaction, choices);
+  return true;
 }
 
 export async function handleCommunityCommand(interaction, community, logger = console) {
@@ -482,6 +522,11 @@ function sortAchievementDisplay(achievements) {
 }
 
 function formatAchievementLine(achievement) {
+  if (achievement.hidden && !achievement.revealed) {
+    const tier = ACHIEVEMENT_TIER_LABELS[achievement.tier] ?? achievement.tier;
+    return `🔒 [${achievement.categoryLabel}/${tier}] **???** ${achievement.progressBar} ??? — 조건이 숨겨진 업적입니다.`;
+  }
+
   const mark = achievement.claimed ? '✅' : achievement.completed ? '🎁' : '⬜';
   const tier = ACHIEVEMENT_TIER_LABELS[achievement.tier] ?? achievement.tier;
   const titleReward = achievement.reward.title ? `, 칭호 ${achievement.reward.title.label}` : '';
@@ -507,7 +552,7 @@ function formatTitles(titles, { view = 'owned' } = {}) {
     `보유 ${owned.length}/${titles.length} · 장착 ${equipped ? equipped.label : '없음'} · 보기 ${TITLE_VIEW_LABELS[safeView]}`,
     body,
     moreText,
-    '장착은 `/칭호 선택`, 획득은 `/업적` 또는 `/상점 구매`에서 할 수 있습니다.'
+    '장착은 `/칭호 선택` 입력창에서 보유 칭호를 검색하고, 획득은 `/업적` 또는 `/상점 구매`에서 할 수 있습니다.'
   ].filter(Boolean).join('\n');
 }
 
@@ -518,10 +563,44 @@ function filterTitlesForView(titles, view) {
 }
 
 function formatTitleLine(title) {
+  if (title.hidden && !title.owned) {
+    return `🔒 ${title.rarityIcon}${title.rarityLabel} [${title.categoryLabel}] **???** — 숨겨진 칭호입니다.`;
+  }
+
   const mark = title.equipped ? '✅' : title.owned ? '▫️' : '🔒';
   const lockedHint = title.owned ? '' : ` · 획득: ${title.source}`;
 
   return `${mark} ${title.rarityIcon}${title.rarityLabel} [${title.categoryLabel}] **${title.label}** — ${title.description}${lockedHint}`;
+}
+
+function normalizeSearchText(value) {
+  return String(value ?? '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/\s+/g, '');
+}
+
+function normalizeTitleSearchText(title) {
+  return normalizeSearchText([
+    title.label,
+    stripLeadingEmoji(title.label),
+    title.rarityLabel,
+    title.categoryLabel,
+    title.source,
+    title.description
+  ].join(' '));
+}
+
+function formatTitleAutocompleteName(title) {
+  const mark = title.equipped ? '✅ ' : '▫️ ';
+  const name = stripLeadingEmoji(title.label);
+  return `${mark}${title.rarityIcon}${title.rarityLabel} ${name} · ${title.categoryLabel}`.slice(0, 100);
+}
+
+function stripLeadingEmoji(value) {
+  return String(value ?? '')
+    .replace(/^[^\p{L}\p{N}]+/u, '')
+    .trim();
 }
 
 function formatTitleEquip(result) {

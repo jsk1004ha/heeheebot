@@ -5,8 +5,10 @@ import { join } from 'node:path';
 import test from 'node:test';
 import {
   getCommunityCommandPayloads,
+  handleCommunityAutocomplete,
   handleCommunityCommand
 } from '../src/commands/community.js';
+import * as achievementSystem from '../src/systems/achievements.js';
 import { createSqliteStore } from '../src/storage/sqlite-store.js';
 import {
   CommunityService,
@@ -39,13 +41,55 @@ test('커뮤니티 명령 payload는 업적, 칭호, 미션, 복권, 상점, 서
   assert.ok(commands.find((command) => command.name === '업적').options.some((option) => option.name === '분류'));
   assert.ok(commands.find((command) => command.name === '업적').options.some((option) => option.name === '보기'));
   assert.ok(commands.find((command) => command.name === '칭호').options.some((option) => option.name === '보기'));
-  assert.ok(commands.find((command) => command.name === '칭호').options.find((option) => option.name === '선택').choices.length <= 25);
+  assert.equal(commands.find((command) => command.name === '칭호').options.find((option) => option.name === '선택').autocomplete, true);
+  assert.equal(commands.find((command) => command.name === '칭호').options.find((option) => option.name === '선택').choices, undefined);
   assert.ok(getAchievementCategories().some((category) => category.id === 'games' && category.label === '게임'));
   assert.ok(getAchievementCategories().some((category) => category.id === 'rpg' && category.label === 'RPG'));
   assert.ok(getAchievementCategories().some((category) => category.id === 'fishing' && category.label === '낚시'));
   assert.ok(getAchievementCategories().some((category) => category.id === 'sword' && category.label === '검강화'));
   assert.ok(getCommunityTitles().some((title) => title.id === 'tycoon' && title.rarityLabel === '전설'));
   assert.ok(getCommunityTitles().some((title) => title.id === 'pet_guardian' && title.category === 'tamagotchi'));
+});
+
+test('칭호 선택 autocomplete는 보유 칭호만 이름으로 보여주고 내부 id를 노출하지 않는다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await seedProfile(fixture.store, {
+      community: {
+        ownedTitles: ['vip', 'angler', 'blade_master'],
+        equippedTitle: 'angler'
+      }
+    });
+
+    const interaction = createAutocompleteInteraction('칭호', '선택', '강');
+
+    const handled = await handleCommunityAutocomplete(interaction, fixture.community);
+
+    assert.equal(handled, true);
+    assert.ok(interaction.choices.length <= 25);
+    assert.ok(interaction.choices.some((choice) => choice.name.includes('강태공') && choice.value === 'angler'));
+    assert.equal(interaction.choices.some((choice) => /angler|blade_master|vip/.test(choice.name)), false);
+    assert.equal(interaction.choices.some((choice) => choice.value === 'tycoon'), false);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('업적 보상 총량은 화폐 통합 경제를 흔들지 않게 카테고리별로 제한된다', () => {
+  assert.equal(typeof achievementSystem.getAchievementRewardSummary, 'function');
+
+  const summary = achievementSystem.getAchievementRewardSummary();
+
+  assert.ok(summary.count >= 40);
+  assert.ok(summary.totalCoins <= 60_000);
+  assert.ok(summary.maxCoins <= 6_000);
+  assert.equal(summary.hiddenCoins, 0);
+  assert.ok(summary.byCategory.rpg.coins <= 2_000);
+  assert.ok(summary.byCategory.fishing.coins <= 2_000);
+  assert.ok(summary.byCategory.sword.coins <= 2_000);
+  assert.ok(summary.byCategory.stocks.coins <= 1_000);
+  assert.ok(summary.byCategory.tamagotchi.coins <= 1_500);
 });
 
 test('업적은 기존 프로필과 커뮤니티 통계를 기준으로 보상과 칭호를 수령한다', async () => {
@@ -138,6 +182,96 @@ test('전역 업적은 RPG, 낚시, 검강화, 주식, 다마고치 기록을 �
     });
     assert.equal(overview.achievements.find((achievement) => achievement.id === 'fishing_collection_20').percent, 100);
     assert.equal(overview.achievements.find((achievement) => achievement.id === 'stock_profit_10000').category, 'stocks');
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('히든 업적과 히든 칭호는 조건 달성 전에는 숨기고 달성 후에는 수령된다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await seedProfile(fixture.store, {
+      sword: {
+        destructions: 2
+      }
+    });
+    await seedHiddenActivityProfiles(fixture.store, {
+      hiddenFish: false,
+      revivals: 0
+    });
+
+    const locked = await fixture.community.getOverview({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '히든러'
+    });
+    const lockedSword = locked.achievements.find((achievement) => achievement.id === 'hidden_sword_destroy_3');
+    const lockedTitle = locked.titles.find((title) => title.id === 'blacksmith_nightmare');
+
+    assert.equal(lockedSword.hidden, true);
+    assert.equal(lockedSword.revealed, false);
+    assert.equal(lockedSword.title, '???');
+    assert.equal(lockedSword.progress, '???');
+    assert.equal(lockedSword.percent, 0);
+    assert.equal(lockedTitle.hidden, true);
+    assert.equal(lockedTitle.owned, false);
+
+    await updateLinkedProfile(fixture.store, {
+      sword: {
+        destructions: 3
+      }
+    });
+    await seedHiddenActivityProfiles(fixture.store, {
+      hiddenFish: true,
+      revivals: 1
+    });
+
+    const claimed = await fixture.community.claimAchievements({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '히든러'
+    });
+    const claimedIds = claimed.claimed.map((achievement) => achievement.id);
+
+    assert.ok(claimedIds.includes('hidden_sword_destroy_3'));
+    assert.ok(claimedIds.includes('hidden_fishing_shadow'));
+    assert.ok(claimedIds.includes('hidden_tamagotchi_revival'));
+    assert.equal(claimed.claimed.find((achievement) => achievement.id === 'hidden_sword_destroy_3').revealed, true);
+    assert.ok(claimed.titles.find((title) => title.id === 'blacksmith_nightmare').owned);
+    assert.ok(claimed.titles.find((title) => title.id === 'abyss_angler').owned);
+    assert.ok(claimed.titles.find((title) => title.id === 'reborn_guardian').owned);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('새로 달성 가능한 업적 조회는 보상 수령 없이 알림 대상만 반환한다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await seedProfile(fixture.store, {
+      community: {
+        stats: {
+          commandsUsed: 50
+        }
+      }
+    });
+
+    const notice = await fixture.community.getClaimableAchievements({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '알림러'
+    });
+    const overview = await fixture.community.getOverview({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '알림러'
+    });
+
+    assert.equal(notice.total, 1);
+    assert.equal(notice.achievements[0].id, 'commands_50');
+    assert.equal(overview.achievements.find((achievement) => achievement.id === 'commands_50').claimed, false);
   } finally {
     await fixture.cleanup();
   }
@@ -576,6 +710,14 @@ async function seedProfile(store, profile = {}) {
   });
 }
 
+async function updateLinkedProfile(store, patch = {}) {
+  await store.update((data) => {
+    const profile = data.accounts?.users?.['user-1'];
+    if (!profile) throw new Error('linked profile missing');
+    Object.assign(profile, patch);
+  });
+}
+
 async function seedGlobalActivityProfiles(store) {
   await store.update((data) => {
     const guild = data.guilds['guild-1'];
@@ -605,6 +747,26 @@ async function seedGlobalActivityProfiles(store) {
           codex: { dailyCompletions: 7 },
           room: { unlockedItemIds: ['basic_mat', 'lamp', 'poster'] },
           growth: { adultBranchId: 'balanced' }
+        }
+      }
+    };
+  });
+}
+
+async function seedHiddenActivityProfiles(store, { hiddenFish = false, revivals = 0 } = {}) {
+  await store.update((data) => {
+    const guild = data.guilds['guild-1'];
+    guild.fishing = {
+      users: {
+        'user-1': {
+          collection: hiddenFish ? { hidden_fish_shadow: 1 } : {}
+        }
+      }
+    };
+    guild.tamagotchi = {
+      users: {
+        'user-1': {
+          counters: { revivals }
         }
       }
     };
@@ -651,6 +813,32 @@ function createInteraction(commandName, options = {}) {
     inGuild: () => true,
     async reply(payload) {
       this.replied = typeof payload === 'string' ? { content: payload } : payload;
+    }
+  };
+}
+
+function createAutocompleteInteraction(commandName, focusedName, focusedValue) {
+  return {
+    commandName,
+    guildId: 'guild-1',
+    user: {
+      id: 'user-1',
+      username: '테스터'
+    },
+    choices: [],
+    isAutocomplete() {
+      return true;
+    },
+    inGuild() {
+      return true;
+    },
+    options: {
+      getFocused(withName) {
+        return withName ? { name: focusedName, value: focusedValue } : focusedValue;
+      }
+    },
+    async respond(choices) {
+      this.choices = choices;
     }
   };
 }

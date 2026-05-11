@@ -49,7 +49,10 @@ export const COMMUNITY_TITLES = Object.freeze([
   title('angler', '🎣 강태공', '낚시 업적으로 획득', { rarity: 'rare', category: 'fishing', source: '낚시 업적' }),
   title('blade_master', '⚔️ 검의 주인', '검강화 업적으로 획득', { rarity: 'epic', category: 'sword', source: '검강화 업적' }),
   title('market_maker', '📈 시장 감시자', '주식 거래 업적으로 획득', { rarity: 'rare', category: 'stocks', source: '주식 업적' }),
-  title('pet_guardian', '🐣 희진 수호자', '다마고치 돌봄 업적으로 획득', { rarity: 'rare', category: 'tamagotchi', source: '다마고치 업적' })
+  title('pet_guardian', '🐣 희진 수호자', '다마고치 돌봄 업적으로 획득', { rarity: 'rare', category: 'tamagotchi', source: '다마고치 업적' }),
+  title('blacksmith_nightmare', '💥 대장장이의 악몽', '숨겨진 검강화 업적으로 획득', { rarity: 'legendary', category: 'sword', source: '히든 업적', hidden: true }),
+  title('abyss_angler', '🌫️ 심연의 낚시꾼', '숨겨진 낚시 업적으로 획득', { rarity: 'legendary', category: 'fishing', source: '히든 업적', hidden: true }),
+  title('reborn_guardian', '🕯️ 다시 만난 보호자', '숨겨진 다마고치 업적으로 획득', { rarity: 'epic', category: 'tamagotchi', source: '히든 업적', hidden: true })
 ]);
 
 const TITLE_BY_ID = new Map(COMMUNITY_TITLES.map((item) => [item.id, item]));
@@ -81,29 +84,32 @@ const ACHIEVEMENTS = Object.freeze([
   achievement('shop_purchase_5', '꾸미기 컬렉터', '상점 아이템 5개 구매', ({ community }) => community.stats.shopPurchases >= 5, ({ community }) => `${Math.min(community.stats.shopPurchases, 5)} / 5개`, { coins: 2_000, xp: 220 }, { category: 'collection', tier: 'silver', target: 5, current: ({ community }) => community.stats.shopPurchases }),
 
   achievement('rpg_started', '모험의 첫 장', 'RPG 캐릭터 생성', ({ sources }) => getRpg(sources).startedAt > 0, ({ sources }) => getRpg(sources).startedAt > 0 ? '시작 완료' : '미시작', { coins: 0, xp: 40, titleId: 'rpg_adventurer' }, { category: 'rpg', tier: 'bronze', target: 1, current: ({ sources }) => getRpg(sources).startedAt > 0 ? 1 : 0 }),
-  achievement('rpg_level_10', '전투 루프 적응', 'RPG 레벨 10 달성', ({ sources }) => getRpg(sources).level >= 10, ({ sources }) => `Lv.${Math.min(getRpg(sources).level, 10)} / Lv.10`, { coins: 1_500, xp: 120 }, { category: 'rpg', tier: 'silver', target: 10, current: ({ sources }) => getRpg(sources).level }),
-  achievement('rpg_boss_1', '첫 보스 토벌', 'RPG 보스 1회 처치', ({ sources }) => sumCounts(getRpg(sources).bossKills) >= 1, ({ sources }) => `${Math.min(sumCounts(getRpg(sources).bossKills), 1)} / 1회`, { coins: 800, xp: 90 }, { category: 'rpg', tier: 'bronze', target: 1, current: ({ sources }) => sumCounts(getRpg(sources).bossKills) }),
-  achievement('rpg_dungeon_5', '돌파하는 모험가', 'RPG 던전 5회 클리어', ({ sources }) => sumCounts(getRpg(sources).dungeonClears) >= 5, ({ sources }) => `${Math.min(sumCounts(getRpg(sources).dungeonClears), 5)} / 5회`, { coins: 2_000, xp: 180, titleId: 'dungeon_breaker' }, { category: 'rpg', tier: 'gold', target: 5, current: ({ sources }) => sumCounts(getRpg(sources).dungeonClears) }),
-  achievement('rpg_craft_5', '제작대 앞 단골', 'RPG 장비/아이템 제작 5회', ({ sources }) => getRpg(sources).craftedItems >= 5, ({ sources }) => `${Math.min(getRpg(sources).craftedItems, 5)} / 5회`, { coins: 1_000, xp: 120 }, { category: 'rpg', tier: 'silver', target: 5, current: ({ sources }) => getRpg(sources).craftedItems }),
+  achievement('rpg_level_10', '전투 루프 적응', 'RPG 레벨 10 달성', ({ sources }) => getRpg(sources).level >= 10, ({ sources }) => `Lv.${Math.min(getRpg(sources).level, 10)} / Lv.10`, { coins: 500, xp: 160 }, { category: 'rpg', tier: 'silver', target: 10, current: ({ sources }) => getRpg(sources).level }),
+  achievement('rpg_boss_1', '첫 보스 토벌', 'RPG 보스 1회 처치', ({ sources }) => sumCounts(getRpg(sources).bossKills) >= 1, ({ sources }) => `${Math.min(sumCounts(getRpg(sources).bossKills), 1)} / 1회`, { coins: 300, xp: 120 }, { category: 'rpg', tier: 'bronze', target: 1, current: ({ sources }) => sumCounts(getRpg(sources).bossKills) }),
+  achievement('rpg_dungeon_5', '돌파하는 모험가', 'RPG 던전 5회 클리어', ({ sources }) => sumCounts(getRpg(sources).dungeonClears) >= 5, ({ sources }) => `${Math.min(sumCounts(getRpg(sources).dungeonClears), 5)} / 5회`, { coins: 600, xp: 240, titleId: 'dungeon_breaker' }, { category: 'rpg', tier: 'gold', target: 5, current: ({ sources }) => sumCounts(getRpg(sources).dungeonClears) }),
+  achievement('rpg_craft_5', '제작대 앞 단골', 'RPG 장비/아이템 제작 5회', ({ sources }) => getRpg(sources).craftedItems >= 5, ({ sources }) => `${Math.min(getRpg(sources).craftedItems, 5)} / 5회`, { coins: 300, xp: 160 }, { category: 'rpg', tier: 'silver', target: 5, current: ({ sources }) => getRpg(sources).craftedItems }),
 
-  achievement('fishing_catch_10', '물비린내 입문', '낚시 10회 성공', ({ sources }) => getFishing(sources).stats.totalCatches >= 10, ({ sources }) => `${Math.min(getFishing(sources).stats.totalCatches, 10)} / 10마리`, { coins: 700, xp: 80, titleId: 'angler' }, { category: 'fishing', tier: 'bronze', target: 10, current: ({ sources }) => getFishing(sources).stats.totalCatches }),
-  achievement('fishing_collection_20', '작은 수족관', '물고기 도감 20종 발견', ({ sources }) => countKeys(getFishing(sources).collection) >= 20, ({ sources }) => `${Math.min(countKeys(getFishing(sources).collection), 20)} / 20종`, { coins: 1_500, xp: 160 }, { category: 'fishing', tier: 'silver', target: 20, current: ({ sources }) => countKeys(getFishing(sources).collection) }),
-  achievement('fishing_rod_10', '손에 익은 낚싯대', '낚싯대 +10 달성', ({ sources }) => getFishing(sources).rod.level >= 10, ({ sources }) => `+${Math.min(getFishing(sources).rod.level, 10)} / +10`, { coins: 1_200, xp: 120 }, { category: 'fishing', tier: 'silver', target: 10, current: ({ sources }) => getFishing(sources).rod.level }),
-  achievement('fishing_battle_win_5', '어항 결투가', '물고기배틀 5승', ({ sources }) => getFishing(sources).battle.wins >= 5, ({ sources }) => `${Math.min(getFishing(sources).battle.wins, 5)} / 5승`, { coins: 1_500, xp: 150 }, { category: 'fishing', tier: 'gold', target: 5, current: ({ sources }) => getFishing(sources).battle.wins }),
+  achievement('fishing_catch_10', '물비린내 입문', '낚시 10회 성공', ({ sources }) => getFishing(sources).stats.totalCatches >= 10, ({ sources }) => `${Math.min(getFishing(sources).stats.totalCatches, 10)} / 10마리`, { coins: 300, xp: 110, titleId: 'angler' }, { category: 'fishing', tier: 'bronze', target: 10, current: ({ sources }) => getFishing(sources).stats.totalCatches }),
+  achievement('fishing_collection_20', '작은 수족관', '물고기 도감 20종 발견', ({ sources }) => countKeys(getFishing(sources).collection) >= 20, ({ sources }) => `${Math.min(countKeys(getFishing(sources).collection), 20)} / 20종`, { coins: 500, xp: 200 }, { category: 'fishing', tier: 'silver', target: 20, current: ({ sources }) => countKeys(getFishing(sources).collection) }),
+  achievement('fishing_rod_10', '손에 익은 낚싯대', '낚싯대 +10 달성', ({ sources }) => getFishing(sources).rod.level >= 10, ({ sources }) => `+${Math.min(getFishing(sources).rod.level, 10)} / +10`, { coins: 400, xp: 160 }, { category: 'fishing', tier: 'silver', target: 10, current: ({ sources }) => getFishing(sources).rod.level }),
+  achievement('fishing_battle_win_5', '어항 결투가', '물고기배틀 5승', ({ sources }) => getFishing(sources).battle.wins >= 5, ({ sources }) => `${Math.min(getFishing(sources).battle.wins, 5)} / 5승`, { coins: 500, xp: 200 }, { category: 'fishing', tier: 'gold', target: 5, current: ({ sources }) => getFishing(sources).battle.wins }),
 
-  achievement('sword_level_10', '날이 선 검', '검 +10 달성', ({ sources }) => getSword(sources).highestLevel >= 10, ({ sources }) => `+${Math.min(getSword(sources).highestLevel, 10)} / +10`, { coins: 1_000, xp: 100, titleId: 'blade_master' }, { category: 'sword', tier: 'silver', target: 10, current: ({ sources }) => getSword(sources).highestLevel }),
-  achievement('sword_level_50_global', '반짝이는 전설의 시작', '검 +50 달성', ({ sources }) => getSword(sources).highestLevel >= 50, ({ sources }) => `+${Math.min(getSword(sources).highestLevel, 50)} / +50`, { coins: 3_000, xp: 300 }, { category: 'sword', tier: 'gold', target: 50, current: ({ sources }) => getSword(sources).highestLevel }),
-  achievement('sword_destroy_1', '터져도 다시 잡는 손', '검 파괴 1회 기록', ({ sources }) => getSword(sources).destructions >= 1, ({ sources }) => `${Math.min(getSword(sources).destructions, 1)} / 1회`, { coins: 300, xp: 50 }, { category: 'sword', tier: 'bronze', target: 1, current: ({ sources }) => getSword(sources).destructions }),
-  achievement('sword_battle_win_10', '검투장 단골', '검배틀 10승', ({ sources }) => getSword(sources).battleWins >= 10, ({ sources }) => `${Math.min(getSword(sources).battleWins, 10)} / 10승`, { coins: 2_000, xp: 220 }, { category: 'sword', tier: 'gold', target: 10, current: ({ sources }) => getSword(sources).battleWins }),
+  achievement('sword_level_10', '날이 선 검', '검 +10 달성', ({ sources }) => getSword(sources).highestLevel >= 10, ({ sources }) => `+${Math.min(getSword(sources).highestLevel, 10)} / +10`, { coins: 300, xp: 130, titleId: 'blade_master' }, { category: 'sword', tier: 'silver', target: 10, current: ({ sources }) => getSword(sources).highestLevel }),
+  achievement('sword_level_50_global', '반짝이는 전설의 시작', '검 +50 달성', ({ sources }) => getSword(sources).highestLevel >= 50, ({ sources }) => `+${Math.min(getSword(sources).highestLevel, 50)} / +50`, { coins: 700, xp: 400 }, { category: 'sword', tier: 'gold', target: 50, current: ({ sources }) => getSword(sources).highestLevel }),
+  achievement('sword_destroy_1', '터져도 다시 잡는 손', '검 파괴 1회 기록', ({ sources }) => getSword(sources).destructions >= 1, ({ sources }) => `${Math.min(getSword(sources).destructions, 1)} / 1회`, { coins: 0, xp: 80 }, { category: 'sword', tier: 'bronze', target: 1, current: ({ sources }) => getSword(sources).destructions }),
+  achievement('sword_battle_win_10', '검투장 단골', '검배틀 10승', ({ sources }) => getSword(sources).battleWins >= 10, ({ sources }) => `${Math.min(getSword(sources).battleWins, 10)} / 10승`, { coins: 500, xp: 280 }, { category: 'sword', tier: 'gold', target: 10, current: ({ sources }) => getSword(sources).battleWins }),
 
-  achievement('stock_trade_10', '시장 구경꾼 탈출', '주식 거래 10회', ({ sources }) => getStocks(sources).tradeCount >= 10, ({ sources }) => `${Math.min(getStocks(sources).tradeCount, 10)} / 10회`, { coins: 700, xp: 80, titleId: 'market_maker' }, { category: 'stocks', tier: 'bronze', target: 10, current: ({ sources }) => getStocks(sources).tradeCount }),
-  achievement('stock_profit_10000', '빨간불보다 초록불', '주식 실현손익 10,000골드 달성', ({ sources }) => getStocks(sources).realizedProfit >= 10_000, ({ sources }) => `${Math.min(getStocks(sources).realizedProfit, 10_000).toLocaleString()} / 10,000골드`, { coins: 1_000, xp: 150 }, { category: 'stocks', tier: 'silver', target: 10_000, current: ({ sources }) => Math.max(0, getStocks(sources).realizedProfit) }),
-  achievement('stock_leverage_5', '레버리지 입문자', '레버리지 포지션 5회 진입', ({ sources }) => getStocks(sources).leveragedTradeCount >= 5, ({ sources }) => `${Math.min(getStocks(sources).leveragedTradeCount, 5)} / 5회`, { coins: 500, xp: 100 }, { category: 'stocks', tier: 'silver', target: 5, current: ({ sources }) => getStocks(sources).leveragedTradeCount }),
+  achievement('stock_trade_10', '시장 구경꾼 탈출', '주식 거래 10회', ({ sources }) => getStocks(sources).tradeCount >= 10, ({ sources }) => `${Math.min(getStocks(sources).tradeCount, 10)} / 10회`, { coins: 300, xp: 110, titleId: 'market_maker' }, { category: 'stocks', tier: 'bronze', target: 10, current: ({ sources }) => getStocks(sources).tradeCount }),
+  achievement('stock_profit_10000', '빨간불보다 초록불', '주식 실현손익 10,000골드 달성', ({ sources }) => getStocks(sources).realizedProfit >= 10_000, ({ sources }) => `${Math.min(getStocks(sources).realizedProfit, 10_000).toLocaleString()} / 10,000골드`, { coins: 500, xp: 180 }, { category: 'stocks', tier: 'silver', target: 10_000, current: ({ sources }) => Math.max(0, getStocks(sources).realizedProfit) }),
+  achievement('stock_leverage_5', '레버리지 입문자', '레버리지 포지션 5회 진입', ({ sources }) => getStocks(sources).leveragedTradeCount >= 5, ({ sources }) => `${Math.min(getStocks(sources).leveragedTradeCount, 5)} / 5회`, { coins: 0, xp: 140 }, { category: 'stocks', tier: 'silver', target: 5, current: ({ sources }) => getStocks(sources).leveragedTradeCount }),
 
-  achievement('tamagotchi_care_30', '돌봄 루틴', '희진 돌봄 행동 30회', ({ sources }) => getTamagotchi(sources).counters.totalCareActions >= 30, ({ sources }) => `${Math.min(getTamagotchi(sources).counters.totalCareActions, 30)} / 30회`, { coins: 500, xp: 90, titleId: 'pet_guardian' }, { category: 'tamagotchi', tier: 'bronze', target: 30, current: ({ sources }) => getTamagotchi(sources).counters.totalCareActions }),
-  achievement('tamagotchi_daily_7', '매일 보는 얼굴', '희진 오늘의 돌봄 미션 7회 완료', ({ sources }) => getTamagotchi(sources).codex.dailyCompletions >= 7, ({ sources }) => `${Math.min(getTamagotchi(sources).codex.dailyCompletions, 7)} / 7회`, { coins: 1_000, xp: 120 }, { category: 'tamagotchi', tier: 'silver', target: 7, current: ({ sources }) => getTamagotchi(sources).codex.dailyCompletions }),
-  achievement('tamagotchi_room_3', '방 꾸미기 시작', '희진 방 아이템 3개 해금', ({ sources }) => getTamagotchi(sources).room.unlockedItemIds.length >= 3, ({ sources }) => `${Math.min(getTamagotchi(sources).room.unlockedItemIds.length, 3)} / 3개`, { coins: 500, xp: 80 }, { category: 'tamagotchi', tier: 'bronze', target: 3, current: ({ sources }) => getTamagotchi(sources).room.unlockedItemIds.length }),
-  achievement('tamagotchi_adult', '어른 희진과 함께', '희진 성년기 분기 발견', ({ sources }) => Boolean(getTamagotchi(sources).growth.adultBranchId), ({ sources }) => getTamagotchi(sources).growth.adultBranchId ? '성년기 발견' : '미발견', { coins: 2_000, xp: 200 }, { category: 'tamagotchi', tier: 'gold', target: 1, current: ({ sources }) => getTamagotchi(sources).growth.adultBranchId ? 1 : 0 })
+  achievement('tamagotchi_care_30', '돌봄 루틴', '희진 돌봄 행동 30회', ({ sources }) => getTamagotchi(sources).counters.totalCareActions >= 30, ({ sources }) => `${Math.min(getTamagotchi(sources).counters.totalCareActions, 30)} / 30회`, { coins: 200, xp: 120, titleId: 'pet_guardian' }, { category: 'tamagotchi', tier: 'bronze', target: 30, current: ({ sources }) => getTamagotchi(sources).counters.totalCareActions }),
+  achievement('tamagotchi_daily_7', '매일 보는 얼굴', '희진 오늘의 돌봄 미션 7회 완료', ({ sources }) => getTamagotchi(sources).codex.dailyCompletions >= 7, ({ sources }) => `${Math.min(getTamagotchi(sources).codex.dailyCompletions, 7)} / 7회`, { coins: 300, xp: 160 }, { category: 'tamagotchi', tier: 'silver', target: 7, current: ({ sources }) => getTamagotchi(sources).codex.dailyCompletions }),
+  achievement('tamagotchi_room_3', '방 꾸미기 시작', '희진 방 아이템 3개 해금', ({ sources }) => getTamagotchi(sources).room.unlockedItemIds.length >= 3, ({ sources }) => `${Math.min(getTamagotchi(sources).room.unlockedItemIds.length, 3)} / 3개`, { coins: 200, xp: 110 }, { category: 'tamagotchi', tier: 'bronze', target: 3, current: ({ sources }) => getTamagotchi(sources).room.unlockedItemIds.length }),
+  achievement('tamagotchi_adult', '어른 희진과 함께', '희진 성년기 분기 발견', ({ sources }) => Boolean(getTamagotchi(sources).growth.adultBranchId), ({ sources }) => getTamagotchi(sources).growth.adultBranchId ? '성년기 발견' : '미발견', { coins: 500, xp: 260 }, { category: 'tamagotchi', tier: 'gold', target: 1, current: ({ sources }) => getTamagotchi(sources).growth.adultBranchId ? 1 : 0 }),
+  achievement('hidden_sword_destroy_3', '대장장이의 악몽', '검 파괴 3회 기록', ({ sources }) => getSword(sources).destructions >= 3, ({ sources }) => `${Math.min(getSword(sources).destructions, 3)} / 3회`, { coins: 0, xp: 220, titleId: 'blacksmith_nightmare' }, { category: 'sword', tier: 'legendary', target: 3, current: ({ sources }) => getSword(sources).destructions, hidden: true }),
+  achievement('hidden_fishing_shadow', '심연에서 건져 올린 것', '히든 물고기 1종 발견', ({ sources }) => getFishing(sources).hiddenCollectionCount >= 1, ({ sources }) => `${Math.min(getFishing(sources).hiddenCollectionCount, 1)} / 1종`, { coins: 0, xp: 220, titleId: 'abyss_angler' }, { category: 'fishing', tier: 'legendary', target: 1, current: ({ sources }) => getFishing(sources).hiddenCollectionCount, hidden: true }),
+  achievement('hidden_tamagotchi_revival', '다시 만난 희진', '희진을 부활시킨 기록', ({ sources }) => getTamagotchi(sources).counters.revivals >= 1, ({ sources }) => `${Math.min(getTamagotchi(sources).counters.revivals, 1)} / 1회`, { coins: 0, xp: 180, titleId: 'reborn_guardian' }, { category: 'tamagotchi', tier: 'epic', target: 1, current: ({ sources }) => getTamagotchi(sources).counters.revivals, hidden: true })
 ]);
 
 export function getAchievementCategories() {
@@ -133,6 +139,8 @@ export function getAchievementStatuses(profile, community, sources = {}) {
   const context = { profile, community, sources };
   return ACHIEVEMENTS.map((achievementConfig) => {
     const completed = Boolean(achievementConfig.isComplete(context));
+    const claimed = Boolean(community.claimedAchievements[achievementConfig.id]);
+    const revealed = !achievementConfig.hidden || completed || claimed;
     const current = achievementConfig.getCurrentValue
       ? normalizeStoredNonNegativeInteger(achievementConfig.getCurrentValue(context))
       : null;
@@ -142,24 +150,32 @@ export function getAchievementStatuses(profile, community, sources = {}) {
       : completed
       ? 100
       : 0;
+    const displayPercent = revealed ? percent : 0;
+    const rewardTitle = revealed && achievementConfig.reward.titleId
+      ? TITLE_BY_ID.get(achievementConfig.reward.titleId)
+      : null;
 
     return {
       id: achievementConfig.id,
-      title: achievementConfig.title,
-      description: achievementConfig.description,
+      title: revealed ? achievementConfig.title : '???',
+      description: revealed ? achievementConfig.description : '조건이 숨겨진 업적입니다.',
       category: achievementConfig.category,
       categoryLabel: achievementConfig.categoryLabel,
       tier: achievementConfig.tier,
+      hidden: achievementConfig.hidden,
+      revealed,
       completed,
-      claimed: Boolean(community.claimedAchievements[achievementConfig.id]),
-      progress: achievementConfig.getProgressText(context),
-      current,
-      target,
-      percent,
-      progressBar: formatAchievementProgressBar(percent),
+      claimed,
+      progress: revealed ? achievementConfig.getProgressText(context) : '???',
+      current: revealed ? current : null,
+      target: revealed ? target : null,
+      percent: displayPercent,
+      progressBar: formatAchievementProgressBar(displayPercent),
       reward: {
-        ...achievementConfig.reward,
-        title: achievementConfig.reward.titleId ? TITLE_BY_ID.get(achievementConfig.reward.titleId) : null
+        coins: revealed ? achievementConfig.reward.coins : 0,
+        xp: revealed ? achievementConfig.reward.xp : 0,
+        titleId: revealed ? achievementConfig.reward.titleId : null,
+        title: rewardTitle
       }
     };
   });
@@ -171,6 +187,48 @@ export function getTitleStatuses(community) {
     owned: community.ownedTitles.includes(titleConfig.id),
     equipped: community.equippedTitle === titleConfig.id
   }));
+}
+
+export function getAchievementRewardSummary() {
+  const byCategory = {};
+  let totalCoins = 0;
+  let totalXp = 0;
+  let maxCoins = 0;
+  let hiddenCount = 0;
+  let hiddenCoins = 0;
+  let titleRewardCount = 0;
+
+  for (const achievementConfig of ACHIEVEMENTS) {
+    totalCoins += achievementConfig.reward.coins;
+    totalXp += achievementConfig.reward.xp;
+    maxCoins = Math.max(maxCoins, achievementConfig.reward.coins);
+    if (achievementConfig.reward.titleId) titleRewardCount += 1;
+    if (achievementConfig.hidden) {
+      hiddenCount += 1;
+      hiddenCoins += achievementConfig.reward.coins;
+    }
+
+    byCategory[achievementConfig.category] ??= {
+      category: achievementConfig.category,
+      count: 0,
+      coins: 0,
+      xp: 0
+    };
+    byCategory[achievementConfig.category].count += 1;
+    byCategory[achievementConfig.category].coins += achievementConfig.reward.coins;
+    byCategory[achievementConfig.category].xp += achievementConfig.reward.xp;
+  }
+
+  return {
+    count: ACHIEVEMENTS.length,
+    totalCoins,
+    totalXp,
+    maxCoins,
+    hiddenCount,
+    hiddenCoins,
+    titleRewardCount,
+    byCategory
+  };
 }
 
 function title(id, label, description, meta = {}) {
@@ -188,7 +246,8 @@ function title(id, label, description, meta = {}) {
     rarityIcon: rarityInfo.icon,
     category,
     categoryLabel: categoryInfo?.label ?? '커뮤니티',
-    source: meta.source ?? '업적'
+    source: meta.source ?? '업적',
+    hidden: Boolean(meta.hidden)
   });
 }
 
@@ -205,6 +264,7 @@ function achievement(id, titleText, description, isComplete, getProgressText, re
     category,
     categoryLabel: categoryInfo?.label ?? '커뮤니티',
     tier: meta.tier ?? 'bronze',
+    hidden: Boolean(meta.hidden),
     target: normalizeStoredNonNegativeInteger(meta.target),
     getCurrentValue: typeof meta.current === 'function' ? meta.current : null,
     reward: Object.freeze({
@@ -235,6 +295,7 @@ function getRpg(sources = {}) {
 
 function getFishing(sources = {}) {
   const fishing = sources.fishing && typeof sources.fishing === 'object' ? sources.fishing : {};
+  const collection = safeObject(fishing.collection);
   return {
     rod: {
       level: normalizeStoredNonNegativeInteger(fishing.rod?.level, 1)
@@ -242,7 +303,10 @@ function getFishing(sources = {}) {
     stats: {
       totalCatches: normalizeStoredNonNegativeInteger(fishing.stats?.totalCatches)
     },
-    collection: safeObject(fishing.collection),
+    collection,
+    hiddenCollectionCount: Object.keys(collection)
+      .filter((fishId) => String(fishId).startsWith('hidden_'))
+      .length,
     battle: {
       wins: normalizeStoredNonNegativeInteger(fishing.battle?.wins)
     }
@@ -271,7 +335,8 @@ function getTamagotchi(sources = {}) {
   const pet = sources.tamagotchi && typeof sources.tamagotchi === 'object' ? sources.tamagotchi : {};
   return {
     counters: {
-      totalCareActions: normalizeStoredNonNegativeInteger(pet.counters?.totalCareActions)
+      totalCareActions: normalizeStoredNonNegativeInteger(pet.counters?.totalCareActions),
+      revivals: normalizeStoredNonNegativeInteger(pet.counters?.revivals)
     },
     codex: {
       dailyCompletions: normalizeStoredNonNegativeInteger(pet.codex?.dailyCompletions)
