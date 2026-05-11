@@ -58,7 +58,7 @@ export async function handlePollCommand(interaction, pollManager, logger = conso
   const replyPayload = createPollMessagePayload(pendingPoll);
   const replyResult = await interaction.reply({
     ...replyPayload,
-    fetchReply: true
+    withResponse: true
   });
   const message = await resolvePollReplyMessage(interaction, replyResult);
 

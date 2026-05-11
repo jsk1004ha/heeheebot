@@ -400,6 +400,32 @@ test('활동 기록은 최근 7일 채팅/명령어 XP 요약을 만든다', asy
   }
 });
 
+test('활동요약 명령은 오래 걸릴 수 있는 조회 전에 먼저 defer하고 결과를 editReply한다', async () => {
+  const events = [];
+  const interaction = createInteraction('활동요약');
+  interaction.deferReply = async function deferReply() {
+    events.push('defer');
+    this.deferred = true;
+  };
+  interaction.editReply = async function editReply(payload) {
+    events.push('edit');
+    this.edited = typeof payload === 'string' ? { content: payload } : payload;
+    this.replied = this.edited;
+  };
+  const community = {
+    async getWeeklyActivitySummary(input) {
+      events.push(`summary:${input.userId}`);
+      return createActivitySummary({ username: input.username });
+    }
+  };
+
+  const handled = await handleCommunityCommand(interaction, community, quietLogger);
+
+  assert.equal(handled, true);
+  assert.deepEqual(events, ['defer', 'summary:user-1', 'edit']);
+  assert.match(interaction.edited.content, /최근 7일 활동 요약/);
+});
+
 test('커뮤니티 명령 핸들러는 복권 구매와 미션 응답을 반환한다', async () => {
   const fixture = await createFixture();
 
@@ -534,6 +560,32 @@ function createInteraction(commandName, options = {}) {
     async reply(payload) {
       this.replied = typeof payload === 'string' ? { content: payload } : payload;
     }
+  };
+}
+
+function createActivitySummary({ username = '테스터' } = {}) {
+  return {
+    profile: { username },
+    range: {
+      days: 7,
+      startDate: '1970-01-01',
+      endDate: '1970-01-07'
+    },
+    totals: {
+      messages: 0,
+      commands: 0,
+      xp: 0,
+      chatXp: 0,
+      commandXp: 0,
+      activeDays: 0
+    },
+    topCommands: [],
+    days: Array.from({ length: 7 }, (_, index) => ({
+      date: `1970-01-0${index + 1}`,
+      messages: 0,
+      commands: 0,
+      xp: 0
+    }))
   };
 }
 

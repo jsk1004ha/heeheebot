@@ -372,14 +372,39 @@ async function routeCommunityCommand(interaction, community) {
       return;
     }
 
+    await deferInteractionReplyIfSupported(interaction);
     const result = await community.getWeeklyActivitySummary({
       guildId,
       userId: target.id,
       username: target.username
     });
-    await interaction.reply(formatWeeklyActivitySummary(result));
+    await sendCommunityReply(interaction, formatWeeklyActivitySummary(result));
     return;
   }
+}
+
+async function deferInteractionReplyIfSupported(interaction) {
+  if (interaction.deferred || interaction.replied || typeof interaction.deferReply !== 'function') {
+    return false;
+  }
+
+  await interaction.deferReply();
+  return true;
+}
+
+async function sendCommunityReply(interaction, payload) {
+  if (interaction.deferred) {
+    if (typeof interaction.editReply === 'function') {
+      await interaction.editReply(payload);
+      return;
+    }
+    if (typeof interaction.followUp === 'function') {
+      await interaction.followUp(payload);
+      return;
+    }
+  }
+
+  await interaction.reply(payload);
 }
 
 function formatAchievements(result, { category = 'all', view = 'summary' } = {}) {
