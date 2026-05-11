@@ -1,5 +1,6 @@
 import { migrateLegacyWalletsToGold, normalizeWallets } from './currencies.js';
 import { getOrCreateLinkedAccountProfile } from './accounts.js';
+import * as achievements from './achievements.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
@@ -22,55 +23,12 @@ const LOTTERY_DRAW_MINUTE = 0;
 const LOTTERY_AUTO_DRAW_CHECK_INTERVAL_MS = 60_000;
 const LOTTERY_FIRST_ROLLOVER_BPS = 5_000;
 const MISSION_EVENT_REWARD_BPS = 15_000;
-const ACHIEVEMENT_PROGRESS_BAR_LENGTH = 8;
-
-export const ACHIEVEMENT_CATEGORIES = Object.freeze([
-  Object.freeze({ id: 'growth', label: '성장' }),
-  Object.freeze({ id: 'attendance', label: '출석' }),
-  Object.freeze({ id: 'economy', label: '경제' }),
-  Object.freeze({ id: 'games', label: '게임' }),
-  Object.freeze({ id: 'community', label: '커뮤니티' }),
-  Object.freeze({ id: 'activity', label: '활동' }),
-  Object.freeze({ id: 'collection', label: '수집' })
-]);
-
-const ACHIEVEMENT_CATEGORY_BY_ID = new Map(ACHIEVEMENT_CATEGORIES.map((category) => [category.id, category]));
-
-export const TITLE_RARITIES = Object.freeze({
-  common: Object.freeze({ id: 'common', label: '일반', icon: '⚪' }),
-  rare: Object.freeze({ id: 'rare', label: '희귀', icon: '🔵' }),
-  epic: Object.freeze({ id: 'epic', label: '영웅', icon: '🟣' }),
-  legendary: Object.freeze({ id: 'legendary', label: '전설', icon: '🟠' }),
-  mythic: Object.freeze({ id: 'mythic', label: '신화', icon: '🔴' })
-});
-
 const LOTTERY_PRIZE_TIERS = Object.freeze([
   Object.freeze({ id: 'first', label: '1등', matchCount: 6, requiresBonus: false, jackpotBps: 7_000, fixedPrize: null, description: '6개 번호 일치' }),
   Object.freeze({ id: 'second', label: '2등', matchCount: 5, requiresBonus: true, jackpotBps: 1_500, fixedPrize: null, description: '5개 번호 + 보너스 일치' }),
   Object.freeze({ id: 'third', label: '3등', matchCount: 5, requiresBonus: false, jackpotBps: 1_000, fixedPrize: null, description: '5개 번호 일치' }),
   Object.freeze({ id: 'fourth', label: '4등', matchCount: 4, requiresBonus: false, jackpotBps: null, fixedPrize: 5_000, description: '4개 번호 일치' }),
   Object.freeze({ id: 'fifth', label: '5등', matchCount: 3, requiresBonus: false, jackpotBps: null, fixedPrize: LOTTERY_TICKET_COST, description: '3개 번호 일치' })
-]);
-
-export const COMMUNITY_TITLES = Object.freeze([
-  title('steady', '🌅 성실한 출석러', '연속 출석 7일 업적으로 획득', { rarity: 'rare', category: 'attendance', source: '업적' }),
-  title('dawn_keeper', '🌄 새벽 수호자', '연속 출석 30일 업적으로 획득', { rarity: 'epic', category: 'attendance', source: '업적' }),
-  title('rich', '💰 동네 부자', '골드 10,000 보유 업적으로 획득', { rarity: 'rare', category: 'economy', source: '업적' }),
-  title('tycoon', '🏦 희희 재벌', '골드 100,000 보유 업적으로 획득', { rarity: 'legendary', category: 'economy', source: '업적' }),
-  title('gambler', '🎲 도박꾼', '카지노 10회 참여 업적으로 획득', { rarity: 'rare', category: 'games', source: '업적' }),
-  title('highroller', '🃏 하이롤러', '카지노 100회 참여 업적으로 획득', { rarity: 'epic', category: 'games', source: '업적' }),
-  title('lucky', '🍀 행운아', '복권 5장 구매 업적으로 획득', { rarity: 'rare', category: 'games', source: '업적' }),
-  title('jackpot_backer', '🎟️ 잭팟 후원자', '복권 50장 구매 업적으로 획득', { rarity: 'epic', category: 'games', source: '업적' }),
-  title('missioner', '📋 미션러', '미션 보상 5개 수령 업적으로 획득', { rarity: 'rare', category: 'community', source: '업적' }),
-  title('quest_captain', '🧭 체크리스트 대장', '미션 보상 25개 수령 업적으로 획득', { rarity: 'epic', category: 'community', source: '업적' }),
-  title('host', '📣 이벤트 주최자', '서버 이벤트 1회 시작 업적으로 획득', { rarity: 'rare', category: 'community', source: '업적' }),
-  title('festival_director', '🎪 축제 감독', '서버 이벤트 5회 시작 업적으로 획득', { rarity: 'legendary', category: 'community', source: '업적' }),
-  title('chatter', '💬 수다쟁이', '채팅 100회 업적으로 획득', { rarity: 'common', category: 'activity', source: '업적' }),
-  title('commander', '⌨️ 명령어 장인', '명령어 50회 사용 업적으로 획득', { rarity: 'rare', category: 'activity', source: '업적' }),
-  title('wordsmith', '🔤 끝말잇기 장인', '끝말잇기 승리 업적으로 획득', { rarity: 'rare', category: 'games', source: '업적' }),
-  title('stylist', '🎨 꾸미기 입문자', '상점 구매 업적으로 획득', { rarity: 'common', category: 'collection', source: '업적' }),
-  title('vip', '👑 VIP', '상점에서 구매', { rarity: 'epic', category: 'collection', source: '상점' }),
-  title('collector', '💎 수집가', '상점에서 구매', { rarity: 'legendary', category: 'collection', source: '상점' })
 ]);
 
 export const SHOP_ITEMS = Object.freeze([
@@ -86,228 +44,8 @@ export const EVENT_TYPES = Object.freeze([
   eventType('lottery_bonus', '복권 잭팟 강화', '이벤트 동안 복권 구매액 전부가 잭팟에 누적됩니다.')
 ]);
 
-const TITLE_BY_ID = new Map(COMMUNITY_TITLES.map((item) => [item.id, item]));
 const SHOP_ITEM_BY_ID = new Map(SHOP_ITEMS.map((item) => [item.id, item]));
 const EVENT_TYPE_BY_ID = new Map(EVENT_TYPES.map((item) => [item.id, item]));
-
-const ACHIEVEMENTS = Object.freeze([
-  achievement(
-    'level_2',
-    '첫 성장',
-    '레벨 2 달성',
-    ({ profile }) => profile.level >= 2,
-    ({ profile }) => `Lv.${Math.min(profile.level, 2)} / Lv.2`,
-    { coins: 300, xp: 0 },
-    { category: 'growth', tier: 'bronze', target: 2, current: ({ profile }) => profile.level }
-  ),
-  achievement(
-    'level_10',
-    '성장 루프 입문',
-    '레벨 10 달성',
-    ({ profile }) => profile.level >= 10,
-    ({ profile }) => `Lv.${Math.min(profile.level, 10)} / Lv.10`,
-    { coins: 1_000, xp: 120 },
-    { category: 'growth', tier: 'silver', target: 10, current: ({ profile }) => profile.level }
-  ),
-  achievement(
-    'level_25',
-    '서버의 주역',
-    '레벨 25 달성',
-    ({ profile }) => profile.level >= 25,
-    ({ profile }) => `Lv.${Math.min(profile.level, 25)} / Lv.25`,
-    { coins: 4_000, xp: 400 },
-    { category: 'growth', tier: 'gold', target: 25, current: ({ profile }) => profile.level }
-  ),
-  achievement(
-    'daily_7',
-    '일주일 출석',
-    '연속 출석 7일 달성',
-    ({ profile }) => profile.dailyStreak >= 7,
-    ({ profile }) => `${Math.min(profile.dailyStreak, 7)} / 7일`,
-    { coins: 1_000, xp: 50, titleId: 'steady' },
-    { category: 'attendance', tier: 'silver', target: 7, current: ({ profile }) => profile.dailyStreak }
-  ),
-  achievement(
-    'daily_30',
-    '한 달 루틴',
-    '연속 출석 30일 달성',
-    ({ profile }) => profile.dailyStreak >= 30,
-    ({ profile }) => `${Math.min(profile.dailyStreak, 30)} / 30일`,
-    { coins: 5_000, xp: 300, titleId: 'dawn_keeper' },
-    { category: 'attendance', tier: 'gold', target: 30, current: ({ profile }) => profile.dailyStreak }
-  ),
-  achievement(
-    'balance_10000',
-    '돈 냄새',
-    '골드 10,000 보유',
-    ({ profile }) => profile.balance >= 10_000,
-    ({ profile }) => `${Math.min(profile.balance, 10_000).toLocaleString()} / 10,000골드`,
-    { coins: 500, xp: 50, titleId: 'rich' },
-    { category: 'economy', tier: 'silver', target: 10_000, current: ({ profile }) => profile.balance }
-  ),
-  achievement(
-    'balance_100000',
-    '금고가 무겁다',
-    '골드 100,000 보유',
-    ({ profile }) => profile.balance >= 100_000,
-    ({ profile }) => `${Math.min(profile.balance, 100_000).toLocaleString()} / 100,000골드`,
-    { coins: 5_000, xp: 500, titleId: 'tycoon' },
-    { category: 'economy', tier: 'gold', target: 100_000, current: ({ profile }) => profile.balance }
-  ),
-  achievement(
-    'transfers_10',
-    '송금왕',
-    '송금 10회 기록',
-    ({ community }) => community.stats.transfers >= 10,
-    ({ community }) => `${Math.min(community.stats.transfers, 10)} / 10회`,
-    { coins: 1_500, xp: 150 },
-    { category: 'economy', tier: 'silver', target: 10, current: ({ community }) => community.stats.transfers }
-  ),
-  achievement(
-    'casino_10',
-    '판돈은 작게',
-    '카지노 게임 10회 참여',
-    ({ community }) => community.stats.casinoPlays >= 10,
-    ({ community }) => `${Math.min(community.stats.casinoPlays, 10)} / 10회`,
-    { coins: 700, xp: 60, titleId: 'gambler' },
-    { category: 'games', tier: 'silver', target: 10, current: ({ community }) => community.stats.casinoPlays }
-  ),
-  achievement(
-    'casino_100',
-    '판 위의 고수',
-    '카지노 게임 100회 참여',
-    ({ community }) => community.stats.casinoPlays >= 100,
-    ({ community }) => `${Math.min(community.stats.casinoPlays, 100)} / 100회`,
-    { coins: 4_000, xp: 400, titleId: 'highroller' },
-    { category: 'games', tier: 'gold', target: 100, current: ({ community }) => community.stats.casinoPlays }
-  ),
-  achievement(
-    'lottery_5',
-    '한 장만 더',
-    '복권 5장 구매',
-    ({ community }) => community.stats.lotteryTickets >= 5,
-    ({ community }) => `${Math.min(community.stats.lotteryTickets, 5)} / 5장`,
-    { coins: 500, xp: 40, titleId: 'lucky' },
-    { category: 'games', tier: 'bronze', target: 5, current: ({ community }) => community.stats.lotteryTickets }
-  ),
-  achievement(
-    'lottery_50',
-    '잭팟 후원자',
-    '복권 50장 누적 구매',
-    ({ community }) => community.stats.lotteryTickets >= 50,
-    ({ community }) => `${Math.min(community.stats.lotteryTickets, 50)} / 50장`,
-    { coins: 2_500, xp: 250, titleId: 'jackpot_backer' },
-    { category: 'games', tier: 'silver', target: 50, current: ({ community }) => community.stats.lotteryTickets }
-  ),
-  achievement(
-    'wordchain_win_1',
-    '말문 트임',
-    '끝말잇기 1회 승리',
-    ({ community }) => community.stats.wordChainWins >= 1,
-    ({ community }) => `${Math.min(community.stats.wordChainWins, 1)} / 1승`,
-    { coins: 700, xp: 70, titleId: 'wordsmith' },
-    { category: 'games', tier: 'bronze', target: 1, current: ({ community }) => community.stats.wordChainWins }
-  ),
-  achievement(
-    'wordchain_win_10',
-    '어휘 사냥꾼',
-    '끝말잇기 10회 승리',
-    ({ community }) => community.stats.wordChainWins >= 10,
-    ({ community }) => `${Math.min(community.stats.wordChainWins, 10)} / 10승`,
-    { coins: 3_000, xp: 320 },
-    { category: 'games', tier: 'gold', target: 10, current: ({ community }) => community.stats.wordChainWins }
-  ),
-  achievement(
-    'missions_5',
-    '체크리스트 중독',
-    '미션 보상 5개 수령',
-    ({ community }) => community.stats.missionsCompleted >= 5,
-    ({ community }) => `${Math.min(community.stats.missionsCompleted, 5)} / 5개`,
-    { coins: 1_000, xp: 100, titleId: 'missioner' },
-    { category: 'community', tier: 'silver', target: 5, current: ({ community }) => community.stats.missionsCompleted }
-  ),
-  achievement(
-    'missions_25',
-    '일정표 지배자',
-    '미션 보상 25개 수령',
-    ({ community }) => community.stats.missionsCompleted >= 25,
-    ({ community }) => `${Math.min(community.stats.missionsCompleted, 25)} / 25개`,
-    { coins: 3_000, xp: 350, titleId: 'quest_captain' },
-    { category: 'community', tier: 'gold', target: 25, current: ({ community }) => community.stats.missionsCompleted }
-  ),
-  achievement(
-    'event_host_1',
-    '분위기 메이커',
-    '서버 이벤트 1회 시작',
-    ({ community }) => community.stats.eventsHosted >= 1,
-    ({ community }) => `${Math.min(community.stats.eventsHosted, 1)} / 1회`,
-    { coins: 300, xp: 30, titleId: 'host' },
-    { category: 'community', tier: 'bronze', target: 1, current: ({ community }) => community.stats.eventsHosted }
-  ),
-  achievement(
-    'event_host_5',
-    '서버 축제 감독',
-    '서버 이벤트 5회 시작',
-    ({ community }) => community.stats.eventsHosted >= 5,
-    ({ community }) => `${Math.min(community.stats.eventsHosted, 5)} / 5회`,
-    { coins: 3_500, xp: 360, titleId: 'festival_director' },
-    { category: 'community', tier: 'gold', target: 5, current: ({ community }) => community.stats.eventsHosted }
-  ),
-  achievement(
-    'chat_100',
-    '대화 시작',
-    '채팅 보상 기록 100회',
-    ({ community }) => community.stats.chatMessages >= 100,
-    ({ community }) => `${Math.min(community.stats.chatMessages, 100)} / 100회`,
-    { coins: 1_000, xp: 120, titleId: 'chatter' },
-    { category: 'activity', tier: 'silver', target: 100, current: ({ community }) => community.stats.chatMessages }
-  ),
-  achievement(
-    'chat_1000',
-    '서버 상주민',
-    '채팅 보상 기록 1,000회',
-    ({ community }) => community.stats.chatMessages >= 1_000,
-    ({ community }) => `${Math.min(community.stats.chatMessages, 1_000).toLocaleString()} / 1,000회`,
-    { coins: 6_000, xp: 650 },
-    { category: 'activity', tier: 'legendary', target: 1_000, current: ({ community }) => community.stats.chatMessages }
-  ),
-  achievement(
-    'commands_50',
-    '봇 조작 입문',
-    '명령어 50회 사용',
-    ({ community }) => community.stats.commandsUsed >= 50,
-    ({ community }) => `${Math.min(community.stats.commandsUsed, 50)} / 50회`,
-    { coins: 1_000, xp: 120, titleId: 'commander' },
-    { category: 'activity', tier: 'silver', target: 50, current: ({ community }) => community.stats.commandsUsed }
-  ),
-  achievement(
-    'commands_300',
-    '단축키 인간',
-    '명령어 300회 사용',
-    ({ community }) => community.stats.commandsUsed >= 300,
-    ({ community }) => `${Math.min(community.stats.commandsUsed, 300)} / 300회`,
-    { coins: 4_000, xp: 430 },
-    { category: 'activity', tier: 'gold', target: 300, current: ({ community }) => community.stats.commandsUsed }
-  ),
-  achievement(
-    'shop_purchase_1',
-    '꾸미기 시작',
-    '상점 아이템 1개 구매',
-    ({ community }) => community.stats.shopPurchases >= 1,
-    ({ community }) => `${Math.min(community.stats.shopPurchases, 1)} / 1개`,
-    { coins: 500, xp: 60, titleId: 'stylist' },
-    { category: 'collection', tier: 'bronze', target: 1, current: ({ community }) => community.stats.shopPurchases }
-  ),
-  achievement(
-    'shop_purchase_5',
-    '꾸미기 컬렉터',
-    '상점 아이템 5개 구매',
-    ({ community }) => community.stats.shopPurchases >= 5,
-    ({ community }) => `${Math.min(community.stats.shopPurchases, 5)} / 5개`,
-    { coins: 2_000, xp: 220 },
-    { category: 'collection', tier: 'silver', target: 5, current: ({ community }) => community.stats.shopPurchases }
-  )
-]);
 
 const DAILY_MISSIONS = Object.freeze([
   mission(
@@ -373,13 +111,15 @@ export class CommunityService {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, now);
       const guildCommunity = getOrCreateGuildCommunity(data, guildId, now);
+      const guild = data.guilds?.[guildId] ?? {};
       const community = normalizeCommunityProfile(profile, now);
+      const achievementSources = getAchievementSources(guild, userId, profile);
 
       return {
         profile: cloneCommunityProfile(profile, now),
         community: cloneCommunityState(community),
-        achievements: getAchievementStatuses(profile, community),
-        titles: getTitleStatuses(community),
+        achievements: achievements.getAchievementStatuses(profile, community, achievementSources),
+        titles: achievements.getTitleStatuses(community),
         shopItems: getShopStatuses(community),
         missions: getMissionStatuses(profile, community, now),
         lottery: getLotteryStatus(guildCommunity.lottery),
@@ -444,8 +184,10 @@ export class CommunityService {
   async claimAchievements({ guildId, userId, username, now = Date.now() }) {
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, now);
+      const guild = data.guilds?.[guildId] ?? {};
       const community = normalizeCommunityProfile(profile, now);
-      const statuses = getAchievementStatuses(profile, community);
+      const achievementSources = getAchievementSources(guild, userId, profile);
+      const statuses = achievements.getAchievementStatuses(profile, community, achievementSources);
       const claimed = [];
       let totalCoins = 0;
       let totalXp = 0;
@@ -468,8 +210,8 @@ export class CommunityService {
         totalXp,
         ...levelResult,
         profile: cloneCommunityProfile(profile, now),
-        achievements: getAchievementStatuses(profile, community),
-        titles: getTitleStatuses(community)
+        achievements: achievements.getAchievementStatuses(profile, community, achievementSources),
+        titles: achievements.getTitleStatuses(community)
       };
     });
   }
@@ -490,8 +232,8 @@ export class CommunityService {
       }
 
       return {
-        equippedTitle: community.equippedTitle ? TITLE_BY_ID.get(community.equippedTitle) : null,
-        titles: getTitleStatuses(community),
+        equippedTitle: community.equippedTitle ? achievements.getCommunityTitle(community.equippedTitle) : null,
+        titles: achievements.getTitleStatuses(community),
         profile: cloneCommunityProfile(profile, now)
       };
     });
@@ -692,7 +434,7 @@ export class CommunityService {
         item,
         profile: cloneCommunityProfile(profile, now),
         shopItems: getShopStatuses(community),
-        titles: getTitleStatuses(community)
+        titles: achievements.getTitleStatuses(community)
       };
     });
   }
@@ -806,15 +548,15 @@ export class CommunityService {
 }
 
 export function getCommunityTitle(titleId) {
-  return TITLE_BY_ID.get(String(titleId)) ?? null;
+  return achievements.getCommunityTitle(titleId);
 }
 
 export function getAchievementCategories() {
-  return ACHIEVEMENT_CATEGORIES.map((item) => ({ ...item }));
+  return achievements.getAchievementCategories();
 }
 
 export function getCommunityTitles() {
-  return COMMUNITY_TITLES.map((item) => ({ ...item }));
+  return achievements.getCommunityTitles();
 }
 
 export function getShopItems() {
@@ -1148,54 +890,12 @@ function payLotteryWinner(data, guildId, entry, tier, amount, payoutLedger, now)
   payoutLedger.set(entry.userId, summary);
 }
 
-function title(id, label, description, meta = {}) {
-  const rarity = TITLE_RARITIES[meta.rarity] ? meta.rarity : 'common';
-  const rarityInfo = TITLE_RARITIES[rarity];
-  const category = ACHIEVEMENT_CATEGORY_BY_ID.has(meta.category) ? meta.category : 'community';
-  const categoryInfo = ACHIEVEMENT_CATEGORY_BY_ID.get(category);
-
-  return Object.freeze({
-    id,
-    label,
-    description,
-    rarity,
-    rarityLabel: rarityInfo.label,
-    rarityIcon: rarityInfo.icon,
-    category,
-    categoryLabel: categoryInfo?.label ?? '커뮤니티',
-    source: meta.source ?? '업적'
-  });
-}
-
 function shopItem(id, label, price, type, description, titleId = null) {
   return Object.freeze({ id, label, price, type, description, titleId });
 }
 
 function eventType(id, label, description) {
   return Object.freeze({ id, label, description });
-}
-
-function achievement(id, titleText, description, isComplete, getProgressText, reward, meta = {}) {
-  const category = ACHIEVEMENT_CATEGORY_BY_ID.has(meta.category) ? meta.category : 'community';
-  const categoryInfo = ACHIEVEMENT_CATEGORY_BY_ID.get(category);
-
-  return Object.freeze({
-    id,
-    title: titleText,
-    description,
-    isComplete,
-    getProgressText,
-    category,
-    categoryLabel: categoryInfo?.label ?? '커뮤니티',
-    tier: meta.tier ?? 'bronze',
-    target: normalizeStoredNonNegativeInteger(meta.target),
-    getCurrentValue: typeof meta.current === 'function' ? meta.current : null,
-    reward: Object.freeze({
-      coins: reward.coins ?? 0,
-      xp: reward.xp ?? 0,
-      titleId: reward.titleId ?? null
-    })
-  });
 }
 
 function mission(id, titleText, description, isComplete, getProgressText, reward) {
@@ -1249,6 +949,18 @@ function getOrCreateProfile(data, guildId, userId, username, now) {
   return profile;
 }
 
+function getAchievementSources(guild, userId, profile) {
+  const normalizedUserId = String(userId ?? profile?.userId ?? '').trim();
+
+  return {
+    rpg: profile?.rpg ?? null,
+    sword: profile?.sword ?? null,
+    fishing: guild?.fishing?.users?.[normalizedUserId] ?? null,
+    stocks: guild?.stocks?.users?.[normalizedUserId] ?? null,
+    tamagotchi: guild?.tamagotchi?.users?.[normalizedUserId] ?? null
+  };
+}
+
 function createDefaultCommunityAccountProfile(userId, username, now = Date.now()) {
   return {
     userId,
@@ -1283,7 +995,7 @@ function normalizeCommunityProfile(profile, now = Date.now()) {
     commandsUsed: normalizeStoredNonNegativeInteger(community.stats?.commandsUsed)
   };
   community.claimedAchievements = normalizeBooleanMap(community.claimedAchievements);
-  community.ownedTitles = normalizeStringArray(community.ownedTitles).filter((titleId) => TITLE_BY_ID.has(titleId));
+  community.ownedTitles = normalizeStringArray(community.ownedTitles).filter((titleId) => achievements.isCommunityTitleId(titleId));
   community.equippedTitle = community.ownedTitles.includes(community.equippedTitle)
     ? community.equippedTitle
     : null;
@@ -1513,50 +1225,6 @@ function normalizeLotteryWinnerSummary(winner) {
   };
 }
 
-function getAchievementStatuses(profile, community) {
-  return ACHIEVEMENTS.map((achievementConfig) => {
-    const context = { profile, community };
-    const completed = Boolean(achievementConfig.isComplete(context));
-    const current = achievementConfig.getCurrentValue
-      ? normalizeStoredNonNegativeInteger(achievementConfig.getCurrentValue(context))
-      : null;
-    const target = achievementConfig.target;
-    const percent = target > 0 && current !== null
-      ? Math.min(100, Math.floor((Math.min(current, target) / target) * 100))
-      : completed
-      ? 100
-      : 0;
-
-    return {
-      id: achievementConfig.id,
-      title: achievementConfig.title,
-      description: achievementConfig.description,
-      category: achievementConfig.category,
-      categoryLabel: achievementConfig.categoryLabel,
-      tier: achievementConfig.tier,
-      completed,
-      claimed: Boolean(community.claimedAchievements[achievementConfig.id]),
-      progress: achievementConfig.getProgressText(context),
-      current,
-      target,
-      percent,
-      progressBar: formatAchievementProgressBar(percent),
-      reward: {
-        ...achievementConfig.reward,
-        title: achievementConfig.reward.titleId ? TITLE_BY_ID.get(achievementConfig.reward.titleId) : null
-      }
-    };
-  });
-}
-
-function formatAchievementProgressBar(percent) {
-  const safePercent = Math.max(0, Math.min(100, normalizeStoredNonNegativeInteger(percent)));
-  const filled = Math.round((safePercent / 100) * ACHIEVEMENT_PROGRESS_BAR_LENGTH);
-  const empty = ACHIEVEMENT_PROGRESS_BAR_LENGTH - filled;
-
-  return `${'█'.repeat(filled)}${'░'.repeat(empty)}`;
-}
-
 function getMissionStatuses(profile, community, now) {
   const context = {
     profile,
@@ -1591,14 +1259,6 @@ function getMissionPeriodState(community, type, now) {
 
   community.missions.weekly = normalizeMissionPeriodState(community.missions.weekly, getWeekIndex(now));
   return community.missions.weekly;
-}
-
-function getTitleStatuses(community) {
-  return COMMUNITY_TITLES.map((titleConfig) => ({
-    ...titleConfig,
-    owned: community.ownedTitles.includes(titleConfig.id),
-    equipped: community.equippedTitle === titleConfig.id
-  }));
 }
 
 function getShopStatuses(community) {
@@ -1757,14 +1417,13 @@ function formatActivityDay(day) {
 }
 
 function addOwnedTitle(community, titleId) {
-  if (!TITLE_BY_ID.has(titleId)) return;
-  if (!community.ownedTitles.includes(titleId)) community.ownedTitles.push(titleId);
+  achievements.addOwnedTitle(community, titleId);
 }
 
 function normalizeTitleId(titleId) {
   const normalized = String(titleId || 'none');
   if (normalized === 'none') return normalized;
-  if (!TITLE_BY_ID.has(normalized)) throw new Error('알 수 없는 칭호입니다.');
+  if (!achievements.isCommunityTitleId(normalized)) throw new Error('알 수 없는 칭호입니다.');
   return normalized;
 }
 

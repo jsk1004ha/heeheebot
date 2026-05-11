@@ -9,6 +9,7 @@ import {
   ACCOUNT_LINK_SELECT_CUSTOM_ID_PREFIX,
   isAccountSelectionRequiredError
 } from '../systems/accounts.js';
+import { getCommunityTitle } from '../systems/achievements.js';
 import { formatCurrencyAmount } from '../systems/currencies.js';
 import {
   getCurrentProfileLevelBadge,
@@ -319,27 +320,6 @@ const PROFILE_SHOP_BADGE_LABELS = Object.freeze({
   badge_gold: '골드 배지'
 });
 
-const PROFILE_TITLE_LABELS = Object.freeze({
-  steady: '성실한 출석러',
-  dawn_keeper: '새벽 수호자',
-  rich: '동네 부자',
-  tycoon: '희희 재벌',
-  gambler: '도박꾼',
-  highroller: '하이롤러',
-  lucky: '행운아',
-  jackpot_backer: '잭팟 후원자',
-  missioner: '미션러',
-  quest_captain: '체크리스트 대장',
-  host: '이벤트 주최자',
-  festival_director: '축제 감독',
-  chatter: '수다쟁이',
-  commander: '명령어 장인',
-  wordsmith: '끝말잇기 장인',
-  stylist: '꾸미기 입문자',
-  vip: 'VIP',
-  collector: '수집가'
-});
-
 export function createProfileReplyPayload(profile, context = {}) {
   const profileText = formatProfile(profile, context);
   const displayBadge = getDisplayProfileLevelBadge(profile.level);
@@ -505,7 +485,7 @@ function formatSwordProfileSummary(profile) {
 function formatCommunityProfileSummary(profile) {
   const title = profile.community?.equippedTitle;
   const titleText = title
-    ? PROFILE_TITLE_LABELS[title] ?? title
+    ? formatCommunityTitleName(title)
     : '없음';
   const badgeIds = Array.isArray(profile.community?.cosmetics?.badges)
     ? profile.community.cosmetics.badges
@@ -594,7 +574,13 @@ function formatNextBadgeHint(level) {
 function getEquippedTitleText(profile) {
   const title = profile.community?.equippedTitle;
   if (!title) return '';
-  return ` · 칭호 **${PROFILE_TITLE_LABELS[title] ?? title}**`;
+  return ` · 칭호 **${formatCommunityTitleName(title)}**`;
+}
+
+function formatCommunityTitleName(titleId) {
+  const title = getCommunityTitle(titleId);
+  if (!title) return titleId;
+  return title.label.replace(/^[^\p{L}\p{N}]+/u, '').trim() || title.label;
 }
 
 function formatShopBadgeGallery(profile) {
