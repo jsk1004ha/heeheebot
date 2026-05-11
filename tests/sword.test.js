@@ -78,6 +78,46 @@ test('묵념 명령은 검을 잃은 분위기와 랜덤 대장장이 사진을 
   assert.equal(replies[0].embeds[0].data.image.url, `attachment://${replies[0].files[0].name}`);
 });
 
+test('자동 defer된 검 명령 실패 안내는 원본 응답을 편집해 바로 사라지지 않게 한다', async () => {
+  const replies = [];
+  const edits = [];
+  const followUps = [];
+  let deleted = false;
+  const interaction = createSwordInteraction({
+    commandName: '검강화',
+    replies
+  });
+  interaction.deferred = true;
+  interaction.replied = false;
+  interaction.editReply = async (payload) => {
+    edits.push(payload);
+    interaction.replied = true;
+    return payload;
+  };
+  interaction.followUp = async (payload) => {
+    followUps.push(payload);
+    return payload;
+  };
+  interaction.deleteReply = async () => {
+    deleted = true;
+  };
+  const economy = {
+    async enhanceSword() {
+      throw new Error('골드가 부족합니다. 필요 금액: 100코인');
+    }
+  };
+
+  const handled = await handleSwordCommand(interaction, economy, silentLogger);
+
+  assert.equal(handled, true);
+  assert.deepEqual(replies, []);
+  assert.equal(followUps.length, 0);
+  assert.equal(deleted, false);
+  assert.equal(edits.length, 1);
+  assert.equal(edits[0].flags, undefined);
+  assert.match(edits[0].content, /골드가 부족합니다\. 필요 금액: 100코인/);
+});
+
 test('검 강화 확률표는 1~100강 확장표와 상급강화 보정을 따른다', () => {
   assert.deepEqual(pickRates(getSwordEnhanceConfig(0)), [95, 5, 0]);
   assert.deepEqual(pickRates(getSwordEnhanceConfig(35)), [70, 20, 10]);

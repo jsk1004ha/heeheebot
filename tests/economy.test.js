@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 import { createSqliteStore } from '../src/storage/sqlite-store.js';
 import { EconomyService } from '../src/systems/economy.js';
@@ -450,6 +451,44 @@ test('메시지 보상은 일반 채팅 XP와 하루 첫 채팅 보너스를 지
   }
 });
 
+test('기존 계정의 메시지 보상은 계정 fast-path row로 저장된다', async () => {
+  const fixture = await createFixture({
+    messageXpMin: 10,
+    messageXpMax: 10,
+    firstMessageXpBonus: 0,
+    randomInt: () => 10
+  });
+  const originalNow = Date.now;
+
+  try {
+    Date.now = () => 1_000;
+    await fixture.economy.getProfile('guild-1', 'user-1', '테스터');
+
+    Date.now = () => 2_000;
+    const result = await fixture.economy.rewardMessage({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '테스터',
+      now: 2_000
+    });
+
+    assert.equal(result.awarded, true);
+    assert.equal(result.profile.totalXp, 10);
+
+    const inspector = new DatabaseSync(fixture.databasePath);
+    try {
+      assert.equal(getUpdatedAt(inspector, 'bot_account_profiles', 'user_id = ?', ['user-1']), 2_000);
+      assert.equal(getUpdatedAt(inspector, 'bot_root_state', 'id = ?', [1]), 1_000);
+      assert.equal(getAccountBalance(inspector, 'user-1'), 0);
+    } finally {
+      inspector.close();
+    }
+  } finally {
+    Date.now = originalNow;
+    await fixture.cleanup();
+  }
+});
+
 test('명령어 사용도 메인 프로필 XP를 조금 지급한다', async () => {
   const fixture = await createFixture({
     commandXpMin: 4,
@@ -786,14 +825,30 @@ test('송금은 잔액을 이동하고 랭킹은 레벨/경험치 순으로 정�
   }
 });
 
+function getUpdatedAt(database, tableName, whereClause, params) {
+  return database
+    .prepare(`SELECT updated_at FROM ${tableName} WHERE ${whereClause}`)
+    .get(...params)
+    .updated_at;
+}
+
+function getAccountBalance(database, userId) {
+  return database
+    .prepare('SELECT balance FROM bot_account_profiles WHERE user_id = ?')
+    .get(userId)
+    .balance;
+}
+
 async function createFixture(options = {}) {
   const directory = await mkdtemp(join(tmpdir(), 'heeheebot-'));
-  const store = createSqliteStore(join(directory, 'profiles.sqlite'));
+  const databasePath = join(directory, 'profiles.sqlite');
+  const store = createSqliteStore(databasePath);
   const economy = new EconomyService(store, options);
 
   return {
     economy,
     store,
+    databasePath,
     async cleanup() {
       store.close();
       await rm(directory, {

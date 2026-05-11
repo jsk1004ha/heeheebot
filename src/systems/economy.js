@@ -249,7 +249,40 @@ export class EconomyService {
     return Math.floor(this.options.levelBaseXp * Math.max(1, level) ** this.options.levelXpExponent);
   }
 
+  async updateExistingLinkedProfile({ guildId, userId, username = 'Unknown', now = Date.now() }, mutator) {
+    if (typeof this.store.getAccountProfile !== 'function' || typeof this.store.updateAccountProfile !== 'function') {
+      return { hit: false, value: null };
+    }
+
+    const normalizedUserId = String(userId ?? '').trim();
+    if (!normalizedUserId) return { hit: false, value: null };
+
+    const existing = await this.store.getAccountProfile(normalizedUserId);
+    if (!existing) return { hit: false, value: null };
+
+    const value = await this.store.updateAccountProfile({
+      guildId,
+      userId: normalizedUserId,
+      username,
+      now
+    }, (profile) => {
+      normalizeEconomyProfile(profile, normalizedUserId, username, this, now);
+      return mutator(profile);
+    });
+
+    return value === null
+      ? { hit: false, value: null }
+      : { hit: true, value };
+  }
+
   async getProfile(guildId, userId, username = 'Unknown') {
+    const fast = await this.updateExistingLinkedProfile({
+      guildId,
+      userId,
+      username
+    }, (profile) => cloneProfile(profile));
+    if (fast.hit) return fast.value;
+
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
       return cloneProfile(profile);
@@ -296,6 +329,14 @@ export class EconomyService {
   }
 
   async rewardMessage({ guildId, userId, username, now = Date.now() }) {
+    const fast = await this.updateExistingLinkedProfile({
+      guildId,
+      userId,
+      username,
+      now
+    }, (profile) => rewardMessageProfile(profile, this, now));
+    if (fast.hit) return fast.value;
+
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
       const elapsed = now - profile.lastMessageRewardAt;
@@ -334,6 +375,14 @@ export class EconomyService {
   }
 
   async rewardCommand({ guildId, userId, username, commandName = '명령어', now = Date.now() }) {
+    const fast = await this.updateExistingLinkedProfile({
+      guildId,
+      userId,
+      username,
+      now
+    }, (profile) => rewardCommandProfile(profile, this, commandName));
+    if (fast.hit) return fast.value;
+
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
       const xpGained = this.randomInt(this.options.commandXpMin, this.options.commandXpMax);
@@ -353,6 +402,14 @@ export class EconomyService {
   }
 
   async grantXp({ guildId, userId, username, xp, source = '경험치', now = Date.now() }) {
+    const fast = await this.updateExistingLinkedProfile({
+      guildId,
+      userId,
+      username,
+      now
+    }, (profile) => grantXpProfile(profile, this, { xp, source }));
+    if (fast.hit) return fast.value;
+
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this, now);
       const xpGained = normalizeStoredNonNegativeInteger(xp);
@@ -3327,6 +3384,72 @@ function getLiarGameMoney(options, winner, isLiar) {
   return isLiar ? 0 : options.liarGameCitizenWinMoney;
 }
 
+function rewardMessageProfile(profile, economy, now) {
+  const elapsed = now - profile.lastMessageRewardAt;
+
+  if (profile.lastMessageRewardAt > 0 && elapsed < economy.options.messageCooldownMs) {
+    return {
+      awarded: false,
+      remainingMs: economy.options.messageCooldownMs - elapsed,
+      profile: cloneProfile(profile)
+    };
+  }
+
+  const xpGained = economy.randomInt(economy.options.messageXpMin, economy.options.messageXpMax);
+  const today = getDayIndex(now);
+  const firstMessageBonusXp = profile.lastFirstMessageBonusDay === today
+    ? 0
+    : economy.options.firstMessageXpBonus;
+  const totalXpGained = xpGained + firstMessageBonusXp;
+  const levelResult = addXp(profile, totalXpGained, economy);
+
+  profile.lastMessageRewardAt = now;
+  if (firstMessageBonusXp > 0) {
+    profile.lastFirstMessageBonusDay = today;
+  }
+
+  return {
+    awarded: true,
+    xpGained,
+    firstMessageBonusXp,
+    totalXpGained,
+    moneyGained: 0,
+    ...levelResult,
+    profile: cloneProfile(profile)
+  };
+}
+
+function rewardCommandProfile(profile, economy, commandName = '명령어') {
+  const xpGained = economy.randomInt(economy.options.commandXpMin, economy.options.commandXpMax);
+  const levelResult = addXp(profile, xpGained, economy);
+
+  return {
+    awarded: true,
+    source: `/${String(commandName || '명령어')}`,
+    commandName: String(commandName || '명령어'),
+    xpGained,
+    totalXpGained: xpGained,
+    moneyGained: 0,
+    ...levelResult,
+    profile: cloneProfile(profile)
+  };
+}
+
+function grantXpProfile(profile, economy, { xp, source = '경험치' }) {
+  const xpGained = normalizeStoredNonNegativeInteger(xp);
+  const levelResult = addXp(profile, xpGained, economy);
+
+  return {
+    awarded: xpGained > 0,
+    source: String(source || '경험치'),
+    xpGained,
+    totalXpGained: xpGained,
+    moneyGained: 0,
+    ...levelResult,
+    profile: cloneProfile(profile)
+  };
+}
+
 function getOrCreateProfile(data, guildId, userId, username, economy, now = Date.now()) {
   const profile = getOrCreateLinkedAccountProfile(data, {
     guildId,
@@ -3335,6 +3458,10 @@ function getOrCreateProfile(data, guildId, userId, username, economy, now = Date
     now,
     createDefaultProfile: createDefaultEconomyProfile
   });
+  return normalizeEconomyProfile(profile, userId, username, economy, now);
+}
+
+function normalizeEconomyProfile(profile, userId, username, economy, now = Date.now()) {
   profile.userId = String(userId ?? '').trim();
   profile.username = username || profile.username || 'Unknown';
   profile.level = normalizeStoredPositiveInteger(profile.level, 1);

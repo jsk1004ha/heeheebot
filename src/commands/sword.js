@@ -130,7 +130,9 @@ export async function handleSwordCommand(interaction, economy, logger = console,
     await routeSwordCommand(interaction, economy, services);
   } catch (error) {
     logUnexpectedInteractionError(logger, error, 'Sword command rejected');
-    await safeReply(interaction, `검 시스템 처리 실패: ${error.message}`, true);
+    await safeReplyToInteraction(interaction, `검 시스템 처리 실패: ${error.message}`, {
+      ephemeral: !shouldKeepSwordCommandRejectionVisible(interaction)
+    });
   }
 
   return true;
@@ -1026,6 +1028,10 @@ function getSwordCoins(profile) {
 
 async function safeReply(interaction, content, ephemeral = false) {
   await safeReplyToInteraction(interaction, content, { ephemeral });
+}
+
+function shouldKeepSwordCommandRejectionVisible(interaction) {
+  return Boolean(interaction?.deferred && !interaction?.replied && typeof interaction?.editReply === 'function');
 }
 
 function isSwordCommand(commandName) {

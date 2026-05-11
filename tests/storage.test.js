@@ -99,7 +99,9 @@ test('SQLite 저장소는 데이터를 정규화 테이블로 파일에 유지�
       assert.equal(countRows(inspector, 'bot_guild_users'), 1);
       assert.equal(countRows(inspector, 'bot_guild_features'), 2);
       assert.equal(countRows(inspector, 'bot_guild_feature_users'), 1);
-      assert.equal(getMetadata(inspector, 'schema_version'), '3');
+      assert.equal(countRows(inspector, 'bot_account_profiles'), 1);
+      assert.equal(countRows(inspector, 'bot_account_guild_memberships'), 1);
+      assert.equal(getMetadata(inspector, 'schema_version'), '4');
     } finally {
       inspector.close();
     }
@@ -263,11 +265,157 @@ test('기존 bot_state_nodes 행 저장소를 정규화 테이블로 자동 마�
       assert.equal(countRows(inspector, 'bot_global_feature_users'), 1);
       assert.equal(countRows(inspector, 'bot_guild_users'), 1);
       assert.equal(countRows(inspector, 'bot_guild_feature_users'), 1);
+      assert.equal(countRows(inspector, 'bot_account_profiles'), 1);
       assert.ok(Number(getMetadata(inspector, 'legacy_bot_state_nodes_migrated_at')) > 0);
     } finally {
       inspector.close();
     }
   } finally {
+    await rm(directory, {
+      recursive: true,
+      force: true
+    });
+  }
+});
+
+test('기존 v3 정규화 DB는 계정 고속 조회 테이블로 자동 이전된다', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'heeheebot-v3-hot-migrate-'));
+  const databasePath = join(directory, 'profiles.sqlite');
+
+  try {
+    createLegacyNormalizedV3Database(databasePath, {
+      accounts: {
+        users: {
+          'user-1': {
+            userId: 'user-1',
+            username: 'v3유저',
+            level: 4,
+            xp: 12,
+            totalXp: 345,
+            balance: 678,
+            createdAt: 111
+          }
+        },
+        guilds: {
+          'guild-1': {
+            users: {
+              'user-1': {
+                userId: 'user-1',
+                username: 'v3유저',
+                linkedAt: 222,
+                lastSeenAt: 333
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const store = createSqliteStore(databasePath);
+    const data = await store.load();
+    const profile = await store.getAccountProfile('user-1');
+    store.close();
+
+    assert.equal(data.accounts.users['user-1'].username, 'v3유저');
+    assert.equal(profile.balance, 678);
+
+    const inspector = new DatabaseSync(databasePath);
+    try {
+      assert.equal(countRows(inspector, 'bot_account_profiles'), 1);
+      assert.equal(countRows(inspector, 'bot_account_guild_memberships'), 1);
+      assert.equal(getAccountProfileColumn(inspector, 'user-1', 'level'), 4);
+      assert.equal(getAccountProfileColumn(inspector, 'user-1', 'balance'), 678);
+      assert.equal(getMetadata(inspector, 'schema_version'), '4');
+      assert.ok(Number(getMetadata(inspector, 'hot_account_projection_migrated_at')) > 0);
+    } finally {
+      inspector.close();
+    }
+  } finally {
+    await rm(directory, {
+      recursive: true,
+      force: true
+    });
+  }
+});
+
+test('계정 fast-path API는 전체 상태 재직렬화 없이 계정 row와 로드 결과를 갱신한다', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'heeheebot-account-fast-path-'));
+  const databasePath = join(directory, 'profiles.sqlite');
+  const store = createSqliteStore(databasePath);
+  const originalNow = Date.now;
+
+  try {
+    Date.now = () => 1_000;
+    await store.save({
+      accounts: {
+        users: {
+          'user-1': {
+            userId: 'user-1',
+            username: '느린유저',
+            level: 1,
+            xp: 0,
+            totalXp: 0,
+            balance: 0,
+            createdAt: 100
+          },
+          'user-2': {
+            userId: 'user-2',
+            username: '유지유저',
+            level: 2,
+            xp: 5,
+            totalXp: 50,
+            balance: 10,
+            createdAt: 200
+          }
+        },
+        guilds: {
+          'guild-1': {
+            users: {
+              'user-1': {
+                userId: 'user-1',
+                username: '느린유저',
+                linkedAt: 100,
+                lastSeenAt: 100
+              }
+            }
+          }
+        }
+      },
+      guilds: {}
+    });
+
+    Date.now = () => 2_000;
+    const result = await store.updateAccountProfile({
+      guildId: 'guild-2',
+      userId: 'user-1',
+      username: '빠른유저',
+      now: 2_000
+    }, (profile) => {
+      profile.username = '빠른유저';
+      profile.balance = 500;
+      return { balance: profile.balance };
+    });
+
+    assert.deepEqual(result, { balance: 500 });
+    assert.equal((await store.getAccountProfile('user-1')).balance, 500);
+
+    const data = await store.load();
+    assert.equal(data.accounts.users['user-1'].username, '빠른유저');
+    assert.equal(data.accounts.users['user-1'].balance, 500);
+    assert.equal(data.accounts.guilds['guild-2'].users['user-1'].lastSeenAt, 2_000);
+
+    const inspector = new DatabaseSync(databasePath);
+    try {
+      assert.equal(getUpdatedAt(inspector, 'bot_account_profiles', 'user_id = ?', ['user-1']), 2_000);
+      assert.equal(getUpdatedAt(inspector, 'bot_account_profiles', 'user_id = ?', ['user-2']), 1_000);
+      assert.equal(getUpdatedAt(inspector, 'bot_global_feature_users', 'feature_key = ? AND user_id = ?', ['accounts', 'user-1']), 2_000);
+      assert.equal(countRows(inspector, 'bot_account_guild_memberships'), 2);
+    } finally {
+      inspector.close();
+    }
+  } finally {
+    Date.now = originalNow;
+    store.close();
     await rm(directory, {
       recursive: true,
       force: true
@@ -550,6 +698,100 @@ function getUpdatedAt(database, tableName, whereClause, params) {
     .prepare(`SELECT updated_at FROM ${tableName} WHERE ${whereClause}`)
     .get(...params)
     .updated_at;
+}
+
+function getAccountProfileColumn(database, userId, column) {
+  return database
+    .prepare(`SELECT ${column} FROM bot_account_profiles WHERE user_id = ?`)
+    .get(userId)?.[column] ?? null;
+}
+
+function createLegacyNormalizedV3Database(databasePath, data) {
+  const database = new DatabaseSync(databasePath);
+  try {
+    database.exec(`
+      CREATE TABLE bot_storage_metadata (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+
+      CREATE TABLE bot_root_state (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        root_type TEXT NOT NULL CHECK (root_type IN ('object', 'array', 'string', 'number', 'boolean', 'null')),
+        root_json TEXT,
+        has_guilds INTEGER NOT NULL DEFAULT 0 CHECK (has_guilds IN (0, 1)),
+        updated_at INTEGER NOT NULL
+      );
+
+      CREATE TABLE bot_global_features (
+        feature_key TEXT PRIMARY KEY,
+        state_json TEXT NOT NULL,
+        has_users INTEGER NOT NULL DEFAULT 0 CHECK (has_users IN (0, 1)),
+        updated_at INTEGER NOT NULL
+      );
+
+      CREATE TABLE bot_global_feature_users (
+        feature_key TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        profile_json TEXT NOT NULL,
+        updated_at INTEGER NOT NULL,
+        PRIMARY KEY (feature_key, user_id)
+      );
+
+      CREATE TABLE bot_guilds (
+        guild_id TEXT PRIMARY KEY,
+        state_json TEXT NOT NULL,
+        has_users INTEGER NOT NULL DEFAULT 0 CHECK (has_users IN (0, 1)),
+        updated_at INTEGER NOT NULL
+      );
+
+      CREATE TABLE bot_guild_users (
+        guild_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        profile_json TEXT NOT NULL,
+        updated_at INTEGER NOT NULL,
+        PRIMARY KEY (guild_id, user_id)
+      );
+
+      CREATE TABLE bot_guild_features (
+        guild_id TEXT NOT NULL,
+        feature_key TEXT NOT NULL,
+        state_json TEXT NOT NULL,
+        has_users INTEGER NOT NULL DEFAULT 0 CHECK (has_users IN (0, 1)),
+        updated_at INTEGER NOT NULL,
+        PRIMARY KEY (guild_id, feature_key)
+      );
+
+      CREATE TABLE bot_guild_feature_users (
+        guild_id TEXT NOT NULL,
+        feature_key TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        profile_json TEXT NOT NULL,
+        updated_at INTEGER NOT NULL,
+        PRIMARY KEY (guild_id, feature_key, user_id)
+      );
+    `);
+    database
+      .prepare('INSERT INTO bot_storage_metadata (key, value, updated_at) VALUES (?, ?, ?)')
+      .run('schema_version', '3', 123);
+    database
+      .prepare('INSERT INTO bot_root_state (id, root_type, root_json, has_guilds, updated_at) VALUES (?, ?, ?, ?, ?)')
+      .run(1, 'object', null, 0, 123);
+    const accountState = { ...(data.accounts ?? {}) };
+    const users = accountState.users ?? {};
+    delete accountState.users;
+    database
+      .prepare('INSERT INTO bot_global_features (feature_key, state_json, has_users, updated_at) VALUES (?, ?, ?, ?)')
+      .run('accounts', JSON.stringify(accountState), 1, 123);
+    for (const [userId, profile] of Object.entries(users)) {
+      database
+        .prepare('INSERT INTO bot_global_feature_users (feature_key, user_id, profile_json, updated_at) VALUES (?, ?, ?, ?)')
+        .run('accounts', userId, JSON.stringify(profile), 123);
+    }
+  } finally {
+    database.close();
+  }
 }
 
 function createLegacyNodeDatabase(databasePath, data) {

@@ -4,7 +4,7 @@
 
 **희희봇은 라이빗을 침공한 터미네이터 희진이다.**
 
-![Version](https://img.shields.io/badge/version-v0.8.1-orange)
+![Version](https://img.shields.io/badge/version-v0.8.2-orange)
 ![Status](https://img.shields.io/badge/status-pre--1.0-yellow)
 ![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.5-339933?logo=nodedotjs&logoColor=white)
 ![discord.js](https://img.shields.io/badge/discord.js-v14-5865F2?logo=discord&logoColor=white)
@@ -47,8 +47,8 @@
 | 명령어 등록 | `npm start` 시 자동 동기화, 수동은 `npm run register` |
 | 테스트 | `node --test` 기반 도메인/라우팅/커맨드 테스트 |
 | 현재 커맨드 규모 | 최상위 slash command 82개 + 다수 subcommand |
-| 현재 버전 | `v0.8.1` — 1.0 이전 개발 버전 |
-| 버전 산정 근거 | `v0.8.0` 기능 기준선에 정규화 SQLite 저장소 패치를 더해 `v0.8.1`로 산정 |
+| 현재 버전 | `v0.8.2` — 1.0 이전 개발 버전 |
+| 버전 산정 근거 | `v0.8.0` 기능 기준선에 정규화 SQLite 저장소와 계정 fast-path 패치를 더해 `v0.8.2`로 산정 |
 
 ### 추천 첫 동선
 
@@ -149,8 +149,8 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 현재 버전 | `v0.8.1` |
-| npm package version | `0.8.1` |
+| 현재 버전 | `v0.8.2` |
+| npm package version | `0.8.2` |
 | 기준 커밋 범위 | `d6b539a` → `6bfed97` |
 | 기준 커밋 수 | 99 commits |
 | 최신 기준 커밋 | `6bfed97` — `Make profile cards feel like character sheets` |
@@ -168,11 +168,11 @@ vMAJOR.MINOR.PATCH
 | --- | --- | --- |
 | `MAJOR` | 저장소/DB/명령어 계약이 크게 깨지는 변경 | `v1.0.0` |
 | `MINOR` | 큰 기능군 추가: RPG 시즌, 가상주식, 다마고치 등 | `v0.9.0` |
-| `PATCH` | 버그 수정, 밸런스 조정, 문서/UX 개선 | `v0.8.1` |
+| `PATCH` | 버그 수정, 밸런스 조정, 문서/UX 개선 | `v0.8.2` |
 
 ### 커밋 기록 기반 마일스톤
 
-커밋이 단순 초기 작업 수준을 넘어 여러 기능군을 단계적으로 쌓았기 때문에, 기능 기준선은 `0.8.0`으로 두고 저장소 호환 패치는 `0.8.1`로 관리합니다.
+커밋이 단순 초기 작업 수준을 넘어 여러 기능군을 단계적으로 쌓았기 때문에, 기능 기준선은 `0.8.0`으로 두고 저장소 호환·성능 패치는 `0.8.x`로 관리합니다.
 
 | 마일스톤 | 커밋 범위 | 핵심 변화 |
 | --- | --- | --- |
@@ -186,6 +186,13 @@ vMAJOR.MINOR.PATCH
 | `0.8` | `f8fa883` → `2ece970` | 계정 연동, 워들/숫자야구/투표 테스트, command startup sync, 자동급식 권한 체크, 도움말 개선 |
 
 ### 커밋 기록 기반 릴리스 노트
+
+#### `v0.8.2` — 계정 fast-path 저장소
+
+- **고속 계정 테이블 추가**: `bot_account_profiles`, `bot_account_guild_memberships`에 고빈도 계정 데이터를 컬럼화해 투영
+- **자동 v4 이전**: 기존 v3 정규화 DB를 열면 계정 hot table을 자동 생성·채움
+- **fast-path API**: 계정/feature user 단일 row 조회·갱신 API를 추가하고 메시지/명령어/경험치 보상 경로에 적용
+- **SQLite 튜닝**: WAL, `synchronous=NORMAL`, `busy_timeout`으로 일반 운영 읽기/쓰기 병목 완화
 
 #### `v0.8.1` — 정규화 SQLite 저장소
 
@@ -218,13 +225,13 @@ vMAJOR.MINOR.PATCH
 git log --date=short --pretty=format:'%h %ad %s'
 
 # 2. package.json / package-lock.json 버전 갱신
-npm version 0.8.1 --no-git-tag-version
+npm version 0.8.2 --no-git-tag-version
 
 # 3. 테스트
 npm test
 
 # 4. 태그 생성 예시
-git tag -a v0.8.1 -m "HeeHeeBot v0.8.1"
+git tag -a v0.8.2 -m "HeeHeeBot v0.8.2"
 ```
 
 ---
@@ -560,6 +567,7 @@ npm start         # 명령어 자동 동기화 후 봇 시작
 
 - 기본 SQLite 경로는 `data/profiles.sqlite`입니다.
 - v0.8.1부터 새 저장 데이터는 root/global/guild/user/feature 정규화 테이블에 기록됩니다.
+- v0.8.2부터 계정 프로필/서버 멤버십은 고속 조회용 hot table에도 자동 투영됩니다.
 - 기존 `bot_state_nodes` 행 저장소, 구 SQLite 단일 JSON(`bot_state`), `data/profiles.json`은 새 DB가 비어 있으면 첫 실행 때 자동으로 가져옵니다.
 - DB 경로를 바꾸려면 `BOT_SQLITE_PATH`를 사용하세요.
 

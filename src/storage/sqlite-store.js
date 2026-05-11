@@ -7,7 +7,8 @@ const DEFAULT_DATA = Object.freeze({
 });
 
 const LEGACY_STATE_KEY = 'state';
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
+const ACCOUNT_FEATURE_KEY = 'accounts';
 const ROOT_STATE_ID = 1;
 const JSON_TYPES = new Set(['object', 'array', 'string', 'number', 'boolean', 'null']);
 const EMPTY_SQL_STATE = Object.freeze({ found: false, data: null });
@@ -33,10 +34,16 @@ export function createSqliteStore(databasePath, options = {}) {
 
     database = new DatabaseSync(databasePath);
     database.exec('PRAGMA foreign_keys = ON');
+    database.exec('PRAGMA busy_timeout = 5000');
+    database.exec('PRAGMA synchronous = NORMAL');
+    if (databasePath !== ':memory:') {
+      database.exec('PRAGMA journal_mode = WAL');
+    }
     createNormalizedSchema();
     migrateLegacyNodeRowsIfNeeded();
     migrateLegacySqliteBlobIfNeeded();
     migrateJsonFileIfNeeded();
+    migrateHotAccountProjectionIfNeeded();
     saveMetadata('schema_version', String(SCHEMA_VERSION));
     return database;
   }
@@ -117,6 +124,41 @@ export function createSqliteStore(databasePath, options = {}) {
 
       CREATE INDEX IF NOT EXISTS idx_bot_guild_feature_users_user
         ON bot_guild_feature_users(user_id);
+
+      CREATE TABLE IF NOT EXISTS bot_account_profiles (
+        user_id TEXT PRIMARY KEY,
+        username TEXT NOT NULL,
+        level INTEGER NOT NULL DEFAULT 1,
+        xp INTEGER NOT NULL DEFAULT 0,
+        total_xp INTEGER NOT NULL DEFAULT 0,
+        balance INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL DEFAULT 0,
+        last_message_reward_at INTEGER NOT NULL DEFAULT 0,
+        last_daily_at INTEGER NOT NULL DEFAULT 0,
+        last_daily_day INTEGER,
+        daily_streak INTEGER NOT NULL DEFAULT 0,
+        last_first_message_bonus_day INTEGER,
+        last_fortune_xp_day INTEGER,
+        profile_json TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_bot_account_profiles_rank
+        ON bot_account_profiles(level DESC, total_xp DESC, balance DESC, user_id);
+
+      CREATE TABLE IF NOT EXISTS bot_account_guild_memberships (
+        guild_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        username TEXT NOT NULL,
+        linked_at INTEGER NOT NULL DEFAULT 0,
+        last_seen_at INTEGER NOT NULL DEFAULT 0,
+        membership_json TEXT NOT NULL,
+        updated_at INTEGER NOT NULL,
+        PRIMARY KEY (guild_id, user_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_bot_account_memberships_user
+        ON bot_account_guild_memberships(user_id);
     `);
   }
 
@@ -209,6 +251,32 @@ export function createSqliteStore(databasePath, options = {}) {
       .run(key, value, Date.now());
   }
 
+  function getMetadata(key) {
+    return database
+      .prepare('SELECT value FROM bot_storage_metadata WHERE key = ?')
+      .get(key)?.value ?? null;
+  }
+
+  function migrateHotAccountProjectionIfNeeded() {
+    if (!hasNormalizedState()) return;
+
+    const storedVersion = Number(getMetadata('schema_version') ?? 0);
+    if (Number.isSafeInteger(storedVersion) && storedVersion >= SCHEMA_VERSION) return;
+
+    const state = loadNormalizedState();
+    if (!state.found) return;
+
+    database.exec('BEGIN IMMEDIATE');
+    try {
+      replaceHotAccountProjection(collectNormalizedRows(state.data), Date.now());
+      saveMetadata('hot_account_projection_migrated_at', String(Date.now()));
+      database.exec('COMMIT');
+    } catch (error) {
+      database.exec('ROLLBACK');
+      throw error;
+    }
+  }
+
   function loadNormalizedState() {
     const root = database
       .prepare(`
@@ -274,6 +342,52 @@ export function createSqliteStore(databasePath, options = {}) {
       feature.users[row.user_id] = parseJsonValue(
         row.profile_json,
         `global feature ${row.feature_key} user ${row.user_id}`
+      );
+    }
+
+    loadHotAccountProjectionInto(data);
+  }
+
+  function loadHotAccountProjectionInto(data) {
+    if (!isPlainObject(data[ACCOUNT_FEATURE_KEY])) return;
+
+    const profileRows = database
+      .prepare(`
+        SELECT user_id, profile_json
+        FROM bot_account_profiles
+        ORDER BY user_id
+      `)
+      .all();
+    const membershipRows = database
+      .prepare(`
+        SELECT guild_id, user_id, membership_json
+        FROM bot_account_guild_memberships
+        ORDER BY guild_id, user_id
+      `)
+      .all();
+
+    if (profileRows.length === 0 && membershipRows.length === 0) return;
+
+    const accountState = data[ACCOUNT_FEATURE_KEY];
+    accountState.users = {};
+    for (const row of profileRows) {
+      accountState.users[row.user_id] = parseJsonValue(
+        row.profile_json,
+        `account profile ${row.user_id}`
+      );
+    }
+
+    const existingGuilds = isPlainObject(accountState.guilds) ? accountState.guilds : {};
+    accountState.guilds = {};
+    for (const row of membershipRows) {
+      accountState.guilds[row.guild_id] ??= {
+        ...(isPlainObject(existingGuilds[row.guild_id]) ? existingGuilds[row.guild_id] : {}),
+        users: {}
+      };
+      accountState.guilds[row.guild_id].users ??= {};
+      accountState.guilds[row.guild_id].users[row.user_id] = parseJsonValue(
+        row.membership_json,
+        `account membership ${row.guild_id}/${row.user_id}`
       );
     }
   }
@@ -421,6 +535,8 @@ export function createSqliteStore(databasePath, options = {}) {
   function writeNormalizedStateDelta(nextRows, previousRows) {
     const now = Date.now();
 
+    deleteMissingRows(previousRows.accountGuildMemberships, nextRows.accountGuildMemberships, deleteAccountGuildMembershipRow());
+    deleteMissingRows(previousRows.accountProfiles, nextRows.accountProfiles, deleteAccountProfileRow());
     deleteMissingRows(previousRows.globalFeatureUsers, nextRows.globalFeatureUsers, deleteGlobalFeatureUserRow());
     deleteMissingRows(previousRows.guildFeatureUsers, nextRows.guildFeatureUsers, deleteGuildFeatureUserRow());
     deleteMissingRows(previousRows.guildFeatures, nextRows.guildFeatures, deleteGuildFeatureRow());
@@ -434,6 +550,8 @@ export function createSqliteStore(databasePath, options = {}) {
 
     upsertChangedRows(nextRows.globalFeatures, previousRows.globalFeatures, upsertGlobalFeatureRow(), bindGlobalFeatureRow, now);
     upsertChangedRows(nextRows.guilds, previousRows.guilds, upsertGuildRow(), bindGuildRow, now);
+    upsertChangedRows(nextRows.accountProfiles, previousRows.accountProfiles, upsertAccountProfileRow(), bindAccountProfileRow, now);
+    upsertChangedRows(nextRows.accountGuildMemberships, previousRows.accountGuildMemberships, upsertAccountGuildMembershipRow(), bindAccountGuildMembershipRow, now);
     upsertChangedRows(nextRows.globalFeatureUsers, previousRows.globalFeatureUsers, upsertGlobalFeatureUserRow(), bindGlobalFeatureUserRow, now);
     upsertChangedRows(nextRows.guildUsers, previousRows.guildUsers, upsertGuildUserRow(), bindGuildUserRow, now);
     upsertChangedRows(nextRows.guildFeatures, previousRows.guildFeatures, upsertGuildFeatureRow(), bindGuildFeatureRow, now);
@@ -441,6 +559,8 @@ export function createSqliteStore(databasePath, options = {}) {
   }
 
   function deleteAllNormalizedRows() {
+    database.prepare('DELETE FROM bot_account_guild_memberships').run();
+    database.prepare('DELETE FROM bot_account_profiles').run();
     database.prepare('DELETE FROM bot_guild_feature_users').run();
     database.prepare('DELETE FROM bot_guild_features').run();
     database.prepare('DELETE FROM bot_guild_users').run();
@@ -458,6 +578,8 @@ export function createSqliteStore(databasePath, options = {}) {
     const guildUser = insertGuildUserRow();
     const guildFeature = insertGuildFeatureRow();
     const guildFeatureUser = insertGuildFeatureUserRow();
+    const accountProfile = insertAccountProfileRow();
+    const accountMembership = insertAccountGuildMembershipRow();
 
     for (const row of rows.globalFeatures.values()) globalFeature.run(...bindGlobalFeatureRow(row, now));
     for (const row of rows.guilds.values()) guild.run(...bindGuildRow(row, now));
@@ -465,6 +587,18 @@ export function createSqliteStore(databasePath, options = {}) {
     for (const row of rows.guildUsers.values()) guildUser.run(...bindGuildUserRow(row, now));
     for (const row of rows.guildFeatures.values()) guildFeature.run(...bindGuildFeatureRow(row, now));
     for (const row of rows.guildFeatureUsers.values()) guildFeatureUser.run(...bindGuildFeatureUserRow(row, now));
+    for (const row of rows.accountProfiles.values()) accountProfile.run(...bindAccountProfileRow(row, now));
+    for (const row of rows.accountGuildMemberships.values()) accountMembership.run(...bindAccountGuildMembershipRow(row, now));
+  }
+
+  function replaceHotAccountProjection(rows, now) {
+    database.prepare('DELETE FROM bot_account_guild_memberships').run();
+    database.prepare('DELETE FROM bot_account_profiles').run();
+
+    const accountProfile = insertAccountProfileRow();
+    const accountMembership = insertAccountGuildMembershipRow();
+    for (const row of rows.accountProfiles.values()) accountProfile.run(...bindAccountProfileRow(row, now));
+    for (const row of rows.accountGuildMemberships.values()) accountMembership.run(...bindAccountGuildMembershipRow(row, now));
   }
 
   function insertRootRow(row, now) {
@@ -595,6 +729,107 @@ export function createSqliteStore(databasePath, options = {}) {
     `);
   }
 
+  function insertAccountProfileRow() {
+    return database.prepare(`
+      INSERT INTO bot_account_profiles (
+        user_id,
+        username,
+        level,
+        xp,
+        total_xp,
+        balance,
+        created_at,
+        last_message_reward_at,
+        last_daily_at,
+        last_daily_day,
+        daily_streak,
+        last_first_message_bonus_day,
+        last_fortune_xp_day,
+        profile_json,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+  }
+
+  function upsertAccountProfileRow() {
+    return database.prepare(`
+      INSERT INTO bot_account_profiles (
+        user_id,
+        username,
+        level,
+        xp,
+        total_xp,
+        balance,
+        created_at,
+        last_message_reward_at,
+        last_daily_at,
+        last_daily_day,
+        daily_streak,
+        last_first_message_bonus_day,
+        last_fortune_xp_day,
+        profile_json,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(user_id) DO UPDATE SET
+        username = excluded.username,
+        level = excluded.level,
+        xp = excluded.xp,
+        total_xp = excluded.total_xp,
+        balance = excluded.balance,
+        created_at = excluded.created_at,
+        last_message_reward_at = excluded.last_message_reward_at,
+        last_daily_at = excluded.last_daily_at,
+        last_daily_day = excluded.last_daily_day,
+        daily_streak = excluded.daily_streak,
+        last_first_message_bonus_day = excluded.last_first_message_bonus_day,
+        last_fortune_xp_day = excluded.last_fortune_xp_day,
+        profile_json = excluded.profile_json,
+        updated_at = excluded.updated_at
+    `);
+  }
+
+  function insertAccountGuildMembershipRow() {
+    return database.prepare(`
+      INSERT INTO bot_account_guild_memberships (
+        guild_id,
+        user_id,
+        username,
+        linked_at,
+        last_seen_at,
+        membership_json,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+  }
+
+  function upsertAccountGuildMembershipRow() {
+    return database.prepare(`
+      INSERT INTO bot_account_guild_memberships (
+        guild_id,
+        user_id,
+        username,
+        linked_at,
+        last_seen_at,
+        membership_json,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(guild_id, user_id) DO UPDATE SET
+        username = excluded.username,
+        linked_at = excluded.linked_at,
+        last_seen_at = excluded.last_seen_at,
+        membership_json = excluded.membership_json,
+        updated_at = excluded.updated_at
+    `);
+  }
+
+  function deleteAccountProfileRow() {
+    return database.prepare('DELETE FROM bot_account_profiles WHERE user_id = ?');
+  }
+
+  function deleteAccountGuildMembershipRow() {
+    return database.prepare('DELETE FROM bot_account_guild_memberships WHERE guild_id = ? AND user_id = ?');
+  }
+
   function deleteGlobalFeatureRow() {
     return database.prepare('DELETE FROM bot_global_features WHERE feature_key = ?');
   }
@@ -617,6 +852,191 @@ export function createSqliteStore(databasePath, options = {}) {
 
   function deleteGuildFeatureUserRow() {
     return database.prepare('DELETE FROM bot_guild_feature_users WHERE guild_id = ? AND feature_key = ? AND user_id = ?');
+  }
+
+  function patchCachedGlobalFeatureUser(featureKey, userId, value) {
+    if (cachedData === UNLOADED_CACHE || !cachedStatePersisted || !isPlainObject(cachedData)) return;
+    cachedData[featureKey] ??= {};
+    if (!isPlainObject(cachedData[featureKey])) return;
+    cachedData[featureKey].users ??= {};
+    if (!isPlainObject(cachedData[featureKey].users)) cachedData[featureKey].users = {};
+    cachedData[featureKey].users[userId] = structuredClone(value);
+  }
+
+  function patchCachedAccountMembership(guildId, userId, membership) {
+    if (cachedData === UNLOADED_CACHE || !cachedStatePersisted || !isPlainObject(cachedData)) return;
+    cachedData[ACCOUNT_FEATURE_KEY] ??= {};
+    if (!isPlainObject(cachedData[ACCOUNT_FEATURE_KEY])) return;
+    cachedData[ACCOUNT_FEATURE_KEY].guilds ??= {};
+    cachedData[ACCOUNT_FEATURE_KEY].guilds[guildId] ??= { users: {} };
+    cachedData[ACCOUNT_FEATURE_KEY].guilds[guildId].users ??= {};
+    cachedData[ACCOUNT_FEATURE_KEY].guilds[guildId].users[userId] = structuredClone(membership);
+  }
+
+  function readGlobalFeatureUser(featureKey, userId) {
+    const row = database
+      .prepare('SELECT profile_json FROM bot_global_feature_users WHERE feature_key = ? AND user_id = ?')
+      .get(featureKey, userId);
+    return row ? parseJsonValue(row.profile_json, `global feature ${featureKey} user ${userId}`) : null;
+  }
+
+  function readAccountProfile(userId) {
+    const row = database
+      .prepare('SELECT profile_json FROM bot_account_profiles WHERE user_id = ?')
+      .get(userId);
+    return row ? parseJsonValue(row.profile_json, `account profile ${userId}`) : null;
+  }
+
+  function ensureObjectRootForPartialWrite() {
+    const root = database
+      .prepare('SELECT root_type, has_guilds FROM bot_root_state WHERE id = ?')
+      .get(ROOT_STATE_ID);
+
+    if (!root) {
+      insertRootRow({ rootType: 'object', rootJson: null, hasGuilds: 0 }, Date.now());
+      cachedStatePersisted = true;
+      return;
+    }
+
+    if (root.root_type !== 'object') {
+      throw new Error('SQLite fast-path writes require an object root state.');
+    }
+  }
+
+  function ensureGlobalFeatureForUsers(featureKey) {
+    const row = database
+      .prepare('SELECT state_json, has_users FROM bot_global_features WHERE feature_key = ?')
+      .get(featureKey);
+
+    if (!row) {
+      insertGlobalFeatureRow().run(featureKey, '{}', 1, Date.now());
+      return;
+    }
+
+    const state = parseJsonValue(row.state_json, `global feature ${featureKey}`);
+    if (!isPlainObject(state)) {
+      throw new Error(`SQLite fast-path user writes require object state for feature: ${featureKey}`);
+    }
+
+    if (row.has_users !== 1) {
+      upsertGlobalFeatureRow().run(featureKey, row.state_json, 1, Date.now());
+    }
+  }
+
+  function upsertGlobalFeatureUserValue(featureKey, userId, value, now) {
+    const normalized = toJsonCompatibleData(value);
+    const row = {
+      featureKey,
+      userId,
+      profileJson: serializeJsonValue(normalized)
+    };
+    upsertGlobalFeatureUserRow().run(...bindGlobalFeatureUserRow(row, now));
+
+    if (featureKey === ACCOUNT_FEATURE_KEY) {
+      upsertAccountProfileRow().run(...bindAccountProfileRow(createAccountProfileProjection(userId, normalized), now));
+    }
+
+    patchCachedGlobalFeatureUser(featureKey, userId, normalized);
+    return normalized;
+  }
+
+  function touchAccountMembership({ guildId, userId, username = 'Unknown', now }) {
+    const normalizedGuildId = String(guildId ?? '').trim();
+    const normalizedUserId = String(userId ?? '').trim();
+    if (!normalizedGuildId || !normalizedUserId) return null;
+
+    const existing = database
+      .prepare('SELECT membership_json FROM bot_account_guild_memberships WHERE guild_id = ? AND user_id = ?')
+      .get(normalizedGuildId, normalizedUserId);
+    const previous = existing
+      ? parseJsonValue(existing.membership_json, `account membership ${normalizedGuildId}/${normalizedUserId}`)
+      : {};
+    const membership = toJsonCompatibleData({
+      ...previous,
+      userId: normalizedUserId,
+      username: username || previous.username || 'Unknown',
+      linkedAt: normalizeProjectionInteger(previous.linkedAt, now),
+      lastSeenAt: now
+    });
+
+    upsertAccountGuildMembershipRow().run(...bindAccountGuildMembershipRow(
+      createAccountGuildMembershipProjection(normalizedGuildId, normalizedUserId, membership),
+      now
+    ));
+    patchCachedAccountMembership(normalizedGuildId, normalizedUserId, membership);
+    return membership;
+  }
+
+  async function getGlobalFeatureUser(featureKey, userId) {
+    return queue.then(() => {
+      initialize();
+      const value = readGlobalFeatureUser(String(featureKey ?? '').trim(), String(userId ?? '').trim());
+      return value ? structuredClone(value) : null;
+    });
+  }
+
+  async function upsertGlobalFeatureUser(featureKey, userId, value) {
+    const job = queue.then(async () => {
+      initialize();
+      database.exec('BEGIN IMMEDIATE');
+      try {
+        const normalizedFeatureKey = String(featureKey ?? '').trim();
+        const normalizedUserId = String(userId ?? '').trim();
+        if (!normalizedFeatureKey || !normalizedUserId) throw new Error('SQLite fast-path user writes require featureKey and userId.');
+        ensureObjectRootForPartialWrite();
+        ensureGlobalFeatureForUsers(normalizedFeatureKey);
+        const normalized = upsertGlobalFeatureUserValue(normalizedFeatureKey, normalizedUserId, value, Date.now());
+        database.exec('COMMIT');
+        return structuredClone(normalized);
+      } catch (error) {
+        database.exec('ROLLBACK');
+        throw error;
+      }
+    });
+
+    queue = job.catch(() => {});
+    return job;
+  }
+
+  async function getAccountProfile(userId) {
+    return queue.then(() => {
+      initialize();
+      const value = readAccountProfile(String(userId ?? '').trim());
+      return value ? structuredClone(value) : null;
+    });
+  }
+
+  async function updateAccountProfile({ guildId = null, userId, username = 'Unknown', now = Date.now() }, mutator) {
+    const job = queue.then(async () => {
+      initialize();
+      database.exec('BEGIN IMMEDIATE');
+      try {
+        const normalizedUserId = String(userId ?? '').trim();
+        if (!normalizedUserId) throw new Error('SQLite account profile update requires userId.');
+
+        const current = readAccountProfile(normalizedUserId);
+        if (!current) {
+          database.exec('COMMIT');
+          return null;
+        }
+
+        ensureObjectRootForPartialWrite();
+        ensureGlobalFeatureForUsers(ACCOUNT_FEATURE_KEY);
+
+        const profile = structuredClone(current);
+        const result = await mutator(profile);
+        const normalized = upsertGlobalFeatureUserValue(ACCOUNT_FEATURE_KEY, normalizedUserId, profile, Date.now());
+        touchAccountMembership({ guildId, userId: normalizedUserId, username: username || normalized.username, now });
+        database.exec('COMMIT');
+        return result;
+      } catch (error) {
+        database.exec('ROLLBACK');
+        throw error;
+      }
+    });
+
+    queue = job.catch(() => {});
+    return job;
   }
 
   async function load() {
@@ -689,6 +1109,10 @@ export function createSqliteStore(databasePath, options = {}) {
     view,
     save,
     update,
+    getGlobalFeatureUser,
+    upsertGlobalFeatureUser,
+    getAccountProfile,
+    updateAccountProfile,
     close
   };
 }
@@ -706,7 +1130,9 @@ function collectNormalizedRows(value) {
     guilds: new Map(),
     guildUsers: new Map(),
     guildFeatures: new Map(),
-    guildFeatureUsers: new Map()
+    guildFeatureUsers: new Map(),
+    accountProfiles: new Map(),
+    accountGuildMemberships: new Map()
   };
 
   if (rootType !== 'object') return rows;
@@ -731,6 +1157,10 @@ function collectGlobalFeatureRows(rows, featureKey, featureValue) {
     stateJson: serializeJsonValue(split.state),
     hasUsers: split.hasUsers ? 1 : 0
   });
+
+  if (featureKey === ACCOUNT_FEATURE_KEY) {
+    collectAccountProjectionRows(rows, featureValue);
+  }
 
   if (!split.hasUsers) return;
 
@@ -800,6 +1230,60 @@ function collectGuildFeatureRows(rows, guildId, featureKey, featureValue) {
   }
 }
 
+function collectAccountProjectionRows(rows, accountState) {
+  if (!isPlainObject(accountState)) return;
+
+  if (isPlainObject(accountState.users)) {
+    for (const [userId, profile] of Object.entries(accountState.users)) {
+      rows.accountProfiles.set(userId, createAccountProfileProjection(userId, profile));
+    }
+  }
+
+  if (!isPlainObject(accountState.guilds)) return;
+
+  for (const [guildId, guildAccount] of Object.entries(accountState.guilds)) {
+    if (!isPlainObject(guildAccount?.users)) continue;
+    for (const [userId, membership] of Object.entries(guildAccount.users)) {
+      rows.accountGuildMemberships.set(
+        compoundKey(guildId, userId),
+        createAccountGuildMembershipProjection(guildId, userId, membership)
+      );
+    }
+  }
+}
+
+function createAccountProfileProjection(userId, profile) {
+  const safeProfile = isPlainObject(profile) ? profile : {};
+  return {
+    userId,
+    username: String(safeProfile.username || 'Unknown'),
+    level: normalizeProjectionInteger(safeProfile.level, 1),
+    xp: normalizeProjectionInteger(safeProfile.xp, 0),
+    totalXp: normalizeProjectionInteger(safeProfile.totalXp, 0),
+    balance: normalizeProjectionInteger(safeProfile.balance, 0),
+    createdAt: normalizeProjectionInteger(safeProfile.createdAt, 0),
+    lastMessageRewardAt: normalizeProjectionInteger(safeProfile.lastMessageRewardAt, 0),
+    lastDailyAt: normalizeProjectionInteger(safeProfile.lastDailyAt, 0),
+    lastDailyDay: normalizeProjectionNullableInteger(safeProfile.lastDailyDay),
+    dailyStreak: normalizeProjectionInteger(safeProfile.dailyStreak, 0),
+    lastFirstMessageBonusDay: normalizeProjectionNullableInteger(safeProfile.lastFirstMessageBonusDay),
+    lastFortuneXpDay: normalizeProjectionNullableInteger(safeProfile.lastFortuneXpDay),
+    profileJson: serializeJsonValue(profile)
+  };
+}
+
+function createAccountGuildMembershipProjection(guildId, userId, membership) {
+  const safeMembership = isPlainObject(membership) ? membership : {};
+  return {
+    guildId,
+    userId,
+    username: String(safeMembership.username || 'Unknown'),
+    linkedAt: normalizeProjectionInteger(safeMembership.linkedAt, 0),
+    lastSeenAt: normalizeProjectionInteger(safeMembership.lastSeenAt, 0),
+    membershipJson: serializeJsonValue(membership)
+  };
+}
+
 function splitUsers(value) {
   if (!isPlainObject(value) || !isPlainObject(value.users)) {
     return {
@@ -839,6 +1323,7 @@ function bindDeleteRow(row) {
   if ('userId' in row && 'guildId' in row) return [row.guildId, row.userId];
   if ('guildId' in row) return [row.guildId];
   if ('featureKey' in row) return [row.featureKey];
+  if ('userId' in row) return [row.userId];
   throw new Error('Unknown normalized row key shape.');
 }
 
@@ -864,6 +1349,38 @@ function bindGuildFeatureRow(row, now) {
 
 function bindGuildFeatureUserRow(row, now) {
   return [row.guildId, row.featureKey, row.userId, row.profileJson, now];
+}
+
+function bindAccountProfileRow(row, now) {
+  return [
+    row.userId,
+    row.username,
+    row.level,
+    row.xp,
+    row.totalXp,
+    row.balance,
+    row.createdAt,
+    row.lastMessageRewardAt,
+    row.lastDailyAt,
+    row.lastDailyDay,
+    row.dailyStreak,
+    row.lastFirstMessageBonusDay,
+    row.lastFortuneXpDay,
+    row.profileJson,
+    now
+  ];
+}
+
+function bindAccountGuildMembershipRow(row, now) {
+  return [
+    row.guildId,
+    row.userId,
+    row.username,
+    row.linkedAt,
+    row.lastSeenAt,
+    row.membershipJson,
+    now
+  ];
 }
 
 function rootRowsEqual(left, right) {
@@ -1001,6 +1518,17 @@ function assertPlainObject(value, label) {
   if (!isPlainObject(value)) {
     throw new Error(`SQLite normalized state expected object at ${label}.`);
   }
+}
+
+function normalizeProjectionInteger(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isSafeInteger(number) && number >= 0 ? number : fallback;
+}
+
+function normalizeProjectionNullableInteger(value) {
+  if (value === null || value === undefined) return null;
+  const number = Number(value);
+  return Number.isSafeInteger(number) && number >= 0 ? number : null;
 }
 
 function serializeJsonValue(value) {
