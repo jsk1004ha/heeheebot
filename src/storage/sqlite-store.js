@@ -10,6 +10,7 @@ const LEGACY_STATE_KEY = 'state';
 const SCHEMA_VERSION = 2;
 const NODE_TYPES = new Set(['object', 'array', 'string', 'number', 'boolean', 'null']);
 const EMPTY_SQL_STATE = Object.freeze({ found: false, data: null });
+const UNLOADED_CACHE = Symbol('unloaded-cache');
 
 export function createSqliteStore(databasePath, options = {}) {
   const {
@@ -19,6 +20,8 @@ export function createSqliteStore(databasePath, options = {}) {
 
   let database = null;
   let queue = Promise.resolve();
+  let cachedData = UNLOADED_CACHE;
+  let cachedStatePersisted = false;
 
   function initialize() {
     if (database) return database;
@@ -68,7 +71,8 @@ export function createSqliteStore(databasePath, options = {}) {
 
     database.exec('BEGIN IMMEDIATE');
     try {
-      writeSqlState(JSON.parse(raw));
+      cachedData = writeSqlState(JSON.parse(raw));
+      cachedStatePersisted = true;
       database
         .prepare('DELETE FROM bot_state WHERE key = ?')
         .run(LEGACY_STATE_KEY);
@@ -87,7 +91,8 @@ export function createSqliteStore(databasePath, options = {}) {
 
     database.exec('BEGIN IMMEDIATE');
     try {
-      writeSqlState(migrated);
+      cachedData = writeSqlState(migrated);
+      cachedStatePersisted = true;
       saveMetadata('legacy_json_file_migrated_at', String(Date.now()));
       database.exec('COMMIT');
     } catch (error) {
@@ -150,8 +155,28 @@ export function createSqliteStore(databasePath, options = {}) {
     };
   }
 
+  function getCachedData() {
+    if (cachedData !== UNLOADED_CACHE) return cachedData;
+
+    const state = loadSqlState();
+    cachedData = state.found ? state.data : structuredClone(initialData);
+    cachedStatePersisted = state.found;
+    return cachedData;
+  }
+
   function writeSqlState(data) {
     const normalizedData = toJsonCompatibleData(data);
+
+    if (cachedData !== UNLOADED_CACHE && cachedStatePersisted) {
+      writeSqlStateDelta(normalizedData, cachedData);
+    } else {
+      writeSqlStateFull(normalizedData);
+    }
+
+    return normalizedData;
+  }
+
+  function writeSqlStateFull(normalizedData) {
     const now = Date.now();
     const insertNode = database.prepare(`
       INSERT INTO bot_state_nodes (
@@ -176,26 +201,86 @@ export function createSqliteStore(databasePath, options = {}) {
     });
   }
 
+  function writeSqlStateDelta(nextData, previousData) {
+    const now = Date.now();
+    const previousRows = collectSerializedRows(previousData);
+    const nextRows = collectSerializedRows(nextData);
+    const deleteNode = database.prepare('DELETE FROM bot_state_nodes WHERE path = ?');
+    const upsertNode = database.prepare(`
+      INSERT INTO bot_state_nodes (
+        path,
+        parent_path,
+        node_key,
+        node_type,
+        text_value,
+        number_value,
+        boolean_value,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(path) DO UPDATE SET
+        parent_path = excluded.parent_path,
+        node_key = excluded.node_key,
+        node_type = excluded.node_type,
+        text_value = excluded.text_value,
+        number_value = excluded.number_value,
+        boolean_value = excluded.boolean_value,
+        updated_at = excluded.updated_at
+    `);
+
+    for (const path of previousRows.keys()) {
+      if (!nextRows.has(path)) {
+        deleteNode.run(path);
+      }
+    }
+
+    for (const [path, row] of nextRows.entries()) {
+      if (serializedRowsEqual(row, previousRows.get(path))) continue;
+
+      upsertNode.run(
+        row.path,
+        row.parentPath,
+        row.nodeKey,
+        row.nodeType,
+        row.textValue,
+        row.numberValue,
+        row.booleanValue,
+        now
+      );
+    }
+  }
+
   async function load() {
-    initialize();
+    return queue.then(() => {
+      initialize();
+      return structuredClone(getCachedData());
+    });
+  }
 
-    const state = loadSqlState();
-    if (!state.found) return structuredClone(initialData);
-
-    return state.data;
+  async function view(mutator) {
+    return queue.then(() => {
+      initialize();
+      return mutator(structuredClone(getCachedData()));
+    });
   }
 
   async function save(data) {
-    initialize();
+    const job = queue.then(async () => {
+      initialize();
 
-    database.exec('BEGIN IMMEDIATE');
-    try {
-      writeSqlState(data);
-      database.exec('COMMIT');
-    } catch (error) {
-      database.exec('ROLLBACK');
-      throw error;
-    }
+      database.exec('BEGIN IMMEDIATE');
+      try {
+        const normalizedData = writeSqlState(data);
+        database.exec('COMMIT');
+        cachedData = normalizedData;
+        cachedStatePersisted = true;
+      } catch (error) {
+        database.exec('ROLLBACK');
+        throw error;
+      }
+    });
+
+    queue = job.catch(() => {});
+    return job;
   }
 
   async function update(mutator) {
@@ -204,11 +289,12 @@ export function createSqliteStore(databasePath, options = {}) {
       database.exec('BEGIN IMMEDIATE');
 
       try {
-        const state = loadSqlState();
-        const data = state.found ? state.data : structuredClone(initialData);
+        const data = structuredClone(getCachedData());
         const result = await mutator(data);
-        writeSqlState(data);
+        const normalizedData = writeSqlState(data);
         database.exec('COMMIT');
+        cachedData = normalizedData;
+        cachedStatePersisted = true;
         return result;
       } catch (error) {
         database.exec('ROLLBACK');
@@ -224,14 +310,80 @@ export function createSqliteStore(databasePath, options = {}) {
     if (!database) return;
     database.close();
     database = null;
+    cachedData = UNLOADED_CACHE;
+    cachedStatePersisted = false;
   }
 
   return {
     load,
+    view,
     save,
     update,
     close
   };
+}
+
+function collectSerializedRows(value) {
+  const rows = new Map();
+  collectSerializedNode(value, {
+    path: '',
+    parentPath: null,
+    nodeKey: null,
+    rows
+  });
+  return rows;
+}
+
+function collectSerializedNode(value, {
+  path,
+  parentPath,
+  nodeKey,
+  rows
+}) {
+  const nodeType = getNodeType(value);
+  rows.set(path, {
+    path,
+    parentPath,
+    nodeKey,
+    nodeType,
+    textValue: nodeType === 'string' ? value : null,
+    numberValue: nodeType === 'number' ? value : null,
+    booleanValue: nodeType === 'boolean' ? Number(value) : null
+  });
+
+  if (nodeType === 'array') {
+    value.forEach((item, index) => {
+      const childKey = String(index);
+      collectSerializedNode(item, {
+        path: joinPointerPath(path, childKey),
+        parentPath: path,
+        nodeKey: childKey,
+        rows
+      });
+    });
+    return;
+  }
+
+  if (nodeType === 'object') {
+    for (const [childKey, childValue] of Object.entries(value)) {
+      collectSerializedNode(childValue, {
+        path: joinPointerPath(path, childKey),
+        parentPath: path,
+        nodeKey: childKey,
+        rows
+      });
+    }
+  }
+}
+
+function serializedRowsEqual(left, right) {
+  if (!left || !right) return false;
+  return left.parentPath === right.parentPath
+    && left.nodeKey === right.nodeKey
+    && left.nodeType === right.nodeType
+    && left.textValue === right.textValue
+    && left.numberValue === right.numberValue
+    && left.booleanValue === right.booleanValue;
 }
 
 function serializeNode(value, {

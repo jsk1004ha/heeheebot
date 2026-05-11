@@ -184,6 +184,114 @@ test('SQLite SQL 행 저장소는 루트 falsy JSON 값도 빈 DB로 오인하�
   }
 });
 
+test('SQLite 저장소 load/view 스냅샷은 캐시 원본을 오염시키지 않는다', async () => {
+  const store = createSqliteStore(':memory:');
+
+  try {
+    await store.save({
+      guilds: {
+        'guild-1': {
+          users: {
+            'user-1': {
+              level: 1
+            }
+          }
+        }
+      }
+    });
+
+    const loaded = await store.load();
+    loaded.guilds['guild-1'].users['user-1'].level = 99;
+
+    const viewResult = await store.view((data) => {
+      data.guilds['guild-1'].users['user-1'].level = 50;
+      return data.guilds['guild-1'].users['user-1'].level;
+    });
+    const reloaded = await store.load();
+
+    assert.equal(viewResult, 50);
+    assert.equal(reloaded.guilds['guild-1'].users['user-1'].level, 1);
+  } finally {
+    store.close();
+  }
+});
+
+test('SQLite 저장소 update 실패는 메모리 캐시와 DB를 되돌린다', async () => {
+  const store = createSqliteStore(':memory:');
+
+  try {
+    await store.save({
+      guilds: {
+        'guild-1': {
+          users: {
+            'user-1': {
+              level: 1
+            }
+          }
+        }
+      }
+    });
+
+    await assert.rejects(
+      () => store.update((data) => {
+        data.guilds['guild-1'].users['user-1'].level = 99;
+        throw new Error('boom');
+      }),
+      /boom/
+    );
+
+    const data = await store.load();
+    assert.equal(data.guilds['guild-1'].users['user-1'].level, 1);
+  } finally {
+    store.close();
+  }
+});
+
+test('SQLite 저장소는 변경된 path만 갱신하고 그대로인 row는 유지한다', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'heeheebot-sqlite-delta-'));
+  const databasePath = join(directory, 'profiles.sqlite');
+  const store = createSqliteStore(databasePath);
+  const originalNow = Date.now;
+
+  try {
+    Date.now = () => 1_000;
+    await store.save({
+      guilds: {
+        'guild-1': {
+          users: {
+            'user-1': {
+              level: 1
+            },
+            'user-2': {
+              level: 2
+            }
+          }
+        }
+      }
+    });
+
+    Date.now = () => 2_000;
+    await store.update((data) => {
+      data.guilds['guild-1'].users['user-1'].level = 10;
+    });
+
+    const inspector = new DatabaseSync(databasePath);
+    try {
+      assert.equal(getNodeUpdatedAt(inspector, '/guilds/guild-1/users/user-1/level'), 2_000);
+      assert.equal(getNodeUpdatedAt(inspector, '/guilds/guild-1/users/user-2/level'), 1_000);
+    } finally {
+      inspector.close();
+    }
+  } finally {
+    Date.now = originalNow;
+    store.close();
+    await rm(directory, {
+      recursive: true,
+      force: true
+    });
+  }
+});
+
 test('기존 SQLite 단일 JSON의 루트 falsy 값도 SQL 행으로 보존한다', async () => {
   const cases = [false, 0, '', null];
 
@@ -291,4 +399,11 @@ function getLegacyStateValue(database) {
   return database
     .prepare('SELECT value FROM bot_state WHERE key = ?')
     .get('state')?.value ?? null;
+}
+
+function getNodeUpdatedAt(database, path) {
+  return database
+    .prepare('SELECT updated_at FROM bot_state_nodes WHERE path = ?')
+    .get(path)
+    .updated_at;
 }
