@@ -339,6 +339,17 @@ export const stockCommands = [
             .setDescription('확인할 유저. 비우면 본인')
         )
     )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('채무상환')
+        .setDescription('내 골드로 레버리지 파산채무를 직접 상환합니다.')
+        .addIntegerOption((option) =>
+          option
+            .setName('금액')
+            .setDescription('상환할 골드. 비우면 가능한 만큼 전액 상환')
+            .setMinValue(1)
+        )
+    )
 ];
 
 export function getStockCommandPayloads() {
@@ -656,6 +667,19 @@ async function routeStockCommand(interaction, stocks) {
     });
     await replyStockContent(interaction, formatLeveragePortfolio(target, portfolio), {
       components: target.id === user.id ? createLeveragePortfolioRows(user.id, portfolio) : []
+    });
+    return;
+  }
+
+  if (subcommand === '채무상환') {
+    const result = await stocks.repayBankruptcyDebt({
+      guildId,
+      userId: user.id,
+      username: user.username,
+      amount: interaction.options.getInteger('금액')
+    });
+    await replyStockContent(interaction, formatDebtRepaymentResult(user, result), {
+      components: createStockQuickRows(user.id)
     });
     return;
   }
@@ -1438,6 +1462,33 @@ function formatLeveragePortfolio(user, portfolio) {
     `미실현손익: **${formatSignedMoney(portfolio.unrealizedProfit)}** / 누적실현손익: **${formatSignedMoney(portfolio.realizedLeveragedProfit)}**`,
     positions + liquidatedText
   ].filter(Boolean).join('\n');
+}
+
+function formatDebtRepaymentResult(user, result) {
+  if (result.debtBefore <= 0) {
+    return [
+      `✅ **파산채무 상환 상태** — ${formatUserMention(user, user.username)}`,
+      '상환할 파산채무가 없습니다.',
+      `골드: **${result.profile.balance.toLocaleString()}골드** / 레버리지 진입 가능`
+    ].join('\n');
+  }
+
+  if (result.repaid <= 0) {
+    return [
+      `⚠️ **파산채무 상환 실패** — ${formatUserMention(user, user.username)}`,
+      `남은 채무: **${result.bankruptcy.debt.toLocaleString()}골드**`,
+      '상환에 사용할 골드가 부족합니다. 골드 수익을 받으면 25%가 자동 상환됩니다.'
+    ].join('\n');
+  }
+
+  return [
+    `✅ **파산채무 상환 완료** — ${formatUserMention(user, user.username)}`,
+    `상환: **${result.repaid.toLocaleString()}골드** / 남은 채무: **${result.bankruptcy.debt.toLocaleString()}골드**`,
+    `골드: **${result.profile.balance.toLocaleString()}골드**`,
+    result.bankruptcy.debt > 0
+      ? '남은 채무가 있어 새 레버리지 진입은 아직 막혀 있습니다.'
+      : '채무를 모두 갚았습니다. 레버리지 진입 가능!'
+  ].join('\n');
 }
 
 function formatBankruptcyLine(bankruptcy) {

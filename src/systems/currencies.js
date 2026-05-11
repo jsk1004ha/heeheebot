@@ -280,6 +280,30 @@ export function hasStockBankruptcyDebt(profile) {
   return getStockBankruptcySummary(profile).debt > 0;
 }
 
+export function repayStockBankruptcyDebt(profile, amount = null) {
+  const state = ensureStockBankruptcyState(profile);
+  const debtBefore = state.debt;
+  const balanceBefore = getCurrencyBalance(profile, CURRENCY_MAIN);
+  const requested = amount === null || amount === undefined
+    ? debtBefore
+    : normalizePositiveInteger(amount, '상환 금액');
+  const repaid = Math.min(debtBefore, balanceBefore, requested);
+
+  if (repaid > 0) {
+    state.debt -= repaid;
+    state.paid += repaid;
+    setCurrencyBalance(profile, CURRENCY_MAIN, balanceBefore - repaid);
+  }
+
+  return {
+    requested,
+    repaid,
+    balanceBefore,
+    balance: getCurrencyBalance(profile, CURRENCY_MAIN),
+    bankruptcy: getStockBankruptcySummary(profile)
+  };
+}
+
 function createUnifiedLegacyConfig(currencyId) {
   const legacy = LEGACY_WALLET_CONFIGS[currencyId];
   return Object.freeze({

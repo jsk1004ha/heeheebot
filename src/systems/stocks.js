@@ -10,7 +10,8 @@ import {
   getStockBankruptcySummary,
   hasStockBankruptcyDebt,
   migrateLegacyWalletsToGold,
-  normalizeWallets
+  normalizeWallets,
+  repayStockBankruptcyDebt
 } from './currencies.js';
 import {
   getAccountUserIdsForGuild,
@@ -949,6 +950,30 @@ export class StockService {
         realizedProfit,
         profile: cloneMoneyProfile(profile),
         stockUser: cloneStockUser(stockUser)
+      };
+    });
+  }
+
+  async repayBankruptcyDebt({ guildId, userId, username, amount = null, now = Date.now() }) {
+    return this.store.update((data) => {
+      const guild = getOrCreateGuild(data, guildId);
+      const market = syncMarket(data, guildId, guild, now, this);
+      const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
+      const liquidated = liquidateLeveragedPositions(profile, stockUser, market);
+      const before = getStockBankruptcySummary(profile);
+      const repayment = repayStockBankruptcyDebt(profile, amount);
+
+      return {
+        userId: profile.userId,
+        username: profile.username,
+        requested: repayment.requested,
+        repaid: repayment.repaid,
+        debtBefore: before.debt,
+        balanceBefore: repayment.balanceBefore,
+        bankruptcy: repayment.bankruptcy,
+        liquidated,
+        profile: cloneMoneyProfile(profile)
       };
     });
   }
