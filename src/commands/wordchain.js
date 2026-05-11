@@ -287,7 +287,7 @@ async function beginWordChainGame(state, economy, logger) {
   clearCollectionTimer(state);
   state.status = 'playing';
 
-  const humanPlayers = [...state.participants.values()];
+  const humanPlayers = shufflePlayerOrder([...state.participants.values()], state.randomInt);
   const minimumHumanPlayers = getMinimumHumanPlayers(state);
 
   if (humanPlayers.length < minimumHumanPlayers) {
@@ -441,7 +441,7 @@ function formatLobbyMessage(state) {
     `모집 시간: **${formatSeconds(state.collectionMs)}**`,
     '방장 시작: 모집 시간이 끝나기 전에도 **방장 시작** 버튼으로 바로 시작 가능',
     '시작 단어: 게임이 시작되면 희희봇이 먼저 제공합니다.',
-    `진행: ${formatProgressMode(state)} 순서대로 진행`,
+    `진행: 게임 시작 시 ${formatProgressMode(state)} 무작위 순서로 진행`,
     `규칙: 자기 차례에 ${formatSeconds(state.turnTimeoutMs)} 안에 DB에 있는 한국어 단어를 입력하세요. 두음법칙을 허용하며, 성공 단어마다 제한시간이 ${formatSeconds(state.turnTimeoutDecreaseMs)}씩 줄고 최소 ${formatSeconds(state.minTurnTimeoutMs)}까지 내려갑니다. 답을 못하면 탈락합니다.`,
     '',
     `참가자 (${state.participants.size}명):`,
@@ -463,7 +463,7 @@ function formatStartMessage(state) {
     `희희봇 시작 단어: **${state.starterWord.word}**`,
     `첫 글자: **${formatNextRequiredStart(state.starterWord.nextRequiredStart)}**`,
     '',
-    '순서:',
+    '순서(랜덤):',
     order
   ].join('\n');
 }
@@ -553,6 +553,33 @@ function formatMinimumPlayerMode(state) {
 
 function getMinimumHumanPlayers(state) {
   return state.includeBot ? 1 : 2;
+}
+
+function shufflePlayerOrder(players, randomInt) {
+  const shuffled = [...players];
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = getRandomIndex(randomInt, index + 1);
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+
+  return shuffled;
+}
+
+function getRandomIndex(randomInt, upperExclusive) {
+  if (upperExclusive <= 1) return 0;
+
+  const value = typeof randomInt === 'function'
+    ? randomInt.length >= 2
+      ? randomInt(0, upperExclusive - 1)
+      : randomInt(upperExclusive)
+    : Math.floor(Math.random() * upperExclusive);
+
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(upperExclusive - 1, Math.floor(value)));
 }
 
 function createLobbyActionRow(state) {

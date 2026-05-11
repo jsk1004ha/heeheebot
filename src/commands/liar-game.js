@@ -613,7 +613,7 @@ function formatLobbyMessage(state) {
     `모집 시간: **${formatSeconds(state.collectionMs)}**`,
     `인원: **${LIAR_GAME_MIN_PLAYERS}~${LIAR_GAME_MAX_PLAYERS}명**`,
     '방장 시작: 모집 시간이 끝나기 전에도 **방장 시작** 버튼으로 바로 시작 가능',
-    '진행: 주제만 공개되고, 제시어는 각자 **내 제시어 보기** 버튼으로만 확인합니다.',
+    '진행: 게임 시작 시 무작위 설명 순서를 공개하고, 제시어는 각자 **내 제시어 보기** 버튼으로만 확인합니다.',
     '',
     `참가자 (${state.participants.size}명):`,
     participants
@@ -634,7 +634,7 @@ function formatStartMessage(state) {
     '아래 **내 제시어 보기** 버튼을 눌러 본인에게만 보이는 제시어를 확인하세요.',
     '라이어가 알아채지 못하게 너무 직접적인 설명은 피하고, 너무 모호하면 의심받을 수 있습니다.',
     '',
-    '설명 순서:',
+    '설명 순서(랜덤):',
     order
   ].join('\n');
 }

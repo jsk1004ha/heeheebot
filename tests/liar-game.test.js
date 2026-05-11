@@ -74,6 +74,8 @@ test('라이어게임 시스템은 일반/어려움 모드 제시어와 2턴 설
   assert.equal(normal.liarUserId, 'user-1');
   assert.equal(normal.getAssignment('user-1').word, null);
   assert.equal(normal.getAssignment('user-2').word, '김치찌개');
+  assert.deepEqual(normal.turnOrder.map((player) => player.userId), ['user-2', 'user-3', 'user-4', 'user-1']);
+  assert.equal(normal.currentTurn.player.userId, 'user-2');
   assert.equal(normal.turns.length, TEST_PLAYERS.length * 2);
 
   const hard = new LiarGame({
