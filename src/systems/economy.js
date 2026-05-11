@@ -74,6 +74,12 @@ import {
   rollRpgMaterialDrops,
   rollRpgGachaPull
 } from './rpg.js';
+import {
+  applyRpgDungeonRelicChoice,
+  createRpgDungeonRun,
+  normalizeRpgDungeonRun,
+  resolveRpgDungeonRoom
+} from './rpg-dungeon-run.js';
 
 import {
   DAILY_SWORD_GIFT_STONES,
@@ -1721,103 +1727,152 @@ export class EconomyService {
   }
 
   async runRpgDungeon({ guildId, userId, username, dungeonId = null, area = null, depth = null, now = Date.now() }) {
+    return this.startOrResumeRpgDungeonRun({ guildId, userId, username, dungeonId, area, depth, now });
+  }
+
+  async startOrResumeRpgDungeonRun({
+    guildId,
+    userId,
+    username,
+    dungeonId = null,
+    area = null,
+    depth = null,
+    now = Date.now()
+  }) {
     const normalizedDungeonId = dungeonId ? normalizeRpgDungeonId(dungeonId) : null;
     const dungeonConfig = normalizedDungeonId ? getRpgDungeonConfig(normalizedDungeonId) : null;
     const requestedDepth = depth ?? dungeonConfig?.rooms ?? 3;
-    const safeDepth = Math.min(dungeonConfig?.rooms ?? 5, 5, normalizePositiveInteger(requestedDepth, '던전 깊이'));
+    const safeDepth = Math.min(
+      dungeonConfig?.rooms ?? 5,
+      5,
+      normalizePositiveInteger(requestedDepth, '던전 깊이')
+    );
 
     return this.store.update((data) => {
-      const profile = getOrCreateProfile(data, guildId, userId, username, this);
+      const profile = getOrCreateProfile(data, guildId, userId, username, this, now);
       const normalizedArea = normalizeRpgArea(dungeonConfig?.area || area || profile.rpg.currentArea);
       assertRpgAreaUnlocked(profile, normalizedArea);
-      if (dungeonConfig) {
-        assertRpgDungeonUnlocked(profile, normalizedDungeonId);
+      if (dungeonConfig) assertRpgDungeonUnlocked(profile, normalizedDungeonId);
+
+      if (profile.rpg.dungeonRun) {
+        const run = normalizeRpgDungeonRun(profile.rpg.dungeonRun, now);
+        if (run) {
+          profile.rpg.dungeonRun = run;
+          return createRpgDungeonRunResponse({
+            profile,
+            run,
+            dungeonConfig: run.dungeonId ? getRpgDungeonConfig(run.dungeonId) : null,
+            action: 'resumed',
+            economy: this,
+            now
+          });
+        }
+        profile.rpg.dungeonRun = null;
       }
+
       assertRpgActionCooldown(profile, 'lastDungeonAt', now, this.options.rpgDungeonCooldownMs, '던전');
-      if (profile.rpg.hp <= 1) {
-        throw new Error('HP가 부족합니다. `/rpg 휴식` 또는 회복 포션을 사용하세요.');
-      }
+      if (profile.rpg.hp <= 1) throw new Error('HP가 부족합니다. `/rpg 휴식` 또는 회복 포션을 사용하세요.');
+
       const derivedStats = getProfileRpgDerivedStats(profile);
-      const rewardMultiplier = dungeonConfig?.rewardMultiplier ?? (dungeonConfig?.hidden ? 1.2 : 1);
-      const floors = [];
-      let totalXp = 0;
-      let totalCoins = 0;
-      let totalDamage = 0;
-      let gearDrop = null;
-      const materialDrops = {};
-
-      for (let floor = 1; floor <= safeDepth; floor += 1) {
-        const event = resolveRpgExploration({
-          playerLevel: getProfileRpgLevel(profile) + floor - 1,
-          area: normalizedArea,
-          randomInt: this.randomInt
-        });
-        totalXp += event.rewards.xp;
-        totalCoins += event.rewards.coins;
-        totalDamage += event.damageTaken;
-        mergeRpgItemQuantities(materialDrops, rollRpgMaterialDrops({
-          source: 'dungeon',
-          area: normalizedArea,
-          difficulty: safeDepth >= 4 ? 'hard' : 'normal',
-          randomInt: this.randomInt
-        }));
-        mergeRpgItemQuantities(materialDrops, rollRpgConfiguredDungeonMaterialDrops({
-          dungeonConfig,
-          randomInt: this.randomInt
-        }));
-        floors.push({ floor, ...event });
-      }
-
-      totalXp = Math.floor(totalXp * rewardMultiplier);
-      totalCoins = Math.floor(totalCoins * rewardMultiplier);
+      const run = createRpgDungeonRun({
+        dungeonId: normalizedDungeonId,
+        dungeonConfig,
+        area: normalizedArea,
+        depth: safeDepth,
+        playerLevel: getProfileRpgLevel(profile),
+        derivedStats,
+        hp: profile.rpg.hp,
+        mp: profile.rpg.mp,
+        now,
+        randomInt: this.randomInt
+      });
 
       profile.rpg.dungeonRuns += 1;
       profile.rpg.lastDungeonAt = now;
       profile.rpg.currentArea = normalizedArea;
-      incrementRpgDailyStats(profile.rpg, now, {
-        dungeons: 1
-      });
-      increaseRpgAreaProgress(profile.rpg, normalizedArea, safeDepth * 12);
-      grantRpgClassMastery(profile, safeDepth * 8);
-      profile.rpg.hp = Math.max(1, Math.min(derivedStats.maxHp, profile.rpg.hp - totalDamage + safeDepth * 3));
-      profile.rpg.mp = Math.max(0, Math.min(derivedStats.maxMp, profile.rpg.mp - safeDepth));
-      grantRpgInventoryItems(profile.rpg.inventory, materialDrops);
-      const rewardSettlement = settleRepeatableRpgRewards(
-        profile,
-        { xp: totalXp, coins: totalCoins },
-        this,
+      profile.rpg.dungeonRun = run;
+      return createRpgDungeonRunResponse({ profile, run, dungeonConfig, action: 'started', economy: this, now });
+    });
+  }
+
+  async chooseRpgDungeonRoom({ guildId, userId, username, runId = null, revision = null, choiceId, now = Date.now() }) {
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, this, now);
+      const run = assertActiveRpgDungeonRun(profile, { runId, revision, expectedState: 'active', now });
+      const dungeonConfig = run.dungeonId ? getRpgDungeonConfig(run.dungeonId) : null;
+      const resolution = resolveRpgDungeonRoom({
+        run,
+        choiceId,
+        playerLevel: getProfileRpgLevel(profile),
+        derivedStats: getProfileRpgDerivedStats(profile),
+        randomInt: this.randomInt,
         now
-      );
-      profile.rpg.dungeonClears[normalizedArea] = (profile.rpg.dungeonClears[normalizedArea] ?? 0) + 1;
-      const blueprint = rollRpgGearDrop({
-        source: dungeonConfig?.hidden ? 'hiddenDungeon' : 'dungeon',
-        area: normalizedArea,
-        difficulty: safeDepth >= 4 ? 'hard' : 'normal',
-        pool: dungeonConfig?.drops,
-        randomInt: this.randomInt
       });
-      if (blueprint) {
-        gearDrop = addRpgGear(profile, blueprint, now);
+
+      if (['cleared', 'failed'].includes(resolution.run.state)) {
+        return settleRpgDungeonRun({
+          profile,
+          run: resolution.run,
+          dungeonConfig,
+          outcome: resolution.run.state,
+          roomResult: resolution.roomResult,
+          economy: this,
+          now
+        });
       }
 
-      return {
-        area: normalizedArea,
-        areaConfig: getRpgAreaConfig(normalizedArea),
-        dungeonId: normalizedDungeonId,
+      profile.rpg.dungeonRun = resolution.run;
+      return createRpgDungeonRunResponse({
+        profile,
+        run: resolution.run,
         dungeonConfig,
-        depth: safeDepth,
-        floors,
-        totalXp,
-        totalCoins: rewardSettlement.coinReward,
-        requestedTotalCoins: totalCoins,
-        rpgGoldLimit: rewardSettlement.rpgGoldLimit,
-        totalDamage,
-        gearDrop,
-        materialDrops: labelRpgItemQuantities(materialDrops),
-        ...rewardSettlement.levelResult,
-        ...getRpgActionContext(profile, this, now),
-        profile: cloneProfile(profile)
-      };
+        action: 'room_resolved',
+        roomResult: resolution.roomResult,
+        economy: this,
+        now
+      });
+    });
+  }
+
+  async chooseRpgDungeonRelic({ guildId, userId, username, runId = null, revision = null, relicId, now = Date.now() }) {
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, this, now);
+      const run = assertActiveRpgDungeonRun(profile, { runId, revision, expectedState: 'awaiting_relic', now });
+      const dungeonConfig = run.dungeonId ? getRpgDungeonConfig(run.dungeonId) : null;
+      const result = applyRpgDungeonRelicChoice({
+        run,
+        relicId,
+        playerLevel: getProfileRpgLevel(profile),
+        randomInt: this.randomInt,
+        now
+      });
+
+      profile.rpg.dungeonRun = result.run;
+      return createRpgDungeonRunResponse({
+        profile,
+        run: result.run,
+        dungeonConfig,
+        action: 'relic_chosen',
+        relic: result.relic,
+        economy: this,
+        now
+      });
+    });
+  }
+
+  async abandonRpgDungeonRun({ guildId, userId, username, runId = null, revision = null, now = Date.now() }) {
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, this, now);
+      const run = assertActiveRpgDungeonRun(profile, { runId, revision, now });
+      const dungeonConfig = run.dungeonId ? getRpgDungeonConfig(run.dungeonId) : null;
+      return settleRpgDungeonRun({
+        profile,
+        run: { ...run, state: 'abandoned', updatedAt: now, currentChoices: [], pendingRelicChoices: [] },
+        dungeonConfig,
+        outcome: 'abandoned',
+        economy: this,
+        now
+      });
     });
   }
 
@@ -3251,7 +3306,7 @@ function getOrCreateProfile(data, guildId, userId, username, economy, now = Date
   profile.dailyStreak = normalizeStoredNonNegativeInteger(profile.dailyStreak);
   profile.lastFirstMessageBonusDay = normalizeStoredNullableInteger(profile.lastFirstMessageBonusDay);
   profile.lastFortuneXpDay = normalizeStoredNullableInteger(profile.lastFortuneXpDay);
-  profile.rpg = normalizeRpgStats(profile.rpg, profile.level);
+  profile.rpg = normalizeRpgStats(profile.rpg, profile.level, now);
   profile.sword = normalizeSwordStats(profile.sword);
   profile.createdAt = normalizeStoredNonNegativeInteger(profile.createdAt) || now;
   reconcileProfileProgress(profile, economy);
@@ -3389,6 +3444,7 @@ function cloneRpgStats(rpg) {
     classMastery: cloneClassMastery(rpg.classMastery),
     craftingMastery: cloneClassMastery(rpg.craftingMastery),
     craftingLog: Array.isArray(rpg.craftingLog) ? rpg.craftingLog.map((entry) => ({ ...entry })) : [],
+    dungeonRun: cloneRpgDungeonRun(rpg.dungeonRun),
     gacha: { ...rpg.gacha },
     daily: {
       ...rpg.daily,
@@ -3410,6 +3466,20 @@ function cloneClassMastery(classMastery = {}) {
   return Object.fromEntries(
     Object.entries(classMastery).map(([classId, mastery]) => [classId, { ...mastery }])
   );
+}
+
+function cloneRpgDungeonRun(run) {
+  if (!run || typeof run !== 'object') return null;
+  return {
+    ...run,
+    relics: Array.isArray(run.relics) ? run.relics.map((relic) => ({ ...relic, modifiers: { ...(relic.modifiers ?? {}) } })) : [],
+    modifiers: { ...(run.modifiers ?? {}) },
+    currentChoices: Array.isArray(run.currentChoices) ? run.currentChoices.map((choice) => ({ ...choice })) : [],
+    pendingRelicChoices: Array.isArray(run.pendingRelicChoices) ? run.pendingRelicChoices.map((relic) => ({ ...relic, modifiers: { ...(relic.modifiers ?? {}) } })) : [],
+    rewardPool: { ...(run.rewardPool ?? {}), items: { ...(run.rewardPool?.items ?? {}) } },
+    log: Array.isArray(run.log) ? [...run.log] : [],
+    lastRoomResult: run.lastRoomResult ? { ...run.lastRoomResult, rewards: { ...(run.lastRoomResult.rewards ?? {}) } } : null
+  };
 }
 
 function addXp(profile, xp, economy, options = {}) {
@@ -3718,6 +3788,7 @@ function createDefaultRpgStats() {
     craftingBlessing: 0,
     craftedItems: 0,
     craftingLog: [],
+    dungeonRun: null,
     gacha: {
       totalPulls: 0,
       pity: 0
@@ -3762,7 +3833,7 @@ function createDefaultRpgTutorialStats() {
   };
 }
 
-function normalizeRpgStats(stats = {}, _legacyGlobalLevel = 1) {
+function normalizeRpgStats(stats = {}, _legacyGlobalLevel = 1, now = Date.now()) {
   const safeStats = stats && typeof stats === 'object' ? stats : {};
   const legacyNeedsReset = safeStats.schemaVersion !== RPG_SCHEMA_VERSION;
   const source = legacyNeedsReset ? {} : omitDeprecatedRpgStats(safeStats);
@@ -3845,6 +3916,7 @@ function normalizeRpgStats(stats = {}, _legacyGlobalLevel = 1) {
     craftingBlessing: Math.min(100, normalizeStoredNonNegativeInteger(source.craftingBlessing)),
     craftedItems: normalizeStoredNonNegativeInteger(source.craftedItems),
     craftingLog: normalizeCraftingLog(source.craftingLog),
+    dungeonRun: normalizeRpgDungeonRun(source.dungeonRun, now),
     gacha: normalizeGachaStats(source.gacha),
     daily,
     explores: normalizeStoredNonNegativeInteger(source.explores),
@@ -4833,6 +4905,128 @@ function assertRpgDungeonUnlocked(profile, dungeonId) {
   if (!status.requirementReady) {
     throw new Error(`${status.hidden ? '히든 ' : ''}${status.label} 던전 조건이 부족합니다. 진행도 ${status.requirementCurrent}/${status.requirementRequired}`);
   }
+}
+
+function assertActiveRpgDungeonRun(profile, { runId = null, revision = null, expectedState = null, now = Date.now() } = {}) {
+  const run = normalizeRpgDungeonRun(profile.rpg.dungeonRun, now);
+  if (!run) {
+    profile.rpg.dungeonRun = null;
+    throw new Error('진행 중인 던전이 없습니다. `/rpg 던전`으로 새로 시작하세요.');
+  }
+  if (runId && run.id !== runId) {
+    throw new Error('이미 지난 던전 버튼입니다. `/rpg 던전`으로 현재 방을 다시 열어주세요.');
+  }
+  if (revision !== null && revision !== undefined && Number(revision) !== run.revision) {
+    throw new Error('이미 지난 던전 선택입니다. `/rpg 던전`으로 현재 방을 다시 열어주세요.');
+  }
+  if (expectedState && run.state !== expectedState) {
+    throw new Error(run.state === 'awaiting_relic' ? '먼저 던전 유물을 선택하세요.' : '현재는 방 선택 단계가 아닙니다.');
+  }
+  profile.rpg.dungeonRun = run;
+  return run;
+}
+
+function createRpgDungeonRunResponse({
+  profile,
+  run,
+  dungeonConfig = null,
+  action = 'resumed',
+  roomResult = null,
+  relic = null,
+  economy,
+  now = Date.now()
+}) {
+  return {
+    type: 'dungeon_run',
+    action,
+    area: run.area,
+    areaConfig: getRpgAreaConfig(run.area),
+    dungeonId: run.dungeonId,
+    dungeonConfig,
+    run: cloneRpgDungeonRun(run),
+    roomResult,
+    relic,
+    derivedStats: getProfileRpgDerivedStats(profile),
+    ...getRpgActionContext(profile, economy, now),
+    profile: cloneProfile(profile)
+  };
+}
+
+function settleRpgDungeonRun({ profile, run, dungeonConfig = null, outcome, roomResult = null, economy, now = Date.now() }) {
+  const area = run.area;
+  const floorCount = Math.max(1, Math.min(run.maxFloors ?? 3, run.floor ?? 1));
+  const cleared = outcome === 'cleared';
+  const failed = outcome === 'failed';
+  const rewardScale = getRpgDungeonRewardScale({ cleared, failed, run, dungeonConfig });
+  const requestedXp = Math.floor((run.rewardPool?.xp ?? 0) * rewardScale);
+  const requestedCoins = Math.floor((run.rewardPool?.coins ?? 0) * rewardScale);
+  const materialDrops = {};
+  let gearDrop = null;
+
+  profile.rpg.hp = Math.max(1, Math.min(run.maxHp ?? profile.rpg.hp, run.hp || 1));
+  profile.rpg.mp = Math.max(0, Math.min(run.maxMp ?? profile.rpg.mp, run.mp ?? 0));
+  profile.rpg.currentArea = area;
+  profile.rpg.dungeonRun = null;
+
+  if (cleared) {
+    incrementRpgDailyStats(profile.rpg, now, { dungeons: 1 });
+    increaseRpgAreaProgress(profile.rpg, area, floorCount * 12);
+    grantRpgClassMastery(profile, floorCount * 8);
+    profile.rpg.dungeonClears[area] = (profile.rpg.dungeonClears[area] ?? 0) + 1;
+
+    mergeRpgItemQuantities(materialDrops, rollRpgMaterialDrops({
+      source: 'dungeon',
+      area,
+      difficulty: floorCount >= 4 || run.highRiskTaken ? 'hard' : 'normal',
+      randomInt: economy.randomInt
+    }));
+    mergeRpgItemQuantities(materialDrops, rollRpgConfiguredDungeonMaterialDrops({
+      dungeonConfig,
+      randomInt: economy.randomInt
+    }));
+    grantRpgInventoryItems(profile.rpg.inventory, materialDrops);
+
+    const blueprint = rollRpgGearDrop({
+      source: dungeonConfig?.hidden ? 'hiddenDungeon' : 'dungeon',
+      area,
+      difficulty: floorCount >= 4 || run.highRiskTaken ? 'hard' : 'normal',
+      pool: dungeonConfig?.drops,
+      randomInt: economy.randomInt
+    });
+    if (blueprint) gearDrop = addRpgGear(profile, blueprint, now);
+  } else {
+    increaseRpgAreaProgress(profile.rpg, area, Math.max(1, floorCount * 3));
+    grantRpgClassMastery(profile, Math.max(1, floorCount * 2));
+  }
+
+  const rewardSettlement = settleRepeatableRpgRewards(profile, { xp: requestedXp, coins: requestedCoins }, economy, now);
+  return {
+    type: 'dungeon_result',
+    outcome,
+    area,
+    areaConfig: getRpgAreaConfig(area),
+    dungeonId: run.dungeonId,
+    dungeonConfig,
+    run: cloneRpgDungeonRun(run),
+    roomResult,
+    depth: run.maxFloors ?? floorCount,
+    totalXp: requestedXp,
+    totalCoins: rewardSettlement.coinReward,
+    requestedTotalCoins: requestedCoins,
+    rpgGoldLimit: rewardSettlement.rpgGoldLimit,
+    totalDamage: Math.max(0, (run.maxHp ?? 0) - (run.hp ?? 0)),
+    gearDrop,
+    materialDrops: labelRpgItemQuantities(materialDrops),
+    ...rewardSettlement.levelResult,
+    ...getRpgActionContext(profile, economy, now),
+    profile: cloneProfile(profile)
+  };
+}
+
+function getRpgDungeonRewardScale({ cleared, failed, run, dungeonConfig }) {
+  if (cleared) return dungeonConfig?.rewardMultiplier ?? (dungeonConfig?.hidden ? 1.2 : 1);
+  if (failed) return run.highRiskTaken ? 0.2 : 0.35;
+  return 0.25;
 }
 
 function rollRpgConfiguredDungeonMaterialDrops({ dungeonConfig = null, randomInt: rollInt = randomInt } = {}) {
