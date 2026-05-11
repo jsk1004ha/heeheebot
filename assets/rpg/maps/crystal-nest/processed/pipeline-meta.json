@@ -17,5 +17,14 @@
   ],
   "normalization": "lanczos resize to project 16:9 map contract",
   "auditReason": "procedural fallback replaced with one-map agent-sprite-forge baked_scene output",
-  "recordedAt": "2026-05-07T10:20:01Z"
+  "recordedAt": "2026-05-07T10:20:01Z",
+  "id": "map_crystal_nest",
+  "label": "늪지 히드라 둥지 전투 배경",
+  "category": "map",
+  "kind": "map",
+  "prompt": "Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: swamp hydra nest, tangled roots and poisoned pools framing sides, shallow muddy floor, open center arena, no characters, no UI, no text.",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

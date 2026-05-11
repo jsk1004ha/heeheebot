@@ -4,9 +4,17 @@
   "category": "item",
   "kind": "sprite",
   "sheet": "single",
-  "generatedWith": "codex:procedural-medieval-rpg",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/item_priest_codex_icon/raw-sheet.png",
   "outputSize": [
     256,
     256
-  ]
+  ],
+  "prompt": "Use $generate2dsprite to create a clean HD transparent medieval fantasy 사제의 성서 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.",
+  "raw": "assets/rpg/items/priest-codex/raw/raw-sheet.png",
+  "clean": "assets/rpg/items/priest-codex/processed/clean.png",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

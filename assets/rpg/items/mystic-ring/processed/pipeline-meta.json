@@ -1,11 +1,28 @@
 {
   "target": "asset",
   "mode": "single",
-  "prompt": "",
+  "prompt": "Use $generate2dsprite to create a clean HD transparent RPG mystic ring icon, single asset, centered gold ring with small blue gem glow, solid #FF00FF background, no text.",
   "role": "",
   "input": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/mystic-ring/raw/raw-sheet.png",
   "threshold": 100,
   "edge_threshold": 150,
   "duration": 160,
-  "single_size": 512
+  "single_size": 512,
+  "id": "item_mystic_ring_icon",
+  "label": "신비한 반지 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "outputSize": [
+    256,
+    256
+  ],
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb412f5ce48191a532e70c63bfe4f0.png",
+  "raw": "assets/rpg/items/mystic-ring/raw/raw-sheet.png",
+  "clean": "assets/rpg/items/mystic-ring/processed/clean.png",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

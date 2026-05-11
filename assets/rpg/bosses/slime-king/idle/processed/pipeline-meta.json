@@ -1,7 +1,7 @@
 {
   "target": "asset",
   "mode": "idle",
-  "prompt": "",
+  "prompt": "Use $generate2dsprite to create a clean HD giant slime king boss idle animation, 3x3 grid, centered large blue slime wearing a small crown, same scale, readable RPG boss silhouette, solid #FF00FF background, no text.",
   "role": "",
   "input": "/home/jio/code/heeheebot/heeheebot/assets/rpg/bosses/slime-king/idle/raw/raw-sheet.png",
   "threshold": 100,
@@ -311,5 +311,23 @@
       ]
     }
   ],
-  "edge_touch_frames": []
+  "edge_touch_frames": [],
+  "id": "boss_slime_king_idle",
+  "label": "슬라임 킹 대기 모션",
+  "category": "monster",
+  "kind": "sprite",
+  "sheet": "3x3",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "outputSize": [
+    384,
+    384
+  ],
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb3dc6244881919723fc79323bda60.png",
+  "raw": "assets/rpg/bosses/slime-king/idle/raw/raw-sheet.png",
+  "transparentSheet": "assets/rpg/bosses/slime-king/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/bosses/slime-king/idle/processed/animation.gif",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

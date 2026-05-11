@@ -9,5 +9,16 @@
   "processedDir": "assets/rpg/items/guardian-plate/processed",
   "status": "processed",
   "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/guardian-plate/processed",
-  "meta": "assets/rpg/items/guardian-plate/processed/pipeline-meta.json"
+  "meta": "assets/rpg/items/guardian-plate/processed/pipeline-meta.json",
+  "label": "수호자의 판금갑옷 아이콘",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "clean": "assets/rpg/items/guardian-plate/processed/clean.png",
+  "outputSize": [
+    256,
+    256
+  ],
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

@@ -1,7 +1,7 @@
 {
   "target": "creature",
   "mode": "idle",
-  "prompt": "",
+  "prompt": "Use $generate2dsprite to create a clean HD flame giant raid boss idle animation, 3x3 grid, lava stone giant with contained flame core, full body centered, same scale, solid #FF00FF background, no text.",
   "role": "",
   "input": "assets/rpg/bosses/flame-giant/idle/raw/raw-sheet.png",
   "threshold": 100,
@@ -311,5 +311,23 @@
       ]
     }
   ],
-  "edge_touch_frames": []
+  "edge_touch_frames": [],
+  "id": "boss_flame_giant_idle",
+  "label": "화염 거인 대기 모션",
+  "category": "monster",
+  "kind": "sprite",
+  "sheet": "3x3",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "outputSize": [
+    480,
+    480
+  ],
+  "source": "/home/jio/.codex/generated_images/019dffb5-dcb4-7ab3-a969-b44a2c3e55d2/ig_094151999effdb840169fc4e55f120819190f2ac162610937e.png",
+  "raw": "assets/rpg/bosses/flame-giant/idle/raw/raw-sheet.png",
+  "transparentSheet": "assets/rpg/bosses/flame-giant/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/bosses/flame-giant/idle/processed/animation.gif",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

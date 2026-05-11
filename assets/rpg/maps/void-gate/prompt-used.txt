@@ -1,1 +1,1 @@
-Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: void gate, cosmic purple portal far back, floating stones, open dark arena center, no characters, no UI, no text.
+Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: demon king castle interior, black stone gate far back, cursed braziers, open dark arena center, no characters, no UI, no text.

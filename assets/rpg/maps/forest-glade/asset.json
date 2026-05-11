@@ -6,11 +6,15 @@
   "raw": "assets/rpg/maps/forest-glade/raw/background.png",
   "prompt": "assets/rpg/maps/forest-glade/prompt-used.txt",
   "status": "generated",
-  "label": "초록 숲 전투 배경",
+  "label": "왕도 남쪽 초원 전투 배경",
   "generatedWith": "agent-sprite-forge:$generate2dmap",
   "meta": "assets/rpg/maps/forest-glade/processed/pipeline-meta.json",
   "outputSize": [
     1024,
     576
-  ]
+  ],
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

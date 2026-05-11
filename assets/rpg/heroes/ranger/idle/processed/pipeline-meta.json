@@ -1,7 +1,7 @@
 {
   "target": "asset",
   "mode": "idle",
-  "prompt": "",
+  "prompt": "Use $generate2dsprite to create a clean HD 2D RPG ranger idle animation, 2x2 grid, full body centered, same scale, stable feet anchor, green cloak, compact bow held close to body, no flying arrows, solid #FF00FF background, no text.",
   "role": "",
   "input": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/ranger/idle/raw/raw-sheet.png",
   "threshold": 100,
@@ -151,5 +151,23 @@
       ]
     }
   ],
-  "edge_touch_frames": []
+  "edge_touch_frames": [],
+  "id": "hero_ranger_idle",
+  "label": "궁수 대기 모션",
+  "category": "hero",
+  "kind": "sprite",
+  "sheet": "2x2",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "outputSize": [
+    256,
+    256
+  ],
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb393b07748191afa69b86373ad570.png",
+  "raw": "assets/rpg/heroes/ranger/idle/raw/raw-sheet.png",
+  "transparentSheet": "assets/rpg/heroes/ranger/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/heroes/ranger/idle/processed/animation.gif",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

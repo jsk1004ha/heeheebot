@@ -1,16 +1,20 @@
 {
   "id": "map_sky_foundry",
-  "label": "왕국 대장간 전투 배경",
   "category": "map",
   "kind": "map",
-  "prompt": "assets/rpg/maps/sky-foundry/prompt-used.txt",
-  "raw": "assets/rpg/maps/sky-foundry/raw/background.png",
-  "status": "generated",
-  "generatedWith": "agent-sprite-forge:$generate2dmap",
   "source": "/home/jio/.codex/generated_images/019e01f0-8f2f-7001-bef0-e080c9ee38d9/ig_0fc1a8c78b345bcc0169fc6712ab0481918af457e0736d2b94.png",
+  "raw": "assets/rpg/maps/sky-foundry/raw/background.png",
+  "prompt": "assets/rpg/maps/sky-foundry/prompt-used.txt",
+  "status": "generated",
+  "label": "왕국 대장간 전투 배경",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
   "meta": "assets/rpg/maps/sky-foundry/processed/pipeline-meta.json",
   "outputSize": [
     1024,
     576
-  ]
+  ],
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

@@ -1,6 +1,5 @@
 {
   "id": "map_dragon_nest",
-  "label": "용의 둥지 전투 배경",
   "category": "map",
   "kind": "map",
   "raw": "assets/rpg/maps/dragon-nest/raw/background.png",
@@ -8,9 +7,31 @@
   "status": "generated",
   "generatedWith": "agent-sprite-forge:$generate2dmap",
   "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc609d329481919c4e8e493f4a366a.png",
+  "crop": {
+    "contactSheetColumns": 4,
+    "contactSheetRows": 3,
+    "cellIndex": 10,
+    "cellColumn": 2,
+    "cellRow": 2,
+    "sourceCell": [
+      724,
+      724,
+      1086,
+      1086
+    ],
+    "outputSize": [
+      1024,
+      576
+    ]
+  },
+  "label": "용의 둥지 전투 배경",
   "meta": "assets/rpg/maps/dragon-nest/processed/pipeline-meta.json",
   "outputSize": [
     1024,
     576
-  ]
+  ],
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

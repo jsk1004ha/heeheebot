@@ -17,5 +17,15 @@
     "reason": "raw generated grid touched a cell edge; preserved generated art and added deterministic magenta safe padding before forge processing",
     "scale": 0.9,
     "originalRaw": "assets/rpg/bosses/slime-king/idle/raw/raw-sheet-original-edge-touch.png"
+  },
+  "label": "슬라임 킹 대기 모션",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "outputSize": [
+    384,
+    384
+  ],
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
   }
 }

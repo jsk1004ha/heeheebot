@@ -3,11 +3,22 @@
   "label": "수습 마법사의 지팡이 아이콘",
   "category": "item",
   "kind": "sprite",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "prompt": "assets/rpg/items/apprentice-staff/prompt-used.txt",
+  "meta": "assets/rpg/items/apprentice-staff/processed/pipeline-meta.json",
   "sheet": "single",
-  "generatedWith": "codex:procedural-medieval-rpg",
+  "raw": "assets/rpg/items/apprentice-staff/raw/raw-sheet.png",
+  "processedDir": "assets/rpg/items/apprentice-staff/processed",
+  "status": "processed",
+  "processorStdout": "assets/rpg/items/apprentice-staff/processed",
+  "clean": "assets/rpg/items/apprentice-staff/processed/clean.png",
   "outputSize": [
     256,
     256
   ],
-  "prompt": "Use $generate2dsprite to create a clean HD transparent medieval fantasy 수습 마법사의 지팡이 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text."
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  },
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/item_apprentice_staff_icon/raw-sheet.png"
 }

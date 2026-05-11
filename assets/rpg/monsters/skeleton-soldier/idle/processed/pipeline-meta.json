@@ -1,7 +1,7 @@
 {
   "target": "asset",
   "mode": "idle",
-  "prompt": "",
+  "prompt": "Use $generate2dsprite to create a clean HD skeleton soldier idle animation, 2x2 grid, full body centered, same scale, rusty sword and small shield kept inside cell, solid #FF00FF background, no text.",
   "role": "",
   "input": "/home/jio/code/heeheebot/heeheebot/assets/rpg/monsters/skeleton-soldier/idle/raw/raw-sheet.png",
   "threshold": 100,
@@ -151,5 +151,23 @@
       ]
     }
   ],
-  "edge_touch_frames": []
+  "edge_touch_frames": [],
+  "id": "monster_skeleton_soldier_idle",
+  "label": "해골 병사 대기 모션",
+  "category": "monster",
+  "kind": "sprite",
+  "sheet": "2x2",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "outputSize": [
+    256,
+    256
+  ],
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb3baef60c8191a482f7f5cb6107fa.png",
+  "raw": "assets/rpg/monsters/skeleton-soldier/idle/raw/raw-sheet.png",
+  "transparentSheet": "assets/rpg/monsters/skeleton-soldier/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/monsters/skeleton-soldier/idle/processed/animation.gif",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

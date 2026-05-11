@@ -1,7 +1,7 @@
 {
   "target": "asset",
   "mode": "idle",
-  "prompt": "",
+  "prompt": "Use $generate2dsprite to create a clean HD 2D RPG rogue idle animation, 2x2 grid, full body centered, same scale, stable feet anchor, dark hood, twin daggers kept close to body, solid #FF00FF background, no text.",
   "role": "",
   "input": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/rogue/idle/raw/raw-sheet.png",
   "threshold": 100,
@@ -151,5 +151,23 @@
       ]
     }
   ],
-  "edge_touch_frames": []
+  "edge_touch_frames": [],
+  "id": "hero_rogue_idle",
+  "label": "도적 대기 모션",
+  "category": "hero",
+  "kind": "sprite",
+  "sheet": "2x2",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "outputSize": [
+    256,
+    256
+  ],
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb39e37ac48191b3d71e474eb2c73e.png",
+  "raw": "assets/rpg/heroes/rogue/idle/raw/raw-sheet.png",
+  "transparentSheet": "assets/rpg/heroes/rogue/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/heroes/rogue/idle/processed/animation.gif",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

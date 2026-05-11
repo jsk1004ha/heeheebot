@@ -17,5 +17,14 @@
   ],
   "normalization": "lanczos resize to project 16:9 map contract",
   "auditReason": "fallback procedural raid map replaced; prior image was flat placeholder and not generatedWith forge metadata",
-  "recordedAt": "2026-05-07T08:45:40Z"
+  "recordedAt": "2026-05-07T08:45:40Z",
+  "id": "map_goblin_war_camp",
+  "label": "고블린 전쟁 야영지 전투 배경",
+  "category": "map",
+  "kind": "map",
+  "prompt": "Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: goblin war camp, torn banners, crude palisades, open dirt arena center, no characters, no UI, no text.",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

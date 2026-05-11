@@ -17,5 +17,14 @@
   ],
   "normalization": "lanczos resize to project 16:9 map contract",
   "auditReason": "contact-sheet crop replaced with one-map agent-sprite-forge baked_scene output",
-  "recordedAt": "2026-05-07T08:57:52Z"
+  "recordedAt": "2026-05-07T08:57:52Z",
+  "id": "map_moonlit_hill",
+  "label": "안개 늪지 언덕 전투 배경",
+  "category": "map",
+  "kind": "map",
+  "prompt": "Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: mist marsh hill, blue night sky, low fog, open stone path center, no characters, no UI, no text.",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

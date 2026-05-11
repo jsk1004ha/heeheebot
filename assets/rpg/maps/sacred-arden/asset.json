@@ -1,12 +1,20 @@
 {
   "id": "map_sacred_arden",
-  "label": "성지 아르덴 배경",
   "category": "map",
   "kind": "map",
-  "generatedWith": "codex:procedural-medieval-rpg",
+  "raw": "assets/rpg/maps/sacred-arden/raw/background.png",
+  "status": "generated",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "meta": "assets/rpg/maps/sacred-arden/processed/pipeline-meta.json",
+  "label": "성지 아르덴 배경",
+  "prompt": "assets/rpg/maps/sacred-arden/prompt-used.txt",
   "outputSize": [
     1024,
     576
   ],
-  "prompt": "Sacred sanctuary Arden holy site, 16:9 game background, no text."
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  },
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_sacred_arden/background.png"
 }

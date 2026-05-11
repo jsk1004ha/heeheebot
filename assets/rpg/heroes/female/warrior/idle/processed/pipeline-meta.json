@@ -1,7 +1,7 @@
 {
   "target": "asset",
   "mode": "idle",
-  "prompt": "",
+  "prompt": "Use $generate2dsprite to create a clean HD 2D RPG female warrior idle animation, 2x2 grid, full body centered, same scale, stable feet anchor, steel armor, round shield, short sword held close to body, solid #FF00FF background, no text.",
   "role": "",
   "input": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/female/warrior/idle/raw/raw-sheet.png",
   "threshold": 100,
@@ -151,5 +151,23 @@
       ]
     }
   ],
-  "edge_touch_frames": []
+  "edge_touch_frames": [],
+  "id": "hero_female_warrior_idle",
+  "label": "여성 검사 대기 모션",
+  "category": "hero",
+  "kind": "sprite",
+  "sheet": "2x2",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "outputSize": [
+    256,
+    256
+  ],
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_08b8b6becf92b5d20169fb4885a9888191a5b47fd39e0eaacc.png",
+  "raw": "assets/rpg/heroes/female/warrior/idle/raw/raw-sheet.png",
+  "transparentSheet": "assets/rpg/heroes/female/warrior/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/heroes/female/warrior/idle/processed/animation.gif",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

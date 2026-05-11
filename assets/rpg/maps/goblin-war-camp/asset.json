@@ -1,16 +1,20 @@
 {
   "id": "map_goblin_war_camp",
-  "label": "고블린 전쟁 야영지 전투 배경",
   "category": "map",
   "kind": "map",
-  "prompt": "assets/rpg/maps/goblin-war-camp/prompt-used.txt",
-  "raw": "assets/rpg/maps/goblin-war-camp/raw/background.png",
-  "status": "generated",
-  "generatedWith": "agent-sprite-forge:$generate2dmap",
   "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc50b35b7081918d3a38b0ecbcd8e0.png",
+  "raw": "assets/rpg/maps/goblin-war-camp/raw/background.png",
+  "prompt": "assets/rpg/maps/goblin-war-camp/prompt-used.txt",
+  "status": "generated",
+  "label": "고블린 전쟁 야영지 전투 배경",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
   "meta": "assets/rpg/maps/goblin-war-camp/processed/pipeline-meta.json",
   "outputSize": [
     1024,
     576
-  ]
+  ],
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

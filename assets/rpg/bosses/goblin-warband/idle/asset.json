@@ -4,11 +4,22 @@
   "category": "monster",
   "kind": "sprite",
   "sheet": "3x3",
-  "prompt": "Generated local fallback raid boss sprite for 고블린 전투부대 대기 모션; clean HD RPG boss, 3x3 transparent idle sheet, no text.",
+  "prompt": "assets/rpg/bosses/goblin-warband/idle/prompt-used.txt",
   "source": "/home/jio/.codex/generated_images/019dffb5-dcb4-7ab3-a969-b44a2c3e55d2/ig_094151999effdb840169fc4b2f71b48191a4fe8f2961a86991.png",
   "status": "processed",
   "processorStdout": "assets/rpg/bosses/goblin-warband/idle/processed",
   "meta": "assets/rpg/bosses/goblin-warband/idle/processed/pipeline-meta.json",
   "transparentSheet": "assets/rpg/bosses/goblin-warband/idle/processed/sheet-transparent.png",
-  "animation": "assets/rpg/bosses/goblin-warband/idle/processed/animation.gif"
+  "animation": "assets/rpg/bosses/goblin-warband/idle/processed/animation.gif",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "raw": "assets/rpg/bosses/goblin-warband/idle/raw/raw-sheet.png",
+  "processedDir": "assets/rpg/bosses/goblin-warband/idle/processed",
+  "outputSize": [
+    480,
+    480
+  ],
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

@@ -11,5 +11,15 @@
   "processorStdout": "/home/jio/code/heeheebot/heeheebot/assets/rpg/monsters/goblin/idle/processed",
   "meta": "assets/rpg/monsters/goblin/idle/processed/pipeline-meta.json",
   "transparentSheet": "assets/rpg/monsters/goblin/idle/processed/sheet-transparent.png",
-  "animation": "assets/rpg/monsters/goblin/idle/processed/animation.gif"
+  "animation": "assets/rpg/monsters/goblin/idle/processed/animation.gif",
+  "label": "고블린 대기 모션",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "outputSize": [
+    256,
+    256
+  ],
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

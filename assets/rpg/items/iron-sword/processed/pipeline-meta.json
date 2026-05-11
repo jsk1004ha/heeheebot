@@ -1,11 +1,28 @@
 {
   "target": "asset",
   "mode": "single",
-  "prompt": "",
+  "prompt": "Use $generate2dsprite to create a clean HD transparent RPG iron sword icon, single asset, centered diagonal steel short sword, readable game item icon, solid #FF00FF background, no text.",
   "role": "",
   "input": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/iron-sword/raw/raw-sheet.png",
   "threshold": 100,
   "edge_threshold": 150,
   "duration": 160,
-  "single_size": 512
+  "single_size": 512,
+  "id": "item_iron_sword_icon",
+  "label": "철검 아이콘",
+  "category": "item",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "outputSize": [
+    256,
+    256
+  ],
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb4069f3c4819199e493884a974a24.png",
+  "raw": "assets/rpg/items/iron-sword/raw/raw-sheet.png",
+  "clean": "assets/rpg/items/iron-sword/processed/clean.png",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

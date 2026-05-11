@@ -1,1 +1,1 @@
-Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG final raid background: eclipse throne at the edge of the sky, black-red celestial light, ruined royal platform center, no characters, no UI, no text.
+Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG final raid background: eclipse throne at the heart of the demon king castle, black-red cursed torchlight, ruined royal platform center, no characters, no UI, no text.

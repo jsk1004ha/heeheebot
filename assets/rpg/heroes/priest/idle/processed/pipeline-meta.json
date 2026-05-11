@@ -1,7 +1,7 @@
 {
   "target": "asset",
   "mode": "idle",
-  "prompt": "",
+  "prompt": "Use $generate2dsprite to create a clean HD 2D RPG priest idle animation, 2x2 grid, full body centered, same scale, stable feet anchor, white robe, small staff, gentle holy glow attached to hands only, solid #FF00FF background, no text.",
   "role": "",
   "input": "/home/jio/code/heeheebot/heeheebot/assets/rpg/heroes/priest/idle/raw/raw-sheet.png",
   "threshold": 100,
@@ -151,5 +151,23 @@
       ]
     }
   ],
-  "edge_touch_frames": []
+  "edge_touch_frames": [],
+  "id": "hero_priest_idle",
+  "label": "사제 대기 모션",
+  "category": "hero",
+  "kind": "sprite",
+  "sheet": "2x2",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "outputSize": [
+    256,
+    256
+  ],
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb3a35f3988191a28e1749bd2eff0f.png",
+  "raw": "assets/rpg/heroes/priest/idle/raw/raw-sheet.png",
+  "transparentSheet": "assets/rpg/heroes/priest/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/heroes/priest/idle/processed/animation.gif",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

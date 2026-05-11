@@ -1,7 +1,7 @@
 {
   "target": "creature",
   "mode": "idle",
-  "prompt": "",
+  "prompt": "Use $generate2dsprite to create a clean HD apocalypse dragon final raid boss idle animation, 3x3 grid, black-red dragon with eclipse halo, full body centered, wings and tail fully inside each cell, same scale, solid #FF00FF background, no text.",
   "role": "",
   "input": "assets/rpg/bosses/apocalypse-dragon/idle/raw/raw-sheet.png",
   "threshold": 100,
@@ -311,5 +311,23 @@
       ]
     }
   ],
-  "edge_touch_frames": []
+  "edge_touch_frames": [],
+  "id": "boss_apocalypse_dragon_idle",
+  "label": "종말의 용 대기 모션",
+  "category": "monster",
+  "kind": "sprite",
+  "sheet": "3x3",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "outputSize": [
+    480,
+    480
+  ],
+  "source": "/home/jio/.codex/generated_images/019dffb5-dcb4-7ab3-a969-b44a2c3e55d2/ig_094151999effdb840169fc52fea06c8191940c8a35554d75fc.png",
+  "raw": "assets/rpg/bosses/apocalypse-dragon/idle/raw/raw-sheet.png",
+  "transparentSheet": "assets/rpg/bosses/apocalypse-dragon/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/bosses/apocalypse-dragon/idle/processed/animation.gif",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

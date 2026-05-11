@@ -1,7 +1,7 @@
 {
   "target": "asset",
   "mode": "idle",
-  "prompt": "",
+  "prompt": "Use $generate2dsprite to create a clean HD small dragon idle animation, 3x3 grid, full body centered, same scale, wings and tail fully inside cells, fantasy RPG boss minion, solid #FF00FF background, no text.",
   "role": "",
   "input": "/home/jio/code/heeheebot/heeheebot/assets/rpg/monsters/mini-dragon/idle/raw/raw-sheet.png",
   "threshold": 100,
@@ -311,5 +311,23 @@
       ]
     }
   ],
-  "edge_touch_frames": []
+  "edge_touch_frames": [],
+  "id": "monster_mini_dragon_idle",
+  "label": "새끼 용 대기 모션",
+  "category": "monster",
+  "kind": "sprite",
+  "sheet": "3x3",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "outputSize": [
+    384,
+    384
+  ],
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb3d7016908191b5b59bf7f92fd723.png",
+  "raw": "assets/rpg/monsters/mini-dragon/idle/raw/raw-sheet.png",
+  "transparentSheet": "assets/rpg/monsters/mini-dragon/idle/processed/sheet-transparent.png",
+  "animation": "assets/rpg/monsters/mini-dragon/idle/processed/animation.gif",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

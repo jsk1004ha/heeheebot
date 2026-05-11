@@ -3,9 +3,16 @@
   "label": "왕국 대장간 거리 배경",
   "category": "map",
   "kind": "map",
-  "generatedWith": "codex:procedural-medieval-rpg",
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_blacksmith_district/background.png",
   "outputSize": [
     1024,
     576
-  ]
+  ],
+  "prompt": "Medieval blacksmith district, 16:9 game background, no text.",
+  "raw": "assets/rpg/maps/blacksmith-district/raw/background.png",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }

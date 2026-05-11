@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
+import { extname } from 'node:path';
 import test from 'node:test';
 import {
   formatRpgAssetLine,
@@ -86,8 +87,59 @@ test('기존 공용 RPG 에셋과 신규 중세 RPG 에셋을 함께 batch 조�
   assert.match(formatRpgAssetLine(tazza), /hero_tazza_idle/);
 });
 
+test('RPG 에셋 manifest는 전체 정의를 agent-sprite-forge 산출물 계약으로 고정한다', () => {
+  const assets = getAllRpgAssets();
+  const manifest = JSON.parse(readFileSync('assets/rpg/asset-manifest.json', 'utf8'));
+  const manifestIds = manifest.assets.map((asset) => asset.id);
+
+  assert.equal(assets.length, getRpgAssetCount());
+  assert.equal(manifestIds.length, assets.length);
+  assert.equal(new Set(manifestIds).size, manifestIds.length, 'manifest id duplicates');
+
+  for (const asset of assets) {
+    const generated = getRpgGeneratedAssetById(asset.id);
+    const expectedGenerator = `agent-sprite-forge:${asset.skill}`;
+    const filePath = getRpgAssetFilePath(asset.id);
+
+    assert.ok(generated, `${asset.id} generated manifest missing`);
+    assert.equal(generated.generatedWith, expectedGenerator, `${asset.id} generatedWith`);
+    assert.equal(generated.label, asset.label, `${asset.id} label drift`);
+    assert.equal(generated.category, asset.category, `${asset.id} category drift`);
+    assert.equal(generated.kind, asset.kind, `${asset.id} kind drift`);
+    assert.equal(generated.sheet, asset.sheet, `${asset.id} sheet drift`);
+    assert.match(generated.source ?? '', /\/\.codex\/generated_images\//, `${asset.id} source provenance`);
+    assert.match(generated.prompt, new RegExp(`^${escapeRegExp(asset.outputDir)}/prompt-used\\.txt$`));
+    assert.ok(filePath, `${asset.id} runtime file path missing`);
+    assert.ok(existsSync(filePath), `${asset.id} runtime file missing`);
+
+    if (asset.category === 'map') {
+      assert.deepEqual(readPngSize(filePath), [1024, 576], `${asset.id} map size`);
+      continue;
+    }
+
+    if (asset.category === 'item') {
+      assert.equal(extname(filePath), '.png', `${asset.id} item runtime extension`);
+      assert.deepEqual(readPngSize(filePath), [256, 256], `${asset.id} item runtime size`);
+    }
+  }
+});
+
 function readPngSize(filePath) {
   const buffer = readFileSync(filePath);
   assert.equal(buffer.toString('ascii', 1, 4), 'PNG', `${filePath} is not a PNG`);
   return [buffer.readUInt32BE(16), buffer.readUInt32BE(20)];
+}
+
+function getAllRpgAssets() {
+  const byId = new Map();
+  for (const category of ['hero', 'monster', 'item', 'map']) {
+    for (const asset of getRpgAssetBatch({ category, limit: 100 })) {
+      byId.set(asset.id, asset);
+    }
+  }
+  return [...byId.values()];
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

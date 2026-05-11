@@ -1,1 +1,1 @@
-Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: bright wildflower plains, green meadow, flowers at edges, open grass center, no characters, no UI, no text.
+Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: goblin forest entrance, green meadow with crude goblin markers at edges, open grass center, no characters, no UI, no text.

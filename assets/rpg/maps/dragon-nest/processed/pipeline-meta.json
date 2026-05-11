@@ -17,5 +17,14 @@
   ],
   "normalization": "lanczos resize to project 16:9 map contract",
   "auditReason": "contact-sheet crop replaced with one-map agent-sprite-forge baked_scene output",
-  "recordedAt": "2026-05-07T09:52:59Z"
+  "recordedAt": "2026-05-07T09:52:59Z",
+  "id": "map_dragon_nest",
+  "label": "용의 둥지 전투 배경",
+  "category": "map",
+  "kind": "map",
+  "prompt": "Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: dragon nest, rocky high mountain nest, eggs and bones at edges, open center arena, no characters, no UI, no text.",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
+  }
 }
