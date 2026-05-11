@@ -18,6 +18,7 @@ import {
   createPlayerBlackjackRound,
   createScratchTicket,
   createTimingRound,
+  DEADLINE_MIN_BET,
   formatEmojiRaceTrack,
   formatScratchPrizeShort,
   getScratchTicketProductStats,
@@ -114,7 +115,8 @@ test('슬롯 기대 지급률은 100% 미만이다', () => {
 });
 
 test('카지노 명령 payload는 다양한 게임을 등록한다', () => {
-  const commandNames = getCasinoCommandPayloads().map((command) => command.name);
+  const payloads = getCasinoCommandPayloads();
+  const commandNames = payloads.map((command) => command.name);
 
   assert.deepEqual(commandNames, [
     '카지노정보',
@@ -134,6 +136,11 @@ test('카지노 명령 payload는 다양한 게임을 등록한다', () => {
     '키노',
     '스크래치복권'
   ]);
+
+  const deadlineCommand = payloads.find((command) => command.name === '데드라인');
+  const deadlineBetOption = deadlineCommand.options.find((option) => option.name === '돈');
+
+  assert.equal(deadlineBetOption.min_value, DEADLINE_MIN_BET);
 });
 
 test('카지노정보 명령은 베팅금 없이 게임 배수와 환급 규칙만 안내한다', async () => {
@@ -226,20 +233,36 @@ test('데드라인은 안전 누름마다 골드 보상과 꽝 확률이 커지�
   });
 
   assert.equal(round.reward, 0);
-  assert.equal(round.nextReward, 10);
-  assert.equal(getDeadlineNextReward(100, 1), 20);
+  assert.equal(round.nextReward, 5);
+  assert.equal(getDeadlineNextReward(100, 1), 13);
   assert.equal(getDeadlineBustChanceBps(0), 1000);
   assert.equal(getDeadlineBustChanceBps(1), 1750);
   assert.equal(firstSafe.status, 'pressing');
-  assert.equal(firstSafe.reward, 10);
-  assert.equal(firstSafe.nextReward, 20);
+  assert.equal(firstSafe.reward, 5);
+  assert.equal(firstSafe.nextReward, 13);
   assert.equal(firstSafe.bustChanceBps, 1750);
-  assert.equal(secondSafe.reward, 30);
+  assert.equal(secondSafe.reward, 18);
   assert.equal(cashedOut.status, 'cashed_out');
-  assert.equal(cashedOut.payout, 130);
+  assert.equal(cashedOut.payout, 118);
   assert.equal(busted.status, 'busted');
-  assert.equal(busted.lostReward, 30);
+  assert.equal(busted.lostReward, 18);
   assert.equal(busted.payout, 0);
+});
+
+test('데드라인은 최소 베팅과 낮아진 보상률로 소액 양수 기댓값을 막는다', () => {
+  assert.throws(
+    () => createDeadlineRound({ bet: DEADLINE_MIN_BET - 1 }),
+    /100 이상의 정수/
+  );
+
+  const firstReward = getDeadlineNextReward(DEADLINE_MIN_BET, 0);
+  const firstSurvivalRate = 1 - getDeadlineBustChanceBps(0) / 10_000;
+  const firstPressRtpBps = Math.round(
+    firstSurvivalRate * (DEADLINE_MIN_BET + firstReward) / DEADLINE_MIN_BET * 10_000
+  );
+
+  assert.equal(firstReward, 5);
+  assert.equal(firstPressRtpBps, 9_450);
 });
 
 test('데드라인 명령은 골드를 예약하고 버튼 안전 누름 후 수령 정산한다', async () => {
@@ -290,7 +313,7 @@ test('데드라인 명령은 골드를 예약하고 버튼 안전 누름 후 수
   assert.equal(calls.length, 1);
   assert.equal(press.deferUpdateCalls, 1);
   assert.equal(press.updateCalls, 0);
-  assert.match(press.updated.content, /방금 안전했습니다: \*\*\+10골드\*\*/);
+  assert.match(press.updated.content, /방금 안전했습니다: \*\*\+5골드\*\*/);
   assert.equal(press.updated.components[0].components[1].data.disabled, false);
 
   const cashOutButtonId = press.updated.components[0].components[1].data.custom_id;
@@ -299,11 +322,11 @@ test('데드라인 명령은 골드를 예약하고 버튼 안전 누름 후 수
   assert.equal(await handleCasinoCommand(cashOut, fakeEconomy, quietLogger), true);
   activeDeadlineButton = null;
   assert.deepEqual(calls.map(([type]) => type), ['reserve', 'resolve']);
-  assert.equal(calls[1][1].payout, 110);
+  assert.equal(calls[1][1].payout, 105);
   assert.equal(cashOut.deferUpdateCalls, 1);
   assert.equal(cashOut.updateCalls, 0);
   assert.match(cashOut.updated.content, /데드라인 수령/);
-  assert.match(cashOut.updated.content, /지급: 110골드/);
+  assert.match(cashOut.updated.content, /지급: 105골드/);
 });
 
 test('데드라인 버튼은 최초 update 토큰 대신 deferUpdate 후 editReply로 갱신한다', async () => {

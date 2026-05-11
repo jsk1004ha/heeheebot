@@ -561,6 +561,7 @@ async function sendStockAlertAnnouncements(client, stocks, logger) {
   const guilds = [...(client.guilds?.cache?.values?.() ?? [])];
   const guildIds = guilds.map((guild) => guild.id);
   let batchedAlerts = null;
+  const deliveredAlerts = [];
 
   if (typeof stocks.getPendingTriggeredPriceAlertsByGuild === 'function') {
     try {
@@ -593,7 +594,7 @@ async function sendStockAlertAnnouncements(client, stocks, logger) {
         }
 
         await channel.send(formatStockAlertAnnouncement(alert));
-        await stocks.markPriceAlertNotified({
+        deliveredAlerts.push({
           guildId: guild.id,
           userId: alert.userId,
           alertId: alert.id
@@ -601,6 +602,29 @@ async function sendStockAlertAnnouncements(client, stocks, logger) {
       } catch (error) {
         logger.error(`Failed to send stock alert ${alert.id} in guild ${guild.id}:`, error);
       }
+    }
+  }
+
+  await markDeliveredStockAlerts(stocks, deliveredAlerts, logger);
+}
+
+async function markDeliveredStockAlerts(stocks, deliveredAlerts, logger) {
+  if (deliveredAlerts.length === 0) return;
+
+  if (typeof stocks.markPriceAlertsNotifiedBatch === 'function') {
+    try {
+      await stocks.markPriceAlertsNotifiedBatch({ alerts: deliveredAlerts });
+      return;
+    } catch (error) {
+      logger.error('Failed to batch mark stock alerts as notified:', error);
+    }
+  }
+
+  for (const alert of deliveredAlerts) {
+    try {
+      await stocks.markPriceAlertNotified(alert);
+    } catch (error) {
+      logger.error(`Failed to mark stock alert ${alert.alertId} as notified:`, error);
     }
   }
 }

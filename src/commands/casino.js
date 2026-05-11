@@ -14,6 +14,7 @@ import {
   createScratchTicket,
   createTimingRound,
   DEADLINE_MAX_SAFE_PRESSES,
+  DEADLINE_MIN_BET,
   DEADLINE_ROLL_MAX,
   TIMING_PAYOUT_TIERS,
   TIMING_TARGET_MAX_SECONDS,
@@ -134,8 +135,8 @@ export const casinoCommands = [
     .addIntegerOption((option) =>
       option
         .setName('돈')
-        .setDescription('베팅할 골드')
-        .setMinValue(1)
+        .setDescription(`베팅할 골드 (최소 ${DEADLINE_MIN_BET.toLocaleString()}골드)`)
+        .setMinValue(DEADLINE_MIN_BET)
         .setRequired(true)
     ),
   new SlashCommandBuilder()
@@ -733,7 +734,7 @@ function formatCasinoInfo() {
     '- `/홀짝`: 홀/짝 적중 시 1.9배, 99~100은 하우스 승리',
     '- `/주사위`: 높음(4~6) 또는 낮음(1~3) 적중 시 1.9배',
     '- `/슬롯`: 페어 3배, 트리플 10배, 7️⃣ 트리플 20배',
-    '- `/데드라인`: 버튼을 누를수록 누적 보상과 꽝 확률이 함께 상승, 멈추면 수령',
+    `- \`/데드라인\`: 최소 ${DEADLINE_MIN_BET.toLocaleString()}골드, 버튼을 누를수록 누적 보상과 꽝 확률이 함께 상승, 멈추면 수령`,
     `- \`/타이밍\`: ${TIMING_TARGET_MIN_SECONDS}~${TIMING_TARGET_MAX_SECONDS}초 랜덤 목표에 가깝게 누를수록 최대 ${formatMultiplier(TIMING_PAYOUT_TIERS[0].multiplier)}배`,
     `- \`/이모지경마\`: 실시간 이모지 트랙에서 1등 동물 적중 시 ${EMOJI_RACE_MULTIPLIER}배`,
     '- `/럭키세븐`: 주사위 2개 합이 7이면 5.5배',
@@ -1190,6 +1191,8 @@ async function playDeadline(interaction, economy, bet) {
   let gameId = null;
 
   try {
+    const game = createDeadlineRound({ bet });
+
     await economy.reserveWager({
       guildId: interaction.guildId,
       userId: interaction.user.id,
@@ -1198,7 +1201,6 @@ async function playDeadline(interaction, economy, bet) {
     });
     reserved = true;
 
-    const game = createDeadlineRound({ bet });
     gameId = createChallengeId();
     pendingDeadlineGames.set(gameId, {
       guildId: interaction.guildId,

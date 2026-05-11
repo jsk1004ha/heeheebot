@@ -6,12 +6,13 @@ const KENO_MAX_NUMBER = 80;
 const KENO_DRAW_COUNT = 10;
 const KENO_MAX_PICKS = 5;
 export const DEADLINE_MAX_SAFE_PRESSES = 12;
+export const DEADLINE_MIN_BET = 100;
 export const DEADLINE_ROLL_MAX = 10_000;
 const DEADLINE_BASE_BUST_CHANCE_BPS = 1_000;
 const DEADLINE_BUST_CHANCE_STEP_BPS = 750;
 const DEADLINE_MAX_BUST_CHANCE_BPS = 8_500;
-const DEADLINE_BASE_REWARD_BPS = 1_000;
-const DEADLINE_REWARD_STEP_BPS = 1_000;
+const DEADLINE_BASE_REWARD_BPS = 500;
+const DEADLINE_REWARD_STEP_BPS = 800;
 export const TIMING_TARGET_MIN_SECONDS = 5;
 export const TIMING_TARGET_MAX_SECONDS = 20;
 export const TIMING_PAYOUT_TIERS = Object.freeze([
@@ -1471,8 +1472,8 @@ function assertDeadlinePressingRound(round) {
 function normalizeDeadlineBet(bet) {
   const normalized = Number(bet);
 
-  if (!Number.isSafeInteger(normalized) || normalized <= 0) {
-    throw new Error('데드라인 베팅액은 1 이상의 정수여야 합니다.');
+  if (!Number.isSafeInteger(normalized) || normalized < DEADLINE_MIN_BET) {
+    throw new Error(`데드라인 베팅액은 ${DEADLINE_MIN_BET.toLocaleString()} 이상의 정수여야 합니다.`);
   }
 
   return normalized;

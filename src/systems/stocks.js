@@ -1015,6 +1015,52 @@ export class StockService {
     });
   }
 
+  async markPriceAlertsNotifiedBatch({ alerts = [], now = Date.now() } = {}) {
+    const normalizedAlerts = normalizePriceAlertNotificationBatch(alerts);
+    if (normalizedAlerts.length === 0) return [];
+    const safeNow = normalizeNonNegativeInteger(now);
+
+    return this.store.update((data) => {
+      const guildCache = new Map();
+      const marketCache = new Map();
+      const notified = [];
+      const seen = new Set();
+
+      for (const item of normalizedAlerts) {
+        const key = `${item.guildId}:${item.userId}:${item.alertId}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        let guild = guildCache.get(item.guildId);
+        if (!guildCache.has(item.guildId)) {
+          guild = getExistingGuild(data, item.guildId);
+          guildCache.set(item.guildId, guild);
+        }
+        if (!guild?.stocks) continue;
+
+        let market = marketCache.get(item.guildId);
+        if (!marketCache.has(item.guildId)) {
+          market = syncMarket(data, item.guildId, guild, safeNow, this);
+          marketCache.set(item.guildId, market);
+        }
+
+        const username = getLinkedAccountUsername(data, item.userId);
+        const profile = getOrCreateMoneyProfile(data, item.guildId, item.userId, username, safeNow);
+        const stockUser = getOrCreateStockUser(data, item.guildId, guild, item.userId, username, profile, safeNow);
+        const alert = stockUser.priceAlerts[item.alertId];
+
+        if (!alert || alert.status !== 'triggered' || (alert.guildId && alert.guildId !== item.guildId)) {
+          continue;
+        }
+
+        alert.notifiedAt = safeNow;
+        notified.push(clonePriceAlert(alert, market));
+      }
+
+      return notified;
+    });
+  }
+
   async getTradeHistory({ guildId, userId, username, limit = RECENT_TRADE_LIMIT, now = Date.now() }) {
     const safeLimit = Math.min(RECENT_TRADE_LIMIT, Math.max(1, Number(limit) || RECENT_TRADE_LIMIT));
 
@@ -2755,6 +2801,18 @@ function normalizeStockUserForAlertScan(rawStockUser, guild) {
 
   stockUser.priceAlerts = normalizePriceAlerts(stockUser.priceAlerts, guild);
   return stockUser;
+}
+
+function normalizePriceAlertNotificationBatch(alerts) {
+  if (!Array.isArray(alerts)) return [];
+
+  return alerts
+    .map((alert) => ({
+      guildId: String(alert?.guildId ?? '').trim(),
+      userId: String(alert?.userId ?? '').trim(),
+      alertId: String(alert?.alertId ?? alert?.id ?? '').trim()
+    }))
+    .filter((alert) => alert.guildId && alert.userId && alert.alertId);
 }
 
 function createDefaultStockUser(userId, username = 'Unknown') {
