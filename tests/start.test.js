@@ -25,6 +25,10 @@ test('시작하기는 새 유저에게 핵심 루트와 버튼을 보여준다',
   assert.match(interaction.replies[0].content, /출석 받기/);
   assert.match(interaction.replies[0].content, /RPG 시작/);
   assert.match(interaction.replies[0].content, /다음 추천/);
+  assert.match(interaction.replies[0].content, /\/주식 매수/);
+  assert.match(interaction.replies[0].content, /\/시즌 과제/);
+  assert.doesNotMatch(interaction.replies[0].content, /\/주식 시세/);
+  assert.doesNotMatch(interaction.replies[0].content, /\/시즌 정보/);
   assert.deepEqual(getButtonLabels(interaction.replies[0]), [
     '새로고침',
     '오늘할일',

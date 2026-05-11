@@ -216,7 +216,7 @@ export function createBot({
         || await handleNumberBaseballCommand(interaction, numberBaseball, economy)
         || await handleFortuneCommand(interaction, fortune, economy)
         || await handleStartCommand(interaction, { economy, community, fishing, stocks, seasons, logger })
-        || await handleTodayCommand(interaction, { economy, community, seasons })
+        || await handleTodayCommand(interaction, { economy, community, seasons, logger })
         || await handleMealCommand(interaction, meals)
         || await handleTimetableCommand(interaction, timetable)
         || await handleSeasonCommand(interaction, seasons, logger)
@@ -381,8 +381,7 @@ async function recordCommandActivity(interaction, economy, community, logger) {
 }
 
 export async function sendAutomaticAchievementNotice(interaction, community, logger = console, seasons = null) {
-  if (!interaction.isChatInputCommand?.() || !interaction.inGuild?.()) return false;
-  if (interaction.commandName === '업적') return false;
+  if (!isAutomaticAchievementEligibleInteraction(interaction)) return false;
   if (typeof community?.grantCompletedAchievements !== 'function') return false;
 
   let result = null;
@@ -434,6 +433,53 @@ export async function sendAutomaticAchievementNotice(interaction, community, log
   ].filter(Boolean).join('\n'), {
     flags: MessageFlags.Ephemeral
   });
+}
+
+function isAutomaticAchievementEligibleInteraction(interaction) {
+  if (!interaction.inGuild?.()) return false;
+
+  if (interaction.isChatInputCommand?.()) {
+    return interaction.commandName !== '업적';
+  }
+
+  if (!interaction.isButton?.()) return false;
+
+  const customId = interaction.customId ?? '';
+  return isEligibleMutatingButton(customId, interaction.user?.id);
+}
+
+function isEligibleMutatingButton(customId, userId) {
+  const parts = customId.split(':');
+
+  if (parts[0] === 'fishing_quick') {
+    return parts[1] === 'fish' && (!parts[2] || parts[2] === userId);
+  }
+
+  if (parts[0] === 'today_checkin' || parts[0] === 'today_missions') {
+    return !parts[1] || parts[1] === userId;
+  }
+
+  if (parts[0] === 'rpg_quick') {
+    return parts[1] === userId && ['battle', 'explore', 'dungeon', 'raid', 'guild_raid', 'rest'].includes(parts[2]);
+  }
+
+  if (['rpg_daily', 'rpg_quest', 'rpg_skill', 'rpg_boss_action', 'rpg_raid_lobby'].includes(parts[0])) {
+    return true;
+  }
+
+  if (parts[0] === 'sword_quick') {
+    return ['enhance', 'advanced'].includes(parts[1]) && parts[2] === userId;
+  }
+
+  if (parts[0] === 'sword_sell_confirm') {
+    return parts[1] === userId;
+  }
+
+  if (parts[0] === 'casino_quick') {
+    return ['slots', 'odd_even', 'dice'].includes(parts[1]) && (!parts[4] || parts[4] === userId);
+  }
+
+  return false;
 }
 
 async function rewardChatActivity(message, economy, community, logger) {

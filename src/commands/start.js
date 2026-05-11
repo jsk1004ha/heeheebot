@@ -66,7 +66,7 @@ async function handleStartButton(interaction, services) {
 
   const hints = {
     today: '오늘 루트는 `/오늘할일`에서 한 번에 확인하세요.',
-    season: '시즌 진행도와 보상은 `/시즌 정보`와 `/시즌 과제`에서 확인하세요.',
+    season: '시즌 진행도는 `/시즌 과제` 보상 수령처럼 장기 활동으로 쌓입니다.',
     help: '전체 명령어는 `/도움말`에서 분류별로 볼 수 있습니다.'
   };
 
@@ -214,13 +214,13 @@ function buildStartSteps({ profile, unavailable, rpg, swordStatus, fishingStatus
     },
     {
       label: '주식 거래 입문',
-      command: '`/주식 매수` 또는 `/주식 시세`',
+      command: '`/주식 매수`',
       unavailable: unavailable.stocks,
       complete: !unavailable.stocks && ((stockOverview?.tradeCount ?? 0) > 0 || (stockOverview?.positions?.length ?? 0) > 0)
     },
     {
-      label: '시즌 정보 확인',
-      command: '`/시즌 정보`',
+      label: '시즌 진행 시작',
+      command: '`/시즌 과제`',
       unavailable: unavailable.seasons,
       complete: !unavailable.seasons && (seasonOverview?.profile?.totalPoints ?? 0) > 0
     }
