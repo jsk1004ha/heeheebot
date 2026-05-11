@@ -318,20 +318,22 @@ function createAccountLinkSelectionPayload(summary, ownerId) {
 }
 
 export function createProfileReplyPayload(profile, context = {}) {
+  const sections = createProfileCardSections(profile, context);
   const profileText = formatProfile(profile, context);
   const displayBadge = getDisplayProfileLevelBadge(profile.level);
   const attachment = getProfileBadgeAttachment(displayBadge);
 
   if (!attachment) return profileText;
 
-  const tier = getProfileLevelTier(profile.level);
+  const level = normalizeProfileLevel(profile.level);
+  const tier = getProfileLevelTier(level);
   const embed = new EmbedBuilder()
-    .setTitle(`${displayBadge.badgeText} · ${displayBadge.name}`)
-    .setDescription('현재 성장 구간 대표 배지')
-    .addFields(createProfileEmbedFields(profileText))
+    .setTitle(`${profile.username} · Lv.${level} ${tier.title}`)
+    .setDescription(`대표 배지: **${displayBadge.badgeText} · ${displayBadge.name}**`)
+    .addFields(sections)
     .setImage(`attachment://${attachment.name}`)
     .setColor(tier.color)
-    .setFooter({ text: '프로필 성장 배지 이미지' });
+    .setFooter({ text: `${tier.aura} · 프로필 성장 배지 이미지` });
 
   return {
     content: `🪪 **${profile.username}님의 통합 프로필**`,
@@ -340,67 +342,47 @@ export function createProfileReplyPayload(profile, context = {}) {
   };
 }
 
-function createProfileEmbedFields(profileText) {
-  const lines = profileText.split('\n');
-  const summaryIndex = lines.findIndex((line) => line.includes('통합 성장 요약'));
-  const safeSummaryIndex = summaryIndex >= 0 ? summaryIndex : lines.length;
-
-  return [
-    {
-      name: '성장 카드',
-      value: lines.slice(0, 4).join('\n') || '성장 카드 정보 없음'
-    },
-    {
-      name: '기본 정보',
-      value: lines.slice(4, 11).join('\n') || '기본 정보 없음'
-    },
-    {
-      name: '꾸미기',
-      value: lines.slice(11, safeSummaryIndex).filter(Boolean).join('\n') || '꾸미기 없음'
-    },
-    {
-      name: '통합 성장 요약',
-      value: lines.slice(safeSummaryIndex + 1, -2).filter(Boolean).join('\n') || '연동된 성장 컨텐츠 없음'
-    },
-    {
-      name: '정산/다음 목표',
-      value: lines.slice(-2).filter(Boolean).join('\n') || '정산 완료'
-    }
-  ];
+export function formatProfile(profile, context = {}) {
+  return createProfileCardSections(profile, context)
+    .map((section) => `${section.name}\n${section.value}`)
+    .join('\n\n');
 }
 
-export function formatProfile(profile, context = {}) {
+function createProfileCardSections(profile, context = {}) {
   const level = normalizeProfileLevel(profile.level);
   const tier = getProfileLevelTier(level);
+  const displayBadge = getDisplayProfileLevelBadge(level);
   const migrationText = profile.currencyMigration?.convertedGold > 0
-    ? `기존 전용 지갑 정산: **+${formatCurrencyAmount(profile.currencyMigration.convertedGold, 'main')}**`
-    : '기존 전용 지갑: **정산 완료**';
+    ? `기존 전용 지갑 정산 **+${formatCurrencyAmount(profile.currencyMigration.convertedGold, 'main')}**`
+    : '기존 전용 지갑 **정산 완료**';
   const titleText = getEquippedTitleText(profile);
-  const topBorder = `${tier.topLeft}${'─'.repeat(10)} ${tier.title} 성장 카드 ${'─'.repeat(10)}${tier.topRight}`;
-  const bottomBorder = `${tier.bottomLeft}${'─'.repeat(8)} ${formatNextBadgeHint(level)} ${'─'.repeat(8)}${tier.bottomRight}`;
 
   return [
-    topBorder,
-    `**${profile.username}님의 프로필**${titleText}`,
-    `단계: **${tier.title}**`,
-    `카드 효과: **${tier.aura}**`,
-    `레벨: **${level}**`,
-    `경험치: **${profile.totalXp.toLocaleString()} XP**`,
-    `성장 배지: ${formatLevelBadgeGallery(level)}`,
-    `대표 배지 이미지: ${formatDisplayBadgeText(level)}`,
-    `다음 배지: ${formatNextBadgeTarget(level)}`,
-    `연속 출석: **${profile.dailyStreak.toLocaleString()}일**`,
-    `골드: **${formatCurrencyAmount(profile.balance, 'main')}**`,
-    `꾸미기 배지: ${formatShopBadgeGallery(profile)}`,
-    '',
-    '🧩 **통합 성장 요약**',
-    formatRpgProfileSummary(profile),
-    formatSwordProfileSummary(profile),
-    formatCommunityProfileSummary(profile),
-    formatStockProfileSummary(context),
-    migrationText,
-    bottomBorder
-  ].join('\n');
+    {
+      name: '🎮 캐릭터 카드',
+      value: [
+        `**${profile.username}님의 프로필**${titleText}`,
+        `Lv. **${level}** · 등급 **${tier.title}**`,
+        `대표 배지 **${displayBadge.badgeText} · ${displayBadge.name}**`,
+        `경험치 **${normalizeProfileCount(profile.totalXp).toLocaleString()} XP**`,
+        `골드 **${formatCurrencyAmount(profile.balance, 'main')}** · 출석 **${normalizeProfileCount(profile.dailyStreak).toLocaleString()}일**`,
+        `다음 배지 ${formatNextBadgeTarget(level)}`
+      ].join('\n')
+    },
+    { name: '⚔️ RPG 캐릭터', value: formatRpgProfileSummary(profile) },
+    { name: '🗡️ 검 성장', value: formatSwordProfileSummary(profile) },
+    { name: '📈 자산/주식', value: formatStockProfileSummary(context) },
+    { name: '🏅 커뮤니티', value: formatCommunityProfileSummary(profile) },
+    {
+      name: '🎖️ 성장/정산',
+      value: [
+        `성장 배지: ${formatLevelBadgeGallery(level)}`,
+        `꾸미기 배지: ${formatShopBadgeGallery(profile)}`,
+        `카드 효과: **${tier.aura}**`,
+        migrationText
+      ].join('\n')
+    }
+  ];
 }
 
 function getProfileTargetUser(interaction, fallbackUser) {
@@ -548,11 +530,6 @@ function formatLevelBadgeGallery(level) {
   return `현재 **${currentBadge.badgeText} · ${currentBadge.name}**${previousText}`;
 }
 
-function formatDisplayBadgeText(level) {
-  const badge = getDisplayProfileLevelBadge(level);
-  return `**${badge.badgeText} · ${badge.name}**`;
-}
-
 function formatNextBadgeTarget(level) {
   const nextBadge = getNextProfileLevelBadge(level);
   if (!nextBadge) {
@@ -560,12 +537,6 @@ function formatNextBadgeTarget(level) {
   }
 
   return `**${nextBadge.badgeText} · ${nextBadge.name}**까지 ${nextBadge.minLevel - level}레벨`;
-}
-
-function formatNextBadgeHint(level) {
-  const nextBadge = getNextProfileLevelBadge(level);
-  if (!nextBadge) return '모든 성장 배지 해금';
-  return `다음 배지 ${nextBadge.badgeText}`;
 }
 
 function getEquippedTitleText(profile) {
