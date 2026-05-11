@@ -185,6 +185,67 @@ test('/초성게임 시작 명령은 라운드를 열고 채팅 정답에 XP를 
   resetChoseongGamesForTest();
 });
 
+test('/초성게임 시작 명령은 사전 준비 전에 먼저 deferReply로 응답 창을 확보한다', async () => {
+  resetChoseongGamesForTest();
+
+  const calls = [];
+  const interaction = {
+    guildId: 'guild-1',
+    channelId: 'channel-1',
+    channel: {
+      async send() {}
+    },
+    user: {
+      id: 'host-1',
+      username: '방장'
+    },
+    deferred: false,
+    replied: false,
+    isChatInputCommand: () => true,
+    commandName: '초성게임',
+    inGuild: () => true,
+    options: {
+      getSubcommand: () => '시작',
+      getInteger: () => 30
+    },
+    async deferReply() {
+      calls.push('defer');
+      this.deferred = true;
+    },
+    async editReply(payload) {
+      calls.push('edit');
+      this.editedPayload = payload;
+      this.replied = true;
+    },
+    async reply() {
+      throw new Error('defer 후에는 reply 대신 editReply를 사용해야 합니다.');
+    }
+  };
+  const dictionary = {
+    chooseInitials() {
+      assert.deepEqual(calls, ['defer']);
+      return {
+        initials: 'ㄱㄴ',
+        answerCount: 2,
+        length: 2
+      };
+    },
+    findAnswers() {
+      return [];
+    }
+  };
+
+  await handleChoseongCommand(interaction, null, console, {
+    dictionary,
+    randomInt: () => 0
+  });
+
+  assert.deepEqual(calls, ['defer', 'edit']);
+  assert.match(interaction.editedPayload.content, /초성게임 시작/);
+
+  resetChoseongGamesForTest();
+});
+
 test('/초성게임 시작 명령은 초성 2글자로 고정하고 확장 단어 DB 파일을 제공한다', async () => {
   const [payload] = getChoseongCommandPayloads();
   const words = await readFile(new URL('../data/choseong-ko.txt', import.meta.url), 'utf8');

@@ -10,9 +10,9 @@ const ACTIVITY_DAY_OFFSET_MS = 9 * 60 * 60 * 1000;
 const ACTIVITY_SUMMARY_DAYS = 7;
 const ACTIVITY_RETENTION_DAYS = 35;
 const LOTTERY_TICKET_COST = 500;
-const LOTTERY_MAX_TICKETS_PER_PURCHASE = 100;
-const DEFAULT_LOTTERY_JACKPOT = 1_000;
-const LOTTERY_BASE_JACKPOT_BPS = 8_000;
+const LOTTERY_FIRST_PRIZE_TICKET_MULTIPLIER = 400_000;
+const DEFAULT_LOTTERY_JACKPOT = LOTTERY_TICKET_COST * LOTTERY_FIRST_PRIZE_TICKET_MULTIPLIER;
+const LOTTERY_BASE_JACKPOT_BPS = 9_000;
 const LOTTERY_EVENT_JACKPOT_BPS = 10_000;
 const LOTTERY_NUMBER_MIN = 1;
 const LOTTERY_NUMBER_MAX = 45;
@@ -21,14 +21,13 @@ const LOTTERY_DRAW_DAYS = Object.freeze([3, 6]); // Wednesday and Saturday in Ko
 const LOTTERY_DRAW_HOUR = 21;
 const LOTTERY_DRAW_MINUTE = 0;
 const LOTTERY_AUTO_DRAW_CHECK_INTERVAL_MS = 60_000;
-const LOTTERY_FIRST_ROLLOVER_BPS = 5_000;
 const MISSION_EVENT_REWARD_BPS = 15_000;
 const LOTTERY_PRIZE_TIERS = Object.freeze([
-  Object.freeze({ id: 'first', label: '1등', matchCount: 6, requiresBonus: false, jackpotBps: 7_000, fixedPrize: null, description: '6개 번호 일치' }),
-  Object.freeze({ id: 'second', label: '2등', matchCount: 5, requiresBonus: true, jackpotBps: 1_500, fixedPrize: null, description: '5개 번호 + 보너스 일치' }),
-  Object.freeze({ id: 'third', label: '3등', matchCount: 5, requiresBonus: false, jackpotBps: 1_000, fixedPrize: null, description: '5개 번호 일치' }),
-  Object.freeze({ id: 'fourth', label: '4등', matchCount: 4, requiresBonus: false, jackpotBps: null, fixedPrize: 5_000, description: '4개 번호 일치' }),
-  Object.freeze({ id: 'fifth', label: '5등', matchCount: 3, requiresBonus: false, jackpotBps: null, fixedPrize: LOTTERY_TICKET_COST, description: '3개 번호 일치' })
+  Object.freeze({ id: 'first', label: '1등', matchCount: 6, requiresBonus: false, jackpotBps: 10_000, fixedPrize: null, description: '6개 번호 일치' }),
+  Object.freeze({ id: 'second', label: '2등', matchCount: 5, requiresBonus: true, jackpotBps: null, fixedPrize: LOTTERY_TICKET_COST * 40_000, description: '5개 번호 + 보너스 일치' }),
+  Object.freeze({ id: 'third', label: '3등', matchCount: 5, requiresBonus: false, jackpotBps: null, fixedPrize: LOTTERY_TICKET_COST * 2_000, description: '5개 번호 일치' }),
+  Object.freeze({ id: 'fourth', label: '4등', matchCount: 4, requiresBonus: false, jackpotBps: null, fixedPrize: LOTTERY_TICKET_COST * 100, description: '4개 번호 일치' }),
+  Object.freeze({ id: 'fifth', label: '5등', matchCount: 3, requiresBonus: false, jackpotBps: null, fixedPrize: LOTTERY_TICKET_COST * 10, description: '3개 번호 일치' })
 ]);
 
 export const SHOP_ITEMS = Object.freeze([
@@ -304,12 +303,7 @@ export class CommunityService {
   }
 
   async buyLotteryTickets({ guildId, userId, username, quantity = 1, now = Date.now() }) {
-    const normalizedQuantity = normalizeBoundedInteger(
-      quantity,
-      '복권 장수',
-      1,
-      LOTTERY_MAX_TICKETS_PER_PURCHASE
-    );
+    const normalizedQuantity = normalizeLotteryPurchaseQuantity(quantity);
 
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, now);
@@ -317,7 +311,7 @@ export class CommunityService {
       const community = normalizeCommunityProfile(profile, now);
       const lottery = normalizeLottery(guildCommunity.lottery, now);
       const activeEvent = getActiveEvent(guildCommunity, now);
-      const totalCost = normalizedQuantity * LOTTERY_TICKET_COST;
+      const totalCost = calculateLotteryPurchaseCost(normalizedQuantity);
       const entries = [];
 
       debitBalance(profile, totalCost);
@@ -591,8 +585,8 @@ export function getLotteryTicketCost() {
   return LOTTERY_TICKET_COST;
 }
 
-export function getLotteryMaxTicketsPerPurchase() {
-  return LOTTERY_MAX_TICKETS_PER_PURCHASE;
+export function getLotteryPrizeTiers() {
+  return LOTTERY_PRIZE_TIERS.map((tier) => ({ ...tier }));
 }
 
 export function getNextLotteryDrawAt(now = Date.now()) {
@@ -710,12 +704,14 @@ function drawLotteryRound({
   const payoutLedger = new Map();
   const tierSummaries = [];
   let totalPaid = 0;
+  let jackpotPoolPaid = 0;
 
   for (const tier of LOTTERY_PRIZE_TIERS) {
     const winners = tierEntries[tier.id];
+    const isJackpotTier = tier.jackpotBps !== null;
     const prizePool = tier.fixedPrize
       ? tier.fixedPrize * winners.length
-      : winners.length > 0
+      : isJackpotTier
       ? applyBps(jackpotBefore, tier.jackpotBps)
       : 0;
     const prizePerTicket = winners.length > 0
@@ -730,6 +726,10 @@ function drawLotteryRound({
       totalPaid += prizePerTicket;
     }
 
+    if (isJackpotTier) {
+      jackpotPoolPaid += tierPayout;
+    }
+
     tierSummaries.push({
       id: tier.id,
       label: tier.label,
@@ -740,13 +740,7 @@ function drawLotteryRound({
     });
   }
 
-  const firstTierWinners = tierEntries.first.length;
-  const hasAnyWinner = totalPaid > 0;
-  const rollover = !hasAnyWinner
-    ? jackpotBefore
-    : firstTierWinners <= 0
-    ? applyBps(jackpotBefore, LOTTERY_FIRST_ROLLOVER_BPS)
-    : 0;
+  const rollover = Math.max(0, jackpotBefore - jackpotPoolPaid);
   const topWinners = [...payoutLedger.values()]
     .map((winner) => ({
       ...winner,
@@ -781,7 +775,7 @@ function drawLotteryRound({
     topWinners: topWinners.slice(0, 5),
     luckyWinner: null
   };
-  lottery.jackpot = DEFAULT_LOTTERY_JACKPOT + rollover;
+  lottery.jackpot = Math.max(DEFAULT_LOTTERY_JACKPOT, rollover);
   lottery.nextDrawAt = getNextLotteryDrawAt(now);
   lottery.tickets = {};
   lottery.totalTickets = 0;
@@ -1451,6 +1445,23 @@ function normalizeMissionType(type) {
   const normalized = String(type || 'daily');
   if (normalized === 'daily' || normalized === 'weekly') return normalized;
   throw new Error('미션 종류는 일일 또는 주간이어야 합니다.');
+}
+
+function normalizeLotteryPurchaseQuantity(value) {
+  const normalized = Number(value);
+  const maxQuantityBySafeCost = Math.floor(Number.MAX_SAFE_INTEGER / LOTTERY_TICKET_COST);
+  if (!Number.isSafeInteger(normalized) || normalized < 1) {
+    throw new Error('복권 장수는 1장 이상의 정수여야 합니다.');
+  }
+  if (normalized > maxQuantityBySafeCost) {
+    throw new Error('복권 구매 금액이 안전한 골드 범위를 초과합니다.');
+  }
+  return normalized;
+}
+
+function calculateLotteryPurchaseCost(quantity) {
+  const totalCost = quantity * LOTTERY_TICKET_COST;
+  return normalizeBoundedInteger(totalCost, '복권 구매 금액', 1, Number.MAX_SAFE_INTEGER);
 }
 
 function normalizeBoundedInteger(value, label, min, max) {

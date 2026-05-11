@@ -227,6 +227,11 @@ export const stockCommands = [
     )
     .addSubcommand((subcommand) =>
       subcommand
+        .setName('배당금')
+        .setDescription('보유 주식에서 쌓인 배당금을 수령하고 최근 배당 내역을 봅니다.')
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
         .setName('뉴스')
         .setDescription('최근 시장 뉴스와 공시를 봅니다.')
         .addIntegerOption((option) =>
@@ -282,7 +287,7 @@ export const stockCommands = [
     .addSubcommand((subcommand) =>
       subcommand
         .setName('레버리지진입')
-        .setDescription('1~100배 롱/숏 가상 레버리지 포지션을 엽니다.')
+        .setDescription('기간 만기 가격으로 자동 정산되는 롱/숏 레버리지 포지션을 엽니다.')
         .addStringOption((option) =>
           option
             .setName('종목')
@@ -304,8 +309,16 @@ export const stockCommands = [
         .addIntegerOption((option) =>
           option
             .setName('배율')
-            .setDescription('레버리지 배율 1~100배')
+            .setDescription('레버리지 배율. 10~29턴은 1~10배, 30턴 이상은 1~100배')
             .setMinValue(1)
+            .setMaxValue(100)
+            .setRequired(true)
+        )
+        .addIntegerOption((option) =>
+          option
+            .setName('기간')
+            .setDescription('자동 정산까지 기다릴 시장 턴 수 (10~100턴)')
+            .setMinValue(10)
             .setMaxValue(100)
             .setRequired(true)
         )
@@ -559,6 +572,18 @@ async function routeStockCommand(interaction, stocks) {
     return;
   }
 
+  if (subcommand === '배당금') {
+    const dividends = await stocks.claimDividends({
+      guildId,
+      userId: user.id,
+      username: user.username
+    });
+    await replyStockContent(interaction, formatDividendSummary(user, dividends), {
+      components: createStockQuickRows(user.id)
+    });
+    return;
+  }
+
   if (subcommand === '뉴스') {
     const news = await stocks.getNews({
       guildId,
@@ -608,6 +633,7 @@ async function routeStockCommand(interaction, stocks) {
       stockId: interaction.options.getString('종목', true),
       side: interaction.options.getString('방향', true),
       leverage: interaction.options.getInteger('배율', true),
+      durationTurns: interaction.options.getInteger('기간', true),
       margin: interaction.options.getInteger('증거금', true)
     });
     await replyStockContent(interaction, formatOpenLeverageResult(user, result), {
@@ -1018,9 +1044,10 @@ function formatLeveragePositionChoice(position, index) {
   return [
     `${index + 1}. ${position.stock.name}`,
     `${formatLeverageSide(position.side)} ${position.leverage}배`,
+    formatLeverageTerm(position),
     `평가 ${position.equity.toLocaleString()}G`,
     `손익 ${formatSignedMoney(position.unrealizedProfit)}`
-  ].join(' · ').slice(0, 100);
+  ].filter(Boolean).join(' · ').slice(0, 100);
 }
 
 async function getTradableStockAutocompleteChoices(interaction, stocks, query) {
@@ -1139,6 +1166,7 @@ function formatQuote(quote) {
     `📌 **${quote.name}** (${quote.sector})`,
     `상태: **${statusText}**`,
     `현재가: **${quote.price.toLocaleString()}골드** / 변동: ${formatTrendMarker(quote.changePercent)} **${formatSignedPercent(quote.changePercent)}**`,
+    `배당률: **${formatDividendPercent(quote.dividendBps)}**${quote.dividendUpdatedAtTick ? ` / 최근 조정: ${quote.dividendUpdatedAtTick}턴` : ''}`,
     `이전가: ${quote.previousPrice.toLocaleString()}골드`,
     quote.news
   ].join('\n');
@@ -1248,6 +1276,32 @@ function formatTradeHistory(user, history) {
   ].join('\n');
 }
 
+function formatDividendSummary(user, dividends) {
+  const claimedAmount = normalizeDisplayAmount(dividends.claimedAmount);
+  const pendingAmount = normalizeDisplayAmount(dividends.pendingAmount);
+  const totalDividends = normalizeDisplayAmount(dividends.totalDividends);
+  const claimedDividends = normalizeDisplayAmount(dividends.claimedDividends);
+  const cash = normalizeDisplayAmount(dividends.cash);
+  const intervalTicks = normalizeDisplayAmount(dividends.intervalTicks);
+  const nextDividendTick = normalizeDisplayAmount(dividends.nextDividendTick);
+  const claimText = claimedAmount > 0
+    ? `이번 수령: **${claimedAmount.toLocaleString()}골드**`
+    : '이번에 수령할 배당금이 없습니다.';
+  const recent = Array.isArray(dividends.recent) && dividends.recent.length > 0
+    ? dividends.recent.map(formatDividendHistoryLine).join('\n')
+    : '최근 배당 내역이 없습니다.';
+
+  return [
+    `💰 **${user.username}님의 주식 배당금**`,
+    claimText,
+    `미수 배당금: **${pendingAmount.toLocaleString()}골드** / 누적 배당금: **${totalDividends.toLocaleString()}골드** / 수령 누계: **${claimedDividends.toLocaleString()}골드**`,
+    `골드: **${cash.toLocaleString()}골드**`,
+    `배당 주기: **${intervalTicks.toLocaleString()}시장 턴마다** / 다음 배당 예정: **${nextDividendTick.toLocaleString()}턴**`,
+    '**최근 배당 내역**',
+    recent
+  ].join('\n');
+}
+
 function formatStockNews(news) {
   const body = news.entries.length > 0
     ? news.entries.map(formatStockNewsLine)
@@ -1305,10 +1359,12 @@ function formatStockChart(chart) {
 }
 
 function formatPortfolio(user, portfolio) {
+  const pendingDividends = normalizeDisplayAmount(portfolio.pendingDividends);
+  const totalDividends = normalizeDisplayAmount(portfolio.totalDividends);
   const positions = portfolio.positions.length > 0
     ? portfolio.positions
       .slice(0, 10)
-      .map((position) => `- ${position.stock.name} ${position.quantity.toLocaleString()}주 / 평가 ${position.marketValue.toLocaleString()}골드 / 손익 ${formatSignedMoney(position.unrealizedProfit)}`)
+      .map((position) => `- ${position.stock.name} ${position.quantity.toLocaleString()}주 / 평가 ${position.marketValue.toLocaleString()}골드 / 손익 ${formatSignedMoney(position.unrealizedProfit)} / 배당률 ${formatDividendPercent(position.stock.dividendBps)}`)
       .join('\n')
     : '보유 주식이 없습니다.';
 
@@ -1317,6 +1373,7 @@ function formatPortfolio(user, portfolio) {
     `골드: **${portfolio.cash.toLocaleString()}골드**`,
     `주식 평가액: **${portfolio.stockValue.toLocaleString()}골드**`,
     `레버리지 평가금: **${portfolio.leveragedEquity.toLocaleString()}골드** / 부채 노출: **${(portfolio.leveragedDebt ?? 0).toLocaleString()}골드**`,
+    `미수 배당금: **${pendingDividends.toLocaleString()}골드** / 누적 배당금: **${totalDividends.toLocaleString()}골드**`,
     `총자산: **${portfolio.totalAssets.toLocaleString()}골드**`,
     `평가손익: **${formatSignedMoney(portfolio.unrealizedProfit)}** / 레버리지 손익: **${formatSignedMoney(portfolio.leveragedUnrealizedProfit)}**`,
     `실현손익: **${formatSignedMoney(portfolio.realizedProfit)}** / 레버리지 실현손익: **${formatSignedMoney(portfolio.realizedLeveragedProfit)}**`,
@@ -1328,7 +1385,7 @@ function formatLeaderboard(rows) {
   if (rows.length === 0) return '아직 가상주식 랭킹 데이터가 없습니다.';
 
   const body = rows
-    .map((row, index) => `${index + 1}. **${row.username}** — 총자산 ${row.totalAssets.toLocaleString()}골드 / 골드 ${row.cash.toLocaleString()}골드 / 주식 ${row.stockValue.toLocaleString()}골드 / 레버리지 ${row.leveragedEquity.toLocaleString()}골드`)
+    .map((row, index) => `${index + 1}. **${row.username}** — 총자산 ${row.totalAssets.toLocaleString()}골드 / 골드 ${row.cash.toLocaleString()}골드 / 주식 ${row.stockValue.toLocaleString()}골드 / 레버리지 ${row.leveragedEquity.toLocaleString()}골드 / 미수배당 ${normalizeDisplayAmount(row.pendingDividends).toLocaleString()}골드`)
     .join('\n');
   return `🏆 **가상주식 총자산 랭킹**\n${body}`;
 }
@@ -1338,10 +1395,10 @@ function formatOpenLeverageResult(user, result) {
   const sideLabel = formatLeverageSide(position.side);
   return [
     `⚡ **레버리지 ${sideLabel} 진입 완료** — ${formatUserMention(user, user.username)}`,
-    `종목: **${position.stock.name}** / 배율: **${position.leverage}배**`,
+    `종목: **${position.stock.name}** / 배율: **${position.leverage}배** / 기간: **${formatLeverageTerm(position)}**`,
     `진입가: ${position.entryPrice.toLocaleString()}골드 / 증거금: ${position.margin.toLocaleString()}골드 / 부채: ${position.debt.toLocaleString()}골드 / 명목가: ${position.notional.toLocaleString()}골드 / 수수료: ${result.fee.toLocaleString()}골드`,
     `골드: **${result.profile.balance.toLocaleString()}골드**`,
-    '아래 `1번 닫기` 버튼으로 바로 닫을 수 있습니다. 같은 종목 롱/숏 양방향은 차단되고 손실 100%면 자동 청산됩니다.'
+    '기간 중 변동은 정산하지 않고 만기 턴 가격으로 자동 정산됩니다. 버튼을 누르면 기존처럼 즉시 중도 청산할 수 있습니다.'
   ].join('\n');
 }
 
@@ -1360,7 +1417,7 @@ function formatLeverageCloseSelection(user, selection) {
   const body = selection.positions.length > 0
     ? selection.positions
       .slice(0, 10)
-      .map((position, index) => `${index + 1}. **${position.stock.name}** ${formatLeverageSide(position.side)} ${position.leverage}배 / 평가 ${position.equity.toLocaleString()}골드 / 손익 ${formatSignedMoney(position.unrealizedProfit)}`)
+      .map((position, index) => `${index + 1}. **${position.stock.name}** ${formatLeverageSide(position.side)} ${position.leverage}배${formatLeverageTermSuffix(position)} / 평가 ${position.equity.toLocaleString()}골드 / 손익 ${formatSignedMoney(position.unrealizedProfit)}`)
       .join('\n')
     : '일치하는 거래가 없습니다. 아래 레버리지 보유 버튼으로 전체를 다시 확인하세요.';
 
@@ -1374,22 +1431,26 @@ function formatLeverageCloseSelection(user, selection) {
 
 function formatCloseLeverageResult(user, result) {
   const position = result.position;
+  const title = formatLeverageCloseTitle(result);
+  const costs = formatLeverageSettlementCosts(result);
   if (result.liquidated) {
     return [
-      `💥 **레버리지 자동 청산** — ${formatUserMention(user, user.username)}`,
-      `종목: **${position.stock.name}** / ${formatLeverageSide(position.side)} ${position.leverage}배`,
+      `💥 **${title}** — ${formatUserMention(user, user.username)}`,
+      `종목: **${position.stock.name}** / ${formatLeverageSide(position.side)} ${position.leverage}배${formatLeverageTermSuffix(position)}`,
+      costs,
       `손익: **${formatSignedMoney(result.realizedProfit)}** / 지급액: 0골드`,
       `골드: **${result.profile.balance.toLocaleString()}골드**`
-    ].join('\n');
+    ].filter(Boolean).join('\n');
   }
 
   return [
-    `✅ **레버리지 청산 완료** — ${formatUserMention(user, user.username)}`,
-    `종목: **${position.stock.name}** / ${formatLeverageSide(position.side)} ${position.leverage}배`,
+    `✅ **${title}** — ${formatUserMention(user, user.username)}`,
+    `종목: **${position.stock.name}** / ${formatLeverageSide(position.side)} ${position.leverage}배${formatLeverageTermSuffix(position)}`,
     `진입가: ${position.entryPrice.toLocaleString()}골드 → 청산가: ${position.currentPrice.toLocaleString()}골드`,
+    costs,
     `손익: **${formatSignedMoney(result.realizedProfit)}** / 지급액: **${result.payout.toLocaleString()}골드**`,
     `골드: **${result.profile.balance.toLocaleString()}골드**`
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
 
 function formatCloseLeverageWithPortfolio(user, result, portfolio) {
@@ -1411,14 +1472,15 @@ function formatCloseLeverageWithPortfolio(user, result, portfolio) {
 }
 
 function formatLeveragePortfolio(user, portfolio) {
-  const liquidatedText = portfolio.liquidated.length > 0
-    ? `\n💥 이번 조회에서 자동 청산: ${portfolio.liquidated.map((entry) => `**${entry.stock.name}** ${formatLeverageSide(entry.side)} ${entry.leverage}배`).join(', ')}`
+  const settled = Array.isArray(portfolio.settled) ? portfolio.settled : portfolio.liquidated;
+  const settledText = settled.length > 0
+    ? `\n✅ 이번 조회에서 자동 정산: ${settled.map((entry) => `**${entry.stock.name}** ${formatLeverageSide(entry.side)} ${entry.leverage}배 ${formatSignedMoney(entry.realizedProfit)}`).join(', ')}`
     : '';
   const positions = portfolio.positions.length > 0
     ? portfolio.positions
       .slice(0, 10)
       .map((position, index) => [
-        `${index + 1}. **${position.stock.name}** ${formatLeverageSide(position.side)} ${position.leverage}배`,
+        `${index + 1}. **${position.stock.name}** ${formatLeverageSide(position.side)} ${position.leverage}배${formatLeverageTermSuffix(position)}`,
         `  진입 ${position.entryPrice.toLocaleString()}골드 → 현재 ${position.currentPrice.toLocaleString()}골드 / 증거금 ${position.margin.toLocaleString()}골드 / 부채 ${position.debt.toLocaleString()}골드 / 평가 ${position.equity.toLocaleString()}골드 / 손익 ${formatSignedMoney(position.unrealizedProfit)}`
       ].join('\n'))
       .join('\n')
@@ -1429,7 +1491,7 @@ function formatLeveragePortfolio(user, portfolio) {
     `골드: **${portfolio.cash.toLocaleString()}골드**`,
     `증거금 합계: **${portfolio.marginTotal.toLocaleString()}골드** / 부채 노출: **${portfolio.debtTotal.toLocaleString()}골드** / 명목가: **${portfolio.notionalTotal.toLocaleString()}골드** / 평가금: **${portfolio.equityTotal.toLocaleString()}골드**`,
     `미실현손익: **${formatSignedMoney(portfolio.unrealizedProfit)}** / 누적실현손익: **${formatSignedMoney(portfolio.realizedLeveragedProfit)}**`,
-    positions + liquidatedText
+    positions + settledText
   ].join('\n');
 }
 
@@ -1473,6 +1535,27 @@ function formatTradeHistoryLine(entry) {
   return `- ${formatTradeType(entry.type)} **${entry.stock.name}**${quantity}${price}${total}${profit}`;
 }
 
+function formatDividendHistoryLine(entry) {
+  const positions = Array.isArray(entry.positions) ? entry.positions : [];
+  const mainPositions = positions
+    .slice(0, 3)
+    .map((position) => `**${position.stock?.name ?? position.stockId ?? '알 수 없음'}** ${normalizeDisplayAmount(position.quantity).toLocaleString()}주 ${normalizeDisplayAmount(position.amount).toLocaleString()}골드(${formatDividendPercent(position.dividendBps)})`)
+    .join(', ');
+  const extraCount = Math.max(0, positions.length - 3);
+  const extraText = extraCount > 0 ? ` 외 ${extraCount.toLocaleString()}종` : '';
+  const detail = mainPositions ? ` — ${mainPositions}${extraText}` : '';
+  return `- ${normalizeDisplayAmount(entry.amount).toLocaleString()}골드${detail}`;
+}
+
+function normalizeDisplayAmount(value) {
+  const normalized = Number(value);
+  return Number.isSafeInteger(normalized) && normalized >= 0 ? normalized : 0;
+}
+
+function formatDividendPercent(dividendBps) {
+  return `${Math.round((normalizeDisplayAmount(dividendBps) / 100) * 100) / 100}%`;
+}
+
 function formatSignedPercent(percent) {
   const sign = percent > 0 ? '+' : '';
   return `${sign}${percent.toLocaleString()}%`;
@@ -1493,6 +1576,35 @@ function formatLeverageSide(side) {
   return side === 'short' ? '숏' : '롱';
 }
 
+function formatLeverageTerm(position) {
+  if (!Number.isSafeInteger(position?.durationTurns) || !Number.isSafeInteger(position?.expiresAtTick)) {
+    return null;
+  }
+  const remaining = Number.isSafeInteger(position.remainingTurns)
+    ? `남은 ${position.remainingTurns}턴`
+    : `만기 ${position.expiresAtTick}턴`;
+  return `${position.durationTurns}턴/${remaining}`;
+}
+
+function formatLeverageTermSuffix(position) {
+  const term = formatLeverageTerm(position);
+  return term ? ` / ${term}` : '';
+}
+
+function formatLeverageCloseTitle(result) {
+  if (result.earlyClosed) return '레버리지 중도 청산 완료';
+  if (result.expired) return '레버리지 만기 정산 완료';
+  if (result.autoSettled) return '레버리지 자동 청산';
+  return '레버리지 청산 완료';
+}
+
+function formatLeverageSettlementCosts(result) {
+  const closingFee = Number.isSafeInteger(result?.closingFee) ? result.closingFee : 0;
+  const penalty = Number.isSafeInteger(result?.penalty) ? result.penalty : 0;
+  if (closingFee <= 0 && penalty <= 0) return '';
+  return `중도청산 수수료: **${closingFee.toLocaleString()}골드** / 위약금: **${penalty.toLocaleString()}골드**`;
+}
+
 function formatOrderSide(side) {
   return side === 'sell' ? '매도' : '매수';
 }
@@ -1507,8 +1619,10 @@ function formatTradeType(type) {
     sell: '현물 매도',
     limit_buy_fill: '지정가 매수 체결',
     limit_sell_fill: '지정가 매도 체결',
+    delisting_cleanup: '상장폐지 정리',
     leverage_open: '레버리지 진입',
     leverage_close: '레버리지 청산',
+    leverage_settlement: '레버리지 만기정산',
     leverage_liquidation: '레버리지 자동청산'
   }[type] ?? type;
 }

@@ -111,6 +111,9 @@ async function createChoseongRound(interaction, economy, logger, options) {
   const timeoutSeconds = normalizeTimeoutSeconds(
     options.timeoutSeconds ?? interaction.options.getInteger?.('제한시간') ?? CHOSEONG_ROUND_TIMEOUT_MS / 1000
   );
+
+  await deferChoseongStartReply(interaction);
+
   const state = {
     key,
     guildId: interaction.guildId,
@@ -134,10 +137,34 @@ async function createChoseongRound(interaction, economy, logger, options) {
     state.timeoutMs
   );
 
-  await interaction.reply({
-    content: formatChoseongStartMessage(state),
-    allowedMentions: { parse: [] }
-  });
+  try {
+    await sendChoseongStartReply(interaction, {
+      content: formatChoseongStartMessage(state),
+      allowedMentions: { parse: [] }
+    });
+  } catch (error) {
+    clearRoundTimer(state);
+    activeGamesByChannel.delete(key);
+    throw error;
+  }
+}
+
+async function deferChoseongStartReply(interaction) {
+  if (interaction.deferred || interaction.replied || typeof interaction.deferReply !== 'function') {
+    return false;
+  }
+
+  await interaction.deferReply();
+  return true;
+}
+
+async function sendChoseongStartReply(interaction, payload) {
+  if (interaction.deferred && !interaction.replied && typeof interaction.editReply === 'function') {
+    await interaction.editReply(payload);
+    return;
+  }
+
+  await interaction.reply(payload);
 }
 
 async function finishChoseongRoundWithWinner({

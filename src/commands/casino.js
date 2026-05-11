@@ -11,6 +11,7 @@ import {
   createBlackjackRound,
   createDeadlineRound,
   createPlayerBlackjackRound,
+  createScratchTicket,
   createTimingRound,
   DEADLINE_MAX_SAFE_PRESSES,
   DEADLINE_ROLL_MAX,
@@ -21,11 +22,15 @@ import {
   formatEmojiRaceChoice,
   formatEmojiRaceTrack,
   formatCards,
+  formatScratchPrizeShort,
   hitBlackjackRound,
   hitPlayerBlackjackRound,
+  getScratchTicketProduct,
+  getScratchTicketProductStats,
   normalizeEmojiRaceChoice,
   normalizeDiceChoice,
   normalizeOddEvenChoice,
+  normalizeScratchTicketProductId,
   playBaccarat,
   playCraps,
   pressDeadlineRound,
@@ -39,6 +44,10 @@ import {
   playSicBo,
   standBlackjackRound,
   resolveTimingRound,
+  revealAllScratchTicketSpots,
+  revealScratchTicketSpot,
+  SCRATCH_TICKET_PRODUCTS,
+  SCRATCH_TICKET_SPOT_COUNT,
   standPlayerBlackjackRound,
   playSlots
 } from '../systems/casino.js';
@@ -49,12 +58,14 @@ import {
 import { safeReplyToInteraction } from './interactions.js';
 
 const CHALLENGE_TTL_MS = 60_000;
+const SCRATCH_TICKET_TTL_MS = 5 * 60_000;
 const EMOJI_RACE_FRAME_DELAY_MS = 500;
 const pendingBlackjackChallenges = new Map();
 const pendingDeadlineGames = new Map();
 const pendingTimingGames = new Map();
 const pendingAiBlackjackGames = new Map();
 const pendingPlayerBlackjackGames = new Map();
+const pendingScratchTickets = new Map();
 
 export const casinoCommands = [
   new SlashCommandBuilder()
@@ -299,6 +310,21 @@ export const casinoCommands = [
         .setDescription('예: 3 14 25 또는 3,14,25 (최대 5개)')
         .setMaxLength(30)
         .setRequired(true)
+    ),
+  new SlashCommandBuilder()
+    .setName('스크래치복권')
+    .setDescription('고정가 복권을 구매하고 버튼으로 9칸을 하나씩 긁어 당첨을 확인합니다.')
+    .addStringOption((option) =>
+      option
+        .setName('종류')
+        .setDescription('구매할 스크래치 복권 종류')
+        .setRequired(true)
+        .addChoices(
+          ...SCRATCH_TICKET_PRODUCTS.map((product) => ({
+            name: `${product.name} · ${product.price.toLocaleString()}골드 · 최고 ${formatScratchPrizeShort(product.topPrize)}골드`,
+            value: product.id
+          }))
+        )
     )
 	];
 
@@ -316,6 +342,9 @@ export async function handleCasinoCommand(interaction, economy, logger = console
     }
     if (interaction.customId?.startsWith('timing_')) {
       return handleTimingButton(interaction, economy, logger, options);
+    }
+    if (interaction.customId?.startsWith('scratch_')) {
+      return handleScratchTicketButton(interaction, economy, logger);
     }
     return handleBlackjackButton(interaction, economy, logger);
   }
@@ -348,6 +377,12 @@ export async function handleCasinoCommand(interaction, economy, logger = console
 async function routeCasinoCommand(interaction, economy, logger = console, options = {}) {
   if (interaction.commandName === '카지노정보') {
     await interaction.reply(createCasinoInfoPayload());
+    return;
+  }
+
+  if (interaction.commandName === '스크래치복권') {
+    const productId = normalizeScratchTicketProductId(interaction.options.getString('종류', true));
+    await playScratchTicket(interaction, economy, productId, options);
     return;
   }
 
@@ -542,7 +577,8 @@ function formatCasinoInfo() {
     '- `/바카라`: 플레이어 2배, 뱅커 1.95배, 타이 9배',
     '- `/크랩스`: 패스/돈패스 라인 승리 2배, 일부 무효는 환불',
     '- `/시크보`: 작음/큼 2배, 트리플 31배',
-    '- `/키노`: 번호 1~5개 선택, 10개 추첨과 비교. 1개 이상 맞히면 선택 개수별 배수표로 환급 또는 당첨'
+    '- `/키노`: 번호 1~5개 선택, 10개 추첨과 비교. 1개 이상 맞히면 선택 개수별 배수표로 환급 또는 당첨',
+    `- \`/스크래치복권\`: 고정가 ${formatScratchTicketProductSummary()} 중 하나를 구매하고 버튼으로 9칸을 하나씩 공개, 같은 금액 3개면 해당 금액 지급`
   ].join('\n');
 }
 
@@ -707,6 +743,142 @@ function createEmojiRaceFailurePayload(error) {
   };
 }
 
+
+async function playScratchTicket(interaction, economy, productId, options = {}) {
+  const product = getScratchTicketProduct(productId);
+  let reserved = false;
+  let gameId = null;
+
+  try {
+    await economy.reserveWager({
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username,
+      bet: product.price
+    });
+    reserved = true;
+
+    const ticket = createScratchTicket({
+      productId: product.id,
+      randomInt: options.randomInt
+    });
+    gameId = createChallengeId();
+    pendingScratchTickets.set(gameId, {
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username,
+      price: product.price,
+      ticket,
+      reserved: true,
+      expiresAt: Date.now() + SCRATCH_TICKET_TTL_MS
+    });
+
+    await interaction.reply(createScratchTicketProgressPayload(interaction.user, ticket, gameId));
+  } catch (error) {
+    if (gameId) pendingScratchTickets.delete(gameId);
+    if (reserved) {
+      await economy.refundReservedWager({
+        guildId: interaction.guildId,
+        userId: interaction.user.id,
+        username: interaction.user.username,
+        bet: product.price
+      });
+    }
+    throw error;
+  }
+}
+
+async function handleScratchTicketButton(interaction, economy, logger) {
+  const [action, gameId, rawIndex] = interaction.customId.split(':');
+  const pending = pendingScratchTickets.get(gameId);
+
+  if (!pending) {
+    await interaction.reply({
+      content: '이미 만료되었거나 처리된 스크래치 복권입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (interaction.user.id !== pending.userId) {
+    await interaction.reply({
+      content: '이 스크래치 복권은 구매한 유저만 긁을 수 있습니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (action !== 'scratch_reveal') {
+    await interaction.reply({
+      content: '알 수 없는 스크래치 복권 버튼입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  const spotIndex = parseScratchTicketButtonIndex(rawIndex);
+  if (spotIndex === null) {
+    await interaction.reply({
+      content: `스크래치 복권 칸 번호는 1~${SCRATCH_TICKET_SPOT_COUNT} 사이여야 합니다.`,
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  const alreadyExpired = Date.now() > pending.expiresAt;
+  if (!alreadyExpired && pending.ticket.revealed[spotIndex]) {
+    await interaction.reply({
+      content: '이미 긁은 복권 칸입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  try {
+    const expired = alreadyExpired;
+    const ticket = expired
+      ? revealAllScratchTicketSpots(pending.ticket)
+      : revealScratchTicketSpot(pending.ticket, spotIndex);
+    pending.ticket = ticket;
+
+    if (ticket.status !== 'settled') {
+      pending.expiresAt = Date.now() + SCRATCH_TICKET_TTL_MS;
+      await interaction.update(createScratchTicketProgressPayload(interaction.user, ticket, gameId));
+      return true;
+    }
+
+    pendingScratchTickets.delete(gameId);
+    const settlement = await economy.resolveReservedWager({
+      guildId: pending.guildId,
+      userId: pending.userId,
+      username: pending.username,
+      bet: pending.price,
+      payout: ticket.payout
+    });
+    pending.reserved = false;
+
+    await interaction.update(createScratchTicketResultPayload(interaction.user, ticket, settlement, {
+      expired
+    }));
+  } catch (error) {
+    pendingScratchTickets.delete(gameId);
+    if (pending.reserved) {
+      await economy.refundReservedWager({
+        guildId: pending.guildId,
+        userId: pending.userId,
+        username: pending.username,
+        bet: pending.price
+      }).catch((refundError) => logger.error('Failed to refund scratch ticket wager:', refundError));
+    }
+    logger.error(error);
+    await interaction.update({
+      content: `스크래치 복권 실패: ${error.message}`,
+      components: []
+    });
+  }
+
+  return true;
+}
 
 
 async function playTiming(interaction, economy, bet, options = {}) {
@@ -1555,6 +1727,126 @@ function formatKenoResult(user, game, settlement) {
     game.win ? `배수: ${game.multiplier}배` : '꽝',
     formatSettlement(game.win, settlement)
   ].join('\n');
+}
+
+function createScratchTicketProgressPayload(user, ticket, gameId) {
+  return {
+    content: formatScratchTicketProgress(user, ticket),
+    allowedMentions: createAllowedMentionsForUsers([user.id]),
+    components: createScratchTicketRows(gameId, ticket)
+  };
+}
+
+function createScratchTicketResultPayload(user, ticket, settlement, { expired = false } = {}) {
+  return {
+    content: formatScratchTicketResult(user, ticket, settlement, { expired }),
+    allowedMentions: createAllowedMentionsForUsers([user.id]),
+    components: []
+  };
+}
+
+function formatScratchTicketProgress(user, ticket) {
+  return [
+    `🎫 **스크래치 복권** — ${formatUserMention(user, user.username)}`,
+    `상품: **${ticket.productName}** / 구매가: **${ticket.price.toLocaleString()}골드** / 최고 당첨: **${ticket.topPrize.toLocaleString()}골드**`,
+    `당첨 조건: **같은 금액 3개**가 나오면 해당 금액을 지급합니다.`,
+    `확률 설계: ${formatScratchTicketStats(ticket.productId)}`,
+    `긁은 칸: **${ticket.revealCount}/${SCRATCH_TICKET_SPOT_COUNT}**`,
+    ticket.lastRevealedIndex !== null
+      ? `방금 공개: **${ticket.lastRevealedIndex + 1}번** → **${ticket.spots[ticket.lastRevealedIndex].label}골드**`
+      : null,
+    '',
+    '```text',
+    formatScratchTicketBoard(ticket),
+    '```',
+    '버튼을 하나씩 눌러 모든 칸을 긁으면 자동 정산됩니다. 5분 동안 입력이 없으면 다음 입력 때 남은 칸이 자동 공개됩니다.'
+  ].filter((line) => line !== null).join('\n');
+}
+
+function formatScratchTicketResult(user, ticket, settlement, { expired = false } = {}) {
+  return [
+    ticket.win
+      ? `🎉 **스크래치 복권 당첨** — ${formatUserMention(user, user.username)}`
+      : `🎫 **스크래치 복권 결과** — ${formatUserMention(user, user.username)}`,
+    `상품: **${ticket.productName}** / 구매가: **${ticket.price.toLocaleString()}골드**`,
+    expired ? '⏰ 시간이 지나 남은 칸을 자동 공개하고 정산했습니다.' : null,
+    '',
+    '```text',
+    formatScratchTicketBoard(ticket, { revealAll: true }),
+    '```',
+    ticket.win
+      ? `판정: 같은 금액 3개 → **${ticket.winningAmount.toLocaleString()}골드 당첨!**`
+      : '판정: 같은 금액 3개가 없어 꽝입니다.',
+    formatSettlement(ticket.win, settlement)
+  ].filter((line) => line !== null).join('\n');
+}
+
+function formatScratchTicketBoard(ticket, { revealAll = false } = {}) {
+  const cells = ticket.spots.map((spot, index) => (
+    revealAll || ticket.revealed[index]
+      ? spot.label.padStart(5, ' ')
+      : `${index + 1}번`.padStart(5, ' ')
+  ));
+  const rows = [];
+
+  for (let index = 0; index < cells.length; index += 3) {
+    rows.push(cells.slice(index, index + 3).join(' | '));
+  }
+
+  return rows.join('\n');
+}
+
+function createScratchTicketRows(gameId, ticket) {
+  const rows = [];
+
+  for (let rowIndex = 0; rowIndex < SCRATCH_TICKET_SPOT_COUNT; rowIndex += 3) {
+    const row = new ActionRowBuilder();
+
+    for (let offset = 0; offset < 3; offset += 1) {
+      const index = rowIndex + offset;
+      const revealed = ticket.revealed[index];
+      const amount = ticket.spots[index].amount;
+      row.addComponents(
+        new ButtonBuilder()
+          .setCustomId(`scratch_reveal:${gameId}:${index}`)
+          .setLabel(revealed ? `${formatScratchPrizeShort(amount)}골드` : `${index + 1}번 긁기`)
+          .setStyle(getScratchTicketButtonStyle(ticket, index))
+          .setDisabled(revealed || ticket.status !== 'scratching')
+      );
+    }
+
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+function getScratchTicketButtonStyle(ticket, index) {
+  if (!ticket.revealed[index]) return ButtonStyle.Primary;
+  if (ticket.winningAmount && ticket.spots[index].amount === ticket.winningAmount) return ButtonStyle.Success;
+  return ButtonStyle.Secondary;
+}
+
+function parseScratchTicketButtonIndex(rawIndex) {
+  const index = Number(rawIndex);
+
+  if (!Number.isSafeInteger(index) || index < 0 || index >= SCRATCH_TICKET_SPOT_COUNT) {
+    return null;
+  }
+
+  return index;
+}
+
+function formatScratchTicketProductSummary() {
+  return SCRATCH_TICKET_PRODUCTS
+    .map((product) => `${product.name} ${product.price.toLocaleString()}골드/최고 ${formatScratchPrizeShort(product.topPrize)}`)
+    .join(', ');
+}
+
+function formatScratchTicketStats(productId) {
+  const stats = getScratchTicketProductStats(productId);
+
+  return `당첨률 약 ${(stats.winChance * 100).toFixed(2)}%, 기대 지급 ${Math.round(stats.expectedPayout).toLocaleString()}골드`;
 }
 
 

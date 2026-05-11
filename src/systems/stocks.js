@@ -19,17 +19,62 @@ const DEFAULT_TICK_MS = 3 * 60 * 1000;
 const DEFAULT_STOCK_ALERT_INTERVAL_MS = 60 * 1000;
 const DEFAULT_FEE_BPS = 100;
 const DEFAULT_LEVERAGE_FEE_BPS = 200;
+const DEFAULT_LEVERAGE_EARLY_CLOSE_FEE_BPS = 200;
+const DEFAULT_LEVERAGE_EARLY_CLOSE_PENALTY_BPS = 500;
+const DEFAULT_LEVERAGE_EARLY_PROFIT_PENALTY_BPS = 9_000;
+const MIN_LEVERAGE_DURATION_TURNS = 10;
+const DEFAULT_LEVERAGE_DURATION_TURNS = 30;
+const LONG_LEVERAGE_MIN_DURATION_TURNS = 30;
+const MAX_LEVERAGE_DURATION_TURNS = 100;
+const SHORT_DURATION_MAX_LEVERAGE = 10;
+const MAX_LEVERAGE = 100;
 const MAX_CATCH_UP_TICKS = 24;
 const MIN_STOCK_PRICE = 10;
 const RECENT_ORDER_LIMIT = 10;
 const RECENT_ALERT_LIMIT = 10;
 const RECENT_TRADE_LIMIT = 20;
 const RECENT_NEWS_LIMIT = 20;
+const RECENT_DIVIDEND_LIMIT = 10;
 const PRICE_HISTORY_LIMIT = 48;
 const AUTO_IPO_CHECK_TICKS = 5;
 const UNIFIED_GOLD_STOCK_MIGRATION_VERSION = 1;
 const DEFAULT_AUTO_IPO_CHANCE_BPS = 1_500;
 const DEFAULT_MAX_DYNAMIC_STOCKS = 50;
+const DEFAULT_DIVIDEND_INTERVAL_TICKS = 10;
+const DEFAULT_DIVIDEND_REVIEW_INTERVAL_TICKS = 6;
+const DEFAULT_DIVIDEND_CHANGE_CHANCE_BPS = 2_000;
+
+const DIVIDEND_BPS_BY_RISK = Object.freeze({
+  stable: 25,
+  cyclical: 18,
+  growth: 12,
+  volatile: 10,
+  meme: 6
+});
+
+const DIVIDEND_BPS_LIMITS_BY_RISK = Object.freeze({
+  stable: Object.freeze({ min: 15, max: 45 }),
+  cyclical: Object.freeze({ min: 8, max: 35 }),
+  growth: Object.freeze({ min: 4, max: 28 }),
+  volatile: Object.freeze({ min: 0, max: 30 }),
+  meme: Object.freeze({ min: 0, max: 20 })
+});
+
+function getInitialDividendBps(definition) {
+  const baseBps = getBaseDividendBps(definition);
+  const spread = Math.max(1, Math.ceil(baseBps * 0.4));
+  const offset = getStableStockNumber(`${definition.id}:initial-dividend`, -spread, spread);
+  return clampDividendBps(baseBps + offset, definition);
+}
+
+function getBaseDividendBps(definition) {
+  return DIVIDEND_BPS_BY_RISK[normalizeStockRisk(definition?.risk)] ?? DIVIDEND_BPS_BY_RISK.meme;
+}
+
+function clampDividendBps(value, definition) {
+  const limits = DIVIDEND_BPS_LIMITS_BY_RISK[normalizeStockRisk(definition?.risk)] ?? DIVIDEND_BPS_LIMITS_BY_RISK.meme;
+  return clampInteger(normalizeNonNegativeInteger(value), limits.min, limits.max);
+}
 
 const STOCK_DEFINITIONS = Object.freeze([
   stock('heejin_electronics', '희진전자', '전자', 'stable', 800, 800, 12),
@@ -224,6 +269,51 @@ const PRE_MARKET_NEWS_TEMPLATES = Object.freeze({
   })
 });
 
+const PRE_MARKET_NEWS_DETAIL_TEMPLATES = Object.freeze({
+  positive: Object.freeze([
+    '추가 자료는 다음 정기 안내 때 공개될 예정입니다',
+    '참석자 질의는 실적과 일정 확인에 집중됐습니다',
+    '세부 조건은 내부 검토 뒤 다시 안내될 예정입니다',
+    '관련 부서는 후속 설명 일정을 별도로 잡았습니다'
+  ]),
+  negative: Object.freeze([
+    '회사 측은 세부 영향 범위를 다시 점검하고 있습니다',
+    '후속 일정은 다음 안내에서 정리될 예정입니다',
+    '거래처와 내부 부서는 조정안을 함께 검토하고 있습니다',
+    '시장 참가자들은 추가 자료 공개를 기다리고 있습니다'
+  ]),
+  risk: Object.freeze([
+    '거래소와 회사 측은 제출 서류 범위를 확인하고 있습니다',
+    '후속 답변은 정해진 절차에 따라 접수될 예정입니다',
+    '관련 자료는 담당 부서 검토 뒤 다시 안내됩니다',
+    '투자자 질의는 자료 제출 일정에 집중됐습니다'
+  ])
+});
+
+const PRE_MARKET_NEWS_CONTEXT_TEMPLATES = Object.freeze({
+  positive: Object.freeze([
+    '자료 열람 창구는 기존 공지 채널로 유지됩니다',
+    '후속 일정은 담당 부서 확인 뒤 순차 안내됩니다',
+    '투자자 설명 자료는 같은 형식으로 정리됩니다',
+    '관련 문의는 정기 안내 페이지에서 접수됩니다',
+    '참석 신청과 세부 시간표는 별도 공지로 이어집니다'
+  ]),
+  negative: Object.freeze([
+    '세부 변경 범위는 내부 검토 뒤 다시 안내됩니다',
+    '담당 부서는 일정표와 참고 자료를 함께 정리하고 있습니다',
+    '거래처와 실무팀은 조정안을 문서로 맞춰보고 있습니다',
+    '추가 질의는 다음 정기 안내에서 다뤄질 예정입니다',
+    '운영 계획은 확정되는 순서대로 재공지됩니다'
+  ]),
+  risk: Object.freeze([
+    '제출 자료 목록은 절차에 따라 순차 확인됩니다',
+    '담당 창구는 보완 요청 항목을 문서로 정리하고 있습니다',
+    '관련 답변은 접수 순서에 맞춰 안내될 예정입니다',
+    '투자자 질의는 자료 범위와 제출 일정에 모였습니다',
+    '회사 측은 확인 절차가 끝나는 대로 추가 안내를 준비합니다'
+  ])
+});
+
 const MARKET_SUMMARY_TEMPLATES = Object.freeze({
   surge: Object.freeze([
     '시황: {name}에 강한 매수세가 몰렸습니다',
@@ -267,6 +357,77 @@ const MARKET_SUMMARY_TEMPLATES = Object.freeze({
   ])
 });
 
+const MARKET_SUMMARY_DETAIL_TEMPLATES = Object.freeze({
+  surge: Object.freeze([
+    '장 후반까지 주문 대기열 변화가 잦았습니다',
+    '분 단위 체결 흐름이 평소보다 촘촘했습니다',
+    '동종 업종 종목보다 호가 이동이 빨랐습니다',
+    '마감 전까지 관찰 주문이 계속 붙었습니다'
+  ]),
+  crash: Object.freeze([
+    '마감 직전 호가 간격이 넓어졌습니다',
+    '짧은 반등 뒤 대기 주문이 빠르게 줄었습니다',
+    '동종 업종보다 관망 주문 비중이 커졌습니다',
+    '체결 흐름은 장 막판까지 얇게 이어졌습니다'
+  ]),
+  positive: Object.freeze([
+    '매수 호가가 여러 가격대에 고르게 쌓였습니다',
+    '장중 거래 흐름은 완만한 회복세를 보였습니다',
+    '동종 업종 대비 체결 속도가 조금 빨랐습니다',
+    '마감 무렵 대기 주문이 천천히 늘었습니다'
+  ]),
+  negative: Object.freeze([
+    '반등 구간마다 관망 주문이 늘었습니다',
+    '장중 거래대금은 좁은 범위에서 움직였습니다',
+    '동종 업종 대비 체결 강도가 약했습니다',
+    '마감 전 호가 방어가 오래 유지되지 않았습니다'
+  ]),
+  quiet: Object.freeze([
+    '주문 흐름은 큰 쏠림 없이 분산됐습니다',
+    '체결 가격대는 좁은 범위에 머물렀습니다',
+    '투자자들은 다음 자료를 기다리는 모습입니다',
+    '동종 업종과 비슷한 속도로 거래됐습니다'
+  ])
+});
+
+const MARKET_SUMMARY_CONTEXT_TEMPLATES = Object.freeze({
+  surge: Object.freeze([
+    '체결 대기열은 마감까지 활발하게 바뀌었습니다',
+    '관심 종목 목록에 새로 담는 투자자가 늘었습니다',
+    '단기 트레이더들의 회전 매매가 빨라졌습니다',
+    '업종 내 비교 매수세가 함께 관찰됐습니다',
+    '마감 동시호가까지 호가 간격이 촘촘했습니다'
+  ]),
+  crash: Object.freeze([
+    '장 후반까지 방어 주문이 얇게 남았습니다',
+    '단기 투자자들은 다음 기준가를 기다렸습니다',
+    '업종 내 비교 매도세가 함께 관찰됐습니다',
+    '호가 간격은 마감 직전까지 넓게 유지됐습니다',
+    '체결 대기열은 낮은 가격대에 다시 쌓였습니다'
+  ]),
+  positive: Object.freeze([
+    '관심 주문은 장중 여러 가격대에 분산됐습니다',
+    '업종 내 순환매 흐름이 천천히 이어졌습니다',
+    '마감 전까지 거래 참여자가 조금 늘었습니다',
+    '단기 수급은 무리 없이 다음 장을 기다렸습니다',
+    '체결 속도는 평균보다 한 단계 빨랐습니다'
+  ]),
+  negative: Object.freeze([
+    '투자자들은 다음 가격대를 확인하며 관망했습니다',
+    '업종 내 순환매가 다른 종목으로 이동했습니다',
+    '체결 속도는 평균보다 한 단계 느렸습니다',
+    '마감 전까지 대기 주문이 얇게 남았습니다',
+    '단기 수급은 낮은 가격대에서 다시 대기했습니다'
+  ]),
+  quiet: Object.freeze([
+    '관심 주문은 평소 수준에서 유지됐습니다',
+    '장중 체결은 좁은 가격대 안에서 반복됐습니다',
+    '투자자들은 다음 자료 공개를 기다렸습니다',
+    '업종 내 움직임과 큰 차이는 없었습니다',
+    '마감 동시호가도 차분하게 지나갔습니다'
+  ])
+});
+
 const AUTO_IPO_PREFIXES = Object.freeze([
   '희진',
   '재성',
@@ -282,6 +443,13 @@ const AUTO_IPO_PREFIXES = Object.freeze([
   '도훈'
 ]);
 
+const AUTO_IPO_NAME_MODIFIERS = Object.freeze([
+  '',
+  '네오',
+  '루나',
+  '픽셀'
+]);
+
 const AUTO_IPO_THEMES = Object.freeze([
   Object.freeze({ suffix: 'AI랩스', sector: 'AI', risk: 'growth', basePriceMin: 650, basePriceMax: 1_600, volatilityBps: 1450, eventChance: 18 }),
   Object.freeze({ suffix: '로켓모빌리티', sector: '모빌리티', risk: 'meme', basePriceMin: 420, basePriceMax: 1_250, volatilityBps: 1700, eventChance: 24 }),
@@ -290,7 +458,63 @@ const AUTO_IPO_THEMES = Object.freeze([
   Object.freeze({ suffix: '푸드', sector: '식품', risk: 'stable', basePriceMin: 320, basePriceMax: 800, volatilityBps: 750, eventChance: 10 }),
   Object.freeze({ suffix: '엔터', sector: '엔터', risk: 'meme', basePriceMin: 450, basePriceMax: 1_200, volatilityBps: 1600, eventChance: 22 }),
   Object.freeze({ suffix: '리츠', sector: '부동산', risk: 'stable', basePriceMin: 350, basePriceMax: 900, volatilityBps: 800, eventChance: 11 }),
-  Object.freeze({ suffix: '퀀트', sector: '핀테크', risk: 'volatile', basePriceMin: 500, basePriceMax: 1_700, volatilityBps: 1500, eventChance: 20 })
+  Object.freeze({ suffix: '퀀트', sector: '핀테크', risk: 'volatile', basePriceMin: 500, basePriceMax: 1_700, volatilityBps: 1500, eventChance: 20 }),
+  Object.freeze({ suffix: '반도체', sector: '반도체', risk: 'growth', basePriceMin: 780, basePriceMax: 1_800, volatilityBps: 1500, eventChance: 18 }),
+  Object.freeze({ suffix: '로보틱스', sector: '로봇', risk: 'growth', basePriceMin: 620, basePriceMax: 1_550, volatilityBps: 1500, eventChance: 18 }),
+  Object.freeze({ suffix: '게임즈', sector: '게임', risk: 'meme', basePriceMin: 360, basePriceMax: 1_300, volatilityBps: 1750, eventChance: 24 }),
+  Object.freeze({ suffix: '커머스', sector: '커머스', risk: 'growth', basePriceMin: 420, basePriceMax: 1_250, volatilityBps: 1200, eventChance: 15 }),
+  Object.freeze({ suffix: '페이', sector: '핀테크', risk: 'growth', basePriceMin: 520, basePriceMax: 1_500, volatilityBps: 1350, eventChance: 17 }),
+  Object.freeze({ suffix: '오일뱅크', sector: '에너지', risk: 'cyclical', basePriceMin: 560, basePriceMax: 1_350, volatilityBps: 1100, eventChance: 14 }),
+  Object.freeze({ suffix: '스틸', sector: '철강', risk: 'cyclical', basePriceMin: 300, basePriceMax: 950, volatilityBps: 1200, eventChance: 15 }),
+  Object.freeze({ suffix: '해운', sector: '해운', risk: 'cyclical', basePriceMin: 280, basePriceMax: 1_050, volatilityBps: 1300, eventChance: 16 }),
+  Object.freeze({ suffix: '건설', sector: '건설', risk: 'cyclical', basePriceMin: 300, basePriceMax: 1_000, volatilityBps: 1150, eventChance: 14 }),
+  Object.freeze({ suffix: '디펜스', sector: '방산', risk: 'cyclical', basePriceMin: 700, basePriceMax: 1_600, volatilityBps: 1000, eventChance: 13 }),
+  Object.freeze({ suffix: '메디컬', sector: '의료기기', risk: 'volatile', basePriceMin: 420, basePriceMax: 1_450, volatilityBps: 1600, eventChance: 20 }),
+  Object.freeze({ suffix: '제약', sector: '제약', risk: 'volatile', basePriceMin: 380, basePriceMax: 1_500, volatilityBps: 1700, eventChance: 22 }),
+  Object.freeze({ suffix: '케미칼', sector: '화학', risk: 'cyclical', basePriceMin: 320, basePriceMax: 1_050, volatilityBps: 1100, eventChance: 13 }),
+  Object.freeze({ suffix: '화장품', sector: '화장품', risk: 'growth', basePriceMin: 360, basePriceMax: 1_150, volatilityBps: 1150, eventChance: 15 }),
+  Object.freeze({ suffix: '항공', sector: '항공', risk: 'meme', basePriceMin: 300, basePriceMax: 1_100, volatilityBps: 1600, eventChance: 22 }),
+  Object.freeze({ suffix: '스트리밍', sector: '플랫폼', risk: 'meme', basePriceMin: 460, basePriceMax: 1_400, volatilityBps: 1650, eventChance: 23 }),
+  Object.freeze({ suffix: '소프트', sector: 'IT', risk: 'growth', basePriceMin: 650, basePriceMax: 1_600, volatilityBps: 1250, eventChance: 16 }),
+  Object.freeze({ suffix: '일렉트릭', sector: '전자', risk: 'stable', basePriceMin: 520, basePriceMax: 1_250, volatilityBps: 850, eventChance: 11 }),
+  Object.freeze({ suffix: '중공업', sector: '중공업', risk: 'cyclical', basePriceMin: 330, basePriceMax: 1_050, volatilityBps: 1200, eventChance: 14 }),
+  Object.freeze({ suffix: '증권', sector: '증권', risk: 'meme', basePriceMin: 350, basePriceMax: 1_300, volatilityBps: 1650, eventChance: 22 }),
+  Object.freeze({ suffix: '캐피탈', sector: '금융', risk: 'stable', basePriceMin: 420, basePriceMax: 1_000, volatilityBps: 800, eventChance: 10 }),
+  Object.freeze({ suffix: '물산', sector: '물산', risk: 'stable', basePriceMin: 300, basePriceMax: 850, volatilityBps: 900, eventChance: 11 }),
+  Object.freeze({ suffix: '모터스', sector: '자동차', risk: 'growth', basePriceMin: 560, basePriceMax: 1_450, volatilityBps: 1300, eventChance: 17 }),
+  Object.freeze({ suffix: '밈팩토리', sector: '밈', risk: 'meme', basePriceMin: 250, basePriceMax: 1_000, volatilityBps: 1900, eventChance: 26 }),
+  Object.freeze({ suffix: 'AI스튜디오', sector: 'AI', risk: 'growth', basePriceMin: 620, basePriceMax: 1_700, volatilityBps: 1500, eventChance: 19 }),
+  Object.freeze({ suffix: '스마트모빌리티', sector: '모빌리티', risk: 'growth', basePriceMin: 480, basePriceMax: 1_350, volatilityBps: 1450, eventChance: 18 }),
+  Object.freeze({ suffix: '바이오팜', sector: '바이오', risk: 'volatile', basePriceMin: 360, basePriceMax: 1_550, volatilityBps: 1850, eventChance: 25 }),
+  Object.freeze({ suffix: '데이터클라우드', sector: '클라우드', risk: 'growth', basePriceMin: 720, basePriceMax: 1_650, volatilityBps: 1300, eventChance: 17 }),
+  Object.freeze({ suffix: '푸드테크', sector: '식품', risk: 'growth', basePriceMin: 340, basePriceMax: 950, volatilityBps: 950, eventChance: 12 }),
+  Object.freeze({ suffix: '미디어엔터', sector: '엔터', risk: 'meme', basePriceMin: 420, basePriceMax: 1_300, volatilityBps: 1650, eventChance: 23 }),
+  Object.freeze({ suffix: '타워리츠', sector: '부동산', risk: 'stable', basePriceMin: 360, basePriceMax: 980, volatilityBps: 850, eventChance: 11 }),
+  Object.freeze({ suffix: '알파퀀트', sector: '핀테크', risk: 'volatile', basePriceMin: 540, basePriceMax: 1_800, volatilityBps: 1550, eventChance: 21 }),
+  Object.freeze({ suffix: '칩스', sector: '반도체', risk: 'growth', basePriceMin: 760, basePriceMax: 1_900, volatilityBps: 1550, eventChance: 19 }),
+  Object.freeze({ suffix: '오토메이션', sector: '로봇', risk: 'growth', basePriceMin: 600, basePriceMax: 1_650, volatilityBps: 1500, eventChance: 18 }),
+  Object.freeze({ suffix: '이스포츠', sector: '게임', risk: 'meme', basePriceMin: 320, basePriceMax: 1_250, volatilityBps: 1800, eventChance: 25 }),
+  Object.freeze({ suffix: '마켓플레이스', sector: '커머스', risk: 'growth', basePriceMin: 400, basePriceMax: 1_350, volatilityBps: 1250, eventChance: 16 }),
+  Object.freeze({ suffix: '월렛', sector: '핀테크', risk: 'growth', basePriceMin: 500, basePriceMax: 1_550, volatilityBps: 1400, eventChance: 18 }),
+  Object.freeze({ suffix: '그린에너지', sector: '에너지', risk: 'cyclical', basePriceMin: 520, basePriceMax: 1_450, volatilityBps: 1150, eventChance: 15 }),
+  Object.freeze({ suffix: '메탈', sector: '철강', risk: 'cyclical', basePriceMin: 280, basePriceMax: 1_000, volatilityBps: 1250, eventChance: 15 }),
+  Object.freeze({ suffix: '로지스해운', sector: '해운', risk: 'cyclical', basePriceMin: 300, basePriceMax: 1_120, volatilityBps: 1350, eventChance: 16 }),
+  Object.freeze({ suffix: '인프라건설', sector: '건설', risk: 'cyclical', basePriceMin: 320, basePriceMax: 1_080, volatilityBps: 1150, eventChance: 14 }),
+  Object.freeze({ suffix: '에어로디펜스', sector: '방산', risk: 'cyclical', basePriceMin: 740, basePriceMax: 1_700, volatilityBps: 1050, eventChance: 14 }),
+  Object.freeze({ suffix: '헬스케어', sector: '의료기기', risk: 'volatile', basePriceMin: 430, basePriceMax: 1_520, volatilityBps: 1600, eventChance: 20 }),
+  Object.freeze({ suffix: '신약연구소', sector: '제약', risk: 'volatile', basePriceMin: 400, basePriceMax: 1_650, volatilityBps: 1750, eventChance: 23 }),
+  Object.freeze({ suffix: '소재화학', sector: '화학', risk: 'cyclical', basePriceMin: 330, basePriceMax: 1_120, volatilityBps: 1150, eventChance: 14 }),
+  Object.freeze({ suffix: '뷰티랩', sector: '화장품', risk: 'growth', basePriceMin: 340, basePriceMax: 1_200, volatilityBps: 1200, eventChance: 16 }),
+  Object.freeze({ suffix: '에어라인', sector: '항공', risk: 'meme', basePriceMin: 280, basePriceMax: 1_150, volatilityBps: 1650, eventChance: 23 }),
+  Object.freeze({ suffix: '숏폼플랫폼', sector: '플랫폼', risk: 'meme', basePriceMin: 440, basePriceMax: 1_500, volatilityBps: 1700, eventChance: 24 }),
+  Object.freeze({ suffix: '시스템즈', sector: 'IT', risk: 'growth', basePriceMin: 620, basePriceMax: 1_650, volatilityBps: 1300, eventChance: 17 }),
+  Object.freeze({ suffix: '가전일렉트릭', sector: '전자', risk: 'stable', basePriceMin: 500, basePriceMax: 1_300, volatilityBps: 900, eventChance: 12 }),
+  Object.freeze({ suffix: '플랜트중공업', sector: '중공업', risk: 'cyclical', basePriceMin: 340, basePriceMax: 1_120, volatilityBps: 1250, eventChance: 15 }),
+  Object.freeze({ suffix: '트레이딩증권', sector: '증권', risk: 'meme', basePriceMin: 330, basePriceMax: 1_350, volatilityBps: 1700, eventChance: 23 }),
+  Object.freeze({ suffix: '파이낸셜', sector: '금융', risk: 'stable', basePriceMin: 430, basePriceMax: 1_050, volatilityBps: 820, eventChance: 10 }),
+  Object.freeze({ suffix: '글로벌물산', sector: '물산', risk: 'stable', basePriceMin: 310, basePriceMax: 900, volatilityBps: 920, eventChance: 11 }),
+  Object.freeze({ suffix: '이모션모터스', sector: '자동차', risk: 'growth', basePriceMin: 540, basePriceMax: 1_500, volatilityBps: 1350, eventChance: 18 }),
+  Object.freeze({ suffix: '밈스튜디오', sector: '밈', risk: 'meme', basePriceMin: 240, basePriceMax: 1_050, volatilityBps: 1950, eventChance: 27 })
 ]);
 
 const AUTO_IPO_PREFIX_SYMBOLS = Object.freeze({
@@ -351,8 +575,24 @@ export class StockService {
     this.tickMs = options.tickMs ?? DEFAULT_TICK_MS;
     this.feeBps = options.feeBps ?? DEFAULT_FEE_BPS;
     this.leverageFeeBps = options.leverageFeeBps ?? DEFAULT_LEVERAGE_FEE_BPS;
+    this.leverageEarlyCloseFeeBps = options.leverageEarlyCloseFeeBps ?? DEFAULT_LEVERAGE_EARLY_CLOSE_FEE_BPS;
+    this.leverageEarlyClosePenaltyBps = options.leverageEarlyClosePenaltyBps ?? DEFAULT_LEVERAGE_EARLY_CLOSE_PENALTY_BPS;
+    this.leverageEarlyProfitPenaltyBps = options.leverageEarlyProfitPenaltyBps ?? DEFAULT_LEVERAGE_EARLY_PROFIT_PENALTY_BPS;
     this.autoIpoChanceBps = options.autoIpoChanceBps ?? (hasCustomRandomInt ? 0 : DEFAULT_AUTO_IPO_CHANCE_BPS);
     this.maxDynamicStocks = options.maxDynamicStocks ?? DEFAULT_MAX_DYNAMIC_STOCKS;
+    this.dividendIntervalTicks = normalizePositiveStoredInteger(
+      options.dividendIntervalTicks,
+      DEFAULT_DIVIDEND_INTERVAL_TICKS
+    );
+    this.dividendReviewIntervalTicks = normalizePositiveStoredInteger(
+      options.dividendReviewIntervalTicks,
+      DEFAULT_DIVIDEND_REVIEW_INTERVAL_TICKS
+    );
+    this.dividendChangeChanceBps = clampInteger(
+      normalizeNonNegativeInteger(options.dividendChangeChanceBps ?? DEFAULT_DIVIDEND_CHANGE_CHANCE_BPS),
+      0,
+      10_000
+    );
   }
 
   async getMarket({ guildId, now = Date.now(), limit = null } = {}) {
@@ -730,6 +970,7 @@ export class StockService {
       const market = syncMarket(data, guildId, guild, now, this);
       const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
       const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
+      settleMaturedLeveragedPositions(profile, stockUser, market);
 
       return {
         userId: stockUser.userId,
@@ -759,6 +1000,36 @@ export class StockService {
     });
   }
 
+  async getDividendSummary({ guildId, userId, username, now = Date.now() }) {
+    return this.store.update((data) => {
+      const guild = getOrCreateGuild(data, guildId);
+      const market = syncMarket(data, guildId, guild, now, this);
+      const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
+      settleMaturedLeveragedPositions(profile, stockUser, market);
+      return buildDividendSummary(profile, stockUser, market, this);
+    });
+  }
+
+  async claimDividends({ guildId, userId, username, now = Date.now() }) {
+    return this.store.update((data) => {
+      const guild = getOrCreateGuild(data, guildId);
+      const market = syncMarket(data, guildId, guild, now, this);
+      const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
+      const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
+      settleMaturedLeveragedPositions(profile, stockUser, market);
+
+      const claimedAmount = normalizeNonNegativeInteger(stockUser.pendingDividends);
+      if (claimedAmount > 0) {
+        creditCurrency(profile, CURRENCY_STOCK, claimedAmount);
+        stockUser.pendingDividends = 0;
+        stockUser.claimedDividends += claimedAmount;
+      }
+
+      return buildDividendSummary(profile, stockUser, market, this, claimedAmount);
+    });
+  }
+
   async getChart({ guildId, stockId, points = 12, now = Date.now() }) {
     const safePoints = Math.min(PRICE_HISTORY_LIMIT, Math.max(2, Number(points) || 12));
 
@@ -785,10 +1056,13 @@ export class StockService {
     side = 'long',
     leverage,
     margin,
+    durationTurns = DEFAULT_LEVERAGE_DURATION_TURNS,
     now = Date.now()
   }) {
     const normalizedSide = normalizeLeverageSide(side);
     const normalizedLeverage = normalizeLeverage(leverage);
+    const normalizedDurationTurns = normalizeLeverageDurationTurns(durationTurns);
+    assertLeverageAllowedForDuration(normalizedLeverage, normalizedDurationTurns);
     const normalizedMargin = normalizePositiveInteger(margin, '증거금');
 
     return this.store.update((data) => {
@@ -797,7 +1071,7 @@ export class StockService {
       const normalizedStockId = normalizeStockIdForGuild(stockId, guild);
       const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
       const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
-      const liquidated = liquidateLeveragedPositions(profile, stockUser, market);
+      const settled = settleMaturedLeveragedPositions(profile, stockUser, market);
       const quote = getTradableQuote(normalizedStockId, market);
       const fee = calculateFee(normalizedMargin, this.leverageFeeBps);
       const totalCost = normalizedMargin + fee;
@@ -823,6 +1097,9 @@ export class StockService {
         notional: exposure.notional,
         debt: exposure.debt,
         entryPrice: quote.price,
+        openedAtTick: market.tickIndex,
+        durationTurns: normalizedDurationTurns,
+        expiresAtTick: market.tickIndex + normalizedDurationTurns,
         openedAt: now
       };
       stockUser.leveragedPositions[position.id] = position;
@@ -839,7 +1116,8 @@ export class StockService {
         positionId: position.id,
         side: normalizedSide,
         leverage: normalizedLeverage,
-        margin: normalizedMargin
+        margin: normalizedMargin,
+        durationTurns: normalizedDurationTurns
       });
 
       return {
@@ -849,10 +1127,12 @@ export class StockService {
         side: normalizedSide,
         leverage: normalizedLeverage,
         margin: normalizedMargin,
+        durationTurns: normalizedDurationTurns,
         fee,
         totalCost,
-        liquidated,
-        position: evaluateLeveragedPosition(position, quote),
+        settled,
+        liquidated: settled.filter((entry) => entry.liquidated),
+        position: evaluateLeveragedPosition(position, quote, { currentTick: market.tickIndex }),
         profile: cloneMoneyProfile(profile)
       };
     });
@@ -871,66 +1151,30 @@ export class StockService {
       }
 
       const quote = cloneQuote(position.stockId, market.symbols[position.stockId]);
-      const evaluated = evaluateLeveragedPosition(position, quote);
-      delete stockUser.leveragedPositions[position.id];
-      stockUser.leveragedTradeCount += 1;
-      stockUser.lastTradeAt = now;
-
-      if (evaluated.liquidated) {
-        const realizedProfit = -position.margin;
-        stockUser.realizedLeveragedProfit += realizedProfit;
-        recordTrade(stockUser, {
-          type: 'leverage_close',
-          stockId: position.stockId,
-          stock: quote,
-          quantity: 0,
-          price: quote.price,
-          fee: 0,
-          total: 0,
-          realizedProfit,
-          at: now,
-          positionId: position.id,
-          side: position.side,
-          leverage: position.leverage,
-          margin: position.margin
-        });
-        return {
-          type: 'close_leverage',
-          liquidated: true,
-          position: evaluated,
-          payout: 0,
-          realizedProfit,
-          profile: cloneMoneyProfile(profile),
-          stockUser: cloneStockUser(stockUser)
-        };
-      }
-
-      const payout = evaluated.equity;
-      const realizedProfit = payout - position.margin;
-      creditCurrency(profile, CURRENCY_STOCK, payout);
-      stockUser.realizedLeveragedProfit += realizedProfit;
-      recordTrade(stockUser, {
-        type: 'leverage_close',
-        stockId: position.stockId,
-        stock: quote,
-        quantity: 0,
-        price: quote.price,
-        fee: 0,
-        total: payout,
-        realizedProfit,
+      const evaluated = evaluateLeveragedPosition(position, quote, {
+        currentTick: market.tickIndex,
+        forceSettlement: true
+      });
+      const closed = settleLeveragedPosition(profile, stockUser, position, evaluated, {
         at: now,
-        positionId: position.id,
-        side: position.side,
-        leverage: position.leverage,
-        margin: position.margin
+        tradeType: 'leverage_close',
+        autoSettled: false,
+        settlementCosts: calculateEarlyCloseCosts(position, evaluated, this)
       });
 
       return {
         type: 'close_leverage',
-        liquidated: false,
-        position: evaluated,
-        payout,
-        realizedProfit,
+        liquidated: closed.liquidated,
+        expired: closed.expired,
+        earlyClosed: closed.earlyClosed,
+        grossPayout: closed.grossPayout,
+        closingFee: closed.closingFee,
+        penalty: closed.penalty,
+        settlementCostTotal: closed.settlementCostTotal,
+        autoSettled: closed.autoSettled,
+        position: closed,
+        payout: closed.payout,
+        realizedProfit: closed.realizedProfit,
         profile: cloneMoneyProfile(profile),
         stockUser: cloneStockUser(stockUser)
       };
@@ -943,7 +1187,7 @@ export class StockService {
       const market = syncMarket(data, guildId, guild, now, this);
       const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
       const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
-      const liquidated = liquidateLeveragedPositions(profile, stockUser, market);
+      const settled = settleMaturedLeveragedPositions(profile, stockUser, market);
       const positions = getEvaluatedLeveragedPositions(stockUser, market);
       const marginTotal = positions.reduce((sum, position) => sum + position.margin, 0);
       const notionalTotal = positions.reduce((sum, position) => sum + position.notional, 0);
@@ -956,7 +1200,8 @@ export class StockService {
         username: profile.username,
         cash: getCurrencyBalance(profile, CURRENCY_STOCK),
         positions,
-        liquidated,
+        settled,
+        liquidated: settled.filter((entry) => entry.liquidated),
         marginTotal,
         notionalTotal,
         debtTotal,
@@ -974,7 +1219,7 @@ export class StockService {
       const market = syncMarket(data, guildId, guild, now, this);
       const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
       const stockUser = getOrCreateStockUser(guild, userId, username, profile, now);
-      liquidateLeveragedPositions(profile, stockUser, market);
+      settleMaturedLeveragedPositions(profile, stockUser, market);
       return buildPortfolio(profile, stockUser, market);
     });
   }
@@ -1001,11 +1246,16 @@ export class StockService {
           );
           if (!profile) return null;
           const stockUser = getOrCreateStockUser(guild, userId, profile.username, profile, now);
-          liquidateLeveragedPositions(profile, stockUser, market);
+          settleMaturedLeveragedPositions(profile, stockUser, market);
           return buildPortfolio(profile, stockUser, market);
         })
         .filter(Boolean)
-        .filter((portfolio) => portfolio.cash > 0 || portfolio.positions.length > 0)
+        .filter((portfolio) =>
+          portfolio.cash > 0 ||
+          portfolio.positions.length > 0 ||
+          portfolio.leveragedPositions.length > 0 ||
+          portfolio.pendingDividends > 0
+        )
         .sort((a, b) => {
           if (b.totalAssets !== a.totalAssets) return b.totalAssets - a.totalAssets;
           if (b.stockValue !== a.stockValue) return b.stockValue - a.stockValue;
@@ -1224,6 +1474,8 @@ function createInitialSymbolState(definition, now, eventType = null, listedAtTic
     status: 'listed',
     eventType,
     listedAtTick,
+    dividendBps: getInitialDividendBps(definition),
+    dividendUpdatedAtTick: normalizeNonNegativeInteger(listedAtTick),
     definition: definition.dynamic ? cloneStoredStockDefinition(definition) : null,
     updatedAt: safeNow,
     history: [
@@ -1243,6 +1495,9 @@ function normalizeSymbolState(state, definition, now) {
     ? 0
     : Math.max(MIN_STOCK_PRICE, normalizePositiveStoredInteger(safeState.price, definition.basePrice));
   const previousPrice = Math.max(MIN_STOCK_PRICE, normalizePositiveStoredInteger(safeState.previousPrice, price));
+  const dividendBps = status === 'delisted'
+    ? 0
+    : normalizeDividendBps(safeState.dividendBps, definition);
 
   return {
     price,
@@ -1255,6 +1510,10 @@ function normalizeSymbolState(state, definition, now) {
     eventType: typeof safeState.eventType === 'string' ? safeState.eventType : null,
     listedAtTick: normalizeNonNegativeInteger(safeState.listedAtTick ?? definition.listedFromTick),
     delistedAtTick: normalizeNonNegativeInteger(safeState.delistedAtTick),
+    dividendBps,
+    dividendUpdatedAtTick: normalizeNonNegativeInteger(
+      safeState.dividendUpdatedAtTick ?? safeState.listedAtTick ?? definition.listedFromTick
+    ),
     definition: definition.dynamic ? cloneStoredStockDefinition(definition) : null,
     updatedAt: normalizeNonNegativeInteger(safeState.updatedAt) || normalizeNonNegativeInteger(now),
     history: normalizePriceHistory(safeState.history, {
@@ -1267,6 +1526,7 @@ function normalizeSymbolState(state, definition, now) {
 function syncMarket(data, guildId, guild, now, service) {
   const market = getOrCreateMarket(guild, now);
   advanceMarket(data, guildId, guild, market, now, service);
+  cleanupDelistedStockUsers(data, guildId, guild, market);
   return market;
 }
 
@@ -1282,7 +1542,7 @@ function advanceMarket(data, guildId, guild, market, now, service) {
     for (const definition of getActiveStockDefinitions(guild, market)) {
       const state = market.symbols[definition.id];
       if (!state || state.status === 'delisted') continue;
-      const advanced = advanceSymbol(definition, state, market.tickIndex, service.randomInt, market.lastTickAt);
+      const advanced = advanceSymbol(definition, state, market.tickIndex, service, market.lastTickAt);
       const nextState = advanced.state;
       market.symbols[definition.id] = nextState;
       if (advanced.marketNews) {
@@ -1295,18 +1555,20 @@ function advanceMarket(data, guildId, guild, market, now, service) {
   }
 }
 
-function advanceSymbol(definition, state, tickIndex, randomIntFn, updatedAt) {
+function advanceSymbol(definition, state, tickIndex, service, updatedAt) {
   if (state.status === 'delisted') return { state, marketNews: null };
 
+  const randomIntFn = service.randomInt;
   const previousPrice = state.price;
   const baseMoveBps = randomIntFn(-definition.volatilityBps, definition.volatilityBps);
   const eventRoll = randomIntFn(1, 100);
-  const eventMoveBps = eventRoll <= definition.eventChance
+  const headlineImpactBps = eventRoll <= definition.eventChance
     ? randomIntFn(-Math.floor(definition.volatilityBps * 1.4), Math.floor(definition.volatilityBps * 1.4))
     : 0;
-  const totalMoveBps = clampInteger(baseMoveBps + eventMoveBps, -3000, 3000);
+  const newsEffect = resolveMarketNewsEffect(headlineImpactBps, randomIntFn);
+  const totalMoveBps = clampInteger(baseMoveBps + newsEffect.actualImpactBps, -3000, 3000);
   const eventType = getMarketEventType(definition, totalMoveBps);
-  const marketNews = createPreMarketNews(definition, eventMoveBps, tickIndex);
+  const marketNews = createPreMarketNews(definition, newsEffect, tickIndex);
 
   if (eventType === 'delisted') {
     return {
@@ -1319,6 +1581,8 @@ function advanceSymbol(definition, state, tickIndex, randomIntFn, updatedAt) {
         eventType,
         listedAtTick: normalizeNonNegativeInteger(state.listedAtTick ?? definition.listedFromTick),
         delistedAtTick: tickIndex,
+        dividendBps: 0,
+        dividendUpdatedAtTick: tickIndex,
         definition: definition.dynamic ? cloneStoredStockDefinition(definition) : null,
         updatedAt,
         history: appendPriceHistory(state.history, {
@@ -1332,6 +1596,7 @@ function advanceSymbol(definition, state, tickIndex, randomIntFn, updatedAt) {
   }
 
   const price = Math.max(MIN_STOCK_PRICE, Math.round(previousPrice * (10_000 + totalMoveBps) / 10_000));
+  const dividendState = advanceDividendBps(definition, state, tickIndex, service);
 
   return {
     state: {
@@ -1343,6 +1608,7 @@ function advanceSymbol(definition, state, tickIndex, randomIntFn, updatedAt) {
       eventType,
       listedAtTick: normalizeNonNegativeInteger(state.listedAtTick ?? definition.listedFromTick),
       delistedAtTick: 0,
+      ...dividendState,
       definition: definition.dynamic ? cloneStoredStockDefinition(definition) : null,
       updatedAt,
       history: appendPriceHistory(state.history, {
@@ -1353,6 +1619,62 @@ function advanceSymbol(definition, state, tickIndex, randomIntFn, updatedAt) {
     },
     marketNews
   };
+}
+
+function advanceDividendBps(definition, state, tickIndex, service) {
+  const currentBps = normalizeDividendBps(state.dividendBps, definition);
+  const currentUpdatedAtTick = normalizeNonNegativeInteger(
+    state.dividendUpdatedAtTick ?? state.listedAtTick ?? definition.listedFromTick
+  );
+  const reviewIntervalTicks = Math.max(2, normalizeNonNegativeInteger(service.dividendReviewIntervalTicks));
+
+  if (tickIndex <= 0 || tickIndex % reviewIntervalTicks !== 0) {
+    return {
+      dividendBps: currentBps,
+      dividendUpdatedAtTick: currentUpdatedAtTick
+    };
+  }
+
+  const changeChanceBps = clampInteger(
+    normalizeNonNegativeInteger(service.dividendChangeChanceBps),
+    0,
+    10_000
+  );
+  if (changeChanceBps <= 0) {
+    return {
+      dividendBps: currentBps,
+      dividendUpdatedAtTick: currentUpdatedAtTick
+    };
+  }
+
+  const roll = getStableStockNumber(`${definition.id}:dividend-roll:${tickIndex}`, 1, 10_000);
+  if (roll > changeChanceBps) {
+    return {
+      dividendBps: currentBps,
+      dividendUpdatedAtTick: currentUpdatedAtTick
+    };
+  }
+
+  const nextBps = calculateNextDividendBps(definition, currentBps, tickIndex);
+  return {
+    dividendBps: nextBps,
+    dividendUpdatedAtTick: nextBps === currentBps ? currentUpdatedAtTick : tickIndex
+  };
+}
+
+function calculateNextDividendBps(definition, currentBps, tickIndex) {
+  const baseBps = getBaseDividendBps(definition);
+  const maxDelta = Math.max(1, Math.ceil(baseBps * 0.25));
+  let delta = getStableStockNumber(`${definition.id}:dividend-delta:${tickIndex}`, -maxDelta, maxDelta);
+  if (delta === 0) {
+    delta = getStableStockNumber(`${definition.id}:dividend-sign:${tickIndex}`, 0, 1) === 0 ? -1 : 1;
+  }
+
+  let nextBps = clampDividendBps(currentBps + delta, definition);
+  if (nextBps === currentBps) {
+    nextBps = clampDividendBps(currentBps - Math.sign(delta) * Math.max(1, Math.abs(delta)), definition);
+  }
+  return nextBps;
 }
 
 function listScheduledStocks(guild, market) {
@@ -1397,7 +1719,8 @@ function createAutomaticIpoDefinition(guild, market, randomIntFn) {
 
   const prefix = AUTO_IPO_PREFIXES[randomIntFn(0, AUTO_IPO_PREFIXES.length - 1)];
   const theme = AUTO_IPO_THEMES[randomIntFn(0, AUTO_IPO_THEMES.length - 1)];
-  const baseName = `${prefix}${theme.suffix}`;
+  const nameModifier = AUTO_IPO_NAME_MODIFIERS[randomIntFn(0, AUTO_IPO_NAME_MODIFIERS.length - 1)];
+  const baseName = `${prefix}${nameModifier}${theme.suffix}`;
   const existingNames = new Set([
     ...STOCK_DEFINITIONS.map((definition) => definition.name),
     ...getDynamicStockDefinitions(guild).map((definition) => definition.name)
@@ -1414,7 +1737,7 @@ function createAutomaticIpoDefinition(guild, market, randomIntFn) {
     randomIntFn(theme.basePriceMin, theme.basePriceMax),
     theme.volatilityBps,
     theme.eventChance,
-    [`${prefix}${theme.sector}`, `${name}상장`],
+    [`${prefix}${theme.sector}`, `${prefix}${theme.suffix}`, `${name}상장`],
     symbol,
     {
       listedFromTick: market.tickIndex,
@@ -1459,12 +1782,26 @@ function createAsciiSymbolPart(value, fallback, length) {
 }
 
 function createStableSymbolHash(value) {
+  return getStableHashNumber(value).toString(36).toUpperCase();
+}
+
+function getStableStockNumber(value, min, max) {
+  const safeMin = Number(min);
+  const safeMax = Number(max);
+  if (!Number.isSafeInteger(safeMin) || !Number.isSafeInteger(safeMax) || safeMax < safeMin) {
+    return 0;
+  }
+  const range = safeMax - safeMin + 1;
+  return safeMin + (getStableHashNumber(value) % range);
+}
+
+function getStableHashNumber(value) {
   const source = String(value ?? '');
   let hash = 0;
   for (const char of source) {
     hash = (hash * 31 + char.codePointAt(0)) >>> 0;
   }
-  return hash.toString(36).toUpperCase();
+  return hash;
 }
 
 function extractDynamicStockSequence(id, name) {
@@ -1510,13 +1847,60 @@ function getMarketEventType(definition, moveBps) {
   return null;
 }
 
-function createPreMarketNews(definition, impactBps, tickIndex) {
-  if (impactBps === 0) return null;
+function resolveMarketNewsEffect(headlineImpactBps, randomIntFn) {
+  if (headlineImpactBps === 0) {
+    return {
+      headlineImpactBps: 0,
+      actualImpactBps: 0,
+      outcome: 'none'
+    };
+  }
+
+  const outcomeRoll = randomIntFn(1, 100);
+  if (outcomeRoll <= 50 || outcomeRoll > 90) {
+    return {
+      headlineImpactBps,
+      actualImpactBps: headlineImpactBps,
+      outcome: 'confirmed'
+    };
+  }
+
+  if (outcomeRoll <= 70) {
+    return {
+      headlineImpactBps,
+      actualImpactBps: scaleMarketNewsImpact(headlineImpactBps, 30),
+      outcome: 'muted'
+    };
+  }
+
+  if (outcomeRoll <= 80) {
+    return {
+      headlineImpactBps,
+      actualImpactBps: 0,
+      outcome: 'ignored'
+    };
+  }
+
+  return {
+    headlineImpactBps,
+    actualImpactBps: -headlineImpactBps,
+    outcome: 'reversed'
+  };
+}
+
+function scaleMarketNewsImpact(impactBps, percent) {
+  const scaled = Math.round(Math.abs(impactBps) * percent / 100);
+  return Math.sign(impactBps) * scaled;
+}
+
+function createPreMarketNews(definition, newsEffect, tickIndex) {
+  const headlineImpactBps = newsEffect?.headlineImpactBps ?? 0;
+  if (headlineImpactBps === 0) return null;
 
   const riskThreshold = -Math.floor(definition.volatilityBps * 1.2);
-  const type = impactBps <= riskThreshold && ['meme', 'volatile'].includes(definition.risk)
+  const type = headlineImpactBps <= riskThreshold && ['meme', 'volatile'].includes(definition.risk)
     ? 'risk'
-    : impactBps > 0
+    : headlineImpactBps > 0
       ? 'positive'
       : 'negative';
   const message = createPreMarketNewsMessage(definition, type, tickIndex);
@@ -1525,14 +1909,32 @@ function createPreMarketNews(definition, impactBps, tickIndex) {
     type,
     title: formatMarketNewsTitle(type),
     message,
-    impactBps
+    impactBps: headlineImpactBps,
+    headlineImpactBps,
+    actualImpactBps: newsEffect.actualImpactBps,
+    outcome: newsEffect.outcome
   };
 }
 
 function createPreMarketNewsMessage(definition, type, tickIndex) {
   const typedTemplates = PRE_MARKET_NEWS_TEMPLATES[type] ?? PRE_MARKET_NEWS_TEMPLATES.negative;
   const templates = typedTemplates[definition.risk] ?? typedTemplates.stable ?? typedTemplates.meme ?? typedTemplates.volatile;
-  return renderStockNewsTemplate(pickStockNewsTemplate(templates, definition, tickIndex), definition);
+  const detailTemplates = PRE_MARKET_NEWS_DETAIL_TEMPLATES[type];
+  const baseTemplate = pickStockNewsTemplate(templates, definition, tickIndex);
+  const detailTemplate = pickStockNewsDetailTemplate(
+    detailTemplates,
+    definition,
+    tickIndex,
+    templates.length
+  );
+  const contextTemplate = pickStockNewsContextTemplate(
+    PRE_MARKET_NEWS_CONTEXT_TEMPLATES[type],
+    definition,
+    tickIndex,
+    templates.length,
+    detailTemplates?.length ?? 1
+  );
+  return renderStockNewsTemplate(joinStockNewsTemplates(baseTemplate, detailTemplate, contextTemplate), definition);
 }
 
 function createIpoMarketNews(definition, state) {
@@ -1546,34 +1948,39 @@ function createIpoMarketNews(definition, state) {
 
 function createMarketSummary(definition, moveBps, tickIndex, eventType = null) {
   if (eventType === 'surge') {
-    return renderStockNewsTemplate(
-      pickStockNewsTemplate(MARKET_SUMMARY_TEMPLATES.surge, definition, tickIndex),
-      definition
-    );
+    return createMarketSummaryMessage(definition, 'surge', tickIndex);
   }
   if (eventType === 'crash') {
-    return renderStockNewsTemplate(
-      pickStockNewsTemplate(MARKET_SUMMARY_TEMPLATES.crash, definition, tickIndex),
-      definition
-    );
+    return createMarketSummaryMessage(definition, 'crash', tickIndex);
   }
   if (moveBps >= 900) {
-    return renderStockNewsTemplate(
-      pickStockNewsTemplate(MARKET_SUMMARY_TEMPLATES.positive, definition, tickIndex),
-      definition
-    );
+    return createMarketSummaryMessage(definition, 'positive', tickIndex);
   }
   if (moveBps <= -900) {
-    return renderStockNewsTemplate(
-      pickStockNewsTemplate(MARKET_SUMMARY_TEMPLATES.negative, definition, tickIndex),
-      definition
-    );
+    return createMarketSummaryMessage(definition, 'negative', tickIndex);
   }
 
-  return renderStockNewsTemplate(
-    pickStockNewsTemplate(MARKET_SUMMARY_TEMPLATES.quiet, definition, tickIndex),
-    definition
+  return createMarketSummaryMessage(definition, 'quiet', tickIndex);
+}
+
+function createMarketSummaryMessage(definition, type, tickIndex) {
+  const templates = MARKET_SUMMARY_TEMPLATES[type] ?? MARKET_SUMMARY_TEMPLATES.quiet;
+  const detailTemplates = MARKET_SUMMARY_DETAIL_TEMPLATES[type];
+  const baseTemplate = pickStockNewsTemplate(templates, definition, tickIndex);
+  const detailTemplate = pickStockNewsDetailTemplate(
+    detailTemplates,
+    definition,
+    tickIndex,
+    templates.length
   );
+  const contextTemplate = pickStockNewsContextTemplate(
+    MARKET_SUMMARY_CONTEXT_TEMPLATES[type],
+    definition,
+    tickIndex,
+    templates.length,
+    detailTemplates?.length ?? 1
+  );
+  return renderStockNewsTemplate(joinStockNewsTemplates(baseTemplate, detailTemplate, contextTemplate), definition);
 }
 
 function pickStockNewsTemplate(templates, definition, tickIndex) {
@@ -1582,6 +1989,35 @@ function pickStockNewsTemplate(templates, definition, tickIndex) {
     : ['{name} 시장 상황 안내가 게시됐습니다'];
   const offset = getStockNewsTemplateOffset(definition);
   return source[(normalizeNonNegativeInteger(tickIndex) + offset) % source.length];
+}
+
+function pickStockNewsDetailTemplate(templates, definition, tickIndex, baseTemplateCount = 1) {
+  const source = Array.isArray(templates) && templates.length > 0 ? templates : [];
+  if (source.length === 0) return '';
+
+  const offset = getStockNewsTemplateOffset(definition);
+  const baseCount = Math.max(1, normalizePositiveStoredInteger(baseTemplateCount, 1));
+  const detailIndex = Math.floor((normalizeNonNegativeInteger(tickIndex) + offset) / baseCount) % source.length;
+  return source[detailIndex];
+}
+
+function pickStockNewsContextTemplate(templates, definition, tickIndex, baseTemplateCount = 1, detailTemplateCount = 1) {
+  const source = Array.isArray(templates) && templates.length > 0 ? templates : [];
+  if (source.length === 0) return '';
+
+  const offset = getStockNewsTemplateOffset(definition);
+  const baseCount = Math.max(1, normalizePositiveStoredInteger(baseTemplateCount, 1));
+  const detailCount = Math.max(1, normalizePositiveStoredInteger(detailTemplateCount, 1));
+  const contextIndex = Math.floor((normalizeNonNegativeInteger(tickIndex) + offset) / (baseCount * detailCount)) % source.length;
+  return source[contextIndex];
+}
+
+function joinStockNewsTemplates(...templates) {
+  const parts = templates
+    .map((template) => String(template ?? '').trim())
+    .filter(Boolean);
+  if (parts.length === 0) return '{name} 시장 상황 안내가 게시됐습니다';
+  return parts.join('. ');
 }
 
 function renderStockNewsTemplate(template, definition) {
@@ -1653,14 +2089,20 @@ function getOrCreateStockUser(guild, userId, username, moneyProfile = null, now 
     priceAlerts: {},
     leveragedPositions: {},
     tradeHistory: [],
+    dividendHistory: [],
     realizedProfit: 0,
     realizedLeveragedProfit: 0,
+    pendingDividends: 0,
+    totalDividends: 0,
+    claimedDividends: 0,
     tradeCount: 0,
     leveragedTradeCount: 0,
     nextOrderSeq: 0,
     nextAlertSeq: 0,
     nextPositionSeq: 0,
     nextTradeSeq: 0,
+    nextDividendSeq: 0,
+    lastDividendTick: 0,
     lastTradeAt: 0
   };
 
@@ -1672,8 +2114,12 @@ function getOrCreateStockUser(guild, userId, username, moneyProfile = null, now 
   stockUser.priceAlerts = normalizePriceAlerts(stockUser.priceAlerts, guild);
   stockUser.leveragedPositions = normalizeLeveragedPositions(stockUser.leveragedPositions, guild);
   stockUser.tradeHistory = normalizeTradeHistory(stockUser.tradeHistory, guild);
+  stockUser.dividendHistory = normalizeDividendHistory(stockUser.dividendHistory, guild);
   stockUser.realizedProfit = normalizeInteger(stockUser.realizedProfit);
   stockUser.realizedLeveragedProfit = normalizeInteger(stockUser.realizedLeveragedProfit);
+  stockUser.pendingDividends = normalizeNonNegativeInteger(stockUser.pendingDividends);
+  stockUser.totalDividends = normalizeNonNegativeInteger(stockUser.totalDividends);
+  stockUser.claimedDividends = normalizeNonNegativeInteger(stockUser.claimedDividends);
   stockUser.tradeCount = normalizeNonNegativeInteger(stockUser.tradeCount);
   stockUser.leveragedTradeCount = normalizeNonNegativeInteger(stockUser.leveragedTradeCount);
   stockUser.nextOrderSeq = normalizeNonNegativeInteger(stockUser.nextOrderSeq);
@@ -1683,6 +2129,11 @@ function getOrCreateStockUser(guild, userId, username, moneyProfile = null, now 
     normalizeNonNegativeInteger(stockUser.nextTradeSeq),
     stockUser.tradeHistory.reduce((max, entry) => Math.max(max, normalizeNonNegativeInteger(entry.sequence)), 0)
   );
+  stockUser.nextDividendSeq = Math.max(
+    normalizeNonNegativeInteger(stockUser.nextDividendSeq),
+    stockUser.dividendHistory.reduce((max, entry) => Math.max(max, normalizeNonNegativeInteger(entry.sequence)), 0)
+  );
+  stockUser.lastDividendTick = normalizeNonNegativeInteger(stockUser.lastDividendTick);
   stockUser.lastTradeAt = normalizeNonNegativeInteger(stockUser.lastTradeAt);
   migrateLegacyStockLiabilitiesToGold(moneyProfile, stockUser, now);
   return stockUser;
@@ -1882,6 +2333,19 @@ function normalizeLeveragedPosition(position = {}, fallbackId, guild = null) {
   const leverage = normalizeLeverage(safePosition.leverage);
   const margin = normalizePositiveInteger(safePosition.margin, '증거금');
   const exposure = calculateLeveragedExposure(margin, leverage);
+  const durationTurns = normalizeOptionalLeverageDurationTurns(safePosition.durationTurns);
+  const openedAtTick = normalizeOptionalNonNegativeInteger(safePosition.openedAtTick);
+  const storedExpiresAtTick = normalizeOptionalNonNegativeInteger(safePosition.expiresAtTick);
+  const expiresAtTick = storedExpiresAtTick ?? (
+    durationTurns !== null && openedAtTick !== null
+      ? openedAtTick + durationTurns
+      : null
+  );
+  const inferredOpenedAtTick = openedAtTick ?? (
+    durationTurns !== null && expiresAtTick !== null
+      ? Math.max(0, expiresAtTick - durationTurns)
+      : null
+  );
 
   return {
     id,
@@ -1892,6 +2356,9 @@ function normalizeLeveragedPosition(position = {}, fallbackId, guild = null) {
     notional: normalizePositiveStoredInteger(safePosition.notional, exposure.notional),
     debt: normalizeStoredDebt(safePosition.debt, exposure.debt),
     entryPrice: normalizePositiveStoredInteger(safePosition.entryPrice, 1),
+    openedAtTick: inferredOpenedAtTick,
+    durationTurns,
+    expiresAtTick,
     openedAt: normalizeNonNegativeInteger(safePosition.openedAt)
   };
 }
@@ -1924,6 +2391,7 @@ function normalizeTradeHistoryEntry(entry = {}, fallbackId = null, guild = null)
     quantity: normalizeNonNegativeInteger(safeEntry.quantity),
     price: normalizeNonNegativeInteger(safeEntry.price),
     fee: normalizeNonNegativeInteger(safeEntry.fee),
+    penalty: normalizeNonNegativeInteger(safeEntry.penalty),
     total: normalizeNonNegativeInteger(safeEntry.total),
     realizedProfit: normalizeInteger(safeEntry.realizedProfit),
     at: normalizeNonNegativeInteger(safeEntry.at),
@@ -1934,6 +2402,65 @@ function normalizeTradeHistoryEntry(entry = {}, fallbackId = null, guild = null)
   };
 }
 
+function normalizeDividendHistory(history = [], guild = null) {
+  const source = Array.isArray(history) ? history : [];
+  return source
+    .map((entry, index) => {
+      try {
+        return normalizeDividendHistoryEntry(entry, `div_legacy_${index + 1}`, guild);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean)
+    .sort(compareTimelineEntries)
+    .slice(0, RECENT_DIVIDEND_LIMIT);
+}
+
+function normalizeDividendHistoryEntry(entry = {}, fallbackId = null, guild = null) {
+  const safeEntry = entry && typeof entry === 'object' ? entry : {};
+  const id = String(safeEntry.id ?? fallbackId ?? '').trim();
+  if (!id) throw new Error('배당 내역 id가 없습니다.');
+
+  const positions = Array.isArray(safeEntry.positions)
+    ? safeEntry.positions
+      .map((position) => normalizeDividendPosition(position, guild))
+      .filter(Boolean)
+    : [];
+  const amount = normalizeNonNegativeInteger(safeEntry.amount);
+  if (amount <= 0 && positions.length === 0) throw new Error('배당 내역 금액이 없습니다.');
+
+  return {
+    id,
+    sequence: normalizeNonNegativeInteger(safeEntry.sequence),
+    tickIndex: normalizeNonNegativeInteger(safeEntry.tickIndex),
+    amount,
+    at: normalizeNonNegativeInteger(safeEntry.at),
+    positions
+  };
+}
+
+function normalizeDividendPosition(position = {}, guild = null) {
+  const safePosition = position && typeof position === 'object' ? position : {};
+  try {
+    const stockId = normalizeStoredStockId(safePosition.stockId, guild);
+    const quantity = normalizeNonNegativeInteger(safePosition.quantity);
+    const price = normalizeNonNegativeInteger(safePosition.price);
+    const dividendBps = normalizeNonNegativeInteger(safePosition.dividendBps);
+    const amount = normalizeNonNegativeInteger(safePosition.amount);
+    if (quantity <= 0 || amount <= 0) return null;
+    return {
+      stockId,
+      quantity,
+      price,
+      dividendBps,
+      amount
+    };
+  } catch {
+    return null;
+  }
+}
+
 function normalizeTradeType(type) {
   const normalized = String(type ?? '').trim();
   return [
@@ -1941,8 +2468,10 @@ function normalizeTradeType(type) {
     'sell',
     'limit_buy_fill',
     'limit_sell_fill',
+    'delisting_cleanup',
     'leverage_open',
     'leverage_close',
+    'leverage_settlement',
     'leverage_liquidation'
   ].includes(normalized)
     ? normalized
@@ -1980,6 +2509,9 @@ function normalizeMarketNewsEntry(entry = {}, fallbackId = null, guild = null) {
     publishedTickIndex: normalizeNonNegativeInteger(safeEntry.publishedTickIndex ?? safeEntry.tickIndex),
     effectiveTickIndex: normalizeNonNegativeInteger(safeEntry.effectiveTickIndex ?? safeEntry.tickIndex),
     impactBps: normalizeInteger(safeEntry.impactBps),
+    headlineImpactBps: normalizeInteger(safeEntry.headlineImpactBps ?? safeEntry.impactBps),
+    actualImpactBps: normalizeInteger(safeEntry.actualImpactBps ?? safeEntry.impactBps),
+    outcome: normalizeMarketNewsOutcome(safeEntry.outcome),
     at: normalizeNonNegativeInteger(safeEntry.at)
   };
 }
@@ -1987,6 +2519,11 @@ function normalizeMarketNewsEntry(entry = {}, fallbackId = null, guild = null) {
 function normalizeMarketNewsType(type) {
   const normalized = String(type ?? '').trim();
   return ['ipo', 'positive', 'negative', 'risk', 'news'].includes(normalized) ? normalized : 'news';
+}
+
+function normalizeMarketNewsOutcome(outcome) {
+  const normalized = String(outcome ?? '').trim();
+  return ['confirmed', 'muted', 'ignored', 'reversed', 'none'].includes(normalized) ? normalized : 'confirmed';
 }
 
 function normalizePriceHistory(history = [], fallbackState = null, fallbackTickIndex = 0, fallbackAt = 0) {
@@ -2076,6 +2613,23 @@ function recordTrade(stockUser, entry) {
     .slice(0, RECENT_TRADE_LIMIT);
 }
 
+function recordDividend(stockUser, entry) {
+  stockUser.dividendHistory = normalizeDividendHistory(stockUser.dividendHistory);
+  const maxSequence = stockUser.dividendHistory.reduce((max, item) => Math.max(max, item.sequence), 0);
+  const sequence = Math.max(normalizeNonNegativeInteger(stockUser.nextDividendSeq), maxSequence) + 1;
+  stockUser.nextDividendSeq = sequence;
+  const at = normalizeNonNegativeInteger(entry.at);
+  const normalized = normalizeDividendHistoryEntry({
+    id: createStockDividendId(entry.tickIndex, sequence),
+    sequence,
+    ...entry,
+    at
+  });
+  stockUser.dividendHistory = [normalized, ...stockUser.dividendHistory]
+    .sort(compareTimelineEntries)
+    .slice(0, RECENT_DIVIDEND_LIMIT);
+}
+
 function recordMarketNews(guild, definition, news, effectiveTickIndex, at, publishedTickIndex = Math.max(0, effectiveTickIndex - 1)) {
   if (!news) return;
   const type = normalizeMarketNewsType(news.type);
@@ -2092,6 +2646,9 @@ function recordMarketNews(guild, definition, news, effectiveTickIndex, at, publi
     publishedTickIndex,
     effectiveTickIndex,
     impactBps: news.impactBps,
+    headlineImpactBps: news.headlineImpactBps ?? news.impactBps,
+    actualImpactBps: news.actualImpactBps ?? news.impactBps,
+    outcome: news.outcome,
     at
   }, null, guild);
   guild.stocks.marketNews = [
@@ -2110,10 +2667,26 @@ function cloneTradeHistoryEntry(entry, market) {
   };
 }
 
-function cloneMarketNewsEntry(entry, market) {
-  const stock = safeCloneQuote(entry.stockId, market) ?? stockSnapshot(entry.stockId);
+function cloneDividendHistoryEntry(entry, market) {
   return {
     ...entry,
+    positions: entry.positions.map((position) => ({
+      ...position,
+      stock: safeCloneQuote(position.stockId, market) ?? stockSnapshot(position.stockId)
+    }))
+  };
+}
+
+function cloneMarketNewsEntry(entry, market) {
+  const stock = safeCloneQuote(entry.stockId, market) ?? stockSnapshot(entry.stockId);
+  const {
+    headlineImpactBps: _headlineImpactBps,
+    actualImpactBps: _actualImpactBps,
+    outcome: _outcome,
+    ...publicEntry
+  } = entry;
+  return {
+    ...publicEntry,
     stock
   };
 }
@@ -2165,6 +2738,7 @@ function buildPortfolio(profile, stockUser, market) {
   const leveragedEquity = leveragedPositions.reduce((sum, position) => sum + position.equity, 0);
   const leveragedDebt = leveragedPositions.reduce((sum, position) => sum + position.debt, 0);
   const leveragedUnrealizedProfit = leveragedPositions.reduce((sum, position) => sum + position.unrealizedProfit, 0);
+  const pendingDividends = normalizeNonNegativeInteger(stockUser.pendingDividends);
 
   return {
     userId: profile.userId,
@@ -2173,16 +2747,48 @@ function buildPortfolio(profile, stockUser, market) {
     stockValue,
     leveragedEquity,
     leveragedDebt,
-    totalAssets: getCurrencyBalance(profile, CURRENCY_STOCK) + stockValue + leveragedEquity,
+    pendingDividends,
+    totalAssets: getCurrencyBalance(profile, CURRENCY_STOCK) + stockValue + leveragedEquity + pendingDividends,
     costBasis,
     unrealizedProfit: stockValue - costBasis,
     leveragedUnrealizedProfit,
     realizedProfit: stockUser.realizedProfit,
     realizedLeveragedProfit: stockUser.realizedLeveragedProfit,
+    totalDividends: stockUser.totalDividends,
+    claimedDividends: stockUser.claimedDividends,
     tradeCount: stockUser.tradeCount,
     positions,
     leveragedPositions
   };
+}
+
+function buildDividendSummary(profile, stockUser, market, service, claimedAmount = 0) {
+  const intervalTicks = Math.max(1, normalizeNonNegativeInteger(service.dividendIntervalTicks));
+  return {
+    userId: stockUser.userId,
+    username: stockUser.username,
+    cash: getCurrencyBalance(profile, CURRENCY_STOCK),
+    claimedAmount: normalizeNonNegativeInteger(claimedAmount),
+    pendingAmount: normalizeNonNegativeInteger(stockUser.pendingDividends),
+    totalDividends: normalizeNonNegativeInteger(stockUser.totalDividends),
+    claimedDividends: normalizeNonNegativeInteger(stockUser.claimedDividends),
+    currentTick: market.tickIndex,
+    intervalTicks,
+    nextDividendTick: getNextDividendTick(market.tickIndex, intervalTicks),
+    recent: stockUser.dividendHistory
+      .map((entry) => cloneDividendHistoryEntry(entry, market))
+      .sort(compareTimelineEntries)
+      .slice(0, RECENT_DIVIDEND_LIMIT)
+  };
+}
+
+function getNextDividendTick(currentTick, intervalTicks) {
+  const safeCurrentTick = normalizeNonNegativeInteger(currentTick);
+  const safeIntervalTicks = Math.max(1, normalizeNonNegativeInteger(intervalTicks));
+  const remainder = safeCurrentTick % safeIntervalTicks;
+  return remainder === 0
+    ? safeCurrentTick + safeIntervalTicks
+    : safeCurrentTick + safeIntervalTicks - remainder;
 }
 
 function cloneMarket(market, limit = null) {
@@ -2218,6 +2824,9 @@ function cloneQuote(stockId, state) {
     eventType: state.eventType,
     listedAtTick: state.listedAtTick,
     delistedAtTick: state.delistedAtTick,
+    dividendBps: normalizeNonNegativeInteger(state.dividendBps),
+    dividendPercent: Math.round((normalizeNonNegativeInteger(state.dividendBps) / 100) * 100) / 100,
+    dividendUpdatedAtTick: normalizeNonNegativeInteger(state.dividendUpdatedAtTick),
     updatedAt: state.updatedAt
   };
 }
@@ -2240,14 +2849,20 @@ function cloneStockUser(stockUser) {
     priceAlerts: structuredClone(stockUser.priceAlerts),
     leveragedPositions: structuredClone(stockUser.leveragedPositions),
     tradeHistory: structuredClone(stockUser.tradeHistory),
+    dividendHistory: structuredClone(stockUser.dividendHistory),
     realizedProfit: stockUser.realizedProfit,
     realizedLeveragedProfit: stockUser.realizedLeveragedProfit,
+    pendingDividends: stockUser.pendingDividends,
+    totalDividends: stockUser.totalDividends,
+    claimedDividends: stockUser.claimedDividends,
     tradeCount: stockUser.tradeCount,
     leveragedTradeCount: stockUser.leveragedTradeCount,
     nextOrderSeq: stockUser.nextOrderSeq,
     nextAlertSeq: stockUser.nextAlertSeq,
     nextPositionSeq: stockUser.nextPositionSeq,
     nextTradeSeq: stockUser.nextTradeSeq,
+    nextDividendSeq: stockUser.nextDividendSeq,
+    lastDividendTick: stockUser.lastDividendTick,
     lastTradeAt: stockUser.lastTradeAt,
     currencyMigration: structuredClone(stockUser.currencyMigration ?? null)
   };
@@ -2319,8 +2934,129 @@ function processMarketSideEffects(data, guildId, guild, market, service) {
     if (!profile) continue;
     const stockUser = getOrCreateStockUser(guild, userId, username, profile, market.lastTickAt);
     processLimitOrders(profile, stockUser, market, service);
+    cleanupDelistedStockUserState(stockUser, market);
+    accrueDividends(stockUser, market, service);
     triggerPriceAlerts(stockUser, market);
+    settleMaturedLeveragedPositions(profile, stockUser, market);
   }
+}
+
+function cleanupDelistedStockUsers(data, guildId, guild, market) {
+  const users = guild.stocks?.users ?? {};
+  for (const [userId, rawStockUser] of Object.entries(users)) {
+    const username = rawStockUser?.username ?? getLinkedAccountUsername(data, userId);
+    const profile = getOptionalMoneyProfile(data, guildId, userId, username, market.lastTickAt);
+    if (!profile) continue;
+    const stockUser = getOrCreateStockUser(guild, userId, username, profile, market.lastTickAt);
+    cleanupDelistedStockUserState(stockUser, market);
+  }
+}
+
+function cleanupDelistedStockUserState(stockUser, market) {
+  cleanupDelistedHoldings(stockUser, market);
+  cleanupDelistedPriceAlerts(stockUser, market);
+}
+
+function cleanupDelistedHoldings(stockUser, market) {
+  for (const [stockId, holding] of Object.entries(stockUser.holdings)) {
+    const quote = safeCloneQuote(stockId, market);
+    if (!quote || quote.status !== 'delisted') continue;
+
+    const quantity = normalizeNonNegativeInteger(holding.quantity);
+    const averageCost = normalizeNonNegativeInteger(holding.averageCost);
+    delete stockUser.holdings[stockId];
+    if (quantity <= 0) continue;
+
+    const realizedProfit = -(averageCost * quantity);
+    stockUser.realizedProfit += realizedProfit;
+    stockUser.lastTradeAt = normalizeNonNegativeInteger(market.lastTickAt);
+    recordTrade(stockUser, {
+      type: 'delisting_cleanup',
+      stockId,
+      stock: quote,
+      quantity,
+      price: 0,
+      fee: 0,
+      total: 0,
+      realizedProfit,
+      at: market.lastTickAt
+    });
+  }
+}
+
+function cleanupDelistedPriceAlerts(stockUser, market) {
+  for (const alert of Object.values(stockUser.priceAlerts)) {
+    const shouldDelete = alert.status === 'active' ||
+      (alert.status === 'triggered' && normalizeNonNegativeInteger(alert.notifiedAt) <= 0);
+    if (!shouldDelete) continue;
+    const quote = safeCloneQuote(alert.stockId, market);
+    if (!quote || quote.status !== 'delisted') continue;
+
+    alert.status = 'deleted';
+    alert.deletedAt = normalizeNonNegativeInteger(market.lastTickAt);
+  }
+}
+
+function accrueDividends(stockUser, market, service) {
+  const intervalTicks = Math.max(1, normalizeNonNegativeInteger(service.dividendIntervalTicks));
+  if (market.tickIndex <= 0 || market.tickIndex % intervalTicks !== 0) return null;
+  if (stockUser.lastDividendTick >= market.tickIndex) return null;
+
+  stockUser.lastDividendTick = market.tickIndex;
+  const positions = calculateDividendPositions(stockUser, market);
+  const amount = positions.reduce((sum, position) => sum + position.amount, 0);
+  if (amount <= 0) return null;
+
+  stockUser.pendingDividends += amount;
+  stockUser.totalDividends += amount;
+  recordDividend(stockUser, {
+    tickIndex: market.tickIndex,
+    at: market.lastTickAt,
+    amount,
+    positions
+  });
+
+  return {
+    tickIndex: market.tickIndex,
+    amount,
+    positions
+  };
+}
+
+function calculateDividendPositions(stockUser, market) {
+  return Object.entries(stockUser.holdings)
+    .map(([stockId, holding]) => {
+      const quote = safeCloneQuote(stockId, market);
+      if (!quote || quote.status !== 'listed') return null;
+
+      const quantity = normalizeNonNegativeInteger(holding.quantity);
+      const dividendBps = getDividendBps(quote);
+      const amount = Math.floor(quote.price * quantity * dividendBps / 10_000);
+      if (quantity <= 0 || amount <= 0) return null;
+
+      return {
+        stockId,
+        quantity,
+        price: quote.price,
+        dividendBps,
+        amount
+      };
+    })
+    .filter(Boolean);
+}
+
+function normalizeDividendBps(value, definition) {
+  const normalized = Number(value);
+  if (!Number.isSafeInteger(normalized) || normalized < 0) {
+    return getInitialDividendBps(definition);
+  }
+  return clampDividendBps(normalized, definition);
+}
+
+function getDividendBps(stock) {
+  const normalized = Number(stock?.dividendBps);
+  if (Number.isSafeInteger(normalized) && normalized >= 0) return normalized;
+  return getInitialDividendBps(stock);
 }
 
 function processLimitOrders(profile, stockUser, market, service) {
@@ -2457,6 +3193,8 @@ function stockSnapshot(stockId) {
   return {
     ...definition,
     aliases: [...definition.aliases],
+    dividendBps: getInitialDividendBps(definition),
+    dividendPercent: Math.round((getInitialDividendBps(definition) / 100) * 100) / 100,
     status: 'upcoming'
   };
 }
@@ -2493,7 +3231,8 @@ function getEvaluatedLeveragedPositions(stockUser, market) {
   return Object.values(stockUser.leveragedPositions)
     .map((position) => evaluateLeveragedPosition(
       position,
-      cloneQuote(position.stockId, market.symbols[position.stockId])
+      cloneQuote(position.stockId, market.symbols[position.stockId]),
+      { currentTick: market.tickIndex }
     ))
     .filter((position) => !position.liquidated)
     .sort((a, b) => b.equity - a.equity);
@@ -2510,53 +3249,135 @@ function assertNoOpposingLeveragedPosition(stockUser, stockId, side, quote = nul
   throw new Error(`같은 종목(${stockName})의 반대 방향 레버리지 포지션이 이미 열려 있습니다. 롱/숏 양방향 돈복사를 막기 위해 먼저 기존 포지션을 청산하세요.`);
 }
 
-function liquidateLeveragedPositions(profile, stockUser, market) {
-  const liquidated = [];
+function settleMaturedLeveragedPositions(profile, stockUser, market) {
+  const settled = [];
 
   for (const position of Object.values(stockUser.leveragedPositions)) {
     const quote = cloneQuote(position.stockId, market.symbols[position.stockId]);
-    const evaluated = evaluateLeveragedPosition(position, quote);
-    if (!evaluated.liquidated) continue;
+    const delisted = quote.status === 'delisted';
+    const evaluated = evaluateLeveragedPosition(position, quote, {
+      currentTick: market.tickIndex,
+      forceSettlement: delisted
+    });
+    if (!delisted && !shouldAutoSettleLeveragedPosition(position, evaluated)) continue;
 
-    delete stockUser.leveragedPositions[position.id];
-    stockUser.realizedLeveragedProfit -= position.margin;
-    stockUser.leveragedTradeCount += 1;
-    stockUser.lastTradeAt = market.lastTickAt;
-    recordTrade(stockUser, {
-      type: 'leverage_liquidation',
-      stockId: position.stockId,
-      stock: quote,
-      quantity: 0,
-      price: quote.price,
-      fee: 0,
-      total: 0,
-      realizedProfit: -position.margin,
+    settled.push(settleLeveragedPosition(profile, stockUser, position, evaluated, {
       at: market.lastTickAt,
-      positionId: position.id,
-      side: position.side,
-      leverage: position.leverage,
-      margin: position.margin
-    });
-    liquidated.push({
-      positionId: position.id,
-      stock: quote,
-      ...evaluated,
-      realizedProfit: -position.margin,
-      profile: cloneMoneyProfile(profile)
-    });
+      tradeType: getAutoLeverageSettlementTradeType(position, evaluated, delisted),
+      autoSettled: true
+    }));
   }
 
-  return liquidated;
+  return settled;
 }
 
-function evaluateLeveragedPosition(position, quote) {
+function shouldAutoSettleLeveragedPosition(position, evaluated) {
+  if (hasLeveragedPositionExpiry(position)) return evaluated.expired;
+  return evaluated.liquidated;
+}
+
+function getAutoLeverageSettlementTradeType(position, evaluated, delisted = false) {
+  if (delisted) {
+    return evaluated.liquidated ? 'leverage_liquidation' : 'leverage_settlement';
+  }
+  return hasLeveragedPositionExpiry(position) ? 'leverage_settlement' : 'leverage_liquidation';
+}
+
+function settleLeveragedPosition(profile, stockUser, position, evaluated, {
+  at,
+  tradeType,
+  autoSettled = false,
+  settlementCosts = {}
+} = {}) {
+  delete stockUser.leveragedPositions[position.id];
+  const grossPayout = evaluated.equity;
+  const costs = applySettlementCosts(grossPayout, settlementCosts);
+  const payout = costs.payout;
+  const realizedProfit = payout - position.margin;
+  if (payout > 0) {
+    creditCurrency(profile, CURRENCY_STOCK, payout);
+  }
+  stockUser.realizedLeveragedProfit += realizedProfit;
+  stockUser.leveragedTradeCount += 1;
+  stockUser.lastTradeAt = normalizeNonNegativeInteger(at);
+  recordTrade(stockUser, {
+    type: tradeType ?? 'leverage_close',
+    stockId: position.stockId,
+    stock: evaluated.stock,
+    quantity: 0,
+    price: evaluated.currentPrice,
+    fee: costs.closingFee,
+    penalty: costs.penalty,
+    total: payout,
+    realizedProfit,
+    at,
+    positionId: position.id,
+    side: position.side,
+    leverage: position.leverage,
+    margin: position.margin
+  });
+
+  return {
+    positionId: position.id,
+    ...evaluated,
+    grossPayout,
+    payout,
+    closingFee: costs.closingFee,
+    penalty: costs.penalty,
+    settlementCostTotal: costs.total,
+    earlyClosed: costs.earlyClosed,
+    realizedProfit,
+    autoSettled,
+    profile: cloneMoneyProfile(profile)
+  };
+}
+
+function calculateEarlyCloseCosts(position, evaluated, service) {
+  if (!isEarlyClose(position, evaluated)) {
+    return { closingFee: 0, penalty: 0, earlyClosed: false };
+  }
+  const grossProfit = Math.max(0, evaluated.equity - position.margin);
+  return {
+    closingFee: calculateFee(position.margin, service.leverageEarlyCloseFeeBps),
+    penalty: calculateFee(position.margin, service.leverageEarlyClosePenaltyBps) +
+      calculateFee(grossProfit, service.leverageEarlyProfitPenaltyBps),
+    earlyClosed: true
+  };
+}
+
+function applySettlementCosts(grossPayout, settlementCosts = {}) {
+  const rawClosingFee = normalizeNonNegativeInteger(settlementCosts.closingFee);
+  const rawPenalty = normalizeNonNegativeInteger(settlementCosts.penalty);
+  const closingFee = Math.min(grossPayout, rawClosingFee);
+  const penalty = Math.min(Math.max(0, grossPayout - closingFee), rawPenalty);
+  const total = closingFee + penalty;
+  return {
+    closingFee,
+    penalty,
+    total,
+    payout: Math.max(0, grossPayout - total),
+    earlyClosed: Boolean(settlementCosts.earlyClosed)
+  };
+}
+
+function isEarlyClose(position, evaluated) {
+  return hasLeveragedPositionExpiry(position) && !evaluated.expired;
+}
+
+function evaluateLeveragedPosition(position, quote, options = {}) {
+  const currentTick = normalizeOptionalNonNegativeInteger(options.currentTick);
+  const forceSettlement = Boolean(options.forceSettlement);
+  const expired = hasLeveragedPositionExpiry(position)
+    ? currentTick !== null && currentTick >= position.expiresAtTick
+    : false;
+  const shouldSettleByPrice = forceSettlement || expired || !hasLeveragedPositionExpiry(position);
   const priceChangeBps = calculateChangeBps(quote.price, position.entryPrice);
   const directionalChangeBps = position.side === 'short' ? -priceChangeBps : priceChangeBps;
-  const leveragedChangeBps = directionalChangeBps * position.leverage;
+  const leveragedChangeBps = shouldSettleByPrice ? directionalChangeBps * position.leverage : 0;
   const rawProfit = Math.trunc(position.margin * leveragedChangeBps / 10_000);
-  const unrealizedProfit = Math.max(-position.margin, rawProfit);
+  const unrealizedProfit = shouldSettleByPrice ? Math.max(-position.margin, rawProfit) : 0;
   const equity = Math.max(0, position.margin + unrealizedProfit);
-  const liquidated = equity <= 0;
+  const liquidated = shouldSettleByPrice && equity <= 0;
   const exposure = calculateLeveragedExposure(position.margin, position.leverage);
   const notional = normalizePositiveStoredInteger(position.notional, exposure.notional);
   const debt = normalizeStoredDebt(position.debt, exposure.debt);
@@ -2572,8 +3393,19 @@ function evaluateLeveragedPosition(position, quote) {
     returnPercent: Math.round((leveragedChangeBps / 100) * 100) / 100,
     unrealizedProfit,
     equity,
+    expired,
+    remainingTurns: getLeveragedPositionRemainingTurns(position, currentTick),
     liquidated
   };
+}
+
+function hasLeveragedPositionExpiry(position) {
+  return Number.isSafeInteger(position.expiresAtTick) && position.expiresAtTick > 0;
+}
+
+function getLeveragedPositionRemainingTurns(position, currentTick) {
+  if (!hasLeveragedPositionExpiry(position) || currentTick === null) return null;
+  return Math.max(0, position.expiresAtTick - currentTick);
 }
 
 function calculateLeveragedExposure(margin, leverage) {
@@ -2615,12 +3447,51 @@ function normalizePositiveInteger(value, label) {
   return normalized;
 }
 
+function normalizeOptionalNonNegativeInteger(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const normalized = Number(value);
+  return Number.isSafeInteger(normalized) && normalized >= 0 ? normalized : null;
+}
+
 function normalizeLeverage(value) {
   const normalized = Number(value);
-  if (!Number.isSafeInteger(normalized) || normalized < 1 || normalized > 100) {
-    throw new Error('레버리지 배율은 1~100 사이의 정수여야 합니다.');
+  if (!Number.isSafeInteger(normalized) || normalized < 1 || normalized > MAX_LEVERAGE) {
+    throw new Error(`레버리지 배율은 1~${MAX_LEVERAGE} 사이의 정수여야 합니다.`);
   }
   return normalized;
+}
+
+function normalizeLeverageDurationTurns(value) {
+  const normalized = Number(value ?? DEFAULT_LEVERAGE_DURATION_TURNS);
+  if (
+    !Number.isSafeInteger(normalized) ||
+    normalized < MIN_LEVERAGE_DURATION_TURNS ||
+    normalized > MAX_LEVERAGE_DURATION_TURNS
+  ) {
+    throw new Error(`레버리지 기간은 ${MIN_LEVERAGE_DURATION_TURNS}~${MAX_LEVERAGE_DURATION_TURNS}턴 사이의 정수여야 합니다.`);
+  }
+  return normalized;
+}
+
+function normalizeOptionalLeverageDurationTurns(value) {
+  if (value === null || value === undefined || value === '') return null;
+  return normalizeLeverageDurationTurns(value);
+}
+
+function assertLeverageAllowedForDuration(leverage, durationTurns) {
+  const maxLeverage = getMaxLeverageForDuration(durationTurns);
+  if (leverage <= maxLeverage) return;
+  const longRule = durationTurns < LONG_LEVERAGE_MIN_DURATION_TURNS
+    ? ` ${LONG_LEVERAGE_MIN_DURATION_TURNS}턴 이상 기간을 선택하면 1~${MAX_LEVERAGE}배까지 사용할 수 있습니다.`
+    : '';
+  throw new Error(`레버리지 기간 ${durationTurns}턴에서는 1~${maxLeverage}배까지만 가능합니다.${longRule}`);
+}
+
+function getMaxLeverageForDuration(durationTurns) {
+  if (durationTurns === null || durationTurns === undefined) return MAX_LEVERAGE;
+  return durationTurns >= LONG_LEVERAGE_MIN_DURATION_TURNS
+    ? MAX_LEVERAGE
+    : SHORT_DURATION_MAX_LEVERAGE;
 }
 
 function normalizeLeverageSide(side) {
@@ -2720,6 +3591,10 @@ function createStockAlertId(now, sequence) {
 
 function createStockTradeId(now, sequence) {
   return `tr-${normalizeNonNegativeInteger(now).toString(36)}-${sequence.toString(36)}`;
+}
+
+function createStockDividendId(tickIndex, sequence) {
+  return `div-${normalizeNonNegativeInteger(tickIndex).toString(36)}-${sequence.toString(36)}`;
 }
 
 function createMarketNewsId(tickIndex, stockId) {

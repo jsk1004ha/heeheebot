@@ -34,6 +34,73 @@ export const EMOJI_RACE_RACERS = Object.freeze([
   Object.freeze({ id: 'dog', number: 2, name: '강아지', emoji: '🐕' }),
   Object.freeze({ id: 'turtle', number: 3, name: '거북이', emoji: '🐢' })
 ]);
+export const SCRATCH_TICKET_SPOT_COUNT = 9;
+export const SCRATCH_TICKET_ROLL_MAX = 1_000_000;
+export const SCRATCH_TICKET_DEFAULT_PRODUCT_ID = 'mini';
+export const SCRATCH_TICKET_PRODUCTS = Object.freeze([
+  scratchTicketProduct({
+    id: 'mega',
+    name: '황금 5억',
+    price: 10_000,
+    topPrize: 500_000_000,
+    prizeTiers: [
+      scratchTicketTier(500_000_000, 1),
+      scratchTicketTier(100_000_000, 5),
+      scratchTicketTier(20_000_000, 25),
+      scratchTicketTier(5_000_000, 120),
+      scratchTicketTier(1_000_000, 700),
+      scratchTicketTier(100_000, 5_000),
+      scratchTicketTier(50_000, 20_000),
+      scratchTicketTier(20_000, 75_000),
+      scratchTicketTier(10_000, 150_000),
+      scratchTicketTier(5_000, 120_000),
+      scratchTicketTier(3_000, 150_000),
+      scratchTicketTier(1_000, 100_000)
+    ]
+  }),
+  scratchTicketProduct({
+    id: 'royal',
+    name: '행운 1억',
+    price: 3_000,
+    topPrize: 100_000_000,
+    prizeTiers: [
+      scratchTicketTier(100_000_000, 1),
+      scratchTicketTier(20_000_000, 5),
+      scratchTicketTier(5_000_000, 25),
+      scratchTicketTier(1_000_000, 150),
+      scratchTicketTier(200_000, 1_000),
+      scratchTicketTier(50_000, 8_000),
+      scratchTicketTier(10_000, 50_000),
+      scratchTicketTier(5_000, 120_000),
+      scratchTicketTier(3_000, 150_000),
+      scratchTicketTier(2_000, 70_000),
+      scratchTicketTier(1_000, 100_000),
+      scratchTicketTier(500, 100_000)
+    ]
+  }),
+  scratchTicketProduct({
+    id: 'mini',
+    name: '미니 2000만',
+    price: 1_000,
+    topPrize: 20_000_000,
+    prizeTiers: [
+      scratchTicketTier(20_000_000, 1),
+      scratchTicketTier(5_000_000, 4),
+      scratchTicketTier(1_000_000, 20),
+      scratchTicketTier(200_000, 150),
+      scratchTicketTier(50_000, 1_500),
+      scratchTicketTier(10_000, 15_000),
+      scratchTicketTier(5_000, 60_000),
+      scratchTicketTier(1_000, 180_000),
+      scratchTicketTier(500, 120_000),
+      scratchTicketTier(300, 100_000),
+      scratchTicketTier(100, 100_000)
+    ]
+  })
+]);
+const SCRATCH_TICKET_PRODUCT_BY_ID = new Map(
+  SCRATCH_TICKET_PRODUCTS.map((product) => [product.id, product])
+);
 
 export function playOddEven({ choice, bet, randomInt = defaultRandomInt }) {
   const normalizedChoice = normalizeOddEvenChoice(choice);
@@ -285,6 +352,111 @@ export function playKeno({ numbers, bet, randomInt = defaultRandomInt }) {
     multiplier,
     payout: bet * multiplier
   };
+}
+
+export function createScratchTicket({
+  productId = SCRATCH_TICKET_DEFAULT_PRODUCT_ID,
+  randomInt = defaultRandomInt
+} = {}) {
+  const product = getScratchTicketProduct(productId);
+  const winningTier = drawScratchTicketPrizeTier(product, randomInt);
+  const spots = winningTier
+    ? createWinningScratchTicketSpots(product, winningTier, randomInt)
+    : createLosingScratchTicketSpots(product, randomInt);
+
+  return buildScratchTicket({
+    productId: product.id,
+    spots,
+    revealed: Array.from({ length: SCRATCH_TICKET_SPOT_COUNT }, () => false),
+    status: 'scratching',
+    lastRevealedIndex: null
+  });
+}
+
+export function revealScratchTicketSpot(ticket, index) {
+  const current = buildScratchTicket(ticket);
+  assertScratchTicketInProgress(current);
+  const normalizedIndex = normalizeScratchTicketSpotIndex(index);
+
+  if (current.revealed[normalizedIndex]) {
+    throw new Error('이미 긁은 복권 칸입니다.');
+  }
+
+  const revealed = [...current.revealed];
+  revealed[normalizedIndex] = true;
+  const revealCount = revealed.filter(Boolean).length;
+
+  return buildScratchTicket({
+    ...current,
+    revealed,
+    status: revealCount >= SCRATCH_TICKET_SPOT_COUNT ? 'settled' : 'scratching',
+    lastRevealedIndex: normalizedIndex
+  });
+}
+
+export function revealAllScratchTicketSpots(ticket) {
+  const current = buildScratchTicket(ticket);
+
+  if (current.status === 'settled') return current;
+
+  return buildScratchTicket({
+    ...current,
+    revealed: Array.from({ length: SCRATCH_TICKET_SPOT_COUNT }, () => true),
+    status: 'settled',
+    lastRevealedIndex: null
+  });
+}
+
+export function getScratchTicketProduct(productId = SCRATCH_TICKET_DEFAULT_PRODUCT_ID) {
+  const normalizedId = normalizeScratchTicketProductId(productId);
+  return SCRATCH_TICKET_PRODUCT_BY_ID.get(normalizedId);
+}
+
+export function normalizeScratchTicketProductId(productId = SCRATCH_TICKET_DEFAULT_PRODUCT_ID) {
+  const normalized = String(productId ?? SCRATCH_TICKET_DEFAULT_PRODUCT_ID)
+    .trim()
+    .toLocaleLowerCase('ko-KR')
+    .replace(/\s+/g, '');
+
+  if (['mega', '황금5억', '5억', '오억', 'gold', 'jackpot'].includes(normalized)) return 'mega';
+  if (['royal', '행운1억', '1억', '일억', 'lucky'].includes(normalized)) return 'royal';
+  if (['mini', '미니2000만', '2000만', '2천만', '이천만'].includes(normalized)) return 'mini';
+
+  throw new Error('스크래치 복권 종류는 미니 2000만, 행운 1억, 황금 5억 중 하나여야 합니다.');
+}
+
+export function getScratchTicketProductStats(productId = SCRATCH_TICKET_DEFAULT_PRODUCT_ID) {
+  const product = getScratchTicketProduct(productId);
+  const totalWinningTickets = product.prizeTiers.reduce((sum, tier) => sum + tier.chance, 0);
+  const expectedPayout = product.prizeTiers.reduce(
+    (sum, tier) => sum + tier.amount * tier.chance,
+    0
+  ) / SCRATCH_TICKET_ROLL_MAX;
+
+  return {
+    productId: product.id,
+    price: product.price,
+    topPrize: product.topPrize,
+    totalWinningTickets,
+    winChance: totalWinningTickets / SCRATCH_TICKET_ROLL_MAX,
+    winChanceBasisPoints: Math.round(totalWinningTickets * 10_000 / SCRATCH_TICKET_ROLL_MAX),
+    expectedPayout,
+    rtp: expectedPayout / product.price
+  };
+}
+
+export function formatScratchPrizeShort(amount) {
+  const normalizedAmount = normalizeNonNegativeSafeInteger(amount, '당첨금');
+
+  if (normalizedAmount >= 100_000_000 && normalizedAmount % 100_000_000 === 0) {
+    return `${normalizedAmount / 100_000_000}억`;
+  }
+
+  if (normalizedAmount >= 10_000 && normalizedAmount % 10_000 === 0) {
+    return `${normalizedAmount / 10_000}만`;
+  }
+
+  return normalizedAmount.toLocaleString();
 }
 
 
@@ -973,6 +1145,221 @@ function drawKenoNumbers(randomInt) {
   }
 
   return draw.sort((a, b) => a - b);
+}
+
+function scratchTicketTier(amount, chance) {
+  const normalizedAmount = normalizeNonNegativeSafeInteger(amount, '당첨금');
+  const normalizedChance = normalizeNonNegativeSafeInteger(chance, '당첨 확률');
+
+  if (normalizedAmount <= 0 || normalizedChance <= 0) {
+    throw new Error('스크래치 복권 당첨금과 당첨 확률은 1 이상의 정수여야 합니다.');
+  }
+
+  return Object.freeze({
+    amount: normalizedAmount,
+    label: formatScratchPrizeShort(normalizedAmount),
+    chance: normalizedChance
+  });
+}
+
+function scratchTicketProduct(product) {
+  const price = normalizeNonNegativeSafeInteger(product.price, '구매가');
+  const topPrize = normalizeNonNegativeSafeInteger(product.topPrize, '최고 당첨금');
+  const prizeTiers = product.prizeTiers ?? [];
+  const totalChance = prizeTiers.reduce((sum, tier) => sum + tier.chance, 0);
+
+  if (!product.id || !product.name) {
+    throw new Error('스크래치 복권 상품에는 id와 이름이 필요합니다.');
+  }
+
+  if (price <= 0 || topPrize <= 0) {
+    throw new Error('스크래치 복권 구매가와 최고 당첨금은 1 이상이어야 합니다.');
+  }
+
+  if (prizeTiers.length < 3) {
+    throw new Error('스크래치 복권은 최소 3개 이상의 당첨금 등급이 필요합니다.');
+  }
+
+  if (totalChance >= SCRATCH_TICKET_ROLL_MAX) {
+    throw new Error('스크래치 복권 당첨 확률 합계는 전체 확률보다 낮아야 합니다.');
+  }
+
+  if (prizeTiers[0].amount !== topPrize) {
+    throw new Error('스크래치 복권 첫 당첨금 등급은 최고 당첨금과 같아야 합니다.');
+  }
+
+  return Object.freeze({
+    id: product.id,
+    name: product.name,
+    price,
+    topPrize,
+    prizeTiers: Object.freeze(prizeTiers)
+  });
+}
+
+function drawScratchTicketPrizeTier(product, randomInt) {
+  const roll = randomInt(1, SCRATCH_TICKET_ROLL_MAX);
+  let threshold = 0;
+
+  if (!Number.isSafeInteger(roll) || roll < 1 || roll > SCRATCH_TICKET_ROLL_MAX) {
+    throw new Error(`스크래치 복권 추첨값은 1~${SCRATCH_TICKET_ROLL_MAX} 사이여야 합니다.`);
+  }
+
+  for (const tier of product.prizeTiers) {
+    threshold += tier.chance;
+    if (roll <= threshold) return tier;
+  }
+
+  return null;
+}
+
+function createWinningScratchTicketSpots(product, winningTier, randomInt) {
+  const values = [
+    winningTier.amount,
+    winningTier.amount,
+    winningTier.amount
+  ];
+  const counts = new Map([[winningTier.amount, 3]]);
+
+  while (values.length < SCRATCH_TICKET_SPOT_COUNT) {
+    const candidate = pickScratchTicketDecoyAmount(product, counts, randomInt, winningTier.amount);
+    values.push(candidate);
+    counts.set(candidate, (counts.get(candidate) ?? 0) + 1);
+  }
+
+  return shuffleScratchTicketAmounts(values, randomInt);
+}
+
+function createLosingScratchTicketSpots(product, randomInt) {
+  const values = [];
+  const counts = new Map();
+
+  while (values.length < SCRATCH_TICKET_SPOT_COUNT) {
+    const candidate = pickScratchTicketDecoyAmount(product, counts, randomInt);
+    values.push(candidate);
+    counts.set(candidate, (counts.get(candidate) ?? 0) + 1);
+  }
+
+  return shuffleScratchTicketAmounts(values, randomInt);
+}
+
+function pickScratchTicketDecoyAmount(product, counts, randomInt, excludedAmount = null) {
+  const candidates = product.prizeTiers
+    .map((tier) => tier.amount)
+    .filter((amount) => amount !== excludedAmount && (counts.get(amount) ?? 0) < 2);
+
+  if (candidates.length === 0) {
+    throw new Error('스크래치 복권 칸을 구성할 당첨금 후보가 부족합니다.');
+  }
+
+  return candidates[randomInt(0, candidates.length - 1)];
+}
+
+function shuffleScratchTicketAmounts(values, randomInt) {
+  const shuffled = [...values];
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = randomInt(0, index);
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+
+  return shuffled.map((amount) => Object.freeze({
+    amount,
+    label: formatScratchPrizeShort(amount)
+  }));
+}
+
+function buildScratchTicket(ticket) {
+  const product = getScratchTicketProduct(ticket.productId);
+  const spots = normalizeScratchTicketSpots(ticket.spots);
+  const revealed = normalizeScratchTicketRevealed(ticket.revealed);
+  const revealCount = revealed.filter(Boolean).length;
+  const status = ticket.status ?? (revealCount >= SCRATCH_TICKET_SPOT_COUNT ? 'settled' : 'scratching');
+  const winningAmount = findScratchTicketWinningAmount(spots);
+  const payout = status === 'settled' ? (winningAmount ?? 0) : 0;
+
+  if (!['scratching', 'settled'].includes(status)) {
+    throw new Error('스크래치 복권 상태가 올바르지 않습니다.');
+  }
+
+  return {
+    game: '스크래치복권',
+    productId: product.id,
+    productName: product.name,
+    price: product.price,
+    topPrize: product.topPrize,
+    spots,
+    revealed,
+    revealCount,
+    status,
+    winningAmount,
+    win: payout > 0,
+    payout,
+    lastRevealedIndex: ticket.lastRevealedIndex ?? null
+  };
+}
+
+function normalizeScratchTicketSpots(spots) {
+  if (!Array.isArray(spots) || spots.length !== SCRATCH_TICKET_SPOT_COUNT) {
+    throw new Error(`스크래치 복권은 ${SCRATCH_TICKET_SPOT_COUNT}칸이어야 합니다.`);
+  }
+
+  return spots.map((spot) => {
+    const amount = normalizeNonNegativeSafeInteger(
+      typeof spot === 'object' && spot !== null ? spot.amount : spot,
+      '복권 칸 당첨금'
+    );
+
+    if (amount <= 0) {
+      throw new Error('복권 칸 당첨금은 1 이상이어야 합니다.');
+    }
+
+    return Object.freeze({
+      amount,
+      label: formatScratchPrizeShort(amount)
+    });
+  });
+}
+
+function normalizeScratchTicketRevealed(revealed) {
+  if (revealed === undefined) {
+    return Array.from({ length: SCRATCH_TICKET_SPOT_COUNT }, () => false);
+  }
+
+  if (!Array.isArray(revealed) || revealed.length !== SCRATCH_TICKET_SPOT_COUNT) {
+    throw new Error(`스크래치 복권 공개 상태는 ${SCRATCH_TICKET_SPOT_COUNT}칸이어야 합니다.`);
+  }
+
+  return revealed.map(Boolean);
+}
+
+function normalizeScratchTicketSpotIndex(index) {
+  const normalized = Number(index);
+
+  if (!Number.isSafeInteger(normalized) || normalized < 0 || normalized >= SCRATCH_TICKET_SPOT_COUNT) {
+    throw new Error(`스크래치 복권 칸 번호는 1~${SCRATCH_TICKET_SPOT_COUNT} 사이여야 합니다.`);
+  }
+
+  return normalized;
+}
+
+function assertScratchTicketInProgress(ticket) {
+  if (!ticket || ticket.status !== 'scratching') {
+    throw new Error('이미 정산된 스크래치 복권입니다.');
+  }
+}
+
+function findScratchTicketWinningAmount(spots) {
+  const counts = new Map();
+
+  for (const spot of spots) {
+    const count = (counts.get(spot.amount) ?? 0) + 1;
+    counts.set(spot.amount, count);
+
+    if (count >= 3) return spot.amount;
+  }
+
+  return null;
 }
 
 

@@ -1,7 +1,7 @@
 import { MessageFlags } from 'discord.js';
 
 export const EPHEMERAL_FLAG = MessageFlags.Ephemeral;
-export const DEFAULT_INTERACTION_DEFER_AFTER_MS = 2_500;
+export const DEFAULT_INTERACTION_DEFER_AFTER_MS = 1_000;
 
 export function isUnknownInteractionError(error) {
   return Boolean(

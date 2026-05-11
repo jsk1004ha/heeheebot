@@ -5,7 +5,7 @@ import {
   getCommunityTitles,
   getEventTypes,
   getLotteryDrawScheduleText,
-  getLotteryMaxTicketsPerPurchase,
+  getLotteryPrizeTiers,
   getLotteryTicketCost,
   getShopItems
 } from '../systems/community.js';
@@ -120,22 +120,20 @@ export const communityCommands = [
         .addIntegerOption((option) =>
           option
             .setName('장수')
-            .setDescription('구매할 복권 장수')
+            .setDescription('구매할 복권 장수(보유 골드 한도 내 제한 없음)')
             .setMinValue(1)
-            .setMaxValue(getLotteryMaxTicketsPerPurchase())
             .setRequired(true)
         )
     )
     .addSubcommand((subcommand) =>
       subcommand
         .setName('대량구매')
-        .setDescription(`복권을 한 번에 여러 장 구매합니다. 최대 ${getLotteryMaxTicketsPerPurchase()}장.`)
+        .setDescription('복권을 한 번에 여러 장 구매합니다. 보유 골드 한도 내 제한 없음.')
         .addIntegerOption((option) =>
           option
             .setName('장수')
-            .setDescription(`구매할 복권 장수(2~${getLotteryMaxTicketsPerPurchase()}장)`)
+            .setDescription('구매할 복권 장수(2장 이상)')
             .setMinValue(2)
-            .setMaxValue(getLotteryMaxTicketsPerPurchase())
             .setRequired(true)
         )
     )
@@ -646,16 +644,34 @@ function formatLotteryStatus(lottery) {
   return [
     '🎟️ **서버 복권 6/45**',
     `장당 가격: ${getLotteryTicketCost().toLocaleString()}골드`,
+    '구매 제한: 보유 골드 한도 내 제한 없음',
     `현재 잭팟: **${lottery.jackpot.toLocaleString()}골드**`,
     `판매된 복권: ${lottery.totalTickets.toLocaleString()}장`,
     `다음 자동 추첨: ${formatLotteryDrawTime(lottery.nextDrawAt)}`,
     `자동 추첨: ${autoDraw}`,
     '당첨 방식: 1~45 중 6개 번호 + 보너스 번호',
-    '무당첨 회차는 잭팟 전액이 다음 추첨으로 이월됩니다.',
+    `당첨금: ${formatLotteryPrizeGuide()}`,
+    '당첨자가 없는 잭팟 등수의 몫은 다음 추첨으로 이월됩니다.',
     participants,
     lastWinner,
     lastDraw
   ].filter(Boolean).join('\n');
+}
+
+function formatLotteryPrizeGuide() {
+  return getLotteryPrizeTiers()
+    .map((tier) => {
+      const prize = tier.fixedPrize
+        ? `${tier.fixedPrize.toLocaleString()}골드 고정`
+        : `잭팟 ${formatBasisPoints(tier.jackpotBps)} 분배`;
+      return `${tier.label} ${tier.description} ${prize}`;
+    })
+    .join(' / ');
+}
+
+function formatBasisPoints(basisPoints) {
+  const percentage = basisPoints / 100;
+  return Number.isInteger(percentage) ? `${percentage}%` : `${percentage.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')}%`;
 }
 
 function formatLotteryBuy(result) {
