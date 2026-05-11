@@ -1,0 +1,24 @@
+{
+  "id": "monster_unique_035_idle",
+  "label": "수도원 망령 전용 몬스터 이미지",
+  "category": "monster",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "prompt": "assets/rpg/monsters/runtime-unique/unique_035/idle/prompt-used.txt",
+  "meta": "assets/rpg/monsters/runtime-unique/unique_035/idle/processed/pipeline-meta.json",
+  "raw": "assets/rpg/monsters/runtime-unique/unique_035/idle/raw/raw-sheet.png",
+  "status": "processed",
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/monster_unique_035_idle/raw-sheet.png",
+  "outputSize": [
+    512,
+    512
+  ],
+  "processedDir": "assets/rpg/monsters/runtime-unique/unique_035/idle/processed",
+  "processorStdout": "assets/rpg/monsters/runtime-unique/unique_035/idle/processed",
+  "clean": "assets/rpg/monsters/runtime-unique/unique_035/idle/processed/clean.png",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+  }
+}

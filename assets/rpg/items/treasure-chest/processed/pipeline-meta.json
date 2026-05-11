@@ -1,28 +1,17 @@
 {
-  "target": "asset",
-  "mode": "single",
-  "prompt": "Use $generate2dsprite to create a clean HD transparent RPG treasure chest icon, single asset, centered, wooden chest with gold trim, solid #FF00FF background, no text.",
-  "role": "",
-  "input": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/treasure-chest/raw/raw-sheet.png",
-  "threshold": 100,
-  "edge_threshold": 150,
-  "duration": 160,
-  "single_size": 512,
   "id": "item_treasure_chest_icon",
   "label": "보물상자 아이콘",
   "category": "item",
   "kind": "sprite",
   "sheet": "single",
   "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb401b1f7c8191ab354f6e9356a60a.png",
+  "raw": "assets/rpg/items/treasure-chest/raw/raw-sheet.png",
+  "clean": "assets/rpg/items/treasure-chest/processed/clean.png",
   "outputSize": [
     256,
     256
   ],
-  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb401b1f7c8191ab354f6e9356a60a.png",
-  "raw": "assets/rpg/items/treasure-chest/raw/raw-sheet.png",
-  "clean": "assets/rpg/items/treasure-chest/processed/clean.png",
-  "forgeAudit": {
-    "normalized": true,
-    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
-  }
+  "prompt": "assets/rpg/items/treasure-chest/prompt-used.txt",
+  "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
 }

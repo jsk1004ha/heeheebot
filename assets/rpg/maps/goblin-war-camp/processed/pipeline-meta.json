@@ -1,30 +1,15 @@
 {
-  "schemaVersion": 1,
-  "skill": "$generate2dmap",
-  "generatedWith": "agent-sprite-forge:$generate2dmap",
-  "mapMode": "baked_scene_mode",
-  "visualModel": "baked_raster",
-  "engineTarget": "Discord attachment battle background",
-  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc50b35b7081918d3a38b0ecbcd8e0.png",
-  "raw": "assets/rpg/maps/goblin-war-camp/raw/background.png",
-  "originalSize": [
-    1672,
-    941
-  ],
-  "outputSize": [
-    1024,
-    576
-  ],
-  "normalization": "lanczos resize to project 16:9 map contract",
-  "auditReason": "fallback procedural raid map replaced; prior image was flat placeholder and not generatedWith forge metadata",
-  "recordedAt": "2026-05-07T08:45:40Z",
   "id": "map_goblin_war_camp",
   "label": "고블린 전쟁 야영지 전투 배경",
   "category": "map",
   "kind": "map",
-  "prompt": "Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG raid background: goblin war camp, torn banners, crude palisades, open dirt arena center, no characters, no UI, no text.",
-  "forgeAudit": {
-    "normalized": true,
-    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
-  }
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0604fb4bc95875aa0169fc50b35b7081918d3a38b0ecbcd8e0.png",
+  "raw": "assets/rpg/maps/goblin-war-camp/raw/background.png",
+  "outputSize": [
+    1024,
+    576
+  ],
+  "prompt": "assets/rpg/maps/goblin-war-camp/prompt-used.txt",
+  "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
 }

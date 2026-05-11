@@ -1,0 +1,1 @@
+Use $generate2dsprite to create a clean HD 2D RPG monster sprite, single creature centered, visually distinct silhouette, no duplicate monster design, no text, transparent final asset. Korean monster concept: 저주받은 마도사.

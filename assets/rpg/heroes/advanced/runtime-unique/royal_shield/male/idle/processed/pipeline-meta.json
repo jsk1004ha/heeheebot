@@ -1,0 +1,17 @@
+{
+  "id": "hero_adv_royal_shield_male_idle",
+  "label": "왕국의 방패 남성 전직 이미지",
+  "category": "hero",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/hero_adv_royal_shield_male_idle/raw-sheet.png",
+  "raw": "assets/rpg/heroes/advanced/runtime-unique/royal_shield/male/idle/raw/raw-sheet.png",
+  "clean": "assets/rpg/heroes/advanced/runtime-unique/royal_shield/male/idle/processed/clean.png",
+  "outputSize": [
+    512,
+    512
+  ],
+  "prompt": "assets/rpg/heroes/advanced/runtime-unique/royal_shield/male/idle/prompt-used.txt",
+  "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+}

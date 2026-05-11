@@ -1,0 +1,24 @@
+{
+  "id": "hero_adv_stormcaller_female_idle",
+  "label": "폭풍술사 여성 전직 이미지",
+  "category": "hero",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "prompt": "assets/rpg/heroes/advanced/runtime-unique/stormcaller/female/idle/prompt-used.txt",
+  "meta": "assets/rpg/heroes/advanced/runtime-unique/stormcaller/female/idle/processed/pipeline-meta.json",
+  "raw": "assets/rpg/heroes/advanced/runtime-unique/stormcaller/female/idle/raw/raw-sheet.png",
+  "status": "processed",
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/hero_adv_stormcaller_female_idle/raw-sheet.png",
+  "outputSize": [
+    512,
+    512
+  ],
+  "processedDir": "assets/rpg/heroes/advanced/runtime-unique/stormcaller/female/idle/processed",
+  "processorStdout": "assets/rpg/heroes/advanced/runtime-unique/stormcaller/female/idle/processed",
+  "clean": "assets/rpg/heroes/advanced/runtime-unique/stormcaller/female/idle/processed/clean.png",
+  "forgeAudit": {
+    "normalized": true,
+    "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+  }
+}

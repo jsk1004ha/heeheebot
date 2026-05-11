@@ -5,14 +5,11 @@
   "kind": "map",
   "generatedWith": "agent-sprite-forge:$generate2dmap",
   "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_royal_south_plains/background.png",
+  "raw": "assets/rpg/maps/royal-south-plains/raw/background.png",
   "outputSize": [
     1024,
     576
   ],
-  "prompt": "Medieval kingdom south plains hunting ground, 16:9 game background, no text.",
-  "raw": "assets/rpg/maps/royal-south-plains/raw/background.png",
-  "forgeAudit": {
-    "normalized": true,
-    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
-  }
+  "prompt": "assets/rpg/maps/royal-south-plains/prompt-used.txt",
+  "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
 }

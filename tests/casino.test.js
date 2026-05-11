@@ -13,15 +13,21 @@ import { createSqliteStore } from '../src/storage/sqlite-store.js';
 import { EconomyService } from '../src/systems/economy.js';
 import {
   cashOutDeadlineRound,
+  applyPokerRecommendedHold,
+  clearPokerHold,
   createBlackjackRound,
   createDeadlineRound,
   createPlayerBlackjackRound,
+  createPokerRound,
   createScratchTicket,
   createTimingRound,
   DEADLINE_MIN_BET,
   formatEmojiRaceTrack,
   formatScratchPrizeShort,
   getScratchTicketProductStats,
+  drawPokerRound,
+  evaluatePokerHand,
+  getPokerHoldRecommendation,
   hitBlackjackRound,
   hitPlayerBlackjackRound,
   getDeadlineBustChanceBps,
@@ -129,6 +135,7 @@ test('카지노 명령 payload는 다양한 게임을 등록한다', () => {
     '럭키세븐',
     '하이로우',
     '블랙잭',
+    '포커',
     '룰렛',
     '바카라',
     '크랩스',
@@ -153,6 +160,7 @@ test('카지노정보 명령은 베팅금 없이 게임 배수와 환급 규칙�
   assert.match(interaction.replied.content, /데드라인.*꽝 확률/);
   assert.match(interaction.replied.content, /타이밍.*5.*20/);
   assert.match(interaction.replied.content, /이모지경마.*2\.7배/);
+  assert.match(interaction.replied.content, /포커.*J 이상 원페어/);
   assert.match(interaction.replied.content, /키노.*번호 1~5개/);
   assert.match(interaction.replied.content, /스크래치복권.*같은 금액 3개/);
   assert.doesNotMatch(interaction.replied.content, /기대|지급률|RTP|%/);
@@ -743,6 +751,78 @@ test('유저 블랙잭 신청과 진행 안내는 상대와 현재 차례를 실
   });
 });
 
+test('포커 명령은 베팅을 예약하고 HOLD/교체 버튼으로 정산한다', async () => {
+  const calls = [];
+  const fakeEconomy = {
+    async reserveWager(payload) {
+      calls.push(['reserve', payload]);
+      return {
+        bet: payload.bet,
+        profile: { balance: 900 }
+      };
+    },
+    async resolveReservedWager(payload) {
+      calls.push(['resolve', payload]);
+      return {
+        bet: payload.bet,
+        payout: payload.payout,
+        profit: payload.payout - payload.bet,
+        profile: { balance: 900 + payload.payout }
+      };
+    },
+    async refundReservedWager(payload) {
+      calls.push(['refund', payload]);
+      return {
+        bet: payload.bet,
+        payout: payload.bet,
+        profit: 0,
+        profile: { balance: 1000 }
+      };
+    }
+  };
+  const interaction = createChatInputInteraction('포커', {
+    integers: { 돈: 100 }
+  });
+  const pokerDeck = ['A♠', 'A♥', '3♣', '4♦', '5♠', 'K♣', 'K♦', 'A♦', '2♣', '9♥'];
+
+  assert.equal(await handleCasinoCommand(interaction, fakeEconomy, quietLogger, { pokerDeck }), true);
+  assert.deepEqual(calls.map(([type]) => type), ['reserve']);
+  assert.match(interaction.replied.content, /드로우 포커/);
+  assert.match(interaction.replied.content, /A♠ A♥ 3♣ 4♦ 5♠/);
+  assert.match(interaction.replied.content, /추천 HOLD: \*\*A♠ A♥/);
+
+  const recommendId = interaction.replied.components[1].components[0].data.custom_id;
+  const recommend = createCasinoButtonInteraction({ customId: recommendId });
+  assert.equal(await handleCasinoCommand(recommend, fakeEconomy, quietLogger), true);
+  assert.equal(recommend.deferUpdateCalls, 1);
+  assert.match(recommend.updated.content, /\*\*\[A♠\]\*\* \*\*\[A♥\]\*\*/);
+
+  const clearId = recommend.updated.components[1].components[1].data.custom_id;
+  const clear = createCasinoButtonInteraction({ customId: clearId });
+  assert.equal(await handleCasinoCommand(clear, fakeEconomy, quietLogger), true);
+  assert.doesNotMatch(clear.updated.content, /현재 패: .*\*\*\[A♠\]\*\*/);
+
+  const firstHoldId = clear.updated.components[0].components[0].data.custom_id;
+  const secondHoldId = clear.updated.components[0].components[1].data.custom_id;
+  await handleCasinoCommand(createCasinoButtonInteraction({ customId: firstHoldId }), fakeEconomy, quietLogger);
+  const holdSecond = createCasinoButtonInteraction({ customId: secondHoldId });
+  await handleCasinoCommand(holdSecond, fakeEconomy, quietLogger);
+
+  const drawId = holdSecond.updated.components[1].components[2].data.custom_id;
+  const draw = createCasinoButtonInteraction({ customId: drawId });
+  assert.equal(await handleCasinoCommand(draw, fakeEconomy, quietLogger), true);
+
+  assert.deepEqual(calls.map(([type]) => type), ['reserve', 'resolve']);
+  assert.equal(calls[1][1].payout, 900);
+  assert.match(draw.updated.content, /포커 결과 — 당첨/);
+  assert.match(draw.updated.content, /풀하우스/);
+  assert.match(draw.updated.content, /지급: 900골드/);
+  assert.deepEqual(draw.updated.allowedMentions, {
+    parse: [],
+    users: ['user-1']
+  });
+});
+
 test('룰렛, 바카라, 크랩스, 시크보, 키노 결과를 계산한다', () => {
   const roulette = playRoulette({
     choice: 'red',
@@ -783,6 +863,37 @@ test('룰렛, 바카라, 크랩스, 시크보, 키노 결과를 계산한다', (
   assert.deepEqual(parseKenoNumbers('3, 1, 2'), [1, 2, 3]);
   assert.deepEqual(keno.hits, [1, 2, 3]);
   assert.equal(keno.payout, 17000);
+});
+
+test('포커는 5장 족보와 1회 교체 보상을 계산한다', () => {
+  const royal = evaluatePokerHand(['A♠', 'K♠', 'Q♠', 'J♠', '10♠']);
+  const wheelStraight = evaluatePokerHand(['A♣', '2♦', '3♠', '4♥', '5♣']);
+  const highPair = evaluatePokerHand(['J♣', 'J♦', '2♠', '7♥', '9♣']);
+  const lowPair = evaluatePokerHand(['10♣', '10♦', '2♠', '7♥', '9♣']);
+  let round = createPokerRound({
+    bet: 100,
+    deck: ['A♠', 'A♥', '3♣', '4♦', '5♠', 'K♣', 'K♦', 'A♦', '2♣', '9♥']
+  });
+  const pairRecommendation = getPokerHoldRecommendation(round.hand);
+  const flushRecommendation = getPokerHoldRecommendation(['A♠', 'K♠', '9♠', '2♠', '7♦']);
+
+  round = applyPokerRecommendedHold(round);
+  const drawn = drawPokerRound(round);
+  const cleared = clearPokerHold(round);
+
+  assert.equal(royal.id, 'royal_flush');
+  assert.equal(royal.multiplier, 250);
+  assert.equal(wheelStraight.id, 'straight');
+  assert.equal(highPair.id, 'high_pair');
+  assert.equal(highPair.multiplier, 1);
+  assert.equal(lowPair.id, 'low_pair');
+  assert.equal(lowPair.multiplier, 0);
+  assert.deepEqual(pairRecommendation.heldIndexes, [0, 1]);
+  assert.deepEqual(flushRecommendation.heldIndexes, [0, 1, 2, 3]);
+  assert.deepEqual(drawn.hand, ['A♠', 'A♥', 'K♣', 'K♦', 'A♦']);
+  assert.equal(drawn.handRank.id, 'full_house');
+  assert.equal(drawn.payout, 900);
+  assert.deepEqual(cleared.held, [false, false, false, false, false]);
 });
 
 test('키노 배수표는 적은 적중도 일부 환급하고 선택 개수별 기대수익률을 완화한다', () => {

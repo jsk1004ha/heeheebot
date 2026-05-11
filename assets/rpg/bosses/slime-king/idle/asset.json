@@ -21,8 +21,8 @@
   "label": "슬라임 킹 대기 모션",
   "generatedWith": "agent-sprite-forge:$generate2dsprite",
   "outputSize": [
-    384,
-    384
+    1254,
+    1254
   ],
   "forgeAudit": {
     "normalized": true,

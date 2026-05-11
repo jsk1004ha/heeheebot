@@ -5,14 +5,11 @@
   "kind": "map",
   "generatedWith": "agent-sprite-forge:$generate2dmap",
   "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_cursed_monastery/background.png",
+  "raw": "assets/rpg/maps/cursed-monastery/raw/background.png",
   "outputSize": [
     1024,
     576
   ],
-  "prompt": "Cursed monastery undead dungeon, 16:9 game background, no text.",
-  "raw": "assets/rpg/maps/cursed-monastery/raw/background.png",
-  "forgeAudit": {
-    "normalized": true,
-    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
-  }
+  "prompt": "assets/rpg/maps/cursed-monastery/prompt-used.txt",
+  "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
 }

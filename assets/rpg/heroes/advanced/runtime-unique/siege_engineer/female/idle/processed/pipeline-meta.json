@@ -1,0 +1,17 @@
+{
+  "id": "hero_adv_siege_engineer_female_idle",
+  "label": "공성 기술자 여성 전직 이미지",
+  "category": "hero",
+  "kind": "sprite",
+  "sheet": "single",
+  "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/hero_adv_siege_engineer_female_idle/raw-sheet.png",
+  "raw": "assets/rpg/heroes/advanced/runtime-unique/siege_engineer/female/idle/raw/raw-sheet.png",
+  "clean": "assets/rpg/heroes/advanced/runtime-unique/siege_engineer/female/idle/processed/clean.png",
+  "outputSize": [
+    512,
+    512
+  ],
+  "prompt": "assets/rpg/heroes/advanced/runtime-unique/siege_engineer/female/idle/prompt-used.txt",
+  "note": "agent-sprite-forge runtime-unique asset expansion; deterministic no-text sprite variants for distinct runtime wiring"
+}

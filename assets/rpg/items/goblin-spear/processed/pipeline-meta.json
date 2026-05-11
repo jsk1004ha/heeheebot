@@ -6,15 +6,12 @@
   "sheet": "single",
   "generatedWith": "agent-sprite-forge:$generate2dsprite",
   "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/item_goblin_spear_icon/raw-sheet.png",
+  "raw": "assets/rpg/items/goblin-spear/raw/raw-sheet.png",
+  "clean": "assets/rpg/items/goblin-spear/processed/clean.png",
   "outputSize": [
     256,
     256
   ],
-  "prompt": "Use $generate2dsprite to create a clean HD transparent medieval fantasy 고블린 창 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.",
-  "raw": "assets/rpg/items/goblin-spear/raw/raw-sheet.png",
-  "clean": "assets/rpg/items/goblin-spear/processed/clean.png",
-  "forgeAudit": {
-    "normalized": true,
-    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
-  }
+  "prompt": "assets/rpg/items/goblin-spear/prompt-used.txt",
+  "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
 }

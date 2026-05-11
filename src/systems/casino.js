@@ -1,4 +1,19 @@
 const CARD_RANKS = Object.freeze(['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']);
+const POKER_SUITS = Object.freeze(['♠', '♥', '♦', '♣']);
+const POKER_HAND_SIZE = 5;
+const POKER_PAYOUTS = Object.freeze({
+  royal_flush: Object.freeze({ id: 'royal_flush', label: '로열 플러시', multiplier: 250, order: 10 }),
+  straight_flush: Object.freeze({ id: 'straight_flush', label: '스트레이트 플러시', multiplier: 50, order: 9 }),
+  four_kind: Object.freeze({ id: 'four_kind', label: '포카드', multiplier: 25, order: 8 }),
+  full_house: Object.freeze({ id: 'full_house', label: '풀하우스', multiplier: 9, order: 7 }),
+  flush: Object.freeze({ id: 'flush', label: '플러시', multiplier: 6, order: 6 }),
+  straight: Object.freeze({ id: 'straight', label: '스트레이트', multiplier: 4, order: 5 }),
+  three_kind: Object.freeze({ id: 'three_kind', label: '트리플', multiplier: 3, order: 4 }),
+  two_pair: Object.freeze({ id: 'two_pair', label: '투페어', multiplier: 2, order: 3 }),
+  high_pair: Object.freeze({ id: 'high_pair', label: 'J 이상 원페어', multiplier: 1, order: 2 }),
+  low_pair: Object.freeze({ id: 'low_pair', label: '낮은 원페어', multiplier: 0, order: 1 }),
+  high_card: Object.freeze({ id: 'high_card', label: '하이카드', multiplier: 0, order: 0 })
+});
 const SLOT_SYMBOLS = Object.freeze(['🍒', '🍋', '🍇', '🔔', '⭐', '💎', '7️⃣', '🍀', '🍉', '🍊']);
 const ROULETTE_RED_NUMBERS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
 const KENO_MIN_NUMBER = 1;
@@ -354,6 +369,151 @@ export function playKeno({ numbers, bet, randomInt = defaultRandomInt }) {
     multiplier,
     payout: bet * multiplier
   };
+}
+
+export function createPokerRound({
+  bet,
+  deck = null,
+  randomInt = defaultRandomInt
+} = {}) {
+  const normalizedBet = normalizePokerBet(bet);
+  const pokerDeck = deck
+    ? normalizePokerDeck(deck)
+    : createShuffledPokerDeck(randomInt);
+  if (pokerDeck.length < POKER_HAND_SIZE * 2) {
+    throw new Error('포커 덱에는 시작 패와 교체 패를 합쳐 최소 10장이 필요합니다.');
+  }
+
+  return buildPokerRound({
+    bet: normalizedBet,
+    initialHand: pokerDeck.slice(0, POKER_HAND_SIZE),
+    hand: pokerDeck.slice(0, POKER_HAND_SIZE),
+    deck: pokerDeck.slice(POKER_HAND_SIZE),
+    held: Array.from({ length: POKER_HAND_SIZE }, () => false),
+    status: 'holding',
+    drawCount: 0,
+    replacedCount: 0,
+    payout: 0
+  });
+}
+
+export function togglePokerHold(round, index) {
+  const current = buildPokerRound(round);
+  assertPokerHoldingRound(current);
+  const normalizedIndex = normalizePokerCardIndex(index);
+  const held = [...current.held];
+  held[normalizedIndex] = !held[normalizedIndex];
+
+  return buildPokerRound({
+    ...current,
+    held
+  });
+}
+
+export function applyPokerRecommendedHold(round) {
+  const current = buildPokerRound(round);
+  assertPokerHoldingRound(current);
+  const recommendation = getPokerHoldRecommendation(current.hand);
+
+  return buildPokerRound({
+    ...current,
+    held: recommendation.held
+  });
+}
+
+export function clearPokerHold(round) {
+  const current = buildPokerRound(round);
+  assertPokerHoldingRound(current);
+
+  return buildPokerRound({
+    ...current,
+    held: Array.from({ length: POKER_HAND_SIZE }, () => false)
+  });
+}
+
+export function drawPokerRound(round) {
+  const current = buildPokerRound(round);
+  assertPokerHoldingRound(current);
+
+  const deck = [...current.deck];
+  const hand = current.hand.map((card, index) => {
+    if (current.held[index]) return card;
+    const replacement = deck.shift();
+    if (!replacement) {
+      throw new Error('포커 교체 카드가 부족합니다.');
+    }
+    return replacement;
+  });
+  const replacedCount = current.held.filter((held) => !held).length;
+  const handRank = evaluatePokerHand(hand);
+
+  return buildPokerRound({
+    ...current,
+    hand,
+    deck,
+    status: 'settled',
+    drawCount: current.drawCount + 1,
+    replacedCount,
+    handRank,
+    payout: Math.floor(current.bet * handRank.multiplier)
+  });
+}
+
+export function getPokerHoldRecommendation(hand) {
+  const cards = normalizePokerHand(Array.isArray(hand) ? hand : hand?.hand);
+  const handRank = evaluatePokerHand(cards);
+  const parsedCards = cards.map((card, index) => ({ ...parsePokerCard(card), card, index }));
+  const held = Array.from({ length: POKER_HAND_SIZE }, () => false);
+  const reason = applyPokerHoldRecommendation({ cards: parsedCards, handRank, held });
+
+  return {
+    held,
+    reason,
+    heldIndexes: held
+      .map((value, index) => value ? index : null)
+      .filter((index) => index !== null),
+    heldCards: cards.filter((_, index) => held[index])
+  };
+}
+
+export function evaluatePokerHand(hand) {
+  const cards = normalizePokerHand(hand);
+  const ranks = cards.map((card) => pokerRankValue(parsePokerCard(card).rank));
+  const suits = cards.map((card) => parsePokerCard(card).suit);
+  const rankCounts = new Map();
+  for (const rank of ranks) {
+    rankCounts.set(rank, (rankCounts.get(rank) ?? 0) + 1);
+  }
+
+  const counts = [...rankCounts.entries()]
+    .map(([rank, count]) => ({ rank, count }))
+    .sort((a, b) => b.count - a.count || b.rank - a.rank);
+  const flush = suits.every((suit) => suit === suits[0]);
+  const straightHigh = getPokerStraightHigh(ranks);
+  const straight = straightHigh !== null;
+  const rankId = getPokerHandRankId({ counts, flush, straight, straightHigh });
+  const payout = POKER_PAYOUTS[rankId];
+
+  return {
+    ...payout,
+    cards,
+    highRank: straightHigh ?? Math.max(...ranks),
+    counts: counts.map((entry) => ({ ...entry }))
+  };
+}
+
+export function getPokerPayoutTable() {
+  return [
+    POKER_PAYOUTS.royal_flush,
+    POKER_PAYOUTS.straight_flush,
+    POKER_PAYOUTS.four_kind,
+    POKER_PAYOUTS.full_house,
+    POKER_PAYOUTS.flush,
+    POKER_PAYOUTS.straight,
+    POKER_PAYOUTS.three_kind,
+    POKER_PAYOUTS.two_pair,
+    POKER_PAYOUTS.high_pair
+  ].map((entry) => ({ ...entry }));
 }
 
 export function createScratchTicket({
@@ -938,6 +1098,295 @@ export function parseKenoNumbers(numbers) {
   }
 
   return unique.sort((a, b) => a - b);
+}
+
+function buildPokerRound(round) {
+  const bet = normalizePokerBet(round.bet);
+  const hand = normalizePokerHand(round.hand);
+  const initialHand = round.initialHand
+    ? normalizePokerHand(round.initialHand)
+    : [...hand];
+  const deck = normalizePokerDeck(round.deck ?? []);
+  const held = normalizePokerHeld(round.held);
+  const handRank = round.handRank
+    ? normalizePokerHandRank(round.handRank)
+    : evaluatePokerHand(hand);
+  const payout = normalizeNonNegativeSafeInteger(round.payout ?? 0, '포커 지급액');
+  const status = round.status ?? 'holding';
+
+  if (!['holding', 'settled'].includes(status)) {
+    throw new Error('포커 상태가 올바르지 않습니다.');
+  }
+
+  return {
+    game: '포커',
+    ...round,
+    bet,
+    initialHand,
+    hand,
+    deck,
+    held,
+    handRank,
+    status,
+    drawCount: normalizeNonNegativeSafeInteger(round.drawCount ?? 0, '포커 교체 횟수'),
+    replacedCount: normalizeNonNegativeSafeInteger(round.replacedCount ?? 0, '포커 교체 카드 수'),
+    win: payout > 0,
+    multiplier: handRank.multiplier,
+    payout
+  };
+}
+
+function assertPokerHoldingRound(round) {
+  if (!round || round.status !== 'holding') {
+    throw new Error('이미 정산된 포커입니다.');
+  }
+}
+
+function createShuffledPokerDeck(randomInt) {
+  const deck = [];
+  for (const suit of POKER_SUITS) {
+    for (const rank of CARD_RANKS) {
+      deck.push(`${rank}${suit}`);
+    }
+  }
+
+  for (let index = deck.length - 1; index > 0; index -= 1) {
+    const swapIndex = randomInt(0, index);
+    [deck[index], deck[swapIndex]] = [deck[swapIndex], deck[index]];
+  }
+
+  return deck;
+}
+
+function normalizePokerBet(bet) {
+  const normalized = Number(bet);
+
+  if (!Number.isSafeInteger(normalized) || normalized <= 0) {
+    throw new Error('포커 베팅액은 1 이상의 정수여야 합니다.');
+  }
+
+  return normalized;
+}
+
+function normalizePokerHand(hand) {
+  if (!Array.isArray(hand) || hand.length !== POKER_HAND_SIZE) {
+    throw new Error(`포커 패는 ${POKER_HAND_SIZE}장이어야 합니다.`);
+  }
+
+  const normalized = hand.map(normalizePokerCard);
+  if (new Set(normalized).size !== normalized.length) {
+    throw new Error('포커 패에는 중복 카드가 있을 수 없습니다.');
+  }
+
+  return normalized;
+}
+
+function normalizePokerDeck(deck) {
+  if (!Array.isArray(deck)) {
+    throw new Error('포커 덱은 카드 배열이어야 합니다.');
+  }
+
+  const normalized = deck.map(normalizePokerCard);
+  if (new Set(normalized).size !== normalized.length) {
+    throw new Error('포커 덱에는 중복 카드가 있을 수 없습니다.');
+  }
+
+  return normalized;
+}
+
+function normalizePokerHeld(held) {
+  if (held === undefined) {
+    return Array.from({ length: POKER_HAND_SIZE }, () => false);
+  }
+
+  if (!Array.isArray(held) || held.length !== POKER_HAND_SIZE) {
+    throw new Error(`포커 보류 상태는 ${POKER_HAND_SIZE}개여야 합니다.`);
+  }
+
+  return held.map(Boolean);
+}
+
+function applyPokerHoldRecommendation({ cards, handRank, held }) {
+  const rankGroups = groupPokerCards(cards, (card) => pokerRankValue(card.rank));
+
+  if (['straight', 'flush', 'full_house', 'four_kind', 'straight_flush', 'royal_flush'].includes(handRank.id)) {
+    held.fill(true);
+    return `${handRank.label} 완성`;
+  }
+
+  const tripleGroup = rankGroups.find((group) => group.length === 3);
+  if (tripleGroup) {
+    holdPokerCards(held, tripleGroup);
+    return '트리플 보존';
+  }
+
+  const pairGroups = rankGroups.filter((group) => group.length === 2);
+  if (pairGroups.length >= 2) {
+    holdPokerCards(held, pairGroups.flat());
+    return '투페어 보존';
+  }
+
+  const pairGroup = pairGroups[0];
+  if (pairGroup) {
+    holdPokerCards(held, pairGroup);
+    return '원페어 보존';
+  }
+
+  const suitGroups = groupPokerCards(cards, (card) => card.suit);
+  const fourFlush = suitGroups.find((group) => group.length === 4);
+  if (fourFlush) {
+    holdPokerCards(held, fourFlush);
+    return '플러시 4장 대기';
+  }
+
+  const straightDraw = findPokerStraightDraw(cards);
+  if (straightDraw) {
+    holdPokerCards(held, straightDraw);
+    return '스트레이트 4장 대기';
+  }
+
+  const highCards = cards.filter((card) => pokerRankValue(card.rank) >= 11);
+  if (highCards.length > 0) {
+    holdPokerCards(held, highCards);
+    return 'J 이상 높은 카드 보존';
+  }
+
+  const highest = cards.reduce((best, card) =>
+    pokerRankValue(card.rank) > pokerRankValue(best.rank) ? card : best
+  );
+  holdPokerCards(held, [highest]);
+  return '최고 카드 1장 보존';
+}
+
+function groupPokerCards(cards, keyResolver) {
+  const groups = new Map();
+  for (const card of cards) {
+    const key = keyResolver(card);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(card);
+  }
+
+  return [...groups.values()].sort((a, b) => b.length - a.length);
+}
+
+function holdPokerCards(held, cards) {
+  for (const card of cards) {
+    held[card.index] = true;
+  }
+}
+
+function findPokerStraightDraw(cards) {
+  const rankMap = new Map();
+  for (const card of cards) {
+    const rank = pokerRankValue(card.rank);
+    if (!rankMap.has(rank)) rankMap.set(rank, []);
+    rankMap.get(rank).push(card);
+    if (rank === 14) {
+      if (!rankMap.has(1)) rankMap.set(1, []);
+      rankMap.get(1).push(card);
+    }
+  }
+
+  const windows = [];
+  for (let start = 1; start <= 10; start += 1) {
+    const ranks = Array.from({ length: 5 }, (_, index) => start + index);
+    const presentRanks = ranks.filter((rank) => rankMap.has(rank));
+    if (presentRanks.length === 4) {
+      windows.push({
+        missingInside: ranks[0] !== presentRanks[0] && ranks.at(-1) !== presentRanks.at(-1),
+        high: ranks.at(-1),
+        cards: presentRanks.map((rank) => rankMap.get(rank)[0])
+      });
+    }
+  }
+
+  if (windows.length === 0) return null;
+  windows.sort((a, b) => Number(a.missingInside) - Number(b.missingInside) || b.high - a.high);
+  return windows[0].cards;
+}
+
+function normalizePokerCardIndex(index) {
+  const normalized = Number(index);
+
+  if (!Number.isSafeInteger(normalized) || normalized < 0 || normalized >= POKER_HAND_SIZE) {
+    throw new Error(`포커 카드 번호는 1~${POKER_HAND_SIZE} 사이여야 합니다.`);
+  }
+
+  return normalized;
+}
+
+function normalizePokerCard(card) {
+  const parsed = parsePokerCard(card);
+  return `${parsed.rank}${parsed.suit}`;
+}
+
+function parsePokerCard(card) {
+  const text = String(card ?? '').trim().toUpperCase();
+  const suit = POKER_SUITS.find((candidate) => text.endsWith(candidate));
+  if (!suit) {
+    throw new Error('포커 카드는 예: A♠, 10♥ 형식이어야 합니다.');
+  }
+
+  const rank = text.slice(0, -suit.length);
+  if (!CARD_RANKS.includes(rank)) {
+    throw new Error('포커 카드 숫자는 A, 2~10, J, Q, K 중 하나여야 합니다.');
+  }
+
+  return { rank, suit };
+}
+
+function normalizePokerHandRank(handRank) {
+  const rankId = handRank?.id;
+  const payout = POKER_PAYOUTS[rankId] ?? POKER_PAYOUTS.high_card;
+  return {
+    ...payout,
+    cards: Array.isArray(handRank?.cards) ? handRank.cards.map(normalizePokerCard) : [],
+    highRank: Number(handRank?.highRank ?? 0),
+    counts: Array.isArray(handRank?.counts)
+      ? handRank.counts.map((entry) => ({
+        rank: Number(entry.rank) || 0,
+        count: Number(entry.count) || 0
+      }))
+      : []
+  };
+}
+
+function getPokerHandRankId({ counts, flush, straight, straightHigh }) {
+  const countPattern = counts.map((entry) => entry.count).join(',');
+
+  if (flush && straight && straightHigh === 14) return 'royal_flush';
+  if (flush && straight) return 'straight_flush';
+  if (countPattern === '4,1') return 'four_kind';
+  if (countPattern === '3,2') return 'full_house';
+  if (flush) return 'flush';
+  if (straight) return 'straight';
+  if (countPattern === '3,1,1') return 'three_kind';
+  if (countPattern === '2,2,1') return 'two_pair';
+  if (countPattern === '2,1,1,1') {
+    const pairRank = counts.find((entry) => entry.count === 2)?.rank ?? 0;
+    return pairRank >= 11 || pairRank === 14 ? 'high_pair' : 'low_pair';
+  }
+  return 'high_card';
+}
+
+function getPokerStraightHigh(ranks) {
+  const unique = [...new Set(ranks)].sort((a, b) => a - b);
+  if (unique.length !== POKER_HAND_SIZE) return null;
+
+  if (unique.join(',') === '2,3,4,5,14') return 5;
+  for (let index = 1; index < unique.length; index += 1) {
+    if (unique[index] !== unique[index - 1] + 1) return null;
+  }
+
+  return unique.at(-1);
+}
+
+function pokerRankValue(rank) {
+  if (rank === 'A') return 14;
+  if (rank === 'K') return 13;
+  if (rank === 'Q') return 12;
+  if (rank === 'J') return 11;
+  return Number(rank);
 }
 
 function decideBlackjackWinner(playerHand, dealerHand) {

@@ -6,15 +6,12 @@
   "sheet": "single",
   "generatedWith": "agent-sprite-forge:$generate2dsprite",
   "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/item_dragon_scale_shield_icon/raw-sheet.png",
+  "raw": "assets/rpg/items/dragon-scale-shield/raw/raw-sheet.png",
+  "clean": "assets/rpg/items/dragon-scale-shield/processed/clean.png",
   "outputSize": [
     256,
     256
   ],
-  "prompt": "Use $generate2dsprite to create a clean HD transparent medieval fantasy 용비늘 방패 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.",
-  "raw": "assets/rpg/items/dragon-scale-shield/raw/raw-sheet.png",
-  "clean": "assets/rpg/items/dragon-scale-shield/processed/clean.png",
-  "forgeAudit": {
-    "normalized": true,
-    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
-  }
+  "prompt": "assets/rpg/items/dragon-scale-shield/prompt-used.txt",
+  "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
 }

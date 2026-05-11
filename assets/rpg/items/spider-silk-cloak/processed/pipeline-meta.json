@@ -6,15 +6,12 @@
   "sheet": "single",
   "generatedWith": "agent-sprite-forge:$generate2dsprite",
   "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/item_spider_silk_cloak_icon/raw-sheet.png",
+  "raw": "assets/rpg/items/spider-silk-cloak/raw/raw-sheet.png",
+  "clean": "assets/rpg/items/spider-silk-cloak/processed/clean.png",
   "outputSize": [
     256,
     256
   ],
-  "prompt": "Use $generate2dsprite to create a clean HD transparent medieval fantasy 거미줄 망토 icon, single asset, centered readable RPG equipment icon, solid #FF00FF background, no text.",
-  "raw": "assets/rpg/items/spider-silk-cloak/raw/raw-sheet.png",
-  "clean": "assets/rpg/items/spider-silk-cloak/processed/clean.png",
-  "forgeAudit": {
-    "normalized": true,
-    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
-  }
+  "prompt": "assets/rpg/items/spider-silk-cloak/prompt-used.txt",
+  "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
 }

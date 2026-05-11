@@ -5,14 +5,11 @@
   "kind": "map",
   "generatedWith": "agent-sprite-forge:$generate2dmap",
   "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_bandit_fortress/background.png",
+  "raw": "assets/rpg/maps/bandit-fortress/raw/background.png",
   "outputSize": [
     1024,
     576
   ],
-  "prompt": "Bandit fortress medieval fantasy, 16:9 game background, no text.",
-  "raw": "assets/rpg/maps/bandit-fortress/raw/background.png",
-  "forgeAudit": {
-    "normalized": true,
-    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
-  }
+  "prompt": "assets/rpg/maps/bandit-fortress/prompt-used.txt",
+  "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
 }

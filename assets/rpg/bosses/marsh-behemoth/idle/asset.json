@@ -15,8 +15,8 @@
   "animation": "assets/rpg/bosses/marsh-behemoth/idle/processed/animation.gif",
   "generatedWith": "agent-sprite-forge:$generate2dsprite",
   "outputSize": [
-    480,
-    480
+    1254,
+    1254
   ],
   "forgeAudit": {
     "normalized": true,

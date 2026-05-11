@@ -1280,6 +1280,280 @@ export class EconomyService {
     });
   }
 
+  async startRpgHuntEncounter({
+    guildId,
+    userId,
+    username,
+    difficulty = 'normal',
+    area = null,
+    now = Date.now()
+  }) {
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, username, this);
+      const normalizedArea = normalizeRpgArea(area || profile.rpg.currentArea);
+      const normalizedDifficulty = normalizeRpgDifficulty(difficulty);
+      const areaConfig = getRpgAreaConfig(normalizedArea);
+      const unlockedAreas = getUnlockedRpgAreaIds(getProfileRpgLevel(profile));
+
+      if (!unlockedAreas.includes(normalizedArea)) {
+        throw new Error(`${areaConfig.label} 지역은 Lv.${areaConfig.unlockLevel}부터 입장할 수 있습니다.`);
+      }
+
+      const cooldownRemainingMs = getRpgCooldownRemaining(
+        profile,
+        now,
+        this.options.rpgBattleCooldownMs
+      );
+
+      if (cooldownRemainingMs > 0) {
+        return {
+          started: false,
+          battled: false,
+          remainingMs: cooldownRemainingMs,
+          cooldownRemainingMs,
+          difficulty: normalizedDifficulty,
+          profile: cloneProfile(profile)
+        };
+      }
+
+      if (profile.rpg.hp <= 1) {
+        throw new Error('HP가 부족합니다. `/rpg 휴식` 또는 회복 포션을 사용하세요.');
+      }
+
+      const derivedStats = getProfileRpgDerivedStats(profile);
+      const battle = resolveRpgBattle({
+        playerLevel: getProfileRpgLevel(profile),
+        difficulty: normalizedDifficulty,
+        area: normalizedArea,
+        characterClass: profile.rpg.characterClass,
+        characterGender: profile.rpg.characterGender,
+        advancedClass: profile.rpg.advancedClass,
+        skillId: 'basic',
+        statBonuses: getRpgCombatBonuses(profile),
+        randomInt: this.randomInt
+      });
+      const enemyMaxHp = Math.max(
+        16,
+        battle.mitigatedMonsterPower * 2 + this.randomInt(0, Math.max(2, getProfileRpgLevel(profile)))
+      );
+
+      profile.rpg.lastBattleAt = now;
+      profile.rpg.currentArea = normalizedArea;
+
+      return {
+        started: true,
+        battled: true,
+        type: 'hunt_turn',
+        session: {
+          id: createRpgHuntSessionId(now),
+          guildId,
+          userId,
+          username: profile.username,
+          type: 'hunt_turn',
+          area: normalizedArea,
+          areaLabel: areaConfig.label,
+          difficulty: normalizedDifficulty,
+          difficultyLabel: battle.difficultyLabel,
+          monster: battle.monster,
+          createdAt: now,
+          updatedAt: now,
+          turn: 1,
+          completed: false,
+          fled: false,
+          damageTakenTotal: 0,
+          player: {
+            userId,
+            username: profile.username,
+            level: getProfileRpgLevel(profile),
+            characterClass: profile.rpg.characterClass,
+            characterGender: profile.rpg.characterGender,
+            stats: derivedStats,
+            hp: profile.rpg.hp,
+            maxHp: derivedStats.maxHp,
+            mp: profile.rpg.mp,
+            maxMp: derivedStats.maxMp,
+            inventory: {
+              potion: profile.rpg.inventory.potion ?? 0,
+              mana_potion: profile.rpg.inventory.mana_potion ?? 0
+            },
+            availableSkillIds: getAvailableRpgSkillIds(profile.rpg.characterClass, profile.rpg.advancedClass),
+            advancedClass: profile.rpg.advancedClass,
+            assets: {
+              hero: getProfileRpgHeroAssetId(profile)
+            }
+          },
+          boss: {
+            hp: enemyMaxHp,
+            maxHp: enemyMaxHp,
+            power: battle.mitigatedMonsterPower,
+            assetId: battle.assets.monster
+          },
+          battle,
+          assets: {
+            hero: battle.assets.hero,
+            monster: battle.assets.monster,
+            background: battle.assets.background
+          }
+        },
+        battle,
+        profile: cloneProfile(profile)
+      };
+    });
+  }
+
+  async playRpgHuntTurn({
+    guildId,
+    session,
+    userId,
+    action = 'basic',
+    now = Date.now()
+  }) {
+    const nextSession = cloneRpgHuntSession(session);
+
+    if (nextSession.guildId !== guildId) {
+      throw new Error('다른 서버의 RPG 사냥입니다.');
+    }
+
+    if (nextSession.userId !== userId) {
+      throw new Error('이 사냥은 시작한 유저만 조작할 수 있습니다.');
+    }
+
+    if (nextSession.completed) {
+      throw new Error('이미 종료된 RPG 사냥입니다.');
+    }
+
+    if (action === 'flee') {
+      nextSession.completed = true;
+      nextSession.fled = true;
+      nextSession.updatedAt = now;
+      return this.store.update((data) => {
+        const profile = getOrCreateProfile(data, guildId, userId, nextSession.username, this);
+        profile.rpg.currentArea = nextSession.area;
+        profile.rpg.hp = Math.max(1, Math.min(getProfileRpgDerivedStats(profile).maxHp, nextSession.player.hp));
+        profile.rpg.mp = Math.max(0, Math.min(getProfileRpgDerivedStats(profile).maxMp, nextSession.player.mp));
+        return {
+          completed: true,
+          type: 'hunt_turn',
+          fled: true,
+          battled: false,
+          session: nextSession,
+          battle: createRpgHuntBattleResult(nextSession, { win: false, fled: true }),
+          profile: cloneProfile(profile)
+        };
+      });
+    }
+
+    const turn = resolveRpgBossTurn({
+      player: nextSession.player,
+      boss: nextSession.boss,
+      action,
+      bossId: 'slime_king',
+      turnNumber: nextSession.turn,
+      randomInt: this.randomInt
+    });
+
+    nextSession.player.hp = turn.playerHpAfter;
+    nextSession.player.mp = turn.playerMpAfter;
+    nextSession.player.inventory = turn.inventory;
+    nextSession.boss.hp = turn.bossHpAfter;
+    nextSession.damageTakenTotal = normalizeStoredNonNegativeInteger(nextSession.damageTakenTotal) + turn.bossDamage;
+    nextSession.lastTurn = turn;
+    nextSession.updatedAt = now;
+
+    if (!turn.win && !turn.playerDefeated) {
+      nextSession.turn += 1;
+      return {
+        completed: false,
+        type: 'hunt_turn',
+        session: nextSession,
+        turn
+      };
+    }
+
+    nextSession.completed = true;
+    const win = turn.win;
+
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, userId, nextSession.username, this);
+      let rewardSettlement = createEmptyRepeatableRpgRewardSettlement();
+      let gearDrop = null;
+      const battle = createRpgHuntBattleResult(nextSession, {
+        win,
+        turn,
+        rewards: win ? nextSession.battle.rewards : { xp: 0, coins: 0 }
+      });
+
+      profile.rpg.battles += 1;
+      profile.rpg.lastBattleAt = now;
+      profile.rpg.currentArea = nextSession.area;
+      profile.rpg.hp = Math.max(1, Math.min(getProfileRpgDerivedStats(profile).maxHp, nextSession.player.hp));
+      profile.rpg.mp = Math.max(0, Math.min(getProfileRpgDerivedStats(profile).maxMp, nextSession.player.mp));
+      setInventoryItemCount(profile.rpg.inventory, 'potion', nextSession.player.inventory.potion ?? 0);
+      profile.rpg.discoveredMonsters[battle.monster] = (profile.rpg.discoveredMonsters[battle.monster] ?? 0) + 1;
+      incrementRpgDailyStats(profile.rpg, now, {
+        battles: 1,
+        wins: win ? 1 : 0
+      });
+      increaseRpgAreaProgress(profile.rpg, nextSession.area, win ? 8 : 3);
+      grantRpgClassMastery(profile, win ? 12 : 5);
+
+      const drop = rollRpgDrop({ battle, randomInt: this.randomInt });
+      const materialDrops = rollRpgMaterialDrops({
+        source: 'battle',
+        area: battle.area,
+        difficulty: battle.difficulty,
+        win,
+        randomInt: this.randomInt
+      });
+
+      if (win) {
+        profile.rpg.wins += 1;
+        profile.rpg.monsterKills[battle.monster] = (profile.rpg.monsterKills[battle.monster] ?? 0) + 1;
+        profile.rpg.areaWins[nextSession.area] = (profile.rpg.areaWins[nextSession.area] ?? 0) + 1;
+        if (drop) {
+          addInventoryItem(profile.rpg.inventory, drop.itemId, drop.quantity);
+        }
+        grantRpgInventoryItems(profile.rpg.inventory, materialDrops);
+        gearDrop = rollRpgGearDrop({
+          source: battle.difficulty === 'boss' ? 'boss' : 'battle',
+          area: battle.area,
+          difficulty: battle.difficulty,
+          randomInt: this.randomInt
+        });
+        if (gearDrop) gearDrop = addRpgGear(profile, gearDrop, now);
+        rewardSettlement = settleRepeatableRpgRewards(profile, battle.rewards, this, now);
+      } else {
+        profile.rpg.losses += 1;
+      }
+
+      const ultimateCharge = settleRpgUltimateCharge(profile, {
+        usedUltimate: turn.ultimate,
+        chargeGain: win ? 35 : 20
+      });
+
+      return {
+        completed: true,
+        type: 'hunt_turn',
+        battled: true,
+        session: nextSession,
+        turn,
+        battle,
+        assets: battle.assets,
+        drop: win ? drop : null,
+        materialDrops: win ? labelRpgItemQuantities(materialDrops) : [],
+        gearDrop,
+        xpGained: battle.rewards.xp,
+        coinReward: rewardSettlement.coinReward,
+        requestedCoinReward: battle.rewards.coins,
+        rpgGoldLimit: rewardSettlement.rpgGoldLimit,
+        ultimateCharge,
+        ...rewardSettlement.levelResult,
+        ...getRpgActionContext(profile, this, now),
+        profile: cloneProfile(profile)
+      };
+    });
+  }
+
   async playRpgBossBattle({
     guildId,
     userId,
@@ -1727,27 +2001,62 @@ export class EconomyService {
       });
       const beforeHp = profile.rpg.hp;
       const beforeMp = profile.rpg.mp;
+      const battle = exploration.event === 'battle'
+        ? resolveRpgBattle({
+          playerLevel: getProfileRpgLevel(profile),
+          difficulty: 'normal',
+          area: normalizedArea,
+          characterClass: profile.rpg.characterClass,
+          characterGender: profile.rpg.characterGender,
+          advancedClass: profile.rpg.advancedClass,
+          skillId: 'basic',
+          statBonuses: getRpgCombatBonuses(profile),
+          randomInt: this.randomInt
+        })
+        : null;
       let gearDrop = null;
       let rewardSettlement = createEmptyRepeatableRpgRewardSettlement();
       const materialDrops = rollRpgMaterialDrops({
-        source: 'explore',
+        source: battle ? 'battle' : 'explore',
         area: normalizedArea,
         difficulty: 'normal',
+        win: battle ? battle.win : true,
         randomInt: this.randomInt
       });
+      const rewardSource = battle
+        ? battle.win ? battle.rewards : { xp: 0, coins: 0 }
+        : exploration.rewards;
 
       profile.rpg.explores += 1;
       profile.rpg.lastExploreAt = now;
       profile.rpg.currentArea = normalizedArea;
       incrementRpgDailyStats(profile.rpg, now, {
-        explores: 1
+        explores: 1,
+        battles: battle ? 1 : 0,
+        wins: battle?.win ? 1 : 0
       });
-      increaseRpgAreaProgress(profile.rpg, normalizedArea, exploration.event === 'trap' ? 4 : 10);
-      grantRpgClassMastery(profile, 4);
-      profile.rpg.hp = Math.max(1, Math.min(derivedStats.maxHp, profile.rpg.hp - exploration.damageTaken + exploration.hpRecovered));
+      if (battle) {
+        profile.rpg.battles += 1;
+        profile.rpg.discoveredMonsters[battle.monster] = (profile.rpg.discoveredMonsters[battle.monster] ?? 0) + 1;
+        if (battle.win) {
+          profile.rpg.wins += 1;
+          profile.rpg.monsterKills[battle.monster] = (profile.rpg.monsterKills[battle.monster] ?? 0) + 1;
+          profile.rpg.areaWins[normalizedArea] = (profile.rpg.areaWins[normalizedArea] ?? 0) + 1;
+        } else {
+          profile.rpg.losses += 1;
+        }
+      }
+      increaseRpgAreaProgress(profile.rpg, normalizedArea, battle ? battle.win ? 8 : 3 : exploration.event === 'trap' ? 4 : 10);
+      grantRpgClassMastery(profile, battle ? battle.win ? 10 : 4 : 4);
+      profile.rpg.hp = Math.max(1, Math.min(
+        derivedStats.maxHp,
+        profile.rpg.hp - exploration.damageTaken - (battle?.damageTaken ?? 0) + exploration.hpRecovered
+      ));
       profile.rpg.mp = Math.max(0, Math.min(derivedStats.maxMp, profile.rpg.mp + exploration.mpRecovered));
-      grantRpgInventoryItems(profile.rpg.inventory, materialDrops);
-      rewardSettlement = settleRepeatableRpgRewards(profile, exploration.rewards, this, now);
+      if (!battle || battle.win) {
+        grantRpgInventoryItems(profile.rpg.inventory, materialDrops);
+      }
+      rewardSettlement = settleRepeatableRpgRewards(profile, rewardSource, this, now);
       if (exploration.event === 'treasure') {
         gearDrop = addRpgGear(profile, rollRpgGearDrop({
           source: 'dungeon',
@@ -1764,17 +2073,26 @@ export class EconomyService {
           power: 1,
           assetId: 'item_iron_sword_icon'
         }, now);
+      } else if (battle?.win) {
+        const blueprint = rollRpgGearDrop({
+          source: 'battle',
+          area: normalizedArea,
+          difficulty: battle.difficulty,
+          randomInt: this.randomInt
+        });
+        if (blueprint) gearDrop = addRpgGear(profile, blueprint, now);
       }
 
       return {
         exploration,
+        battle,
         beforeHp,
         beforeMp,
         gearDrop,
-        materialDrops: labelRpgItemQuantities(materialDrops),
-        xpGained: exploration.rewards.xp,
+        materialDrops: (!battle || battle.win) ? labelRpgItemQuantities(materialDrops) : [],
+        xpGained: rewardSource.xp,
         coinReward: rewardSettlement.coinReward,
-        requestedCoinReward: exploration.rewards.coins,
+        requestedCoinReward: rewardSource.coins,
         rpgGoldLimit: rewardSettlement.rpgGoldLimit,
         ...rewardSettlement.levelResult,
         ...getRpgActionContext(profile, this, now),
@@ -5015,6 +5333,10 @@ function createRpgBossSessionId(now = Date.now()) {
   return `boss_${now.toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function createRpgHuntSessionId(now = Date.now()) {
+  return `hunt_${now.toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function cloneRpgBossSession(session = {}) {
   if (!session || typeof session !== 'object') {
     throw new Error('RPG 보스전 세션이 없습니다.');
@@ -5032,6 +5354,54 @@ function cloneRpgBossSession(session = {}) {
     boss: { ...(session.boss ?? {}) },
     assets: { ...(session.assets ?? {}) },
     lastTurn: session.lastTurn ? { ...session.lastTurn } : null
+  };
+}
+
+function cloneRpgHuntSession(session = {}) {
+  const cloned = cloneRpgBossSession(session);
+  return {
+    ...cloned,
+    battle: {
+      ...(session.battle ?? {}),
+      rewards: { ...(session.battle?.rewards ?? {}) },
+      assets: { ...(session.battle?.assets ?? {}) }
+    },
+    damageTakenTotal: normalizeStoredNonNegativeInteger(session.damageTakenTotal)
+  };
+}
+
+function createRpgHuntBattleResult(session, { win = false, fled = false, turn = null, rewards = null } = {}) {
+  const battle = session.battle ?? {};
+  const finalRewards = rewards ?? (win ? battle.rewards : { xp: 0, coins: 0 });
+  return {
+    ...battle,
+    difficulty: session.difficulty ?? battle.difficulty,
+    difficultyLabel: session.difficultyLabel ?? battle.difficultyLabel,
+    area: session.area ?? battle.area,
+    areaLabel: session.areaLabel ?? battle.areaLabel,
+    monster: session.monster ?? battle.monster,
+    playerLevel: session.player?.level ?? battle.playerLevel,
+    playerPower: turn?.attackPower || session.player?.stats?.attack || battle.playerPower,
+    monsterPower: session.boss?.power ?? battle.monsterPower,
+    mitigatedMonsterPower: session.boss?.power ?? battle.mitigatedMonsterPower,
+    damageTaken: normalizeStoredNonNegativeInteger(session.damageTakenTotal),
+    win,
+    fled,
+    skillId: turn?.skillId ?? battle.skillId,
+    skillLabel: turn?.skillLabel ?? battle.skillLabel ?? '기본 공격',
+    skillMpCost: turn?.mpCost ?? battle.skillMpCost ?? 0,
+    ultimate: Boolean(turn?.ultimate),
+    statusEffect: turn?.statusEffect ?? null,
+    rewards: {
+      xp: normalizeStoredNonNegativeInteger(finalRewards?.xp),
+      coins: normalizeStoredNonNegativeInteger(finalRewards?.coins)
+    },
+    assets: {
+      ...(battle.assets ?? {}),
+      hero: session.assets?.hero ?? battle.assets?.hero,
+      monster: session.assets?.monster ?? battle.assets?.monster,
+      background: session.assets?.background ?? battle.assets?.background
+    }
   };
 }
 

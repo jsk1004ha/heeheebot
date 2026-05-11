@@ -8,9 +8,12 @@ import {
 } from 'discord.js';
 import {
   cashOutDeadlineRound,
+  applyPokerRecommendedHold,
+  clearPokerHold,
   createBlackjackRound,
   createDeadlineRound,
   createPlayerBlackjackRound,
+  createPokerRound,
   createScratchTicket,
   createTimingRound,
   DEADLINE_MAX_SAFE_PRESSES,
@@ -24,8 +27,11 @@ import {
   formatEmojiRaceTrack,
   formatCards,
   formatScratchPrizeShort,
+  drawPokerRound,
   hitBlackjackRound,
   hitPlayerBlackjackRound,
+  getPokerHoldRecommendation,
+  getPokerPayoutTable,
   getScratchTicketProduct,
   getScratchTicketProductStats,
   normalizeEmojiRaceChoice,
@@ -50,6 +56,7 @@ import {
   SCRATCH_TICKET_PRODUCTS,
   SCRATCH_TICKET_SPOT_COUNT,
   standPlayerBlackjackRound,
+  togglePokerHold,
   playSlots
 } from '../systems/casino.js';
 import {
@@ -72,6 +79,7 @@ const pendingDeadlineGames = new Map();
 const pendingTimingGames = new Map();
 const pendingAiBlackjackGames = new Map();
 const pendingPlayerBlackjackGames = new Map();
+const pendingPokerGames = new Map();
 const pendingScratchTickets = new Map();
 let pendingCasinoCleanupTimer = null;
 
@@ -214,6 +222,16 @@ export const casinoCommands = [
 	      option
         .setName('상대')
         .setDescription('비우면 AI와 대결합니다.')
+    ),
+  new SlashCommandBuilder()
+    .setName('포커')
+    .setDescription('5장 드로우 포커입니다. 보류할 카드를 고르고 한 번 교체합니다.')
+    .addIntegerOption((option) =>
+      option
+        .setName('돈')
+        .setDescription('베팅할 골드')
+        .setMinValue(1)
+        .setRequired(true)
     ),
   new SlashCommandBuilder()
     .setName('룰렛')
@@ -360,6 +378,9 @@ export async function handleCasinoCommand(interaction, economy, logger = console
       if (interaction.customId?.startsWith('timing_')) {
         return await handleTimingButton(interaction, economy, logger, options);
       }
+      if (interaction.customId?.startsWith('poker_')) {
+        return await handlePokerButton(interaction, economy, logger);
+      }
       if (interaction.customId?.startsWith('scratch_')) {
         return await handleScratchTicketButton(interaction, economy, logger);
       }
@@ -404,6 +425,7 @@ function isCasinoButtonId(customId) {
     'blackjack_',
     'casino_quick:',
     'deadline_',
+    'poker_',
     'scratch_',
     'timing_'
   ].some((prefix) => customId?.startsWith(prefix));
@@ -417,6 +439,7 @@ export async function cleanupExpiredCasinoGames(economy, logger = console, now =
     pendingScratchTickets,
     pendingTimingGames,
     pendingDeadlineGames,
+    pendingPokerGames,
     pendingAiBlackjackGames
   ]) {
     const result = await cleanupExpiredCasinoPendingMap(
@@ -496,6 +519,7 @@ function getNextPendingCasinoExpiry() {
     ...[...pendingScratchTickets.values()].map((pending) => pending.expiresAt),
     ...[...pendingTimingGames.values()].map((pending) => pending.expiresAt),
     ...[...pendingDeadlineGames.values()].map((pending) => pending.expiresAt),
+    ...[...pendingPokerGames.values()].map((pending) => pending.expiresAt),
     ...[...pendingAiBlackjackGames.values()].map((pending) => pending.expiresAt),
     ...[...pendingBlackjackChallenges.values()].map((pending) => pending.expiresAt),
     ...[...pendingPlayerBlackjackGames.values()].map((pending) => pending.expiresAt)
@@ -669,6 +693,11 @@ async function routeCasinoCommand(interaction, economy, logger = console, option
     return;
   }
 
+  if (interaction.commandName === '포커') {
+    await playPoker(interaction, economy, bet, options);
+    return;
+  }
+
   if (interaction.commandName === '룰렛') {
     const game = playRoulette({
       choice: interaction.options.getString('선택', true),
@@ -740,6 +769,7 @@ function formatCasinoInfo() {
     '- `/럭키세븐`: 주사위 2개 합이 7이면 5.5배',
     '- `/하이로우`: 두 번째 카드가 높음/낮음 적중 시 1.9배, 같은 숫자는 환불',
     '- `/블랙잭`: 승리 1.5배, 내추럴 블랙잭 2배, 무승부 환불',
+    '- `/포커`: 5장 드로우 포커. 보류할 카드를 고르고 한 번 교체, J 이상 원페어부터 환급',
     '- `/룰렛`: 색상/홀짝/구간 2배, 0은 36배',
     '- `/바카라`: 플레이어 2배, 뱅커 1.95배, 타이 9배',
     '- `/크랩스`: 패스/돈패스 라인 승리 2배, 일부 무효는 환불',
@@ -1181,6 +1211,206 @@ async function handleTimingButton(interaction, economy, logger, options = {}) {
       content: `타이밍 게임 실패: ${error.message}`,
       components: []
     });
+  }
+
+  return true;
+}
+
+async function playPoker(interaction, economy, bet, options = {}) {
+  let reserved = false;
+  let gameId = null;
+
+  try {
+    await economy.reserveWager({
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username,
+      bet
+    });
+    reserved = true;
+
+    const game = createPokerRound({
+      bet,
+      deck: options.pokerDeck,
+      randomInt: options.randomInt
+    });
+    gameId = createChallengeId();
+    pendingPokerGames.set(gameId, {
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username,
+      bet,
+      game,
+      reserved: true,
+      expiresAt: Date.now() + CHALLENGE_TTL_MS
+    });
+
+    await interaction.reply(createPokerProgressPayload(interaction.user, game, gameId));
+  } catch (error) {
+    if (gameId) pendingPokerGames.delete(gameId);
+    if (reserved) {
+      await economy.refundReservedWager({
+        guildId: interaction.guildId,
+        userId: interaction.user.id,
+        username: interaction.user.username,
+        bet
+      });
+    }
+    throw error;
+  }
+}
+
+async function handlePokerButton(interaction, economy, logger) {
+  const [action, gameId, rawIndex] = interaction.customId.split(':');
+  const pending = pendingPokerGames.get(gameId);
+
+  if (!pending) {
+    await safeReplyToInteraction(interaction, {
+      content: '이미 만료되었거나 처리된 포커입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (interaction.user.id !== pending.userId) {
+    await safeReplyToInteraction(interaction, {
+      content: '이 포커는 시작한 유저만 조작할 수 있습니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (!['poker_hold', 'poker_recommend', 'poker_clear', 'poker_draw'].includes(action)) {
+    await safeReplyToInteraction(interaction, {
+      content: '알 수 없는 포커 버튼입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  const acknowledged = await safeDeferUpdate(interaction);
+  if (!acknowledged) {
+    logger.warn?.('Poker interaction expired before it could be acknowledged.');
+    return true;
+  }
+
+  if (pendingPokerGames.get(gameId) !== pending) {
+    await safeReplyToInteraction(interaction, {
+      content: '이미 만료되었거나 처리된 포커입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (pending.processing) {
+    await safeReplyToInteraction(interaction, {
+      content: '이전 포커 입력을 처리 중입니다. 잠시 후 다시 눌러주세요.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  pending.processing = true;
+
+  try {
+    if (Date.now() > pending.expiresAt) {
+      pendingPokerGames.delete(gameId);
+      await economy.refundReservedWager({
+        guildId: pending.guildId,
+        userId: pending.userId,
+        username: pending.username,
+        bet: pending.bet
+      });
+      pending.reserved = false;
+      const updated = await sendInteractionUpdate(interaction, {
+        content: '⏰ 포커가 만료되었습니다. 베팅금은 환불되었습니다.',
+        components: []
+      });
+      if (!updated) {
+        logger.warn?.('Poker expired message could not be sent because the interaction expired.');
+      }
+      return true;
+    }
+
+    if (action === 'poker_hold') {
+      pending.game = togglePokerHold(pending.game, Number(rawIndex));
+      pending.expiresAt = Date.now() + CHALLENGE_TTL_MS;
+      const updated = await sendInteractionUpdate(
+        interaction,
+        createPokerProgressPayload(interaction.user, pending.game, gameId)
+      );
+      if (!updated) {
+        logger.warn?.('Poker progress could not be sent because the interaction expired.');
+      }
+      return true;
+    }
+
+    if (action === 'poker_recommend') {
+      pending.game = applyPokerRecommendedHold(pending.game);
+      pending.expiresAt = Date.now() + CHALLENGE_TTL_MS;
+      const updated = await sendInteractionUpdate(
+        interaction,
+        createPokerProgressPayload(interaction.user, pending.game, gameId)
+      );
+      if (!updated) {
+        logger.warn?.('Poker recommendation could not be sent because the interaction expired.');
+      }
+      return true;
+    }
+
+    if (action === 'poker_clear') {
+      pending.game = clearPokerHold(pending.game);
+      pending.expiresAt = Date.now() + CHALLENGE_TTL_MS;
+      const updated = await sendInteractionUpdate(
+        interaction,
+        createPokerProgressPayload(interaction.user, pending.game, gameId)
+      );
+      if (!updated) {
+        logger.warn?.('Poker clear-hold update could not be sent because the interaction expired.');
+      }
+      return true;
+    }
+
+    const game = drawPokerRound(pending.game);
+    pendingPokerGames.delete(gameId);
+    const settlement = await economy.resolveReservedWager({
+      guildId: pending.guildId,
+      userId: pending.userId,
+      username: pending.username,
+      bet: pending.bet,
+      payout: game.payout
+    });
+    pending.reserved = false;
+    const updated = await sendInteractionUpdate(interaction, {
+      content: formatPokerResult(interaction.user, game, settlement),
+      allowedMentions: createAllowedMentionsForUsers([pending.userId]),
+      components: []
+    });
+    if (!updated) {
+      logger.warn?.('Poker result could not be sent because the interaction expired.');
+    }
+  } catch (error) {
+    pendingPokerGames.delete(gameId);
+    if (pending.reserved) {
+      await economy.refundReservedWager({
+        guildId: pending.guildId,
+        userId: pending.userId,
+        username: pending.username,
+        bet: pending.bet
+      }).catch((refundError) => logger.error('Failed to refund poker wager:', refundError));
+    }
+    logger.error(error);
+    const updated = await sendInteractionUpdate(interaction, {
+      content: `포커 실패: ${error.message}`,
+      components: []
+    });
+    if (!updated) {
+      logger.warn?.('Poker failure could not be sent because the interaction expired.');
+    }
+  } finally {
+    if (pendingPokerGames.get(gameId) === pending) {
+      pending.processing = false;
+    }
   }
 
   return true;
@@ -1970,6 +2200,64 @@ function formatKenoResult(user, game, settlement) {
   ].join('\n');
 }
 
+function createPokerProgressPayload(user, game, gameId) {
+  return {
+    content: formatPokerProgress(user, game),
+    allowedMentions: createAllowedMentionsForUsers([user.id]),
+    components: createPokerRows(gameId, game)
+  };
+}
+
+function formatPokerProgress(user, game) {
+  const recommendation = getPokerHoldRecommendation(game.hand);
+  const recommendationText = recommendation.heldCards.length > 0
+    ? `${recommendation.heldCards.join(' ')} (${recommendation.reason})`
+    : recommendation.reason;
+
+  return [
+    `🃏 **드로우 포커** — ${formatUserMention(user, user.username)}`,
+    `베팅금: **${game.bet.toLocaleString()}골드**`,
+    `현재 패: ${formatPokerHand(game.hand, game.held)}`,
+    `현재 판정: **${game.handRank.label}**${game.handRank.multiplier > 0 ? ` · ${formatMultiplier(game.handRank.multiplier)}배` : ''}`,
+    `보류: **${game.held.filter(Boolean).length}/5장**`,
+    `추천 HOLD: **${recommendationText}**`,
+    `배율표: ${formatPokerPayoutTable()}`,
+    '카드를 직접 누르거나 **추천 HOLD**를 적용한 뒤, **교체/승부**로 한 번 교체하고 정산합니다.'
+  ].join('\n');
+}
+
+function formatPokerResult(user, game, settlement) {
+  const outcomeLabel = game.payout > game.bet
+    ? '당첨'
+    : game.payout === game.bet
+      ? '환급'
+      : '꽝';
+  const multiplierText = game.handRank.multiplier > 0
+    ? `${formatMultiplier(game.handRank.multiplier)}배`
+    : '배율 없음';
+
+  return [
+    `🃏 **포커 결과 — ${outcomeLabel}** — ${formatUserMention(user, user.username)}`,
+    `처음 패: ${formatPokerHand(game.initialHand)}`,
+    `최종 패: ${formatPokerHand(game.hand, game.held)}`,
+    `교체: **${game.replacedCount}장**`,
+    `판정: **${game.handRank.label}** · ${multiplierText}`,
+    formatSettlement(game.payout > 0, settlement)
+  ].join('\n');
+}
+
+function formatPokerHand(cards, held = []) {
+  return cards
+    .map((card, index) => held[index] ? `**[${card}]**` : card)
+    .join(' ');
+}
+
+function formatPokerPayoutTable() {
+  return getPokerPayoutTable()
+    .map((entry) => `${entry.label} ${formatMultiplier(entry.multiplier)}배`)
+    .join(' / ');
+}
+
 function createScratchTicketProgressPayload(user, ticket, gameId) {
   return {
     content: formatScratchTicketProgress(user, ticket),
@@ -2068,6 +2356,39 @@ function getScratchTicketButtonStyle(ticket, index) {
     return ButtonStyle.Success;
   }
   return ButtonStyle.Secondary;
+}
+
+function createPokerRows(gameId, game) {
+  const cardRow = new ActionRowBuilder();
+  for (let index = 0; index < game.hand.length; index += 1) {
+    cardRow.addComponents(
+      new ButtonBuilder()
+        .setCustomId(`poker_hold:${gameId}:${index}`)
+        .setLabel(game.held[index] ? `HOLD ${game.hand[index]}` : game.hand[index])
+        .setStyle(game.held[index] ? ButtonStyle.Success : ButtonStyle.Secondary)
+        .setDisabled(game.status !== 'holding')
+    );
+  }
+
+  const actionRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`poker_recommend:${gameId}`)
+      .setLabel('추천 HOLD')
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(game.status !== 'holding'),
+    new ButtonBuilder()
+      .setCustomId(`poker_clear:${gameId}`)
+      .setLabel('보류 초기화')
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(game.status !== 'holding' || !game.held.some(Boolean)),
+    new ButtonBuilder()
+      .setCustomId(`poker_draw:${gameId}`)
+      .setLabel(game.held.every(Boolean) ? '그대로 승부' : '교체/승부')
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(game.status !== 'holding')
+  );
+
+  return [cardRow, actionRow];
 }
 
 function getRevealedScratchTicketAmountCount(ticket, amount) {

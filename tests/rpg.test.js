@@ -335,7 +335,7 @@ test('RPG 카드는 긴 본문을 안전 길이로 줄이고 버튼 행을 3개 
   }
 });
 
-test('RPG 일반 전투 결과는 모바일에서 먼저 읽히는 압축 요약을 보여준다', async () => {
+test('RPG 일반 사냥은 버튼으로 조작하는 수동 전투를 시작한다', async () => {
   const fixture = await createFixture({ randomInt: (min) => min });
 
   try {
@@ -356,14 +356,114 @@ test('RPG 일반 전투 결과는 모바일에서 먼저 읽히는 압축 요약
     const interaction = createChatInputInteraction('사냥');
     const handled = await handleRpgCommand(interaction, fixture.economy);
     const description = getReplyDescription(interaction.replies[0]);
+    const customIds = getComponentCustomIds(interaction.replies[0].components);
 
     assert.equal(handled, true);
-    assert.match(interaction.replies[0].embeds[0].data.title, /RPG 전투 결과 — 승리/);
-    assert.match(description, /📍 .* · .* · \*\*.*\*\*/);
-    assert.match(description, /🎲 판정: 내 \*\*\d+\*\* vs 몬스터/);
-    assert.match(description, /🏁 피해 .*🎁 \+/);
+    assert.match(interaction.replies[0].embeds[0].data.title, /수동 사냥 시작/);
+    assert.match(description, /직접 공격\/스킬\/방어\/포션/);
+    assert.match(description, /몬스터 상태/);
     assert.doesNotMatch(description, /전투 판정:|📊 전적:/);
-    assert.ok(description.length < 900, 'battle result should prioritize a compact summary');
+    assert.ok(description.length < 900, 'hunt start should prioritize a compact summary');
+    assert.ok(customIds.some((id) => id.startsWith('rpg_hunt_action:') && id.endsWith(':basic')));
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('RPG 수동 사냥 버튼은 턴을 진행하고 종료 보상을 정산한다', async () => {
+  const fixture = await createFixture({ randomInt: (min) => min });
+
+  try {
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '용사',
+      characterClass: 'novice',
+      characterGender: 'male',
+      now: 1_000
+    });
+    await mutateProfile(fixture.store, (profile) => {
+      profile.rpg.level = 80;
+      profile.rpg.hp = 500;
+      profile.rpg.mp = 200;
+    });
+
+    const start = createChatInputInteraction('사냥');
+    await handleRpgCommand(start, fixture.economy);
+
+    let currentReply = start.replies[0];
+    let actionId = getComponentCustomIds(currentReply.components)
+      .find((id) => id.startsWith('rpg_hunt_action:') && id.endsWith(':basic'));
+    let finishedReply = null;
+
+    for (let turn = 0; turn < 5 && actionId; turn += 1) {
+      const button = createButtonInteraction(actionId);
+      const handled = await handleRpgCommand(button, fixture.economy);
+      currentReply = button.edits[0] ?? button.updates[0] ?? button.replies[0];
+
+      assert.equal(handled, true);
+      assert.ok(currentReply, 'hunt button should update the message');
+
+      const title = currentReply.embeds?.[0]?.data?.title ?? '';
+      if (/수동 사냥 종료/.test(title)) {
+        finishedReply = currentReply;
+        break;
+      }
+
+      actionId = getComponentCustomIds(currentReply.components)
+        .find((id) => id.startsWith('rpg_hunt_action:') && id.endsWith(':basic'));
+    }
+
+    assert.ok(finishedReply, 'manual hunt should finish through button turns');
+    assert.match(getReplyDescription(finishedReply), /보상: \+/);
+
+    const stored = await fixture.economy.getProfile('guild-1', 'user-1', '용사');
+    assert.equal(stored.rpg.battles, 1);
+    assert.equal(stored.rpg.wins, 1);
+    assert.equal(stored.rpg.daily.battles, 1);
+    assert.equal(stored.rpg.daily.wins, 1);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('RPG 탐사 전투 이벤트는 실제 조우 전투 기록과 보상을 사용한다', async () => {
+  const fixture = await createFixture({ randomInt: (min) => min });
+
+  try {
+    await fixture.economy.chooseRpgClass({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '탐험가',
+      characterClass: 'novice',
+      characterGender: 'female',
+      now: 1_000
+    });
+    await mutateProfile(fixture.store, (profile) => {
+      profile.rpg.level = 80;
+      profile.rpg.hp = 500;
+      profile.rpg.mp = 200;
+    });
+
+    const result = await fixture.economy.exploreRpg({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '탐험가',
+      area: 'forest',
+      now: 2_000
+    });
+
+    assert.equal(result.exploration.event, 'battle');
+    assert.ok(result.battle, 'battle exploration should include an actual combat result');
+    assert.equal(result.battle.win, true);
+    assert.equal(result.xpGained, result.battle.rewards.xp);
+    assert.equal(result.requestedCoinReward, result.battle.rewards.coins);
+    assert.equal(result.profile.rpg.explores, 1);
+    assert.equal(result.profile.rpg.battles, 1);
+    assert.equal(result.profile.rpg.wins, 1);
+    assert.equal(result.profile.rpg.daily.explores, 1);
+    assert.equal(result.profile.rpg.daily.battles, 1);
+    assert.equal(result.profile.rpg.daily.wins, 1);
   } finally {
     await fixture.cleanup();
   }
@@ -681,18 +781,23 @@ test('RPG 던전은 진행형 로그라이트 런으로 시작·선택·유물·
     const highRisk = started.run.currentChoices.find((choice) => choice.risk === 'high');
     const room = await fixture.economy.chooseRpgDungeonRoom({ guildId: 'guild-1', userId: 'user-1', username: '탐험가', runId: started.run.id, revision: started.run.revision, choiceId: highRisk.id, now: 3_000 });
     assert.equal(room.type, 'dungeon_run');
-    assert.equal(room.run.state, 'awaiting_relic');
+    assert.equal(room.run.state, 'active');
+    assert.equal(room.run.floor, 2);
     assert.equal(room.run.highRiskTaken, true);
-    assert.ok(room.run.pendingRelicChoices.length >= 2);
-    assert.ok(room.run.pendingRelicChoices.every((relic) => relic.upside && relic.downside));
 
     await assert.rejects(
       () => fixture.economy.chooseRpgDungeonRoom({ guildId: 'guild-1', userId: 'user-1', username: '탐험가', runId: started.run.id, revision: started.run.revision, choiceId: highRisk.id, now: 3_100 }),
       /이미 지난 던전 선택/
     );
 
-    const relic = room.run.pendingRelicChoices[0];
-    const afterRelic = await fixture.economy.chooseRpgDungeonRelic({ guildId: 'guild-1', userId: 'user-1', username: '탐험가', runId: room.run.id, revision: room.run.revision, relicId: relic.id, now: 4_000 });
+    const secondChoice = room.run.currentChoices.find((choice) => choice.risk !== 'high') ?? room.run.currentChoices[0];
+    const secondRoom = await fixture.economy.chooseRpgDungeonRoom({ guildId: 'guild-1', userId: 'user-1', username: '탐험가', runId: room.run.id, revision: room.run.revision, choiceId: secondChoice.id, now: 4_000 });
+    assert.equal(secondRoom.run.state, 'awaiting_relic');
+    assert.ok(secondRoom.run.pendingRelicChoices.length >= 2);
+    assert.ok(secondRoom.run.pendingRelicChoices.every((relic) => relic.upside && relic.downside));
+
+    const relic = secondRoom.run.pendingRelicChoices[0];
+    const afterRelic = await fixture.economy.chooseRpgDungeonRelic({ guildId: 'guild-1', userId: 'user-1', username: '탐험가', runId: secondRoom.run.id, revision: secondRoom.run.revision, relicId: relic.id, now: 5_000 });
     assert.equal(afterRelic.type, 'dungeon_run');
     assert.equal(afterRelic.run.state, 'active');
     assert.equal(afterRelic.run.relics[0].id, relic.id);
@@ -701,7 +806,7 @@ test('RPG 던전은 진행형 로그라이트 런으로 시작·선택·유물·
     const stored = await fixture.economy.getProfile('guild-1', 'user-1', '탐험가');
     assert.notEqual(stored.rpg.dungeonRun.relics[0].label, 'mutated');
 
-    const result = await clearDungeonRun(fixture.economy, afterRelic, { guildId: 'guild-1', userId: 'user-1', username: '탐험가', now: 5_000 });
+    const result = await clearDungeonRun(fixture.economy, afterRelic, { guildId: 'guild-1', userId: 'user-1', username: '탐험가', now: 6_000 });
     assert.equal(result.type, 'dungeon_result');
     assert.equal(result.outcome, 'cleared');
     assert.equal(result.profile.rpg.dungeonRun, null);
@@ -1292,6 +1397,48 @@ function createStringSelectInteraction(action, selected, options = {}) {
     },
     async update(payload) {
       updates.push(payload);
+    }
+  };
+}
+
+function createButtonInteraction(customId, options = {}) {
+  const replies = [];
+  const updates = [];
+  const edits = [];
+  const followUps = [];
+  const user = options.user ?? { id: 'user-1', username: '용사' };
+  return {
+    commandName: 'rpg',
+    guildId: options.guildId ?? 'guild-1',
+    user,
+    customId,
+    replies,
+    updates,
+    edits,
+    followUps,
+    deferred: false,
+    replied: false,
+    isButton: () => true,
+    isStringSelectMenu: () => false,
+    isChatInputCommand: () => false,
+    inGuild: () => true,
+    async deferUpdate() {
+      this.deferred = true;
+    },
+    async reply(payload) {
+      this.replied = true;
+      replies.push(payload);
+    },
+    async update(payload) {
+      this.replied = true;
+      updates.push(payload);
+    },
+    async editReply(payload) {
+      this.replied = true;
+      edits.push(payload);
+    },
+    async followUp(payload) {
+      followUps.push(payload);
     }
   };
 }

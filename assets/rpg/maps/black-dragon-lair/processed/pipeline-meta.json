@@ -5,14 +5,11 @@
   "kind": "map",
   "generatedWith": "agent-sprite-forge:$generate2dmap",
   "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_black_dragon_lair/background.png",
+  "raw": "assets/rpg/maps/black-dragon-lair/raw/background.png",
   "outputSize": [
     1024,
     576
   ],
-  "prompt": "Black dragon lair with lava and treasure, 16:9 game background, no text.",
-  "raw": "assets/rpg/maps/black-dragon-lair/raw/background.png",
-  "forgeAudit": {
-    "normalized": true,
-    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
-  }
+  "prompt": "assets/rpg/maps/black-dragon-lair/prompt-used.txt",
+  "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
 }

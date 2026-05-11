@@ -5,14 +5,11 @@
   "kind": "map",
   "generatedWith": "agent-sprite-forge:$generate2dmap",
   "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_sacred_arden/background.png",
+  "raw": "assets/rpg/maps/sacred-arden/raw/background.png",
   "outputSize": [
     1024,
     576
   ],
-  "prompt": "Sacred sanctuary Arden holy site, 16:9 game background, no text.",
-  "raw": "assets/rpg/maps/sacred-arden/raw/background.png",
-  "forgeAudit": {
-    "normalized": true,
-    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
-  }
+  "prompt": "assets/rpg/maps/sacred-arden/prompt-used.txt",
+  "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
 }

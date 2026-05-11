@@ -15,8 +15,8 @@
   "animation": "assets/rpg/bosses/ruins-sentinel/idle/processed/animation.gif",
   "generatedWith": "agent-sprite-forge:$generate2dsprite",
   "outputSize": [
-    480,
-    480
+    1536,
+    1024
   ],
   "forgeAudit": {
     "normalized": true,

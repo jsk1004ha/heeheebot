@@ -5,14 +5,11 @@
   "kind": "map",
   "generatedWith": "agent-sprite-forge:$generate2dmap",
   "source": "/home/jio/.codex/generated_images/rpg-forge-source-complete/map_demon_king_outer_wall/background.png",
+  "raw": "assets/rpg/maps/demon-king-outer-wall/raw/background.png",
   "outputSize": [
     1024,
     576
   ],
-  "prompt": "Demon king castle outer wall battlefield, 16:9 game background, no text.",
-  "raw": "assets/rpg/maps/demon-king-outer-wall/raw/background.png",
-  "forgeAudit": {
-    "normalized": true,
-    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
-  }
+  "prompt": "assets/rpg/maps/demon-king-outer-wall/prompt-used.txt",
+  "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
 }

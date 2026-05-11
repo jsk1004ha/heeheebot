@@ -15,8 +15,8 @@
   "label": "동굴 박쥐 대기 모션",
   "generatedWith": "agent-sprite-forge:$generate2dsprite",
   "outputSize": [
-    256,
-    256
+    1254,
+    1254
   ],
   "forgeAudit": {
     "normalized": true,

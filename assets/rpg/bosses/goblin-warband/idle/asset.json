@@ -15,8 +15,8 @@
   "raw": "assets/rpg/bosses/goblin-warband/idle/raw/raw-sheet.png",
   "processedDir": "assets/rpg/bosses/goblin-warband/idle/processed",
   "outputSize": [
-    480,
-    480
+    1254,
+    1254
   ],
   "forgeAudit": {
     "normalized": true,

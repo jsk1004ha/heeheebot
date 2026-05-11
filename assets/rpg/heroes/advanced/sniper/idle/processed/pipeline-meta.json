@@ -5,16 +5,13 @@
   "kind": "sprite",
   "sheet": "single",
   "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "source": "/home/jio/.codex/generated_images/019dfd64-811e-7561-a000-5b3212cc9327/ig_0be8125a22524a6e0169fc2ae43048819194033095fa3a6e25.png",
+  "raw": "assets/rpg/heroes/advanced/sniper/idle/raw/raw-sheet.png",
+  "clean": "assets/rpg/heroes/advanced/sniper/idle/processed/clean.png",
   "outputSize": [
     128,
     128
   ],
-  "prompt": "Use $generate2dsprite to create a clean HD 2D RPG male sniper advanced class hero, single full-body sprite centered, green-brown cloak, eagle-feather hood, longbow/crossbow kept inside silhouette, solid #FF00FF background, no text.",
-  "source": "/home/jio/.codex/generated_images/019dfd64-811e-7561-a000-5b3212cc9327/ig_0be8125a22524a6e0169fc2ae43048819194033095fa3a6e25.png",
-  "raw": "assets/rpg/heroes/advanced/sniper/idle/raw/raw-sheet.png",
-  "clean": "assets/rpg/heroes/advanced/sniper/idle/processed/clean.png",
-  "forgeAudit": {
-    "normalized": true,
-    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
-  }
+  "prompt": "assets/rpg/heroes/advanced/sniper/idle/prompt-used.txt",
+  "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
 }

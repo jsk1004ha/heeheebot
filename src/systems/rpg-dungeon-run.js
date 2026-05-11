@@ -387,7 +387,7 @@ export function resolveRpgDungeonRoom({
   next.mp = Math.max(0, Math.min(next.maxMp, next.mp - (choice.type === 'rest' ? 0 : 2) + mpRecovered));
   next.rewardPool.xp += Math.max(0, reward.xp);
   next.rewardPool.coins += Math.max(0, reward.coins);
-  next.log = [formatRoomLog(next, choice, damage, reward), ...next.log].slice(0, 3);
+  next.log = [formatRoomLog(next, choice, damage, reward), ...next.log].slice(0, 5);
   next.lastRoomResult = {
     choiceId: choice.id,
     type: choice.type,
@@ -416,9 +416,17 @@ export function resolveRpgDungeonRoom({
     return { run: next, choice, roomResult: next.lastRoomResult };
   }
 
-  next.state = 'awaiting_relic';
   next.currentChoices = [];
-  next.pendingRelicChoices = generateRpgDungeonRelicChoices({ run: next, randomInt });
+  if (shouldOfferRpgDungeonRelicChoice(next)) {
+    next.state = 'awaiting_relic';
+    next.pendingRelicChoices = generateRpgDungeonRelicChoices({ run: next, randomInt });
+    return { run: next, choice, roomResult: next.lastRoomResult };
+  }
+
+  next.floor = Math.min(next.maxFloors, next.floor + 1);
+  next.state = 'active';
+  next.pendingRelicChoices = [];
+  next.currentChoices = generateRpgDungeonRoomChoices({ run: next, playerLevel, randomInt });
   return { run: next, choice, roomResult: next.lastRoomResult };
 }
 
@@ -469,7 +477,7 @@ export function applyRpgDungeonRelicChoice({
   next.state = 'active';
   next.pendingRelicChoices = [];
   next.currentChoices = generateRpgDungeonRoomChoices({ run: next, playerLevel, randomInt });
-  next.log = [`유물 ${relic.label} 획득`, ...next.log].slice(0, 3);
+  next.log = [`유물 ${relic.label} 획득`, ...next.log].slice(0, 5);
   next.updatedAt = now;
   next.revision += 1;
 
@@ -478,6 +486,12 @@ export function applyRpgDungeonRelicChoice({
 
 function room(id, type, label, description, risk = 'normal') {
   return { id, type, label, description, risk, highRisk: risk === 'high' };
+}
+
+function shouldOfferRpgDungeonRelicChoice(run) {
+  const floor = clampInt(run?.floor, 1, 5, 1);
+  const maxFloors = clampInt(run?.maxFloors, 3, 5, 3);
+  return floor < maxFloors && floor % 2 === 0;
 }
 
 function formatRoomLog(run, choice, damage, reward) {

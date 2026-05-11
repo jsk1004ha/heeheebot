@@ -15,8 +15,8 @@
   "label": "암흑 기사 대기 모션",
   "generatedWith": "agent-sprite-forge:$generate2dsprite",
   "outputSize": [
-    384,
-    384
+    1254,
+    1254
   ],
   "forgeAudit": {
     "normalized": true,

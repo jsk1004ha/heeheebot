@@ -1,28 +1,17 @@
 {
-  "target": "asset",
-  "mode": "single",
-  "prompt": "Use $generate2dsprite to create a clean HD transparent RPG archmage staff icon, single asset, centered wooden staff with floating blue gem, solid #FF00FF background, no text.",
-  "role": "",
-  "input": "/home/jio/code/heeheebot/heeheebot/assets/rpg/items/archmage-staff/raw/raw-sheet.png",
-  "threshold": 100,
-  "edge_threshold": 150,
-  "duration": 160,
-  "single_size": 512,
   "id": "item_archmage_staff_icon",
   "label": "대마도사의 지팡이 아이콘",
   "category": "item",
   "kind": "sprite",
   "sheet": "single",
   "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb433bdd188191a39e68f307b42266.png",
+  "raw": "assets/rpg/items/archmage-staff/raw/raw-sheet.png",
+  "clean": "assets/rpg/items/archmage-staff/processed/clean.png",
   "outputSize": [
     256,
     256
   ],
-  "source": "/home/jio/.codex/generated_images/019dfd0c-ef4e-7790-ab2e-8df3275f3d8c/ig_0bd709b08cd35d490169fb433bdd188191a39e68f307b42266.png",
-  "raw": "assets/rpg/items/archmage-staff/raw/raw-sheet.png",
-  "clean": "assets/rpg/items/archmage-staff/processed/clean.png",
-  "forgeAudit": {
-    "normalized": true,
-    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
-  }
+  "prompt": "assets/rpg/items/archmage-staff/prompt-used.txt",
+  "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
 }

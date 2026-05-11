@@ -1,30 +1,15 @@
 {
-  "schemaVersion": 1,
-  "skill": "$generate2dmap",
-  "mapMode": "baked_scene_mode",
-  "visualModel": "baked_raster",
-  "engineTarget": "Discord attachment battle background",
-  "originalSize": [
-    1024,
-    576
-  ],
-  "outputSize": [
-    1024,
-    576
-  ],
-  "normalization": "none",
-  "auditReason": "existing forge map backfilled with durable pipeline metadata during map audit",
-  "recordedAt": "2026-05-07T10:26:54Z",
-  "generatedWith": "agent-sprite-forge:$generate2dmap",
-  "raw": "assets/rpg/maps/shadow-marsh/raw/background.png",
-  "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_0bd4e574af6750910169fbef9abc708191bcc139a8539bb94e.png",
   "id": "map_shadow_marsh",
   "label": "그림자 늪 전투 배경",
   "category": "map",
   "kind": "map",
-  "prompt": "Use $generate2dmap to create a baked_scene_mode clean HD hand-painted 2D RPG battle background: eerie shadow marsh, dark water, twisted roots, purple fog, open center island for hero and monster sprites, no characters, no UI, no text.",
-  "forgeAudit": {
-    "normalized": true,
-    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
-  }
+  "generatedWith": "agent-sprite-forge:$generate2dmap",
+  "source": "/home/jio/.codex/generated_images/019dfff0-7ced-7153-a30a-e994e9d494a3/ig_0bd4e574af6750910169fbef9abc708191bcc139a8539bb94e.png",
+  "raw": "assets/rpg/maps/shadow-marsh/raw/background.png",
+  "outputSize": [
+    1024,
+    576
+  ],
+  "prompt": "assets/rpg/maps/shadow-marsh/prompt-used.txt",
+  "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
 }

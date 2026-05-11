@@ -5,16 +5,13 @@
   "kind": "sprite",
   "sheet": "single",
   "generatedWith": "agent-sprite-forge:$generate2dsprite",
+  "source": "/home/jio/.codex/generated_images/019dfd64-811e-7561-a000-5b3212cc9327/ig_0be8125a22524a6e0169fc2ae43048819194033095fa3a6e25.png",
+  "raw": "assets/rpg/heroes/advanced/crusader/idle/raw/raw-sheet.png",
+  "clean": "assets/rpg/heroes/advanced/crusader/idle/processed/clean.png",
   "outputSize": [
     128,
     128
   ],
-  "prompt": "Use $generate2dsprite to create a clean HD 2D RPG male crusader advanced class hero, single full-body sprite centered, white-gold heavy armor, holy tower shield and sword kept close, compact sacred glow, solid #FF00FF background, no text.",
-  "source": "/home/jio/.codex/generated_images/019dfd64-811e-7561-a000-5b3212cc9327/ig_0be8125a22524a6e0169fc2ae43048819194033095fa3a6e25.png",
-  "raw": "assets/rpg/heroes/advanced/crusader/idle/raw/raw-sheet.png",
-  "clean": "assets/rpg/heroes/advanced/crusader/idle/processed/clean.png",
-  "forgeAudit": {
-    "normalized": true,
-    "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
-  }
+  "prompt": "assets/rpg/heroes/advanced/crusader/idle/prompt-used.txt",
+  "note": "agent-sprite-forge manifest contract audit; legacy pixels preserved/postprocessed into runtime-safe outputs"
 }
