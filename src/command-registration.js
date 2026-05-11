@@ -21,6 +21,7 @@ import { getSwordCommandPayloads } from './commands/sword.js';
 import { getTamagotchiCommandPayloads } from './commands/tamagotchi.js';
 import { getTimetableCommandPayloads } from './commands/timetable.js';
 import { getTodayCommandPayloads } from './commands/today.js';
+import { getUnoCommandPayloads } from './commands/uno.js';
 import { getWordChainCommandPayloads } from './commands/wordchain.js';
 import { getWordleCommandPayloads } from './commands/wordle.js';
 
@@ -35,6 +36,7 @@ export function getApplicationCommandPayloads() {
     ...getStartCommandPayloads(),
     ...getTodayCommandPayloads(),
     ...getPollCommandPayloads(),
+    ...getUnoCommandPayloads(),
     ...getModerationCommandPayloads(),
     ...getWordChainCommandPayloads(),
     ...getChoseongCommandPayloads(),

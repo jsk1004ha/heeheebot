@@ -58,6 +58,7 @@ import {
 } from './commands/interactions.js';
 import { handleTimetableCommand } from './commands/timetable.js';
 import { handleTodayCommand } from './commands/today.js';
+import { handleUnoCommand } from './commands/uno.js';
 import {
   handleWordChainCommand,
   handleWordChainMessage
@@ -85,6 +86,7 @@ import {
 import { SeasonService, SEASON_POINT_SOURCES } from './systems/seasons.js';
 import { TamagotchiService } from './systems/tamagotchi.js';
 import { TimetableService } from './systems/timetable.js';
+import { UnoGameManager } from './systems/uno.js';
 import { WordleService } from './systems/wordle.js';
 
 export function createBot({
@@ -124,6 +126,7 @@ export function createBot({
   const wordle = new WordleService(store);
   const numberBaseball = new NumberBaseballService(store);
   const polls = new PollManager({ logger });
+  const uno = new UnoGameManager();
   let stopMealAnnouncementScheduler = () => {};
   let stopStockAlertScheduler = () => {};
   let stopLotteryDrawScheduler = () => {};
@@ -220,6 +223,7 @@ export function createBot({
         || await handleCompatibilityCommand(interaction)
         || await handleHelpCommand(interaction)
         || await handlePollCommand(interaction, polls, logger)
+        || await handleUnoCommand(interaction, uno, logger)
         || await handleModerationCommand(interaction, moderation, logger)
         || await handleWordChainCommand(interaction, economy, logger)
         || await handleChoseongCommand(interaction, economy, logger)
@@ -333,6 +337,7 @@ export function createBot({
     wordle,
     numberBaseball,
     polls,
+    uno,
     stopMealAnnouncements() {
       stopMealAnnouncementScheduler();
     },
