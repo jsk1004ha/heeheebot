@@ -44,6 +44,7 @@ import {
   handleStockCommand
 } from './commands/stocks.js';
 import {
+  guardInteractionResponse,
   isUnknownInteractionError,
   isUserFacingInteractionError,
   logUnexpectedInteractionError,
@@ -172,6 +173,7 @@ export function createBot({
 
     if (!isSupportedCommandInteraction(interaction)) return;
 
+    const responseGuard = guardInteractionResponse(interaction, { logger });
     try {
       const handledAccountLinkComponent = await handleAccountLinkComponent(interaction, economy);
       if (handledAccountLinkComponent) return;
@@ -247,6 +249,8 @@ export function createBot({
       } catch (replyError) {
         logger.error('Failed to send command error response:', replyError);
       }
+    } finally {
+      responseGuard.stop();
     }
   });
 
