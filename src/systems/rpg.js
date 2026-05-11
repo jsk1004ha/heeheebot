@@ -709,7 +709,7 @@ const RPG_ITEMS = Object.freeze({
   mana_potion: Object.freeze({ label: '마나 포션', description: 'MP를 25 회복합니다.', type: 'consumable', category: 'consumable', price: 140, heal: 0, mpHeal: 25, assetId: 'item_mana_potion_icon' }),
   detox_potion: Object.freeze({ label: '해독제', description: '독/저주 계열 상태이상 대응 소모품입니다.', type: 'consumable', category: 'consumable', price: 180, heal: 12, mpHeal: 0, assetId: 'item_potion_icon' }),
   guard_elixir: Object.freeze({ label: '수호 비약', description: '전투 전 방어를 보강하는 제작 소모품입니다.', type: 'consumable', category: 'consumable', price: 260, heal: 0, mpHeal: 10, assetId: 'item_mana_potion_icon' }),
-  enhancement_stone: Object.freeze({ label: '강화석', description: '전리품 강화 보조 재료입니다.', type: 'material', category: 'upgrade', price: 0, assetId: 'item_enhancement_stone_icon', shopHidden: true }),
+  enhancement_stone: Object.freeze({ label: '강화석', description: '인벤토리 장비 강화 보조 재료입니다.', type: 'material', category: 'upgrade', price: 0, assetId: 'item_enhancement_stone_icon', shopHidden: true }),
   artisan_hammer: Object.freeze({ label: '장인의 망치', description: '제작 성공률을 높이는 보조 재료입니다.', type: 'material', category: 'upgrade', price: 0, assetId: 'item_blacksmith_hammer_icon', shopHidden: true }),
   healing_herb: Object.freeze({ label: '약초', description: '초원과 숲에서 얻는 포션 재료입니다.', type: 'material', category: 'material', price: 0, assetId: 'item_potion_icon', shopHidden: true }),
   iron_ore: Object.freeze({ label: '철광석', description: '광산에서 캐는 기본 무기 재료입니다.', type: 'material', category: 'material', price: 0, assetId: 'item_iron_ore_icon', shopHidden: true }),
@@ -1101,7 +1101,7 @@ const RPG_TUTORIAL_STEPS = Object.freeze({
   first_battle: Object.freeze({ label: '첫 사냥', description: '사냥을 한 번 진행해 전투 보상 흐름을 익힙니다.', command: '/rpg 사냥', action: 'battle', actionLabel: '사냥하기', requirement: Object.freeze({ type: 'battles', count: 1 }), rewards: Object.freeze({ xp: 50, coins: 80, items: Object.freeze({ potion: 1 }) }) }),
   first_recovery: Object.freeze({ label: '첫 정비', description: '휴식이나 회복 아이템으로 HP/MP를 정비합니다.', command: '/rpg 휴식 또는 /rpg 인벤토리', action: 'rest', actionLabel: '휴식하기', requirement: Object.freeze({ type: 'recoveryActions', count: 1 }), rewards: Object.freeze({ xp: 40, coins: 40, items: Object.freeze({ mana_potion: 1 }) }) }),
   first_shop: Object.freeze({ label: '첫 상점 정비', description: '상점에서 포션이나 장비를 구매합니다.', command: '/rpg 상점', action: 'shop', actionLabel: '상점 가기', requirement: Object.freeze({ type: 'shopPurchases', count: 1 }), rewards: Object.freeze({ xp: 60, coins: 120, items: Object.freeze({ enhancement_stone: 1 }) }) }),
-  first_quest: Object.freeze({ label: '첫 퀘스트 보상', description: '완료한 퀘스트 보상을 받습니다.', command: '/rpg 퀘스트', action: 'quest', actionLabel: '퀘스트 보기', requirement: Object.freeze({ type: 'claimedQuests', count: 1 }), rewards: Object.freeze({ xp: 80, coins: 160, items: Object.freeze({ potion: 1 }) }) }),
+  first_quest: Object.freeze({ label: '첫 퀘스트 보상', description: '완료한 퀘스트 보상을 받습니다.', command: '/rpg 메뉴 → 오늘 할 일', action: 'quest', actionLabel: '퀘스트 보기', requirement: Object.freeze({ type: 'claimedQuests', count: 1 }), rewards: Object.freeze({ xp: 80, coins: 160, items: Object.freeze({ potion: 1 }) }) }),
   first_world_step: Object.freeze({ label: '월드맵 첫걸음', description: '탐사, 지역 이동, 보스전 중 하나로 월드 진행도를 열어봅니다.', command: '/rpg 지역 또는 /rpg 탐사', action: 'area', actionLabel: '월드맵 보기', requirement: Object.freeze({ type: 'worldSteps', count: 1 }), rewards: Object.freeze({ xp: 100, coins: 200, items: Object.freeze({ potion: 1 }) }) })
 });
 
@@ -1646,7 +1646,7 @@ export function getRpgAdventureGuide(profile, {
             type: 'endgame',
             label: '엔드게임 파밍',
             progressText: `${highestUnlockedArea.label} 진행 중`,
-            description: '레이드, 던전, 전리품 파밍으로 캐릭터를 강화하세요.'
+            description: '레이드, 던전, 장비 파밍으로 캐릭터를 강화하세요.'
           };
 
   return {
@@ -3377,7 +3377,7 @@ function getRecommendedRpgAction({
     return {
       type: 'quest_claim',
       label: `${quest.label} 보상`,
-      command: `/rpg 퀘스트 퀘스트:${quest.label}`,
+      command: '/rpg 메뉴 → 오늘 할 일',
       reason: '완료한 일반 퀘스트 보상을 받을 수 있습니다.'
     };
   }
@@ -3392,8 +3392,8 @@ function getRecommendedRpgAction({
       return {
         type: 'explore',
         label: `${currentArea.label} 탐험`,
-        command: '/rpg 탐험',
-        reason: '전투 대기시간 동안 탐험으로 보상과 전리품을 노릴 수 있습니다.'
+        command: '/rpg 탐사',
+        reason: '전투 대기시간 동안 탐험으로 보상과 장비를 노릴 수 있습니다.'
       };
     }
 
@@ -3402,7 +3402,7 @@ function getRecommendedRpgAction({
         type: 'explore',
         label: `${currentArea.label} 탐험`,
         command: exploreAction.command,
-        reason: '전투 대기시간 동안 탐험으로 보상과 전리품을 노릴 수 있습니다.'
+        reason: '전투 대기시간 동안 탐험으로 보상과 장비를 노릴 수 있습니다.'
       };
     }
 
@@ -3427,7 +3427,7 @@ function getRecommendedRpgAction({
     return {
       type: 'wait',
       label: '쿨다운 대기',
-      command: '/rpg 상태',
+      command: '/rpg 프로필',
       reason: battleAction?.reason ?? '주요 RPG 행동이 아직 대기 중입니다.'
     };
   }
@@ -3445,7 +3445,7 @@ function getRecommendedRpgAction({
   return {
     type: 'battle',
     label: `${currentArea.label} 전투`,
-    command: '/rpg 전투',
+    command: '/rpg 사냥',
     reason: nextLockedArea
       ? `${nextLockedArea.label} 해금을 위해 레벨과 장비를 올리는 단계입니다.`
       : '엔드게임 파밍을 위해 전투와 던전을 반복하세요.'

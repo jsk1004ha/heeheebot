@@ -18,7 +18,7 @@ const HELP_CATEGORIES = Object.freeze({
     ].join('\n'),
     fields: Object.freeze([
       { name: '성장/프로필', value: '`/프로필` `/출석` `/랭킹` `/재화정보`' },
-      { name: '전투 성장', value: '`/rpg 메뉴` `/rpg 전투` `/검강화` `/검배틀` `/검도감` `/시즌 정보`' },
+      { name: '전투 성장', value: '`/rpg 메뉴` `/rpg 사냥` `/검강화` `/검배틀` `/검도감` `/시즌 정보`' },
       { name: '경제/놀이', value: '`/주식 시세` `/주식 보유` `/낚시` `/카지노정보` `/희진다마고치`' }
     ])
   }),
@@ -40,9 +40,9 @@ const HELP_CATEGORIES = Object.freeze({
     title: 'RPG 도움말',
     description: '캐릭터를 키우고 전직, 스킬트리, 장비, 레이드까지 이어가는 성장 루프입니다.',
     fields: Object.freeze([
-      { name: '시작/상태', value: '`/rpg 시작` `/rpg 튜토리얼` `/rpg 메뉴` `/rpg 상태` `/rpg 지역`' },
-      { name: '성장 루프', value: '`/rpg 전투` `/rpg 탐험` `/rpg 던전` `/rpg 휴식` `/rpg 일일`' },
-      { name: '심화', value: '`/rpg 스킬트리` `/rpg 전직` `/rpg 보스` `/rpg 레이드` `/rpg 길드레이드`' }
+      { name: '시작/상태', value: '`/rpg 시작` `/rpg 튜토리얼` `/rpg 메뉴` `/rpg 프로필` `/rpg 지역`' },
+      { name: '성장 루프', value: '`/rpg 사냥` `/rpg 탐사` `/rpg 던전` `/rpg 휴식` `/rpg 일일`' },
+      { name: '심화', value: '`/rpg 스토리` `/rpg 도감` `/rpg 전직` `/rpg 보스` `/rpg 레이드` `/rpg 길드레이드`' }
     ])
   }),
   sword: Object.freeze({
@@ -74,7 +74,7 @@ const HELP_CATEGORIES = Object.freeze({
     description: '학교 급식, 시간표, 오늘 정보, 커뮤니티 활동처럼 서버에서 자주 쓰는 편의 기능입니다.',
     fields: Object.freeze([
       { name: '생활 정보', value: '`/급식` `/자동급식 상태` `/시간표` `/오늘` `/운세` `/선택` `/투표`' },
-      { name: '커뮤니티', value: '`/칭호` `/미션` `/복권` `/이벤트` `/끝말잇기` `/초성게임`' },
+      { name: '커뮤니티', value: '`/업적` `/칭호` `/미션` `/복권` `/서버이벤트` `/활동요약` `/끝말잇기` `/초성게임`' },
       { name: '관리/안전', value: '`/청소` `/경고` 등 서버 권한 명령은 권한이 있을 때만 사용됩니다.' }
     ])
   }),

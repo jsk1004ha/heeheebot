@@ -1,6 +1,7 @@
 import { MessageFlags, SlashCommandBuilder } from 'discord.js';
 import {
   formatLotteryDrawTime,
+  getAchievementCategories,
   getCommunityTitles,
   getEventTypes,
   getLotteryDrawScheduleText,
@@ -24,10 +25,52 @@ const communityCommandNames = new Set([
   '활동요약'
 ]);
 
+const ACHIEVEMENT_VIEW_LABELS = Object.freeze({
+  summary: '요약',
+  claimable: '수령 가능',
+  progress: '진행 중',
+  completed: '완료',
+  all: '전체'
+});
+
+const ACHIEVEMENT_TIER_LABELS = Object.freeze({
+  bronze: '브론즈',
+  silver: '실버',
+  gold: '골드',
+  legendary: '전설'
+});
+
+const TITLE_VIEW_LABELS = Object.freeze({
+  owned: '보유',
+  all: '전체',
+  locked: '미보유'
+});
+
 export const communityCommands = [
   new SlashCommandBuilder()
     .setName('업적')
-    .setDescription('업적 진행도와 보상을 확인하고 완료 업적을 수령합니다.'),
+    .setDescription('업적 진행도와 보상을 확인하고 완료 업적을 수령합니다.')
+    .addStringOption((option) =>
+      option
+        .setName('분류')
+        .setDescription('확인할 업적 분류')
+        .addChoices(
+          { name: '전체', value: 'all' },
+          ...getAchievementCategories().map((category) => ({ name: category.label, value: category.id }))
+        )
+    )
+    .addStringOption((option) =>
+      option
+        .setName('보기')
+        .setDescription('표시 방식')
+        .addChoices(
+          { name: '요약', value: 'summary' },
+          { name: '수령 가능', value: 'claimable' },
+          { name: '진행 중', value: 'progress' },
+          { name: '완료', value: 'completed' },
+          { name: '전체', value: 'all' }
+        )
+    ),
   new SlashCommandBuilder()
     .setName('칭호')
     .setDescription('보유 칭호를 확인하거나 장착합니다.')
@@ -38,6 +81,16 @@ export const communityCommands = [
         .addChoices(
           { name: '칭호 해제', value: 'none' },
           ...getCommunityTitles().map((title) => ({ name: title.label, value: title.id }))
+        )
+    )
+    .addStringOption((option) =>
+      option
+        .setName('보기')
+        .setDescription('칭호 도감 표시 방식')
+        .addChoices(
+          { name: '보유', value: 'owned' },
+          { name: '전체', value: 'all' },
+          { name: '미보유', value: 'locked' }
         )
     ),
   new SlashCommandBuilder()
@@ -202,8 +255,10 @@ async function routeCommunityCommand(interaction, community) {
   };
 
   if (interaction.commandName === '업적') {
+    const category = interaction.options.getString('분류') ?? 'all';
+    const view = interaction.options.getString('보기') ?? 'summary';
     const result = await community.claimAchievements(base);
-    await interaction.reply(formatAchievements(result));
+    await interaction.reply(formatAchievements(result, { category, view }));
     return;
   }
 
@@ -218,8 +273,9 @@ async function routeCommunityCommand(interaction, community) {
       return;
     }
 
+    const view = interaction.options.getString('보기') ?? 'owned';
     const overview = await community.getOverview(base);
-    await interaction.reply(formatTitles(overview.titles));
+    await interaction.reply(formatTitles(overview.titles, { view }));
     return;
   }
 
@@ -326,36 +382,126 @@ async function routeCommunityCommand(interaction, community) {
   }
 }
 
-function formatAchievements(result) {
+function formatAchievements(result, { category = 'all', view = 'summary' } = {}) {
+  const safeView = ACHIEVEMENT_VIEW_LABELS[view] ? view : 'summary';
+  const categoryLabel = category === 'all'
+    ? '전체'
+    : result.achievements.find((achievement) => achievement.category === category)?.categoryLabel ?? '전체';
+  const allAchievements = result.achievements.filter((achievement) => (
+    category === 'all' || achievement.category === category
+  ));
+  const claimedNowIds = new Set(result.claimed.map((achievement) => achievement.id));
+  const filteredAchievements = safeView === 'claimable' && claimedNowIds.size > 0
+    ? allAchievements.filter((achievement) => claimedNowIds.has(achievement.id))
+    : filterAchievementsForView(allAchievements, safeView);
+  const displayedAchievements = sortAchievementDisplay(filteredAchievements).slice(0, 12);
+  const completedCount = result.achievements.filter((achievement) => achievement.claimed || achievement.completed).length;
+  const ownedRewardTitles = result.titles.filter((title) => title.owned).length;
   const claimText = result.claimed.length > 0
-    ? `\n\n🎁 이번에 수령: ${result.claimed.map((item) => `**${item.title}**`).join(', ')} / +${result.totalCoins.toLocaleString()}골드, +${result.totalXp.toLocaleString()} XP`
-    : '\n\n받을 수 있는 새 업적 보상은 없습니다.';
-  const body = result.achievements
-    .map((achievement) => {
-      const mark = achievement.claimed ? '✅' : achievement.completed ? '🎁' : '⬜';
-      const titleReward = achievement.reward.title ? `, 칭호 ${achievement.reward.title.label}` : '';
-      return `${mark} **${achievement.title}** — ${achievement.description} (${achievement.progress}) / 보상 ${achievement.reward.coins.toLocaleString()}골드, ${achievement.reward.xp.toLocaleString()} XP${titleReward}`;
-    })
-    .join('\n');
+    ? `🎁 이번에 수령: ${result.claimed.map((item) => `**${item.title}**`).join(', ')} / +${result.totalCoins.toLocaleString()}골드, +${result.totalXp.toLocaleString()} XP`
+    : '🎁 받을 수 있는 새 업적 보상은 없습니다.';
+  const body = displayedAchievements.length > 0
+    ? displayedAchievements.map(formatAchievementLine).join('\n')
+    : '표시할 업적이 없습니다.';
+  const moreText = filteredAchievements.length > displayedAchievements.length
+    ? `외 ${filteredAchievements.length - displayedAchievements.length}개는 \`/업적 보기:전체\` 또는 분류 선택으로 더 좁혀보세요.`
+    : null;
 
-  return `🏆 **업적**\n${body}${claimText}\n현재 골드: ${result.profile.balance.toLocaleString()}골드`;
+  return [
+    '🏆 **업적 도감**',
+    `완료 ${completedCount}/${result.achievements.length} · 칭호 ${ownedRewardTitles}/${result.titles.length} · 현재 골드 ${result.profile.balance.toLocaleString()}골드`,
+    `보기: ${categoryLabel} / ${ACHIEVEMENT_VIEW_LABELS[safeView]}`,
+    body,
+    moreText,
+    claimText
+  ].filter(Boolean).join('\n');
 }
 
-function formatTitles(titles) {
-  const owned = titles.filter((title) => title.owned);
-  if (owned.length === 0) {
-    return '🏷️ **칭호**\n아직 보유한 칭호가 없습니다. `/업적`, `/상점 구매`로 칭호를 얻어보세요.';
+function filterAchievementsForView(achievements, view) {
+  if (view === 'claimable') {
+    return achievements.filter((achievement) => achievement.completed && !achievement.claimed);
   }
+  if (view === 'progress') {
+    return achievements.filter((achievement) => !achievement.completed);
+  }
+  if (view === 'completed') {
+    return achievements.filter((achievement) => achievement.completed || achievement.claimed);
+  }
+  if (view === 'all') return achievements;
 
-  const body = owned
-    .map((title) => `${title.equipped ? '✅' : '▫️'} ${title.label} — ${title.description}`)
-    .join('\n');
-  return `🏷️ **보유 칭호**\n${body}\n\n장착하려면 \`/칭호 선택\`을 사용하세요.`;
+  const claimable = achievements.filter((achievement) => achievement.completed && !achievement.claimed);
+  const progress = achievements
+    .filter((achievement) => !achievement.completed)
+    .sort((a, b) => b.percent - a.percent || a.title.localeCompare(b.title))
+    .slice(0, 8);
+  const completed = achievements
+    .filter((achievement) => achievement.claimed)
+    .slice(0, Math.max(0, 12 - claimable.length - progress.length));
+
+  return [...claimable, ...progress, ...completed];
+}
+
+function sortAchievementDisplay(achievements) {
+  const stateRank = (achievement) => {
+    if (achievement.completed && !achievement.claimed) return 0;
+    if (!achievement.completed) return 1;
+    return 2;
+  };
+
+  return [...achievements].sort((a, b) => (
+    stateRank(a) - stateRank(b)
+      || b.percent - a.percent
+      || a.categoryLabel.localeCompare(b.categoryLabel)
+      || a.title.localeCompare(b.title)
+  ));
+}
+
+function formatAchievementLine(achievement) {
+  const mark = achievement.claimed ? '✅' : achievement.completed ? '🎁' : '⬜';
+  const tier = ACHIEVEMENT_TIER_LABELS[achievement.tier] ?? achievement.tier;
+  const titleReward = achievement.reward.title ? `, 칭호 ${achievement.reward.title.label}` : '';
+
+  return `${mark} [${achievement.categoryLabel}/${tier}] **${achievement.title}** ${achievement.progressBar} ${achievement.progress} — 보상 ${achievement.reward.coins.toLocaleString()}골드, ${achievement.reward.xp.toLocaleString()} XP${titleReward}`;
+}
+
+function formatTitles(titles, { view = 'owned' } = {}) {
+  const safeView = TITLE_VIEW_LABELS[view] ? view : 'owned';
+  const owned = titles.filter((title) => title.owned);
+  const equipped = titles.find((title) => title.equipped);
+  const filteredTitles = filterTitlesForView(titles, safeView);
+  const displayedTitles = filteredTitles.slice(0, 15);
+  const body = displayedTitles.length > 0
+    ? displayedTitles.map(formatTitleLine).join('\n')
+    : '표시할 칭호가 없습니다.';
+  const moreText = filteredTitles.length > displayedTitles.length
+    ? `외 ${filteredTitles.length - displayedTitles.length}개는 \`/칭호 보기:전체\`로 확인할 수 있습니다.`
+    : null;
+
+  return [
+    '🏷️ **칭호 도감**',
+    `보유 ${owned.length}/${titles.length} · 장착 ${equipped ? equipped.label : '없음'} · 보기 ${TITLE_VIEW_LABELS[safeView]}`,
+    body,
+    moreText,
+    '장착은 `/칭호 선택`, 획득은 `/업적` 또는 `/상점 구매`에서 할 수 있습니다.'
+  ].filter(Boolean).join('\n');
+}
+
+function filterTitlesForView(titles, view) {
+  if (view === 'all') return titles;
+  if (view === 'locked') return titles.filter((title) => !title.owned);
+  return titles.filter((title) => title.owned);
+}
+
+function formatTitleLine(title) {
+  const mark = title.equipped ? '✅' : title.owned ? '▫️' : '🔒';
+  const lockedHint = title.owned ? '' : ` · 획득: ${title.source}`;
+
+  return `${mark} ${title.rarityIcon}${title.rarityLabel} [${title.categoryLabel}] **${title.label}** — ${title.description}${lockedHint}`;
 }
 
 function formatTitleEquip(result) {
   const titleText = result.equippedTitle
-    ? `${result.equippedTitle.label} 칭호를 장착했습니다.`
+    ? `${result.equippedTitle.rarityIcon}${result.equippedTitle.rarityLabel} ${result.equippedTitle.label} 칭호를 장착했습니다.`
     : '칭호를 해제했습니다.';
   return `🏷️ ${titleText}`;
 }

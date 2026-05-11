@@ -320,10 +320,10 @@ function formatRpgDailySummary(missions = []) {
 
 function formatRpgActionHint(rpgStatus) {
   if (rpgStatus.cooldownRemainingMs > 0) {
-    return `전투 대기 ${formatDuration(rpgStatus.cooldownRemainingMs)} · 그동안 \`/rpg 탐험\`, \`/rpg 장비\``;
+    return `전투 대기 ${formatDuration(rpgStatus.cooldownRemainingMs)} · 그동안 \`/rpg 탐사\`, \`/rpg 장비\``;
   }
 
-  return `${rpgStatus.currentArea?.label ?? '현재 지역'}에서 전투 가능 (\`/rpg 전투\` 또는 \`/rpg 탐험\`)`;
+  return `${rpgStatus.currentArea?.label ?? '현재 지역'}에서 전투 가능 (\`/rpg 사냥\` 또는 \`/rpg 탐사\`)`;
 }
 
 function getRecommendedActions({
@@ -340,7 +340,7 @@ function getRecommendedActions({
   if (communityClaimable.length > 0) actions.push('`/미션 종류:일일`');
   if (rpgClaimable.length > 0) actions.push('`/rpg 일일`');
   if (swordStatus?.giftAvailable) actions.push('`/선물받기`');
-  if (rpgStatus.cooldownRemainingMs <= 0) actions.push('`/rpg 전투`');
+  if (rpgStatus.cooldownRemainingMs <= 0) actions.push('`/rpg 사냥`');
 
   return actions.length > 0 ? actions.slice(0, 4) : ['할 일 거의 끝남', '`/급식`', '`/시간표`'];
 }

@@ -1676,7 +1676,7 @@ export class EconomyService {
           slot: 'weapon',
           rarity: 'common',
           rarityLabel: '일반',
-          label: '일반 전리품',
+          label: '일반 장비',
           stats: { attack: 2 },
           power: 1,
           assetId: 'item_iron_sword_icon'
@@ -1917,7 +1917,7 @@ export class EconomyService {
       try {
         const gear = resolveOwnedRpgGear(profile, item);
         if (Object.values(profile.rpg.equippedGear).includes(gear.id)) {
-          throw new Error('장착 중인 전리품은 먼저 장착 해제하거나 다른 장비로 교체하세요.');
+          throw new Error('장착 중인 장비는 먼저 장착 해제하거나 다른 장비로 교체하세요.');
         }
         delete profile.rpg.gearInventory[gear.id];
         listing = {
@@ -1933,7 +1933,7 @@ export class EconomyService {
           createdAt: now
         };
       } catch (gearError) {
-        if (String(gearError?.message ?? '').startsWith('장착 중인 전리품')) {
+        if (String(gearError?.message ?? '').startsWith('장착 중인 장비')) {
           throw gearError;
         }
         const itemId = normalizeRpgItemId(item);
@@ -2113,7 +2113,7 @@ export class EconomyService {
       const gear = resolveOwnedRpgGear(profile, gearId);
 
       if (Object.values(profile.rpg.equippedGear).includes(gear.id)) {
-        throw new Error('장착 중인 전리품은 먼저 다른 장비로 교체한 뒤 분해하세요.');
+        throw new Error('장착 중인 장비는 먼저 다른 장비로 교체한 뒤 분해하세요.');
       }
 
       const rewards = getRpgGearDisassembleRewards(gear);
@@ -5276,7 +5276,7 @@ function resolveOwnedRpgGear(profile, selector) {
   const rawSelector = String(selector || '').trim();
 
   if (!rawSelector) {
-    throw new Error('장착할 전리품 번호나 이름을 입력하세요. `/rpg 전리품`에서 버튼 목록을 볼 수 있습니다.');
+    throw new Error('장착할 장비 번호나 이름을 입력하세요. `/rpg 인벤토리 보기:장비`에서 선택 목록을 볼 수 있습니다.');
   }
 
   if (profile.rpg.gearInventory[rawSelector]) {
@@ -5313,7 +5313,7 @@ function resolveOwnedRpgGear(profile, selector) {
     return matchedGear;
   }
 
-  throw new Error('보유한 전리품 장비를 찾을 수 없습니다. `/rpg 전리품`에서 번호 버튼을 확인하세요.');
+  throw new Error('보유한 인벤토리 장비를 찾을 수 없습니다. `/rpg 인벤토리 보기:장비`에서 번호 버튼을 확인하세요.');
 }
 
 function getSortedRpgGearList(profile) {
