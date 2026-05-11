@@ -304,7 +304,8 @@ async function awardFishingCatchSeasonPoints(services, interaction) {
       source: SEASON_POINT_SOURCES.FISHING_CATCH,
       points: 20
     });
-  } catch {
+  } catch (error) {
+    services.logger?.debug?.('Failed to award fishing season points:', error);
     return null;
   }
 }

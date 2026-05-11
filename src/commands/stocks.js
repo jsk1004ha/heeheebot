@@ -439,7 +439,8 @@ async function awardStockTradeSeasonPoints(services, interaction) {
       source: SEASON_POINT_SOURCES.STOCK_TRADE,
       points: 15
     });
-  } catch {
+  } catch (error) {
+    services.logger?.debug?.('Failed to award stock trade season points:', error);
     return null;
   }
 }

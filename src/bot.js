@@ -34,7 +34,10 @@ import {
 import { handleNumberBaseballCommand } from './commands/number-baseball.js';
 import { handlePollCommand, PollManager } from './commands/poll.js';
 import { handleRpgCommand } from './commands/rpg.js';
-import { handleSeasonCommand } from './commands/seasons.js';
+import {
+  formatSeasonAwardLine,
+  handleSeasonCommand
+} from './commands/seasons.js';
 import { handleStartCommand } from './commands/start.js';
 import { handleSwordCommand } from './commands/sword.js';
 import {
@@ -217,9 +220,9 @@ export function createBot({
         || await handleMealCommand(interaction, meals)
         || await handleTimetableCommand(interaction, timetable)
         || await handleSeasonCommand(interaction, seasons, logger)
-        || await handleStockCommand(interaction, stocks, { seasons })
+        || await handleStockCommand(interaction, stocks, { seasons, logger })
         || await handleTamagotchiCommand(interaction, tamagotchi, logger)
-        || await handleFishingCommand(interaction, fishing, { seasons })
+        || await handleFishingCommand(interaction, fishing, { seasons, logger })
         || await handleSwordCommand(interaction, economy, logger, { seasons })
         || await handleRpgCommand(interaction, economy, { seasons })
         || await handleEconomyCommand(interaction, economy, { stocks });
@@ -399,9 +402,10 @@ export async function sendAutomaticAchievementNotice(interaction, community, log
     return false;
   }
 
+  let seasonAward = null;
   if (typeof seasons?.awardPoints === 'function') {
     try {
-      await seasons.awardPoints({
+      seasonAward = await seasons.awardPoints({
         guildId: interaction.guildId,
         userId: interaction.user.id,
         username: interaction.user.username,
@@ -425,8 +429,9 @@ export async function sendAutomaticAchievementNotice(interaction, community, log
 
   return safeReplyToInteraction(interaction, [
     `🏆 업적 자동 수령: ${achievementText}${moreText}`,
-    `보상: ${rewardText}`
-  ].join('\n'), {
+    `보상: ${rewardText}`,
+    formatSeasonAwardLine(seasonAward)
+  ].filter(Boolean).join('\n'), {
     flags: MessageFlags.Ephemeral
   });
 }

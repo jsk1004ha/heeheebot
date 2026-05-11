@@ -65,6 +65,7 @@ test('명령 처리 후 새 업적은 자동 지급 안내로 표시한다', asy
   assert.match(interaction.followUps[0].content, /자동 수령/);
   assert.match(interaction.followUps[0].content, /물비린내 입문/);
   assert.match(interaction.followUps[0].content, /300골드/);
+  assert.match(interaction.followUps[0].content, /시즌: 테스트 시즌/);
 });
 
 test('/업적 명령 자체는 자동 업적 followUp을 중복으로 보내지 않는다', async () => {

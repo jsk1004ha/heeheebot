@@ -842,6 +842,28 @@ test('주식 매수와 매도 결과에도 다음 확인 버튼을 붙인다', a
   }
 });
 
+
+test('주식 시즌 포인트 지급 실패는 기록하고 기본 거래 응답은 유지한다', async () => {
+  const fakeStocks = {
+    async buyStock() {
+      return createStockTradeResultForTest({ remainingQuantity: 3 });
+    }
+  };
+  const interaction = createStockInteraction('매수', {
+    strings: { 종목: '희진전자' },
+    integers: { 수량: 3 }
+  });
+  const logs = [];
+  const logger = { debug: (...args) => logs.push(args) };
+
+  assert.equal(await handleStockCommand(interaction, fakeStocks, { seasons: createRejectingSeasonSpy(), logger }), true);
+
+  assert.match(interaction.replies[0], /매수 완료/);
+  assert.doesNotMatch(interaction.replies[0], /시즌:/);
+  assert.equal(logs.length, 1);
+  assert.match(logs[0][0], /Failed to award stock trade season points/);
+});
+
 test('주식 확장 명령은 신규상장, 지정가 주문, 알림 응답을 출력한다', async () => {
   const ipoInteraction = createStockInteraction('신규상장');
   const limitBuyInteraction = createStockInteraction('지정가매수', {
@@ -1952,6 +1974,14 @@ function createSeasonSpy() {
         sourceLabel: '테스트 시즌',
         newlyClaimableRewards: []
       };
+    }
+  };
+}
+
+function createRejectingSeasonSpy() {
+  return {
+    async awardPoints() {
+      throw new Error('season ledger unavailable');
     }
   };
 }
