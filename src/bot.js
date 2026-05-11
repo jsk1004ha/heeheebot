@@ -35,6 +35,7 @@ import { handleNumberBaseballCommand } from './commands/number-baseball.js';
 import { handlePollCommand, PollManager } from './commands/poll.js';
 import { handleRpgCommand } from './commands/rpg.js';
 import { handleSeasonCommand } from './commands/seasons.js';
+import { handleStartCommand } from './commands/start.js';
 import { handleSwordCommand } from './commands/sword.js';
 import {
   handleTamagotchiAutocomplete,
@@ -211,6 +212,7 @@ export function createBot({
         || await handleWordleCommand(interaction, wordle, economy)
         || await handleNumberBaseballCommand(interaction, numberBaseball, economy)
         || await handleFortuneCommand(interaction, fortune, economy)
+        || await handleStartCommand(interaction, { economy, community, fishing, stocks, seasons })
         || await handleTodayCommand(interaction, { economy, community, seasons })
         || await handleMealCommand(interaction, meals)
         || await handleTimetableCommand(interaction, timetable)
