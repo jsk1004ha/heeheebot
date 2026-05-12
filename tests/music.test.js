@@ -4,9 +4,11 @@ import { ChannelType } from 'discord.js';
 import { getApplicationCommandPayloads } from '../src/command-registration.js';
 import {
   createMusicPanelPayload,
+  createNodeStatusPayload,
   createPopularTracksPayload,
   createUserMusicStatsPayload,
-  getMusicCommandPayloads
+  getMusicCommandPayloads,
+  handleMusicCommand
 } from '../src/commands/music.js';
 import { createSqliteStore } from '../src/storage/sqlite-store.js';
 import {
@@ -34,7 +36,7 @@ test('음악 명령 payload가 기본 재생/검색/플리/통계 명령을 등�
   const payloads = getMusicCommandPayloads();
   const names = payloads.map((payload) => payload.name);
 
-  for (const name of ['재생', '검색', '일시정지', '다시재생', '스킵', '정지', '큐', '플리', '내음악통계']) {
+  for (const name of ['재생', '검색', '일시정지', '다시재생', '스킵', '정지', '큐', '플리', '내음악통계', '노드상태']) {
     assert.ok(names.includes(name), `${name} 음악 명령이 있어야 합니다.`);
   }
 
@@ -116,9 +118,132 @@ test('음악 서비스는 현재곡을 플레이리스트에 저장하고 공개
     assert.equal(stats.totalRequests, 1);
     assert.equal(Object.values(stats.artists)[0].label, 'NewJeans');
     assert.equal(Object.values(stats.genres)[0].label, 'K-Pop');
+
+    await music.stop('guild-1');
+    assert.equal(lavalink.destroyed, 'guild-1');
+    assert.equal(voicePackets.at(-1).d.channel_id, null);
+    assert.equal(music.getPlayerState('guild-1').current, null);
+    assert.equal(music.getPlayerState('guild-1').voiceChannelId, null);
   } finally {
     store.close();
   }
+});
+
+test('마지막 곡을 스킵해 큐가 비면 Lavalink 플레이어를 정리하고 음성 채널에서 나간다', async () => {
+  const lavalink = new MockLavalink();
+  const voicePackets = [];
+  const music = new MusicService({
+    lavalink,
+    config: { lavalink: { host: 'localhost', password: 'pw' } },
+    now: createClock(2000)
+  });
+
+  await music.playQuery({
+    guild: createGuild(voicePackets),
+    textChannel: createTextChannel(),
+    voiceChannel: createVoiceChannel(),
+    requester: { id: 'user-1', username: 'Junseo' },
+    query: 'ditto'
+  });
+
+  const state = await music.skip('guild-1');
+
+  assert.equal(state.current, null);
+  assert.equal(lavalink.destroyed, 'guild-1');
+  assert.equal(voicePackets.at(-1).op, 4);
+  assert.equal(voicePackets.at(-1).d.channel_id, null);
+  assert.equal(music.getPlayerState('guild-1').voiceChannelId, null);
+});
+
+test('음악 패널 종료 버튼은 정지 핸들러를 호출하고 음성 채널 퇴장을 안내한다', async () => {
+  let stoppedGuildId = null;
+  const replies = [];
+  const interaction = {
+    customId: 'music:stop',
+    guildId: 'guild-1',
+    deferred: false,
+    replied: false,
+    inGuild: () => true,
+    isButton: () => true,
+    isStringSelectMenu: () => false,
+    isChatInputCommand: () => false,
+    async reply(payload) {
+      replies.push(payload);
+      this.replied = true;
+    }
+  };
+  const music = {
+    async stop(guildId) {
+      stoppedGuildId = guildId;
+    }
+  };
+
+  const handled = await handleMusicCommand(interaction, music, { warn() {} });
+
+  assert.equal(handled, true);
+  assert.equal(stoppedGuildId, 'guild-1');
+  assert.match(replies[0].content, /음성 채널에서 나갔습니다/);
+});
+
+test('노드상태 명령은 Lavalink stats와 최근 frameStats를 진단한다', async () => {
+  const lavalink = new MockLavalink();
+  lavalink.stats = {
+    players: 1,
+    playingPlayers: 1,
+    uptime: 3_600_000,
+    memory: {
+      free: 128 * 1024 * 1024,
+      used: 900 * 1024 * 1024,
+      allocated: 1024 * 1024 * 1024,
+      reservable: 2048 * 1024 * 1024
+    },
+    cpu: {
+      cores: 4,
+      systemLoad: 0.72,
+      lavalinkLoad: 0.31
+    }
+  };
+  const music = new MusicService({
+    lavalink,
+    config: { lavalink: { host: 'localhost', password: 'pw' } },
+    now: createClock(3000)
+  });
+  await music.handleLavalinkMessage({
+    op: 'stats',
+    players: 1,
+    playingPlayers: 1,
+    uptime: 3_500_000,
+    memory: lavalink.stats.memory,
+    cpu: lavalink.stats.cpu,
+    frameStats: { sent: 6000, nulled: 2, deficit: 5 }
+  });
+
+  const replies = [];
+  const interaction = {
+    commandName: '노드상태',
+    guildId: 'guild-1',
+    deferred: false,
+    replied: false,
+    inGuild: () => true,
+    isButton: () => false,
+    isStringSelectMenu: () => false,
+    isChatInputCommand: () => true,
+    async reply(payload) {
+      replies.push(payload);
+      this.replied = true;
+    }
+  };
+
+  const handled = await handleMusicCommand(interaction, music, { warn() {} });
+
+  assert.equal(handled, true);
+  assert.match(replies[0].embeds[0].data.description, /systemLoad/);
+  assert.match(replies[0].embeds[0].data.description, /deficit \*\*\+5\*\*/);
+  assert.match(replies[0].embeds[0].data.description, /nulled \*\*2\*\*/);
+  assert.match(replies[0].embeds[0].data.description, /CPU 병목/);
+
+  const payload = createNodeStatusPayload(await music.getNodeStatus());
+  assert.equal(payload.flags, 64);
 });
 
 test('Lavalink 진행도 업데이트는 현재 재생 패널 메시지를 자동 갱신한다', async () => {
@@ -183,7 +308,9 @@ test('음악 패널과 랭킹/통계 payload는 핵심 정보를 임베드와 �
 
   assert.match(panel.embeds[0].data.description, /Ditto - NewJeans/);
   assert.equal(panel.components.length, 2);
-  assert.equal(panel.components[1].components[0].data.custom_id, 'music:filter');
+  const panelCustomIds = panel.components.flatMap((row) => row.components.map((component) => component.data.custom_id));
+  assert.ok(panelCustomIds.includes('music:stop'));
+  assert.deepEqual(panel.components[1].components.map((component) => component.data.custom_id), ['music:queue', 'music:filter']);
 
   const ranking = createPopularTracksPayload([{ track: { title: 'Ditto', author: 'NewJeans' }, count: 3 }]);
   assert.match(ranking.embeds[0].data.description, /3회 재생/);
@@ -214,6 +341,16 @@ class MockLavalink {
   async updatePlayer(guildId, payload) {
     this.updates.push({ guildId, payload });
     return { guildId, ...payload };
+  }
+
+  async getStats() {
+    return this.stats ?? {
+      players: 0,
+      playingPlayers: 0,
+      uptime: 0,
+      memory: { free: 0, used: 0, allocated: 0, reservable: 0 },
+      cpu: { cores: 0, systemLoad: 0, lavalinkLoad: 0 }
+    };
   }
 
   async destroyPlayer(guildId) {

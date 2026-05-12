@@ -73,6 +73,12 @@ test('로컬 Lavalink 자동 설정은 jar, application.yml을 준비하고 준�
     assert.ok(applicationYaml.includes(GENERATED_CONFIG_MARKER));
     assert.ok(applicationYaml.includes('youtube-plugin:9.9.9'));
     assert.ok(applicationYaml.includes('password: "secret"'));
+    assert.ok(applicationYaml.includes('bufferDurationMs: 500'));
+    assert.ok(applicationYaml.includes('frameBufferDurationMs: 7000'));
+    assert.ok(applicationYaml.includes('opusEncodingQuality: 8'));
+    assert.ok(applicationYaml.includes('resamplingQuality: LOW'));
+    assert.ok(applicationYaml.includes('trackStuckThresholdMs: 10000'));
+    assert.ok(applicationYaml.includes('volume: false'));
     assert.deepEqual(spawned.map(({ command }) => command), ['java']);
     assert.equal(spawned[0].cwd, directory);
 

@@ -189,10 +189,11 @@ vMAJOR.MINOR.PATCH
 
 #### `v0.10.0` — Lavalink/yt-dlp 음악 시스템
 
-- **기본 음악 명령**: `/재생`, `/검색`, `/일시정지`, `/다시재생`, `/스킵`, `/정지`, `/큐` 추가
+- **기본 음악 명령**: `/재생`, `/검색`, `/일시정지`, `/다시재생`, `/스킵`, `/정지`, `/큐`, `/노드상태` 추가
 - **인터랙티브 패널**: 현재곡 embed와 버튼으로 일시정지, 스킵, 반복, 셔플, 큐, 필터 제어
 - **플레이리스트**: `/플리 생성|추가|재생|공개|가져오기`로 개인/공개 플레이리스트 관리
 - **서버 문화 기록**: `/랭킹 종류:인기곡`, `/내음악통계`로 인기곡·아티스트·장르 신청 기록 저장
+- **노드 진단**: `/노드상태`로 Lavalink CPU, 메모리, frameStats 상태 확인
 - **자동 런타임 세팅**: `npm start` 시 로컬 Lavalink.jar, `application.yml`, YouTube source plugin 설정, yt-dlp 바이너리를 `data/music-runtime`에 자동 준비
 
 #### `v0.9.1` — 이모지경마 다인 배당판
@@ -285,7 +286,9 @@ npm start
 ```
 
 `npm start`는 시작 전에 slash command를 자동으로 동기화합니다. 개발 서버에 빠르게 등록하려면 `.env`에 `DISCORD_GUILD_ID`를 넣으세요.
-음악 기능은 `MUSIC_AUTO_SETUP=true` 기본값으로 `data/music-runtime`에 Lavalink/yt-dlp 런타임을 자동 준비하고 로컬 Lavalink 노드를 실행합니다. 단, Lavalink 실행에는 시스템에 Java 17 이상이 설치되어 있어야 합니다.
+음악 기능은 `MUSIC_AUTO_SETUP=true` 기본값으로 `data/music-runtime`에 Lavalink/yt-dlp 런타임을 자동 준비하고 로컬 Lavalink 노드를 실행합니다. 자동 생성되는 `application.yml`은 끊김 완화를 우선해 버퍼를 넉넉하게 잡고(`bufferDurationMs: 500`, `frameBufferDurationMs: 7000`) Opus 품질 8, resampling LOW, 필터 비활성화로 시작합니다. 단, Lavalink 실행에는 시스템에 Java 17 이상이 설치되어 있어야 합니다.
+
+재생 중 끊김이 있으면 `/노드상태`로 CPU, 메모리, Lavalink frameStats(`deficit`, `nulled`)를 먼저 확인하세요. `deficit`/`nulled`가 늘면 소스 스트림, CPU/인코딩, 네트워크 병목을 우선 의심하면 됩니다.
 
 ### 4) 명령어만 수동 동기화
 
@@ -345,6 +348,7 @@ npm run register
 | `/큐` | 현재곡과 대기열을 embed로 확인 |
 | `/플리 생성|추가|재생|공개|가져오기` | 개인/공개 플레이리스트 관리 |
 | `/내음악통계` | 내가 많이 신청한 장르, 아티스트, 곡 수 확인 |
+| `/노드상태` | Lavalink CPU, 메모리, frame deficit/nulled 진단 |
 
 ### 커뮤니티·시즌
 

@@ -14,7 +14,7 @@ import {
 } from '../systems/music.js';
 import { safeReplyToInteraction } from './interactions.js';
 
-const MUSIC_COMMAND_NAMES = new Set(['재생', '검색', '일시정지', '다시재생', '스킵', '정지', '큐', '플리', '내음악통계']);
+const MUSIC_COMMAND_NAMES = new Set(['재생', '검색', '일시정지', '다시재생', '스킵', '정지', '큐', '플리', '내음악통계', '노드상태']);
 const MUSIC_CUSTOM_ID_PREFIX = 'music:';
 const PLAYLIST_TARGET_CURRENT = '현재곡';
 const MUSIC_COLOR = 0x8b5cf6;
@@ -128,7 +128,10 @@ export const musicCommands = [
     ),
   new SlashCommandBuilder()
     .setName('내음악통계')
-    .setDescription('내가 가장 많이 신청한 장르, 아티스트, 곡 수를 보여줍니다.')
+    .setDescription('내가 가장 많이 신청한 장르, 아티스트, 곡 수를 보여줍니다.'),
+  new SlashCommandBuilder()
+    .setName('노드상태')
+    .setDescription('Lavalink CPU, 메모리, 오디오 프레임 상태를 진단합니다.')
 ];
 
 export function getMusicCommandPayloads() {
@@ -186,7 +189,7 @@ export async function handleMusicCommand(interaction, music, logger = console) {
       }
       case '정지':
         await music.stop(interaction.guildId);
-        await safeReplyToInteraction(interaction, '⏹ 재생을 멈추고 큐를 비웠습니다.');
+        await safeReplyToInteraction(interaction, '⏹ 재생을 종료하고 큐를 비운 뒤 음성 채널에서 나갔습니다.');
         return true;
       case '큐':
         await safeReplyToInteraction(interaction, createQueuePayload(music.getPlayerState(interaction.guildId)));
@@ -196,6 +199,9 @@ export async function handleMusicCommand(interaction, music, logger = console) {
         return true;
       case '내음악통계':
         await handleMyMusicStatsCommand(interaction, music);
+        return true;
+      case '노드상태':
+        await handleNodeStatusCommand(interaction, music);
         return true;
       default:
         return false;
@@ -298,6 +304,24 @@ export function createUserMusicStatsPayload(stats, user = null) {
     { name: '최다 신청 아티스트', value: formatTopStats(stats.artists, '기록 없음'), inline: true },
     { name: '최다 신청 곡', value: formatTopStats(stats.tracks, '기록 없음'), inline: false }
   );
+
+  return { embeds: [embed], flags: MessageFlags.Ephemeral };
+}
+
+export function createNodeStatusPayload(status) {
+  const warnings = createNodeStatusWarnings(status);
+  const embed = new EmbedBuilder()
+    .setColor(warnings.length > 0 ? 0xf97316 : 0x22c55e)
+    .setTitle('🩺 Lavalink 노드 상태')
+    .setDescription([
+      `플레이어: **${formatNumber(status.players)}개** · 재생 중 **${formatNumber(status.playingPlayers)}개**`,
+      `업타임: **${formatUptime(status.uptime)}**`,
+      `CPU: systemLoad **${formatLoad(status.cpu?.systemLoad)}** · lavalinkLoad **${formatLoad(status.cpu?.lavalinkLoad)}** · cores **${formatNumber(status.cpu?.cores)}**`,
+      `메모리: used **${formatBytes(status.memory?.used)}** / allocated **${formatBytes(status.memory?.allocated)}** · reservable **${formatBytes(status.memory?.reservable)}**`,
+      formatFrameStats(status),
+      warnings.length > 0 ? `\n주의:\n${warnings.map((warning) => `- ${warning}`).join('\n')}` : '\n상태: 눈에 띄는 병목 신호가 없습니다.'
+    ].filter(Boolean).join('\n'))
+    .setFooter({ text: status.frameStatsSource === 'websocket' ? 'frameStats는 최근 WebSocket stats 기준입니다.' : 'REST /v4/stats는 frameStats를 제공하지 않을 수 있습니다.' });
 
   return { embeds: [embed], flags: MessageFlags.Ephemeral };
 }
@@ -413,6 +437,11 @@ async function handleMyMusicStatsCommand(interaction, music) {
   await safeReplyToInteraction(interaction, createUserMusicStatsPayload(stats, interaction.user));
 }
 
+async function handleNodeStatusCommand(interaction, music) {
+  const status = await music.getNodeStatus();
+  await safeReplyToInteraction(interaction, createNodeStatusPayload(status));
+}
+
 async function handleMusicButton(interaction, music, logger) {
   if (!interaction.inGuild?.()) {
     await replyEphemeral(interaction, '서버에서만 사용할 수 있는 음악 버튼입니다.');
@@ -442,7 +471,13 @@ async function handleMusicButton(interaction, music, logger) {
 
     if (action === 'skip') {
       const state = await music.skip(interaction.guildId);
-      await replyEphemeral(interaction, state?.current ? `⏭ 다음 곡: ${state.current.title}` : '⏭ 큐가 비었습니다.');
+      await replyEphemeral(interaction, state?.current ? `⏭ 다음 곡: ${state.current.title}` : '⏭ 큐가 비어 재생을 종료하고 음성 채널에서 나갔습니다.');
+      return;
+    }
+
+    if (action === 'stop') {
+      await music.stop(interaction.guildId);
+      await replyEphemeral(interaction, '⏹ 재생을 종료하고 음성 채널에서 나갔습니다.');
       return;
     }
 
@@ -550,6 +585,11 @@ function createPanelButtonRow(state) {
       .setEmoji('⏭')
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
+      .setCustomId('music:stop')
+      .setLabel('종료')
+      .setEmoji('⏹')
+      .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
       .setCustomId('music:repeat')
       .setLabel('반복')
       .setEmoji('🔁')
@@ -558,27 +598,17 @@ function createPanelButtonRow(state) {
       .setCustomId('music:shuffle')
       .setLabel('셔플')
       .setEmoji('🔀')
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId('music:queue')
-      .setLabel('큐')
-      .setEmoji('📜')
       .setStyle(ButtonStyle.Secondary)
-  );
-}
-
-function createDisabledPanelRow() {
-  return new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('music:pause').setLabel('일시정지').setEmoji('⏸').setStyle(ButtonStyle.Secondary).setDisabled(true),
-    new ButtonBuilder().setCustomId('music:skip').setLabel('스킵').setEmoji('⏭').setStyle(ButtonStyle.Secondary).setDisabled(true),
-    new ButtonBuilder().setCustomId('music:repeat').setLabel('반복').setEmoji('🔁').setStyle(ButtonStyle.Secondary).setDisabled(true),
-    new ButtonBuilder().setCustomId('music:shuffle').setLabel('셔플').setEmoji('🔀').setStyle(ButtonStyle.Secondary).setDisabled(true),
-    new ButtonBuilder().setCustomId('music:queue').setLabel('큐').setEmoji('📜').setStyle(ButtonStyle.Secondary).setDisabled(true)
   );
 }
 
 function createPanelFilterRow() {
   return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('music:queue')
+      .setLabel('큐')
+      .setEmoji('📜')
+      .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('music:filter')
       .setLabel('필터')
@@ -587,8 +617,24 @@ function createPanelFilterRow() {
   );
 }
 
+function createDisabledPanelRow() {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('music:pause').setLabel('일시정지').setEmoji('⏸').setStyle(ButtonStyle.Secondary).setDisabled(true),
+    new ButtonBuilder().setCustomId('music:skip').setLabel('스킵').setEmoji('⏭').setStyle(ButtonStyle.Secondary).setDisabled(true),
+    new ButtonBuilder().setCustomId('music:stop').setLabel('종료').setEmoji('⏹').setStyle(ButtonStyle.Danger).setDisabled(true),
+    new ButtonBuilder().setCustomId('music:repeat').setLabel('반복').setEmoji('🔁').setStyle(ButtonStyle.Secondary).setDisabled(true),
+    new ButtonBuilder().setCustomId('music:shuffle').setLabel('셔플').setEmoji('🔀').setStyle(ButtonStyle.Secondary).setDisabled(true)
+  );
+}
+
 function createDisabledFilterRow() {
   return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('music:queue')
+      .setLabel('큐')
+      .setEmoji('📜')
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(true),
     new ButtonBuilder()
       .setCustomId('music:filter')
       .setLabel('필터')
@@ -667,6 +713,69 @@ function formatTopStats(bucket, emptyText) {
     .slice(0, 3);
   if (entries.length === 0) return emptyText;
   return entries.map((entry, index) => `${index + 1}. ${escapeMarkdown(entry.label)} (${entry.count.toLocaleString()}회)`).join('\n');
+}
+
+function formatFrameStats(status) {
+  const frameStats = status.frameStats;
+  if (!frameStats) return '프레임: 아직 수신된 frameStats가 없습니다. 재생 중 잠시 뒤 다시 확인하세요.';
+  return [
+    '프레임:',
+    `sent **${formatNumber(frameStats.sent)}**`,
+    `nulled **${formatNumber(frameStats.nulled)}**`,
+    `deficit **${formatSignedNumber(frameStats.deficit)}**`
+  ].join(' ');
+}
+
+function createNodeStatusWarnings(status) {
+  const warnings = [];
+  const systemLoad = Number(status.cpu?.systemLoad) || 0;
+  const lavalinkLoad = Number(status.cpu?.lavalinkLoad) || 0;
+  const memoryUsedRatio = status.memory?.allocated > 0
+    ? status.memory.used / status.memory.allocated
+    : 0;
+  const frameStats = status.frameStats;
+
+  if (systemLoad >= 0.7) warnings.push('systemLoad가 70% 이상이라 서버/PC CPU 병목 가능성이 큽니다.');
+  if (lavalinkLoad >= 0.7) warnings.push('lavalinkLoad가 70% 이상이라 인코딩/필터 비용을 낮추는 게 좋습니다.');
+  if (memoryUsedRatio >= 0.85) warnings.push('JVM allocated 메모리의 85% 이상을 사용 중입니다.');
+  if (frameStats?.deficit > 0) warnings.push('frame deficit이 양수라 Discord 송출 프레임이 밀리고 있습니다.');
+  if (frameStats?.nulled > 0) warnings.push('nulled frame이 있어 소스 스트림 공급이 불안정할 수 있습니다.');
+
+  return warnings;
+}
+
+function formatNumber(value) {
+  return Math.round(Number(value) || 0).toLocaleString();
+}
+
+function formatSignedNumber(value) {
+  const number = Math.round(Number(value) || 0);
+  return `${number > 0 ? '+' : ''}${number.toLocaleString()}`;
+}
+
+function formatLoad(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return '알 수 없음';
+  return `${(number * 100).toFixed(number > 0 && number < 0.1 ? 1 : 0)}%`;
+}
+
+function formatBytes(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) return '0 B';
+  const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+  const exponent = Math.min(units.length - 1, Math.floor(Math.log(number) / Math.log(1024)));
+  const scaled = number / (1024 ** exponent);
+  return `${scaled.toFixed(scaled >= 10 || exponent === 0 ? 0 : 1)} ${units[exponent]}`;
+}
+
+function formatUptime(ms) {
+  const totalSeconds = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  if (days > 0) return `${days}일 ${hours}시간`;
+  if (hours > 0) return `${hours}시간 ${minutes}분`;
+  return `${minutes}분`;
 }
 
 async function replyEphemeral(interaction, payload) {

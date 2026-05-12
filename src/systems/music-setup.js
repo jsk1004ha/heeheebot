@@ -183,18 +183,21 @@ lavalink:
       http: true
       local: false
     filters:
-      volume: true
-      equalizer: true
-      karaoke: true
-      timescale: true
-      tremolo: true
-      vibrato: true
-      distortion: true
-      rotation: true
-      channelMix: true
-      lowPass: true
-    bufferDurationMs: 400
-    frameBufferDurationMs: 5000
+      volume: false
+      equalizer: false
+      karaoke: false
+      timescale: false
+      tremolo: false
+      vibrato: false
+      distortion: false
+      rotation: false
+      channelMix: false
+      lowPass: false
+    bufferDurationMs: 500
+    frameBufferDurationMs: 7000
+    opusEncodingQuality: 8
+    resamplingQuality: LOW
+    trackStuckThresholdMs: 10000
     playerUpdateInterval: 5
     youtubePlaylistLoadLimit: 6
     youtubeSearchEnabled: true

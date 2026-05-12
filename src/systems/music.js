@@ -134,6 +134,11 @@ export class LavalinkNodeClient {
     return this.requestJson(url, { method: 'GET' });
   }
 
+  async getStats() {
+    this.ensureConfigured();
+    return this.requestJson(new URL('/v4/stats', this.restBaseUrl), { method: 'GET' });
+  }
+
   async updatePlayer(guildId, payload, { noReplace = false } = {}) {
     this.ensureSessionReady();
     const url = new URL(`/v4/sessions/${this.sessionId}/players/${guildId}`, this.restBaseUrl);
@@ -212,10 +217,6 @@ export class YtDlpMetadataResolver {
   }
 
   async search(query, { limit = MAX_SEARCH_RESULTS } = {}) {
-    if (!this.lavalink?.configured && !this.ytdlp?.enabled) {
-      throw new Error('음악 검색을 위해 Lavalink 설정 또는 yt-dlp fallback 설정이 필요합니다.');
-    }
-
     if (!this.enabled) return [];
     const identifier = isUrl(query) ? query : `ytsearch${limit}:${query}`;
     const payload = await this.runJson([
@@ -301,6 +302,7 @@ export class MusicService {
     this.ytdlp = ytdlp ?? new YtDlpMetadataResolver(this.config.ytdlp, { logger });
     this.players = new Map();
     this.searchSessions = new Map();
+    this.latestNodeStats = null;
     this.panelRenderer = null;
   }
 
@@ -441,8 +443,17 @@ export class MusicService {
   async leaveVoiceChannel(guildId) {
     const state = this.players.get(guildId);
     if (!state?.guild) return;
-    await sendGuildVoiceStateUpdate(state.guild, null);
+    const previousVoiceChannelId = state.voiceChannelId;
+    const previousLavalinkVoiceChannelId = state.voice.channelId;
     state.voiceChannelId = null;
+    state.voice.channelId = null;
+    try {
+      await sendGuildVoiceStateUpdate(state.guild, null);
+    } catch (error) {
+      state.voiceChannelId = previousVoiceChannelId;
+      state.voice.channelId = previousLavalinkVoiceChannelId;
+      throw error;
+    }
   }
 
   async pause(guildId) {
@@ -489,9 +500,7 @@ export class MusicService {
     await this.lavalink.destroyPlayer(guildId).catch((error) => {
       this.logger.warn?.('Failed to destroy Lavalink player:', error);
     });
-    await this.leaveVoiceChannel(guildId).catch((error) => {
-      this.logger.warn?.('Failed to leave Discord voice channel:', error);
-    });
+    await this.leaveVoiceChannel(guildId);
     await this.refreshPanel(guildId);
     return state;
   }
@@ -538,8 +547,16 @@ export class MusicService {
       state.position = 0;
       state.lastPositionUpdateAt = this.now();
       if (skipped) {
-        await this.lavalink.updatePlayer(guildId, { track: { encoded: null } });
+        await this.lavalink.updatePlayer(guildId, { track: { encoded: null } }).catch((error) => {
+          this.logger.warn?.('Failed to stop Lavalink track after queue drained:', error);
+        });
       }
+      await this.lavalink.destroyPlayer(guildId).catch((error) => {
+        this.logger.warn?.('Failed to destroy drained Lavalink player:', error);
+      });
+      await this.leaveVoiceChannel(guildId).catch((error) => {
+        this.logger.warn?.('Failed to leave Discord voice channel after queue drained:', error);
+      });
       await this.refreshPanel(guildId);
       return null;
     }
@@ -565,6 +582,14 @@ export class MusicService {
   }
 
   async handleLavalinkMessage(message) {
+    if (message.op === 'stats') {
+      this.latestNodeStats = {
+        receivedAt: this.now(),
+        stats: normalizeLavalinkStats(message)
+      };
+      return;
+    }
+
     if (message.op === 'playerUpdate') {
       const state = this.players.get(message.guildId);
       if (state) {
@@ -605,7 +630,8 @@ export class MusicService {
       if (payload.user_id !== botUserId || !payload.guild_id) return false;
       const state = this.getOrCreatePlayerState(payload.guild_id);
       state.voice.sessionId = payload.session_id ?? null;
-      state.voice.channelId = payload.channel_id ?? state.voiceChannelId ?? null;
+      state.voice.channelId = Object.hasOwn(payload, 'channel_id') ? payload.channel_id : state.voiceChannelId ?? null;
+      state.voiceChannelId = state.voice.channelId;
       await this.maybeSendVoiceUpdate(payload.guild_id);
       return true;
     }
@@ -762,6 +788,25 @@ export class MusicService {
     });
   }
 
+  async getNodeStatus() {
+    this.ensurePlaybackConfigured();
+    const restStats = typeof this.lavalink.getStats === 'function'
+      ? normalizeLavalinkStats(await this.lavalink.getStats())
+      : null;
+    const websocketStats = this.latestNodeStats?.stats ?? null;
+    const stats = mergeLavalinkStats(restStats, websocketStats);
+    if (!stats) throw new Error('Lavalink 노드 통계를 가져오지 못했습니다.');
+
+    return {
+      ...stats,
+      fetchedAt: this.now(),
+      websocketStatsReceivedAt: this.latestNodeStats?.receivedAt ?? null,
+      frameStatsSource: stats.frameStats
+        ? (restStats?.frameStats ? 'rest' : 'websocket')
+        : null
+    };
+  }
+
   async recordTrackStarted(guildId, track) {
     if (!this.store) return null;
     const storedTrack = toStoredTrack(track);
@@ -915,6 +960,53 @@ export function normalizeYtDlpConfig(config = {}) {
     enabled: Boolean(config.enabled),
     path: normalizeOptionalString(config.path) ?? 'yt-dlp',
     timeoutMs: clampInteger(config.timeoutMs ?? DEFAULT_YTDLP_TIMEOUT_MS, 1_000, 60_000)
+  };
+}
+
+export function normalizeLavalinkStats(stats) {
+  if (!stats) return null;
+  return {
+    players: normalizeNonNegativeNumber(stats.players),
+    playingPlayers: normalizeNonNegativeNumber(stats.playingPlayers),
+    uptime: normalizeNonNegativeNumber(stats.uptime),
+    memory: normalizeMemoryStats(stats.memory),
+    cpu: normalizeCpuStats(stats.cpu),
+    frameStats: normalizeFrameStats(stats.frameStats)
+  };
+}
+
+function mergeLavalinkStats(restStats, websocketStats) {
+  if (!restStats && !websocketStats) return null;
+  return {
+    ...(websocketStats ?? {}),
+    ...(restStats ?? {}),
+    frameStats: restStats?.frameStats ?? websocketStats?.frameStats ?? null
+  };
+}
+
+function normalizeMemoryStats(memory = {}) {
+  return {
+    free: normalizeNonNegativeNumber(memory.free),
+    used: normalizeNonNegativeNumber(memory.used),
+    allocated: normalizeNonNegativeNumber(memory.allocated),
+    reservable: normalizeNonNegativeNumber(memory.reservable)
+  };
+}
+
+function normalizeCpuStats(cpu = {}) {
+  return {
+    cores: normalizeNonNegativeNumber(cpu.cores),
+    systemLoad: normalizeNonNegativeNumber(cpu.systemLoad),
+    lavalinkLoad: normalizeNonNegativeNumber(cpu.lavalinkLoad)
+  };
+}
+
+function normalizeFrameStats(frameStats) {
+  if (!frameStats) return null;
+  return {
+    sent: normalizeNonNegativeNumber(frameStats.sent),
+    nulled: normalizeNonNegativeNumber(frameStats.nulled),
+    deficit: Number(frameStats.deficit) || 0
   };
 }
 
@@ -1211,6 +1303,11 @@ function clampInteger(value, min, max) {
   const number = Number(value);
   if (!Number.isFinite(number)) return min;
   return Math.max(min, Math.min(max, Math.trunc(number)));
+}
+
+function normalizeNonNegativeNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : 0;
 }
 
 function isUrl(value) {
