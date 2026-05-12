@@ -24,7 +24,7 @@ import {
   TIMING_PAYOUT_TIERS,
   TIMING_TARGET_MAX_SECONDS,
   TIMING_TARGET_MIN_SECONDS,
-  EMOJI_RACE_MULTIPLIER,
+  EMOJI_RACE_RACERS,
   formatEmojiRaceChoice,
   formatEmojiRaceTrack,
   formatCards,
@@ -34,6 +34,7 @@ import {
   hitPlayerBlackjackRound,
   getPokerHoldRecommendation,
   getPokerPayoutTable,
+  getEmojiRacePoolMarket,
   getScratchTicketProduct,
   getScratchTicketProductStats,
   normalizeEmojiRaceChoice,
@@ -44,7 +45,7 @@ import {
   playCraps,
   pressDeadlineRound,
   playDice,
-  playEmojiRace,
+  playEmojiRacePool,
   playHighLow,
   playKeno,
   playLuckySeven,
@@ -76,11 +77,14 @@ const CHALLENGE_TTL_MS = 60_000;
 const SCRATCH_TICKET_TTL_MS = 5 * 60_000;
 const CASINO_PENDING_CLEANUP_MIN_DELAY_MS = 1_000;
 const EMOJI_RACE_FRAME_DELAY_MS = 500;
+const EMOJI_RACE_LOBBY_MAX_PLAYERS = 12;
+const EMOJI_RACE_LOBBY_MIN_PLAYERS = 2;
 const POKER_LOBBY_MAX_PLAYERS = 6;
 const pendingBlackjackChallenges = new Map();
 const pendingDeadlineGames = new Map();
 const pendingTimingGames = new Map();
 const pendingAiBlackjackGames = new Map();
+const pendingEmojiRaceLobbies = new Map();
 const pendingPlayerBlackjackGames = new Map();
 const pendingPokerGames = new Map();
 const pendingPokerLobbies = new Map();
@@ -164,7 +168,7 @@ export const casinoCommands = [
     ),
   new SlashCommandBuilder()
     .setName('이모지경마')
-    .setDescription('움직이는 이모지 트랙에서 1등 동물을 맞히면 2.7배를 받습니다.')
+    .setDescription('여러 유저가 같은 판에 베팅하고 1등 동물 적중자끼리 배당풀을 나눕니다.')
     .addIntegerOption((option) =>
       option
         .setName('돈')
@@ -383,6 +387,9 @@ export async function handleCasinoCommand(interaction, economy, logger = console
       if (interaction.customId?.startsWith('timing_')) {
         return await handleTimingButton(interaction, economy, logger, options);
       }
+      if (interaction.customId?.startsWith('race_')) {
+        return await handleEmojiRaceButton(interaction, economy, logger, options);
+      }
       if (interaction.customId?.startsWith('poker_')) {
         return await handlePokerButton(interaction, economy, logger);
       }
@@ -430,6 +437,7 @@ function isCasinoButtonId(customId) {
     'blackjack_',
     'casino_quick:',
     'deadline_',
+    'race_',
     'poker_',
     'scratch_',
     'timing_'
@@ -444,6 +452,7 @@ export async function cleanupExpiredCasinoGames(economy, logger = console, now =
     pendingScratchTickets,
     pendingTimingGames,
     pendingDeadlineGames,
+    pendingEmojiRaceLobbies,
     pendingPokerGames,
     pendingAiBlackjackGames
   ]) {
@@ -452,7 +461,9 @@ export async function cleanupExpiredCasinoGames(economy, logger = console, now =
       economy,
       logger,
       now,
-      refundReservedCasinoWager
+      pendingGames === pendingEmojiRaceLobbies
+        ? refundReservedEmojiRaceLobby
+        : refundReservedCasinoWager
     );
     removed += result.removed;
     refunded += result.refunded;
@@ -535,6 +546,7 @@ function getNextPendingCasinoExpiry() {
     ...[...pendingScratchTickets.values()].map((pending) => pending.expiresAt),
     ...[...pendingTimingGames.values()].map((pending) => pending.expiresAt),
     ...[...pendingDeadlineGames.values()].map((pending) => pending.expiresAt),
+    ...[...pendingEmojiRaceLobbies.values()].map((pending) => pending.expiresAt),
     ...[...pendingPokerGames.values()].map((pending) => pending.expiresAt),
     ...[...pendingAiBlackjackGames.values()].map((pending) => pending.expiresAt),
     ...[...pendingBlackjackChallenges.values()].map((pending) => pending.expiresAt),
@@ -576,6 +588,32 @@ async function refundReservedCasinoWager(economy, logger, pending) {
     logger.error?.('Failed to refund expired casino wager:', error);
     return 0;
   }
+}
+
+async function refundReservedEmojiRaceLobby(economy, logger, pending) {
+  if (!pending?.reserved || typeof economy?.refundReservedWager !== 'function') return 0;
+
+  let refunded = 0;
+
+  for (const betEntry of pending.bets ?? []) {
+    if (!betEntry.reserved) continue;
+
+    try {
+      await economy.refundReservedWager({
+        guildId: pending.guildId,
+        userId: betEntry.userId,
+        username: betEntry.username,
+        bet: betEntry.bet
+      });
+      betEntry.reserved = false;
+      refunded += 1;
+    } catch (error) {
+      logger.error?.('Failed to refund expired emoji race wager:', error);
+    }
+  }
+
+  pending.reserved = (pending.bets ?? []).some((betEntry) => betEntry.reserved);
+  return refunded;
 }
 
 async function refundReservedPlayerCasinoPot(economy, logger, pending) {
@@ -690,7 +728,7 @@ async function routeCasinoCommand(interaction, economy, logger = console, option
 
   if (interaction.commandName === '이모지경마') {
     const choice = normalizeEmojiRaceChoice(interaction.options.getString('선택', true));
-    await runEmojiRaceCommand(interaction, economy, logger, {
+    await createEmojiRaceLobby(interaction, economy, logger, {
       bet,
       choice,
       randomInt: options.randomInt,
@@ -803,7 +841,7 @@ function formatCasinoInfo() {
     '- `/슬롯`: 페어 3배, 트리플 10배, 7️⃣ 트리플 20배',
     `- \`/데드라인\`: 최소 ${DEADLINE_MIN_BET.toLocaleString()}골드, 버튼을 누를수록 누적 보상과 꽝 확률이 함께 상승, 멈추면 수령`,
     `- \`/타이밍\`: ${TIMING_TARGET_MIN_SECONDS}~${TIMING_TARGET_MAX_SECONDS}초 랜덤 목표에 가깝게 누를수록 최대 ${formatMultiplier(TIMING_PAYOUT_TIERS[0].multiplier)}배`,
-    `- \`/이모지경마\`: 실시간 이모지 트랙에서 1등 동물 적중 시 ${EMOJI_RACE_MULTIPLIER}배`,
+    '- `/이모지경마`: 여러 명이 같은 판에 베팅, 총 베팅금에서 운영 수수료를 뺀 배당풀을 1등 동물 적중자끼리 지분 비례 분배',
     '- `/럭키세븐`: 주사위 2개 합이 7이면 5.5배',
     '- `/하이로우`: 두 번째 카드가 높음/낮음 적중 시 1.9배, 같은 숫자는 환불',
     '- `/블랙잭`: 승리 1.5배, 내추럴 블랙잭 2배, 무승부 환불',
@@ -857,7 +895,7 @@ function getCasinoQuickGameLabel(game) {
   return '게임';
 }
 
-async function runEmojiRaceCommand(interaction, economy, logger, {
+async function createEmojiRaceLobby(interaction, economy, logger, {
   bet,
   choice,
   randomInt,
@@ -865,7 +903,7 @@ async function runEmojiRaceCommand(interaction, economy, logger, {
   sleep: sleepFn = sleep
 }) {
   let reserved = false;
-  let replied = false;
+  let lobbyId = null;
 
   try {
     await economy.reserveWager({
@@ -876,32 +914,34 @@ async function runEmojiRaceCommand(interaction, economy, logger, {
     });
     reserved = true;
 
-    const race = playEmojiRace({
-      choice,
-      bet,
-      ...(randomInt ? { randomInt } : {})
-    });
-
-    await interaction.reply(createEmojiRaceProgressPayload(interaction.user, race, race.frames[0]));
-    replied = true;
-
-    for (const frame of race.frames.slice(1, -1)) {
-      await waitForRaceFrame(frameDelayMs, sleepFn);
-      await interaction.editReply(createEmojiRaceProgressPayload(interaction.user, race, frame));
-    }
-
-    await waitForRaceFrame(frameDelayMs, sleepFn);
-    const settlement = await economy.resolveReservedWager({
+    lobbyId = createChallengeId();
+    const lobby = {
       guildId: interaction.guildId,
-      userId: interaction.user.id,
-      username: interaction.user.username,
-      bet,
-      payout: race.payout
-    });
+      channelId: interaction.channelId,
+      host: {
+        userId: interaction.user.id,
+        username: interaction.user.username
+      },
+      bets: [
+        createEmojiRaceLobbyBet(interaction.user, choice, bet)
+      ],
+      unitBet: bet,
+      maxPlayers: EMOJI_RACE_LOBBY_MAX_PLAYERS,
+      randomInt: randomInt ?? null,
+      frameDelayMs,
+      sleep: sleepFn,
+      reserved: true,
+      mutating: false,
+      processing: false,
+      expiresAt: Date.now() + CHALLENGE_TTL_MS
+    };
+
+    pendingEmojiRaceLobbies.set(lobbyId, lobby);
     reserved = false;
 
-    await interaction.editReply(createEmojiRaceResultPayload(interaction.user, race, settlement));
+    await interaction.reply(createEmojiRaceLobbyPayload(lobbyId, lobby));
   } catch (error) {
+    if (lobbyId) pendingEmojiRaceLobbies.delete(lobbyId);
     if (reserved) {
       await economy.refundReservedWager({
         guildId: interaction.guildId,
@@ -911,23 +951,360 @@ async function runEmojiRaceCommand(interaction, economy, logger, {
       }).catch((refundError) => logger.error('Failed to refund emoji race wager:', refundError));
     }
 
-    if (replied && typeof interaction.editReply === 'function') {
-      await interaction.editReply(createEmojiRaceFailurePayload(error)).catch((editError) => {
-        logger.error('Failed to update emoji race failure message:', editError);
-      });
-      return;
-    }
-
     throw error;
   }
 }
 
-function createEmojiRaceProgressPayload(user, race, frame) {
+async function handleEmojiRaceButton(interaction, economy, logger, options = {}) {
+  const [action, lobbyId, rawChoice] = interaction.customId.split(':');
+  const lobby = pendingEmojiRaceLobbies.get(lobbyId);
+
+  if (!lobby) {
+    await safeReplyToInteraction(interaction, {
+      content: '이미 만료되었거나 처리된 이모지 경마판입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (Date.now() > lobby.expiresAt) {
+    pendingEmojiRaceLobbies.delete(lobbyId);
+    await refundReservedEmojiRaceLobby(economy, logger, lobby);
+    await interaction.update({
+      content: '⏰ 이모지 경마판이 만료되었습니다. 예약된 베팅금은 환불되었습니다.',
+      embeds: [],
+      components: []
+    });
+    return true;
+  }
+
+  if (lobby.processing) {
+    await safeReplyToInteraction(interaction, {
+      content: '경마판을 처리 중입니다. 잠시만 기다려주세요.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (lobby.mutating) {
+    await safeReplyToInteraction(interaction, {
+      content: '이전 경마판 입력을 처리 중입니다. 잠시 후 다시 눌러주세요.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (['race_bet', 'race_leave', 'race_cancel'].includes(action)) {
+    lobby.mutating = true;
+    try {
+      if (action === 'race_bet') {
+        return await handleEmojiRaceBetButton(interaction, economy, logger, lobbyId, lobby, rawChoice);
+      }
+
+      if (action === 'race_leave') {
+        return await handleEmojiRaceLeaveButton(interaction, economy, logger, lobbyId, lobby);
+      }
+
+      return await handleEmojiRaceCancelButton(interaction, economy, logger, lobbyId, lobby);
+    } finally {
+      if (pendingEmojiRaceLobbies.get(lobbyId) === lobby) {
+        lobby.mutating = false;
+      }
+    }
+  }
+
+  if (action === 'race_start') {
+    return handleEmojiRaceStartButton(interaction, economy, logger, lobbyId, lobby, options);
+  }
+
+  await safeReplyToInteraction(interaction, {
+    content: '알 수 없는 이모지 경마 버튼입니다.',
+    flags: MessageFlags.Ephemeral
+  });
+  return true;
+}
+
+async function handleEmojiRaceBetButton(interaction, economy, logger, lobbyId, lobby, rawChoice) {
+  let choice;
+
+  try {
+    choice = normalizeEmojiRaceChoice(rawChoice);
+  } catch (error) {
+    await safeReplyToInteraction(interaction, {
+      content: error.message,
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (interaction.user.bot) {
+    await safeReplyToInteraction(interaction, {
+      content: '봇 유저는 이모지 경마에 베팅할 수 없습니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  const existingBet = lobby.bets.find((betEntry) => betEntry.userId === interaction.user.id);
+  if (existingBet) {
+    existingBet.choice = choice;
+    lobby.expiresAt = Date.now() + CHALLENGE_TTL_MS;
+    await interaction.update(createEmojiRaceLobbyPayload(lobbyId, lobby));
+    return true;
+  }
+
+  if (lobby.bets.length >= lobby.maxPlayers) {
+    await safeReplyToInteraction(interaction, {
+      content: '이미 이모지 경마판 인원이 가득 찼습니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  try {
+    await economy.reserveWager({
+      guildId: lobby.guildId,
+      userId: interaction.user.id,
+      username: interaction.user.username,
+      bet: lobby.unitBet
+    });
+  } catch (error) {
+    await safeReplyToInteraction(interaction, {
+      content: `베팅 예약 실패: ${error.message}`,
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  lobby.bets.push(createEmojiRaceLobbyBet(interaction.user, choice, lobby.unitBet));
+  lobby.reserved = true;
+  lobby.expiresAt = Date.now() + CHALLENGE_TTL_MS;
+  await interaction.update(createEmojiRaceLobbyPayload(lobbyId, lobby));
+  return true;
+}
+
+async function handleEmojiRaceLeaveButton(interaction, economy, logger, lobbyId, lobby) {
+  const betIndex = lobby.bets.findIndex((betEntry) => betEntry.userId === interaction.user.id);
+
+  if (betIndex === -1) {
+    await safeReplyToInteraction(interaction, {
+      content: '이 이모지 경마판에 베팅 중이 아닙니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  const betEntry = lobby.bets[betIndex];
+  if (betEntry.userId === lobby.host.userId) {
+    await safeReplyToInteraction(interaction, {
+      content: '방장은 나가기 대신 취소 버튼으로 경마판을 닫을 수 있습니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  try {
+    await economy.refundReservedWager({
+      guildId: lobby.guildId,
+      userId: betEntry.userId,
+      username: betEntry.username,
+      bet: betEntry.bet
+    });
+    betEntry.reserved = false;
+  } catch (error) {
+    logger.error?.('Failed to refund emoji race leave wager:', error);
+    await safeReplyToInteraction(interaction, {
+      content: `나가기 실패: ${error.message}`,
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  lobby.bets.splice(betIndex, 1);
+  lobby.reserved = lobby.bets.some((entry) => entry.reserved);
+  lobby.expiresAt = Date.now() + CHALLENGE_TTL_MS;
+  await interaction.update(createEmojiRaceLobbyPayload(lobbyId, lobby));
+  return true;
+}
+
+async function handleEmojiRaceCancelButton(interaction, economy, logger, lobbyId, lobby) {
+  if (interaction.user.id !== lobby.host.userId) {
+    await safeReplyToInteraction(interaction, {
+      content: '이모지 경마판은 방장만 취소할 수 있습니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  pendingEmojiRaceLobbies.delete(lobbyId);
+  const refunded = await refundReservedEmojiRaceLobby(economy, logger, lobby);
+  await interaction.update({
+    content: `🏁 ${formatEmojiRaceParticipantMention(lobby.host)}님이 이모지 경마판을 취소했습니다. ${refunded}명의 베팅금을 환불했습니다.`,
+    allowedMentions: { parse: [] },
+    embeds: [],
+    components: []
+  });
+  return true;
+}
+
+async function handleEmojiRaceStartButton(interaction, economy, logger, lobbyId, lobby, options = {}) {
+  if (interaction.user.id !== lobby.host.userId) {
+    await safeReplyToInteraction(interaction, {
+      content: '이모지 경마판은 방장만 시작할 수 있습니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (lobby.bets.length < EMOJI_RACE_LOBBY_MIN_PLAYERS) {
+    await safeReplyToInteraction(interaction, {
+      content: `이모지 경마 배당판은 최소 ${EMOJI_RACE_LOBBY_MIN_PLAYERS}명이 베팅해야 시작할 수 있습니다.`,
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  const acknowledged = await safeDeferUpdate(interaction);
+  if (!acknowledged) {
+    logger.warn?.('Emoji race interaction expired before it could be acknowledged.');
+    return true;
+  }
+
+  if (pendingEmojiRaceLobbies.get(lobbyId) !== lobby) {
+    await safeReplyToInteraction(interaction, {
+      content: '이미 만료되었거나 처리된 이모지 경마판입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  lobby.processing = true;
+  lobby.expiresAt = Date.now() + CHALLENGE_TTL_MS * 5;
+
+  try {
+    const race = playEmojiRacePool({
+      bets: lobby.bets,
+      randomInt: options.randomInt ?? lobby.randomInt ?? undefined
+    });
+
+    await sendInteractionUpdate(interaction, createEmojiRaceProgressPayload(lobby, race, race.frames[0]));
+
+    for (const frame of race.frames.slice(1, -1)) {
+      await waitForRaceFrame(options.raceDelayMs ?? lobby.frameDelayMs, lobby.sleep ?? sleep);
+      await sendInteractionUpdate(interaction, createEmojiRaceProgressPayload(lobby, race, frame));
+    }
+
+    await waitForRaceFrame(options.raceDelayMs ?? lobby.frameDelayMs, lobby.sleep ?? sleep);
+    const settlements = await resolveEmojiRacePoolSettlements(economy, lobby, race);
+    pendingEmojiRaceLobbies.delete(lobbyId);
+
+    await sendInteractionUpdate(interaction, createEmojiRaceResultPayload(lobby, race, settlements));
+  } catch (error) {
+    pendingEmojiRaceLobbies.delete(lobbyId);
+    await refundReservedEmojiRaceLobby(economy, logger, lobby);
+    logger.error?.('Emoji race failed:', error);
+    const updated = await sendInteractionUpdate(interaction, createEmojiRaceFailurePayload(error));
+    if (!updated) {
+      logger.warn?.('Emoji race failure could not be sent because the interaction expired.');
+    }
+  } finally {
+    if (pendingEmojiRaceLobbies.get(lobbyId) === lobby) {
+      lobby.processing = false;
+    }
+  }
+
+  return true;
+}
+
+function createEmojiRaceLobbyBet(user, choice, bet) {
+  return {
+    key: String(user.id),
+    userId: String(user.id),
+    username: String(user.username ?? user.id),
+    choice: normalizeEmojiRaceChoice(choice),
+    bet,
+    reserved: true
+  };
+}
+
+function createEmojiRaceLobbyPayload(lobbyId, lobby) {
+  const embed = new EmbedBuilder()
+    .setTitle('🏁 이모지 경마 배당판')
+    .setDescription(formatEmojiRaceLobby(lobby))
+    .setColor(0xf59e0b)
+    .setFooter({ text: '베팅 버튼으로 참가/선택 변경, 방장이 시작하면 골드가 배당풀로 정산됩니다.' });
+
+  return {
+    embeds: [embed],
+    allowedMentions: { parse: [] },
+    components: createEmojiRaceLobbyRows(lobbyId, lobby)
+  };
+}
+
+function createEmojiRaceLobbyRows(lobbyId, lobby) {
+  const market = getEmojiRacePoolMarket(lobby.bets);
+  const choiceRow = new ActionRowBuilder().addComponents(
+    ...EMOJI_RACE_RACERS.map((racer) =>
+      new ButtonBuilder()
+        .setCustomId(`race_bet:${lobbyId}:${racer.id}`)
+        .setLabel(`${racer.emoji} ${racer.name} ${market.countByChoice[racer.id]}명`)
+        .setStyle(market.countByChoice[racer.id] > 0 ? ButtonStyle.Success : ButtonStyle.Secondary)
+        .setDisabled(lobby.processing)
+    )
+  );
+  const controlRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`race_leave:${lobbyId}`)
+      .setLabel('나가기')
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(lobby.processing),
+    new ButtonBuilder()
+      .setCustomId(`race_start:${lobbyId}`)
+      .setLabel('경주 시작')
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(lobby.processing || lobby.bets.length < EMOJI_RACE_LOBBY_MIN_PLAYERS),
+    new ButtonBuilder()
+      .setCustomId(`race_cancel:${lobbyId}`)
+      .setLabel('취소')
+      .setStyle(ButtonStyle.Danger)
+      .setDisabled(lobby.processing)
+  );
+
+  return [choiceRow, controlRow];
+}
+
+function formatEmojiRaceLobby(lobby) {
+  const market = getEmojiRacePoolMarket(lobby.bets);
+  const betLines = lobby.bets.map((betEntry) =>
+    `- ${formatEmojiRaceParticipantMention(betEntry)}: **${formatEmojiRaceChoice(betEntry.choice)}** · ${betEntry.bet.toLocaleString()}골드`
+  );
+  const oddsLines = EMOJI_RACE_RACERS.map((racer) => {
+    const stake = market.stakeByChoice[racer.id];
+    const count = market.countByChoice[racer.id];
+    return `- ${racer.emoji} ${racer.name}: ${count}명 · ${stake.toLocaleString()}골드 · 현재 배당 ${formatEmojiRaceOdds(market.oddsByChoice[racer.id])}`;
+  });
+
+  return [
+    `방장: ${formatEmojiRaceParticipantMention(lobby.host)}`,
+    `참가: **${lobby.bets.length}/${lobby.maxPlayers}명** · 단위 베팅: **${lobby.unitBet.toLocaleString()}골드**`,
+    `총 베팅: **${market.totalPool.toLocaleString()}골드** · 승자 배당풀: **${market.payoutPool.toLocaleString()}골드** · 운영 수수료: **${market.houseFee.toLocaleString()}골드**`,
+    '',
+    '**현재 배당률**',
+    ...oddsLines,
+    '',
+    '**베팅 현황**',
+    ...betLines,
+    '',
+    `${EMOJI_RACE_LOBBY_MIN_PLAYERS}명 이상 베팅하면 방장이 **경주 시작**을 누를 수 있습니다. 같은 유저가 동물 버튼을 다시 누르면 선택만 변경됩니다.`
+  ].join('\n');
+}
+
+function createEmojiRaceProgressPayload(lobby, race, frame) {
   const embed = new EmbedBuilder()
     .setTitle(frame.turn === 0 ? '🏁 이모지 경마 출발!' : `🏁 이모지 경마 진행 중 · ${frame.turn}턴`)
     .setDescription([
-      `베팅: **${user.username}** → **${formatEmojiRaceChoice(race.choice)}**`,
-      `배수: 적중 시 **${EMOJI_RACE_MULTIPLIER}배**`,
+      `참가: **${lobby.bets.length}명** · 총 베팅: **${race.market.totalPool.toLocaleString()}골드** · 배당풀: **${race.payoutPool.toLocaleString()}골드**`,
+      `현재 선두가 확정되면 **${formatEmojiRaceChoice(race.winnerId)}** 적중자끼리 배당풀을 나눕니다.`,
       '',
       '```text',
       formatEmojiRaceTrack(frame),
@@ -942,25 +1319,77 @@ function createEmojiRaceProgressPayload(user, race, frame) {
   };
 }
 
-function createEmojiRaceResultPayload(user, race, settlement) {
+async function resolveEmojiRacePoolSettlements(economy, lobby, race) {
+  const settlements = [];
+
+  for (const betEntry of race.bets) {
+    const settlement = await economy.resolveReservedWager({
+      guildId: lobby.guildId,
+      userId: betEntry.userId,
+      username: betEntry.username,
+      bet: betEntry.bet,
+      payout: betEntry.payout
+    });
+    const lobbyBet = lobby.bets.find((candidate) => candidate.key === betEntry.key);
+    if (lobbyBet) lobbyBet.reserved = false;
+    settlements.push({
+      ...betEntry,
+      settlement
+    });
+  }
+
+  lobby.reserved = lobby.bets.some((betEntry) => betEntry.reserved);
+  return settlements;
+}
+
+function createEmojiRaceResultPayload(lobby, race, settlements) {
+  const settlementByKey = new Map(settlements.map((settlement) => [settlement.key, settlement]));
+  const winnerBets = race.bets.filter((betEntry) => betEntry.win);
+  const resultLines = race.bets.map((betEntry) => {
+    const settlement = settlementByKey.get(betEntry.key);
+    const payout = settlement?.settlement?.payout ?? betEntry.payout;
+    const profit = settlement?.settlement?.profit ?? (payout - betEntry.bet);
+    const profitText = profit >= 0
+      ? `+${profit.toLocaleString()}골드`
+      : `${profit.toLocaleString()}골드`;
+    return `- ${formatEmojiRaceParticipantMention(betEntry)} (${formatEmojiRaceChoice(betEntry.choice)}): ${betEntry.win ? '✅ 적중' : '❌ 실패'} · 지급 ${payout.toLocaleString()}골드 · 손익 **${profitText}**`;
+  });
   const embed = new EmbedBuilder()
     .setTitle('🏆 이모지 경마 결과')
     .setDescription([
-      `베팅: **${user.username}** → **${formatEmojiRaceChoice(race.choice)}**`,
       `승자: **${formatEmojiRaceChoice(race.winnerId)}**`,
+      `총 베팅: **${race.market.totalPool.toLocaleString()}골드** · 배당풀: **${race.payoutPool.toLocaleString()}골드** · 운영 수수료: **${race.houseFee.toLocaleString()}골드**`,
+      winnerBets.length > 0
+        ? `적중: **${winnerBets.length}명** · 적중 지분: **${race.winnerStake.toLocaleString()}골드**`
+        : '적중자가 없어 배당풀은 지급되지 않았습니다.',
       '',
       '```text',
       formatEmojiRaceTrack(race.finalFrame),
       '```',
-      race.win ? `배수: **${EMOJI_RACE_MULTIPLIER}배**` : '베팅한 동물이 1등하지 못했습니다.',
-      formatSettlement(race.win, settlement)
+      '',
+      '**정산**',
+      ...resultLines
     ].join('\n'))
-    .setColor(race.win ? 0x22c55e : 0xef4444);
+    .setColor(winnerBets.length > 0 ? 0x22c55e : 0xef4444);
 
   return {
     embeds: [embed],
+    allowedMentions: createAllowedMentionsForUsers(lobby.bets.map((betEntry) => betEntry.userId)),
     components: []
   };
+}
+
+function formatEmojiRaceParticipantMention(participant) {
+  return formatUserMention(
+    { id: participant.userId, username: participant.username },
+    participant.username
+  );
+}
+
+function formatEmojiRaceOdds(odds) {
+  if (!Number.isFinite(odds) || odds <= 0) return '무베팅';
+  if (Number.isInteger(odds)) return `${odds.toFixed(0)}배`;
+  return `${odds.toFixed(2).replace(/0+$/u, '').replace(/\.$/u, '')}배`;
 }
 
 function createEmojiRaceFailurePayload(error) {

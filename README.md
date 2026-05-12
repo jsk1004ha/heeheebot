@@ -4,7 +4,7 @@
 
 **희희봇은 라이빗을 침공한 터미네이터 희진이다.**
 
-![Version](https://img.shields.io/badge/version-v0.8.2-orange)
+![Version](https://img.shields.io/badge/version-v0.9.1-orange)
 ![Status](https://img.shields.io/badge/status-pre--1.0-yellow)
 ![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.5-339933?logo=nodedotjs&logoColor=white)
 ![discord.js](https://img.shields.io/badge/discord.js-v14-5865F2?logo=discord&logoColor=white)
@@ -47,8 +47,8 @@
 | 명령어 등록 | `npm start` 시 자동 동기화, 수동은 `npm run register` |
 | 테스트 | `node --test` 기반 도메인/라우팅/커맨드 테스트 |
 | 현재 커맨드 규모 | 최상위 slash command 82개 + 다수 subcommand |
-| 현재 버전 | `v0.8.2` — 1.0 이전 개발 버전 |
-| 버전 산정 근거 | `v0.8.0` 기능 기준선에 정규화 SQLite 저장소와 계정 fast-path 패치를 더해 `v0.8.2`로 산정 |
+| 현재 버전 | `v0.9.1` — 1.0 이전 개발 버전 |
+| 버전 산정 근거 | `v0.9.0` 마피아 기능 기준선에 이모지경마 다인 배당판 패치를 더해 `v0.9.1`로 산정 |
 
 ### 추천 첫 동선
 
@@ -149,11 +149,11 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 현재 버전 | `v0.9.0` |
-| npm package version | `0.9.0` |
-| 기준 커밋 범위 | `d6b539a` → `4b2a0b6` + working tree |
-| 기준 커밋 수 | 107 commits + working tree |
-| 최신 기준 커밋 | `4b2a0b6` — `feat: enhance Uno game interactions and improve command handling logic` |
+| 현재 버전 | `v0.9.1` |
+| npm package version | `0.9.1` |
+| 기준 커밋 범위 | `d6b539a` → `919b758` + working tree |
+| 기준 커밋 수 | 119 commits + working tree |
+| 최신 기준 커밋 | `919b758` — `Merge branch 'main' of https://github.com/jsk1004ha/heeheebot` |
 | 릴리스 상태 | Pre-1.0: 기능 확장과 안정화가 동시에 진행 중 |
 
 ### 버전 규칙
@@ -186,6 +186,14 @@ vMAJOR.MINOR.PATCH
 | `0.8` | `f8fa883` → `2ece970` | 계정 연동, 워들/숫자야구/투표 테스트, command startup sync, 자동급식 권한 체크, 도움말 개선 |
 
 ### 커밋 기록 기반 릴리스 노트
+
+#### `v0.9.1` — 이모지경마 다인 배당판
+
+- **다인 베팅 로비**: `/이모지경마`가 단일 즉시 정산 대신 참가/나가기/시작 버튼이 있는 경마판을 생성
+- **배당풀 정산**: 총 베팅금에서 운영 수수료를 제외한 배당풀을 우승 동물 적중자끼리 베팅 지분 비례로 분배
+- **실시간 배당 표시**: 참가자 수, 동물별 베팅액, 현재 배당률, 총 베팅금과 배당풀을 embed에 표시
+- **예약금 보호**: 참가·선택 변경·나가기·취소·만료·실패 흐름에서 예약 베팅금 중복/누락 정산을 방어
+- **회귀 검증**: 카지노 경마 배당 테스트를 추가하고 전체 `node --test` 회귀를 통과
 
 #### `v0.9.0` — 공개 혼합 투표 마피아 게임
 
@@ -233,13 +241,13 @@ vMAJOR.MINOR.PATCH
 git log --date=short --pretty=format:'%h %ad %s'
 
 # 2. package.json / package-lock.json 버전 갱신
-npm version 0.8.2 --no-git-tag-version
+npm version 0.9.1 --no-git-tag-version
 
 # 3. 테스트
 npm test
 
 # 4. 태그 생성 예시
-git tag -a v0.8.2 -m "HeeHeeBot v0.8.2"
+git tag -a v0.9.1 -m "HeeHeeBot v0.9.1"
 ```
 
 ---
@@ -394,7 +402,7 @@ npm run register
 | `/주식 보유\|랭킹\|레버리지진입\|레버리지청산\|레버리지보유` | 자산/랭킹/부채 노출형 레버리지와 버튼·번호 청산 |
 | `/카지노정보` | 도박 게임 배수와 환급 규칙 |
 | `/홀짝`, `/주사위`, `/슬롯`, `/데드라인`, `/타이밍` | 간단 베팅 게임 |
-| `/이모지경마`, `/럭키세븐`, `/하이로우`, `/블랙잭` | 버튼/카드/경마형 게임 |
+| `/이모지경마`, `/럭키세븐`, `/하이로우`, `/블랙잭` | 다인 배당 경마, 버튼/카드형 게임 |
 | `/룰렛`, `/바카라`, `/크랩스`, `/시크보`, `/키노` | 카지노 테이블 게임 |
 | `/스크래치복권` | 2000만/1억/5억형 고정가 복권을 버튼으로 한 칸씩 긁어 같은 금액 3개 당첨 확인 |
 
@@ -497,6 +505,7 @@ npm run register
 /주식 레버리지청산
 /주식 레버리지청산 대상:1
 /카지노정보
+/이모지경마 돈:100 선택:강아지
 /블랙잭 500
 /룰렛 100 빨강
 /키노 100 3,14,25

@@ -59,6 +59,7 @@ const KENO_MULTIPLIERS = Object.freeze({
 });
 export const EMOJI_RACE_TRACK_LENGTH = 9;
 export const EMOJI_RACE_MULTIPLIER = 2.7;
+export const EMOJI_RACE_POOL_PAYOUT_BPS = 9_500;
 export const EMOJI_RACE_RACERS = Object.freeze([
   Object.freeze({ id: 'horse', number: 1, name: '말', emoji: '🐎' }),
   Object.freeze({ id: 'dog', number: 2, name: '강아지', emoji: '🐕' }),
@@ -1024,6 +1025,86 @@ export function playEmojiRace({
   trackLength = EMOJI_RACE_TRACK_LENGTH
 } = {}) {
   const normalizedChoice = normalizeEmojiRaceChoice(choice);
+  const race = runEmojiRace({ randomInt, trackLength });
+
+  return createEmojiRaceResult({
+    choice: normalizedChoice,
+    bet,
+    frames: race.frames,
+    winner: race.winner
+  });
+}
+
+export function playEmojiRacePool({
+  bets,
+  randomInt = defaultRandomInt,
+  trackLength = EMOJI_RACE_TRACK_LENGTH,
+  payoutBps = EMOJI_RACE_POOL_PAYOUT_BPS
+} = {}) {
+  const normalizedBets = normalizeEmojiRacePoolBets(bets);
+  const race = runEmojiRace({ randomInt, trackLength });
+  const market = getEmojiRacePoolMarket(normalizedBets, { payoutBps });
+  const payouts = calculateEmojiRacePoolPayouts(normalizedBets, race.winner.id, market);
+
+  return {
+    game: '이모지경마',
+    bets: normalizedBets.map((betEntry) => ({
+      ...betEntry,
+      payout: payouts.byKey[betEntry.key] ?? 0,
+      profit: (payouts.byKey[betEntry.key] ?? 0) - betEntry.bet,
+      win: betEntry.choice === race.winner.id
+    })),
+    racers: EMOJI_RACE_RACERS,
+    frames: race.frames,
+    finalFrame: race.frames.at(-1),
+    winner: race.winner,
+    winnerId: race.winner.id,
+    market,
+    payoutPool: market.payoutPool,
+    houseFee: market.houseFee,
+    winnerStake: payouts.winnerStake,
+    winnerCount: payouts.winnerCount,
+    payouts: payouts.byKey
+  };
+}
+
+export function getEmojiRacePoolMarket(bets, {
+  payoutBps = EMOJI_RACE_POOL_PAYOUT_BPS
+} = {}) {
+  const normalizedBets = normalizeEmojiRacePoolBets(bets);
+  const normalizedPayoutBps = normalizeBasisPoints(payoutBps, '이모지 경마 배당률');
+  const totalPool = normalizedBets.reduce((total, betEntry) => total + betEntry.bet, 0);
+  const payoutPool = Math.floor(totalPool * normalizedPayoutBps / 10_000);
+  const stakeByChoice = Object.fromEntries(EMOJI_RACE_RACERS.map((racer) => [racer.id, 0]));
+  const countByChoice = Object.fromEntries(EMOJI_RACE_RACERS.map((racer) => [racer.id, 0]));
+
+  for (const betEntry of normalizedBets) {
+    stakeByChoice[betEntry.choice] += betEntry.bet;
+    countByChoice[betEntry.choice] += 1;
+  }
+
+  const oddsByChoice = Object.fromEntries(EMOJI_RACE_RACERS.map((racer) => [
+    racer.id,
+    stakeByChoice[racer.id] > 0
+      ? payoutPool / stakeByChoice[racer.id]
+      : null
+  ]));
+
+  return {
+    totalPool,
+    payoutPool,
+    houseFee: totalPool - payoutPool,
+    payoutBps: normalizedPayoutBps,
+    stakeByChoice,
+    countByChoice,
+    oddsByChoice
+  };
+}
+
+function runEmojiRace({
+  randomInt = defaultRandomInt,
+  trackLength = EMOJI_RACE_TRACK_LENGTH
+} = {}) {
   const finishLine = normalizeEmojiRaceTrackLength(trackLength);
   const positions = Object.fromEntries(EMOJI_RACE_RACERS.map((racer) => [racer.id, 0]));
   const frames = [
@@ -1054,12 +1135,7 @@ export function playEmojiRace({
         finished: true
       }));
 
-      return createEmojiRaceResult({
-        choice: normalizedChoice,
-        bet,
-        frames,
-        winner
-      });
+      return { frames, winner };
     }
 
     frames.push(createEmojiRaceFrame({
@@ -1078,12 +1154,7 @@ export function playEmojiRace({
     finished: true
   }));
 
-  return createEmojiRaceResult({
-    choice: normalizedChoice,
-    bet,
-    frames,
-    winner
-  });
+  return { frames, winner };
 }
 
 export function playBlackjackRound({ bet, randomInt = defaultRandomInt } = {}) {
@@ -3016,12 +3087,114 @@ function normalizeNonNegativeSafeInteger(value, label) {
   return normalized;
 }
 
+function normalizePositiveSafeInteger(value, label) {
+  const normalized = Number(value);
+
+  if (!Number.isSafeInteger(normalized) || normalized < 1) {
+    throw new Error(`${label}은 1 이상의 정수여야 합니다.`);
+  }
+
+  return normalized;
+}
+
+function normalizeBasisPoints(value, label) {
+  const normalized = Number(value);
+
+  if (!Number.isSafeInteger(normalized) || normalized < 0 || normalized > 10_000) {
+    throw new Error(`${label}은 0~10000 사이의 정수여야 합니다.`);
+  }
+
+  return normalized;
+}
+
 function normalizeEmojiRaceTrackLength(trackLength) {
   if (!Number.isSafeInteger(trackLength) || trackLength < 3 || trackLength > 20) {
     throw new Error('이모지 경마 트랙 길이는 3~20 사이의 정수여야 합니다.');
   }
 
   return trackLength;
+}
+
+function normalizeEmojiRacePoolBets(bets) {
+  if (!Array.isArray(bets) || bets.length < 1) {
+    throw new Error('이모지 경마 배당 베팅은 1명 이상이어야 합니다.');
+  }
+
+  const normalized = bets.map((betEntry, index) => {
+    const userId = String(betEntry?.userId ?? betEntry?.key ?? `bettor-${index + 1}`).trim();
+    const key = String(betEntry?.key ?? userId).trim();
+    const username = String(betEntry?.username ?? userId).trim();
+    const choice = normalizeEmojiRaceChoice(betEntry?.choice);
+    const bet = normalizePositiveSafeInteger(betEntry?.bet, `${username} 베팅액`);
+
+    if (!key || !userId || !username) {
+      throw new Error('이모지 경마 베팅 참가자 정보가 올바르지 않습니다.');
+    }
+
+    return {
+      key,
+      userId,
+      username,
+      choice,
+      bet
+    };
+  });
+
+  const keys = new Set(normalized.map((betEntry) => betEntry.key));
+  const userIds = new Set(normalized.map((betEntry) => betEntry.userId));
+
+  if (keys.size !== normalized.length || userIds.size !== normalized.length) {
+    throw new Error('이모지 경마 배당 베팅 참가자는 중복될 수 없습니다.');
+  }
+
+  return normalized;
+}
+
+function calculateEmojiRacePoolPayouts(bets, winnerId, market) {
+  const winners = bets.filter((betEntry) => betEntry.choice === winnerId);
+  const byKey = Object.fromEntries(bets.map((betEntry) => [betEntry.key, 0]));
+  const winnerStake = winners.reduce((total, betEntry) => total + betEntry.bet, 0);
+
+  if (winners.length === 0 || winnerStake <= 0 || market.payoutPool <= 0) {
+    return {
+      byKey,
+      winnerStake,
+      winnerCount: winners.length
+    };
+  }
+
+  const allocations = winners.map((betEntry, index) => {
+    const weighted = betEntry.bet * market.payoutPool;
+    return {
+      key: betEntry.key,
+      index,
+      basePayout: Math.floor(weighted / winnerStake),
+      remainder: weighted % winnerStake
+    };
+  });
+  let allocated = 0;
+
+  for (const allocation of allocations) {
+    byKey[allocation.key] = allocation.basePayout;
+    allocated += allocation.basePayout;
+  }
+
+  let remainderPool = market.payoutPool - allocated;
+  const remainderOrder = [...allocations].sort((a, b) =>
+    b.remainder - a.remainder || a.index - b.index
+  );
+
+  for (const allocation of remainderOrder) {
+    if (remainderPool <= 0) break;
+    byKey[allocation.key] += 1;
+    remainderPool -= 1;
+  }
+
+  return {
+    byKey,
+    winnerStake,
+    winnerCount: winners.length
+  };
 }
 
 function createEmojiRaceFrame({
