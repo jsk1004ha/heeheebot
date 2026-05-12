@@ -11,7 +11,7 @@ import {
 } from './accounts.js';
 
 const MAX_PICKAXE_LEVEL = 100;
-const ACTIVE_MINE_COOLDOWN_MS = 8_000;
+const ACTIVE_MINE_COOLDOWN_MS = 3_000;
 const ACTIVE_CHAIN_WINDOW_MS = 2 * 60 * 1000;
 const MAX_IDLE_REWARD_MS = 12 * 60 * 60 * 1000;
 const IDLE_ORE_INTERVAL_MS = 10 * 60 * 1000;
