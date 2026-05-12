@@ -104,6 +104,10 @@ async function createMafiaLobby(interaction, economy, logger, options) {
     status: 'collecting',
     participants: new Map(),
     game: null,
+    gameChannel: null,
+    gameThread: null,
+    gameThreadResult: null,
+    threadKey: null,
     roleRooms: new Map(),
     roleRoomResults: [],
     collectionMs: options.collectionMs ?? MAFIA_COLLECTION_MS,
@@ -156,7 +160,7 @@ async function handleMafiaButton(interaction, economy, logger, options) {
   const [action, gameId, targetId] = interaction.customId.split(':');
   const state = activeMafiaGamesById.get(gameId);
 
-  if (!state || state.guildId !== interaction.guildId || state.channelId !== interaction.channelId) {
+  if (!state || state.guildId !== interaction.guildId || !isMafiaInteractionChannel(state, interaction.channelId)) {
     await interaction.reply({
       content: '이미 종료되었거나 다른 채널의 마피아게임입니다.',
       flags: MessageFlags.Ephemeral
@@ -261,9 +265,17 @@ async function beginMafiaGame(state, economy, logger) {
   }
 
   state.status = 'starting';
+  state.gameThreadResult = await createGamePrivateThread(state, logger);
   state.roleRoomResults = await createSameRolePrivateRooms(state, logger);
 
-  await state.channel.send({
+  if (state.gameThreadResult.ok && state.gameThread?.id) {
+    await state.channel.send({
+      content: `🧵 마피아게임 진행 스레드: <#${state.gameThread.id}>\n생존자만 스레드에 남고, 사망자는 자동으로 퇴장됩니다.`,
+      allowedMentions: { parse: [] }
+    }).catch(() => null);
+  }
+
+  await sendGameMessage(state, {
     content: formatStartMessage(state),
     components: [createRoleActionRow(state)]
   });
@@ -275,8 +287,42 @@ async function finishCancelledGame(state, reason) {
   state.status = 'ended';
   clearAllTimers(state);
   activeMafiaGamesByChannel.delete(state.key);
+  if (state.threadKey) activeMafiaGamesByChannel.delete(state.threadKey);
   activeMafiaGamesById.delete(state.id);
   await state.channel.send(`⏹️ 마피아게임 시작 취소: ${reason}`);
+}
+
+async function createGamePrivateThread(state, logger) {
+  if (typeof state.channel?.threads?.create !== 'function') {
+    state.gameChannel = state.channel;
+    return { ok: false, error: new Error('비공개 진행 스레드 생성 권한 또는 기능이 없습니다.') };
+  }
+
+  try {
+    const thread = await state.channel.threads.create({
+      name: `마피아게임-${state.id}`.slice(0, 90),
+      type: ChannelType.PrivateThread,
+      invitable: false,
+      reason: '마피아게임 생존자 전용 진행 스레드'
+    });
+
+    state.gameThread = thread;
+    state.gameChannel = thread;
+    state.threadKey = createChannelKey(state.guildId, thread.id);
+    activeMafiaGamesByChannel.set(state.threadKey, state);
+
+    for (const player of state.game.players) {
+      if (typeof thread.members?.add === 'function') {
+        await thread.members.add(player.userId).catch((error) => logger.debug?.('Failed to add mafia player to game thread:', error));
+      }
+    }
+
+    return { ok: true, threadId: thread.id ?? null, thread };
+  } catch (error) {
+    logger.debug?.('Failed to create mafia game thread:', error);
+    state.gameChannel = state.channel;
+    return { ok: false, error };
+  }
 }
 
 async function createSameRolePrivateRooms(state, logger) {
@@ -338,7 +384,7 @@ async function startNightPhase(state, economy, logger) {
     state.nightMs
   );
 
-  await state.channel.send({
+  await sendGameMessage(state, {
     content: formatNightMessage(state),
     components: [createNightActionRow(state)]
   });
@@ -439,8 +485,8 @@ async function resolveNightPhase(state, economy, logger, { reason = 'time' } = {
   const result = state.game.resolveNight();
   state.lastNightResult = result;
 
-  await removeDeadPlayersFromRoleRooms(state, result.killed, logger);
-  await state.channel.send(formatNightResultMessage(result, reason));
+  await sendGameMessage(state, formatNightResultMessage(result, reason));
+  await removeDeadPlayersFromPrivateRooms(state, result.killed, logger);
 
   if (result.win) {
     await finishMafiaGame(state, economy, result.win);
@@ -459,7 +505,7 @@ async function startDiscussionPhase(state, economy, logger) {
     state.discussionMs
   );
 
-  await state.channel.send({
+  await sendGameMessage(state, {
     content: formatDiscussionMessage(state),
     components: [createSkipActionRow(state)]
   });
@@ -472,7 +518,7 @@ async function startVotingPhase(state, economy, logger) {
   clearVoteTimer(state);
   state.game.clearVotes();
 
-  state.voteMessage = await state.channel.send(createVoteMessagePayload(state, '처형할 사람에게 투표하세요.'));
+  state.voteMessage = await sendGameMessage(state, createVoteMessagePayload(state, '처형할 사람에게 투표하세요.'));
   state.voteTimer = setManagedTimeout(
     () => resolveVotingPhase(state, economy, logger, { reason: 'time' }).catch((error) => logger.error(error)),
     state.votingMs
@@ -507,11 +553,11 @@ async function resolveVotingPhase(state, economy, logger, { reason = 'time' } = 
 
   const result = state.game.resolveVote();
   state.lastVoteResult = result;
-  if (result.executed) {
-    await removeDeadPlayersFromRoleRooms(state, [result.executed], logger);
-  }
 
-  await state.channel.send(formatVoteResultMessage(result, reason));
+  await sendGameMessage(state, formatVoteResultMessage(result, reason));
+  if (result.executed) {
+    await removeDeadPlayersFromPrivateRooms(state, [result.executed], logger);
+  }
   if (result.win) {
     await finishMafiaGame(state, economy, result.win);
     return;
@@ -553,11 +599,20 @@ async function finishMafiaGame(state, economy, win) {
   state.status = 'ended';
   clearAllTimers(state);
   activeMafiaGamesByChannel.delete(state.key);
+  if (state.threadKey) activeMafiaGamesByChannel.delete(state.threadKey);
   activeMafiaGamesById.delete(state.id);
 
   const rewards = await awardMafiaRewards(state, economy, win.winner);
+  const finishMessage = formatFinishMessage(state, win, rewards);
+  await sendGameMessage(state, finishMessage);
+  if (state.gameThread && state.gameChannel !== state.channel) {
+    await state.channel.send({
+      content: finishMessage,
+      allowedMentions: { parse: [] }
+    }).catch(() => null);
+  }
   await cleanupRoleRooms(state);
-  await state.channel.send(formatFinishMessage(state, win, rewards));
+  await cleanupGameThread(state);
 }
 
 async function awardMafiaRewards(state, economy, winner) {
@@ -574,13 +629,21 @@ async function awardMafiaRewards(state, economy, winner) {
   }
 }
 
-async function removeDeadPlayersFromRoleRooms(state, players, logger) {
+async function removeDeadPlayersFromPrivateRooms(state, players, logger) {
   for (const player of players) {
     const room = state.roleRooms.get(player.role);
     if (typeof room?.members?.remove === 'function') {
       await room.members.remove(player.userId).catch((error) => logger.debug?.('Failed to remove dead mafia player from room:', error));
     }
+    if (typeof state.gameThread?.members?.remove === 'function') {
+      await state.gameThread.members.remove(player.userId).catch((error) => logger.debug?.('Failed to remove dead mafia player from game thread:', error));
+    }
   }
+}
+
+async function sendGameMessage(state, payload) {
+  const channel = state.gameChannel ?? state.gameThread ?? state.channel;
+  return channel.send(payload);
 }
 
 async function cleanupRoleRooms(state) {
@@ -594,6 +657,14 @@ async function cleanupRoleRooms(state) {
   state.roleRooms.clear();
 }
 
+async function cleanupGameThread(state) {
+  if (typeof state.gameThread?.setArchived === 'function') {
+    await state.gameThread.setArchived(true, '마피아게임 종료').catch(() => null);
+  }
+  state.gameThread = null;
+  state.gameChannel = state.channel;
+}
+
 function formatLobbyMessage(state) {
   const distribution = safeDistributionText(state.participants.size);
   const participants = [...state.participants.values()]
@@ -605,6 +676,7 @@ function formatLobbyMessage(state) {
     `인원: **${state.participants.size}/${MAFIA_MAX_PLAYERS}명** · 최소 ${MAFIA_MIN_PLAYERS}명`,
     `역할: ${distribution}`,
     `모집: ${formatSeconds(state.collectionMs)}`,
+    '시작 후 생존자 전용 스레드에서 진행됩니다.',
     '',
     participants
   ].join('\n');
@@ -615,10 +687,14 @@ function formatStartMessage(state) {
   const roomLine = state.roleRoomResults.length > 0
     ? `회의실: ${state.roleRoomResults.map((result) => `${getMafiaRoleLabel(result.role)} ${result.ok ? '생성' : '실패'}`).join(' · ')}`
     : '회의실: 같은 직업 2명 이상 없음';
+  const threadLine = state.gameThreadResult?.ok && state.gameThread?.id
+    ? `진행: <#${state.gameThread.id}> · 사망자는 진행 스레드에서 제거`
+    : '진행: 스레드 생성 실패 · 사망자 채팅 제한 불가';
 
   return [
     '🕵️ **마피아게임 시작**',
     `역할: 마피아 ${counts.mafia} / 경찰 ${counts.police} / 의사 ${counts.doctor} / 시민 ${counts.citizen}`,
+    threadLine,
     roomLine,
     '아래 버튼으로 본인 역할만 확인하세요.'
   ].join('\n');
@@ -742,9 +818,10 @@ function formatStatusMessage(state) {
 
   return [
     `🕵️ 마피아게임 상태: **${statusLabel}**`,
+    state.gameThread?.id ? `진행 스레드: <#${state.gameThread.id}>` : null,
     `${state.game.round}일차 · 생존 ${state.game.livingPlayers.length}명`,
     state.game.livingPlayers.map(formatPlayerMention).join(', ')
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
 
 function safeDistributionText(count) {
@@ -844,6 +921,11 @@ function formatPlayerName(player) {
 
 function createChannelKey(guildId, channelId) {
   return `${guildId}:${channelId}`;
+}
+
+function isMafiaInteractionChannel(state, channelId) {
+  const normalizedChannelId = String(channelId ?? '');
+  return normalizedChannelId === state.channelId || normalizedChannelId === state.gameThread?.id;
 }
 
 function createGameId() {
