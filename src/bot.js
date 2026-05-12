@@ -367,6 +367,9 @@ export function shouldDeferBeforeCommandHandling(interaction) {
     if (interaction?.isChatInputCommand?.() && interaction.commandName === '계정연동') {
       return false;
     }
+    if (interaction?.isChatInputCommand?.() && shouldKeepInitialChatInputResponseOpen(interaction)) {
+      return false;
+    }
     return true;
   }
 
@@ -381,6 +384,16 @@ function shouldKeepInitialComponentResponseOpen(interaction) {
   const customId = interaction?.customId ?? '';
 
   return customId.startsWith('liar_guess:');
+}
+
+function shouldKeepInitialChatInputResponseOpen(interaction) {
+  if (interaction?.commandName !== '우노') return false;
+
+  try {
+    return interaction.options?.getSubcommand?.() === '손패';
+  } catch {
+    return false;
+  }
 }
 
 async function recordCommandActivity(interaction, economy, community, logger) {

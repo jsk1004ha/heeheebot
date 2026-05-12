@@ -6,10 +6,8 @@ import {
   SlashCommandBuilder
 } from 'discord.js';
 import {
-  UNO_COLORS,
   UNO_MODES,
   UnoGameManager,
-  formatUnoCard,
   formatUnoColor,
   formatUnoDirection,
   normalizeUnoRules
@@ -34,6 +32,25 @@ const UNO_STACKING_CHOICES = Object.freeze([
   { name: 'Anything stacks(아무 드로우 중첩)', value: 'anything' },
   { name: '중첩 끔', value: 'off' }
 ]);
+const UNO_COLOR_EMOJIS = Object.freeze({
+  red: '🟥',
+  yellow: '🟨',
+  green: '🟩',
+  blue: '🟦'
+});
+const UNO_CARD_FACES = Object.freeze({
+  skip: 'SKIP',
+  reverse: 'REV',
+  draw2: '+2',
+  wild: 'WILD',
+  wildDraw4: '+4',
+  wildReverseDraw4: '↺ +4',
+  wildDraw6: '+6',
+  wildDraw10: '+10',
+  wildColorRoulette: 'ROULETTE',
+  skipAll: 'ALL SKIP',
+  discardAll: 'ALL DROP'
+});
 
 export const unoCommands = [
   new SlashCommandBuilder()
@@ -165,6 +182,7 @@ export async function handleUnoCommand(interaction, manager = DEFAULT_UNO_MANAGE
       });
       await interaction.reply({
         content: state ? formatUnoStatus(state) : '이 채널에는 우노 방이 없습니다. `/우노 시작`으로 방을 만들 수 있습니다.',
+        components: state ? createUnoComponents(state) : [],
         allowedMentions: { parse: [] }
       });
       return true;
@@ -280,9 +298,30 @@ async function handleUnoButton(interaction, manager) {
     return true;
   }
 
+  if (action === 'uno_hand') {
+    try {
+      const result = manager.getPlayerHand({
+        guildId: interaction.guildId,
+        channelId: interaction.channelId,
+        userId: interaction.user.id
+      });
+      await interaction.reply({
+        content: formatUnoHand(result),
+        flags: MessageFlags.Ephemeral,
+        allowedMentions: { parse: [] }
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: `손패 확인 실패: ${error.message}`,
+        flags: MessageFlags.Ephemeral
+      });
+    }
+    return true;
+  }
+
   if (state.status !== 'lobby') {
     await interaction.reply({
-      content: '이미 시작된 우노 게임입니다. `/우노 손패`, `/우노 내기`, `/우노 뽑기`를 사용하세요.',
+      content: '이미 시작된 우노 게임입니다. 공개 메시지의 **내 손패** 버튼이나 `/우노 내기`, `/우노 뽑기`를 사용하세요.',
       flags: MessageFlags.Ephemeral
     });
     return true;
@@ -359,11 +398,13 @@ async function handleUnoButton(interaction, manager) {
     if (typeof interaction.channel?.send === 'function') {
       await interaction.channel.send({
         content: formatUnoStartMessage(started),
+        components: createUnoComponents(started),
         allowedMentions: { parse: [] }
       });
     } else if (typeof interaction.followUp === 'function') {
       await interaction.followUp({
         content: formatUnoStartMessage(started),
+        components: createUnoComponents(started),
         allowedMentions: { parse: [] }
       });
     }
@@ -409,6 +450,7 @@ async function replyWithUnoActionResult(interaction, result) {
 
   await interaction.reply({
     content: payload,
+    components: result.ok ? createUnoComponents(result.game) : [],
     flags: result.ok ? undefined : MessageFlags.Ephemeral,
     allowedMentions: { parse: [] }
   });
@@ -416,27 +458,30 @@ async function replyWithUnoActionResult(interaction, result) {
 
 export function formatUnoLobbyMessage(state) {
   const participants = state.players
-    .map((player, index) => `${index + 1}. <@${player.userId}>`)
+    .map((player, index) => `${formatPlayerSeat(index, state.players.length)} <@${player.userId}>`)
     .join('\n');
+  const fill = Math.max(0, UNO_MAX_PLAYERS - state.players.length);
   return [
-    '🃏 **우노 참가자 모집**',
-    `모드: **${formatUnoMode(state.mode)}**`,
-    `규칙: ${formatUnoRules(state.rules)}`,
-    `인원: **${state.players.length}/${UNO_MAX_PLAYERS}명** · 최소 2명`,
-    '진행: 참가 버튼으로 들어온 뒤 방장이 **시작** 버튼을 누르면 게임이 시작됩니다.',
-    '플레이: 시작 후 `/우노 손패`로 번호를 보고 `/우노 내기 번호:<번호>` 또는 `/우노 뽑기`를 사용하세요.',
+    '╭─ 🃏 **UNO ROOM**',
+    `│ 모드  **${formatUnoMode(state.mode)}**`,
+    `│ 규칙  ${formatUnoRules(state.rules)}`,
+    `│ 인원  **${state.players.length}/${UNO_MAX_PLAYERS}명** ${createPlayerCapacityBar(state.players.length, UNO_MAX_PLAYERS)}`,
+    '╰─ 최소 2명 · 방장은 **방장 시작**으로 바로 시작 가능',
     '',
-    `참가자:\n${participants}`
+    '👥 **참가자**',
+    participants,
+    fill > 0 ? `빈 자리 ${fill}개` : '방이 가득 찼습니다.',
+    '',
+    '🎮 시작 후 공개 메시지의 **내 손패** 버튼으로 카드를 보고 `/우노 내기 번호:<번호>` 또는 `/우노 뽑기`를 사용하세요.'
   ].join('\n');
 }
 
 export function formatUnoStartMessage(state) {
   return [
-    '🃏 **우노 시작!**',
+    '🃏 **UNO GAME START!**',
     formatUnoStatus(state),
     '',
-    '각자 `/우노 손패`로 손패를 비공개 확인하세요.',
-    `${formatCurrentTurnLine(state)}`
+    '🔒 아래 **내 손패** 버튼을 누르면 본인에게만 보이는 손패가 계속 표시됩니다.'
   ].join('\n');
 }
 
@@ -445,48 +490,49 @@ export function formatUnoStatus(state) {
 
   const playerLines = state.players
     .map((player, index) => {
-      const marker = state.currentPlayer?.userId === player.userId ? '➡️ ' : '';
-      const eliminated = player.eliminated ? ' 탈락' : '';
-      return `${marker}${index + 1}. <@${player.userId}> — ${player.cardCount}장${eliminated}`;
+      const marker = state.currentPlayer?.userId === player.userId ? '➡️' : '▫️';
+      const eliminated = player.eliminated ? ' · ☠️ 탈락' : '';
+      return `${marker} ${formatPlayerSeat(index, state.players.length)} <@${player.userId}>  **${player.cardCount}장** ${createCardCountBar(player.cardCount)}${eliminated}`;
     })
     .join('\n');
   const pendingDraw = state.pendingDraw
-    ? `\n누적 드로우: **${state.pendingDraw.amount}장** (동급/상위 드로우로 중첩 가능)`
-    : '';
+    ? `🚨 누적 드로우 **${state.pendingDraw.amount}장** · 동급/상위 드로우 카드 1장으로 중첩 가능`
+    : null;
   const challenge = state.pendingChallenge
-    ? '\n와일드 드로우 4 도전 가능: `/우노 도전`'
-    : '';
+    ? '⚖️ 와일드 드로우 4 도전 가능: `/우노 도전`'
+    : null;
   const winner = state.winner
-    ? `\n🏆 승자: <@${state.winner.userId}>`
-    : '';
+    ? `🏆 승자: <@${state.winner.userId}>`
+    : null;
 
   return [
-    `모드: **${formatUnoMode(state.mode)}** · 규칙: ${formatUnoRules(state.rules)}`,
-    `상태: **${formatUnoState(state.status)}** · 방향: **${formatUnoDirection(state.direction)}**`,
-    `현재 색: **${formatUnoColor(state.activeColor)}** · 맨 위 카드: **${formatUnoCard(state.topCard)}**`,
-    formatCurrentTurnLine(state),
+    '╭─ 🃏 **UNO TABLE**',
+    `│ ${formatUnoState(state.status)} · ${formatUnoMode(state.mode)} · ${formatUnoDirection(state.direction)} 방향`,
+    `│ Top  ${formatUnoCardChip(state.topCard)}   Color  ${formatUnoColorChip(state.activeColor)}`,
+    `╰─ Turn ${state.currentPlayer ? `<@${state.currentPlayer.userId}>` : '없음'}`,
     pendingDraw,
     challenge,
     winner,
     '',
+    '👥 **플레이어**',
     playerLines
-  ].filter((line) => line !== '').join('\n');
+  ].filter(Boolean).join('\n');
 }
 
 export function formatUnoHand({ game, hand }) {
   const cardLines = hand.length > 0
-    ? hand.map((card, index) => `${index + 1}. ${formatUnoCard(card)}`).join('\n')
+    ? formatUnoCardGrid(hand)
     : '손패가 비어 있습니다.';
   return [
-    '🃏 **내 우노 손패**',
-    formatCurrentTurnLine(game),
-    `현재 색: **${formatUnoColor(game.activeColor)}** · 맨 위 카드: **${formatUnoCard(game.topCard)}**`,
-    game.pendingDraw ? `누적 드로우: **${game.pendingDraw.amount}장**` : null,
-    '```text',
+    `🃏 **내 우노 손패**  ·  ${hand.length}장`,
+    `테이블 ${formatUnoCardChip(game.topCard)} · 현재 색 ${formatUnoColorChip(game.activeColor)}`,
+    `차례 ${game.currentPlayer ? `<@${game.currentPlayer.userId}>` : '없음'}`,
+    game.pendingDraw ? `🚨 누적 드로우 **${game.pendingDraw.amount}장** — 중첩하거나 \`/우노 뽑기\`로 받으세요.` : null,
+    '',
+    '🎴 **카드 선택 번호**',
     cardLines,
-    '```',
-    '와일드 카드는 `/우노 내기 번호:<번호> 색:<색>`처럼 색을 함께 선택하세요.',
-    '세븐-O 7 카드는 참가자가 3명 이상이면 `/우노 내기 번호:<번호> 대상:@유저`처럼 교환 대상을 지정하세요.'
+    '',
+    'Tip: 와일드는 `/우노 내기 번호:<번호> 색:<색>`, Seven-O 7은 `/우노 내기 번호:<번호> 대상:@유저`'
   ].filter(Boolean).join('\n');
 }
 
@@ -515,10 +561,68 @@ function createUnoLobbyActionRow(state) {
   );
 }
 
-function formatCurrentTurnLine(state) {
-  if (state.status !== 'playing') return '현재 차례: 아직 시작 전';
-  if (!state.currentPlayer) return '현재 차례: 없음';
-  return `현재 차례: <@${state.currentPlayer.userId}>`;
+function createUnoComponents(state) {
+  if (state.status === 'lobby') return [createUnoLobbyActionRow(state)];
+  if (state.status !== 'playing') return [];
+  return [createUnoGameActionRow(state)];
+}
+
+function createUnoGameActionRow(state) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`uno_hand:${state.id}`)
+      .setLabel('내 손패')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('🔒')
+  );
+}
+
+function formatUnoCardGrid(cards) {
+  const slots = cards.map((card, index) => `${formatCardIndex(index)} ${formatUnoCardChip(card)}`);
+  const rows = [];
+  for (let index = 0; index < slots.length; index += 3) {
+    rows.push(slots.slice(index, index + 3).join('   '));
+  }
+  return rows.join('\n');
+}
+
+function formatCardIndex(index) {
+  return `\`${String(index + 1).padStart(2, '0')}\``;
+}
+
+function formatUnoCardChip(card) {
+  if (!card) return '`?` 알 수 없음';
+  if (card.type === 'number') {
+    return `${formatUnoColorEmoji(card.color)} **${card.rank}**`;
+  }
+
+  const face = UNO_CARD_FACES[card.type] ?? card.type;
+  if (card.color) return `${formatUnoColorEmoji(card.color)} **${face}**`;
+  return `🌈 **${face}**`;
+}
+
+function formatUnoColorChip(color) {
+  return `${formatUnoColorEmoji(color)} **${formatUnoColor(color)}**`;
+}
+
+function formatUnoColorEmoji(color) {
+  return UNO_COLOR_EMOJIS[color] ?? '⬜';
+}
+
+function createPlayerCapacityBar(count, max) {
+  const filled = Math.max(0, Math.min(max, count));
+  return `${'●'.repeat(filled)}${'○'.repeat(Math.max(0, max - filled))}`;
+}
+
+function createCardCountBar(count) {
+  if (count <= 0) return 'WIN';
+  const filled = Math.min(8, Math.max(1, Math.ceil(count / 3)));
+  const suffix = count > 24 ? ' ⚠️' : '';
+  return `${'▰'.repeat(filled)}${'▱'.repeat(8 - filled)}${suffix}`;
+}
+
+function formatPlayerSeat(index, total) {
+  return `\`${String(index + 1).padStart(2, '0')}/${String(total).padStart(2, '0')}\``;
 }
 
 function formatUnoMode(mode) {
