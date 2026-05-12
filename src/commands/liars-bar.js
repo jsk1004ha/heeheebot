@@ -4,7 +4,8 @@ import {
   ButtonStyle,
   EmbedBuilder,
   MessageFlags,
-  SlashCommandBuilder
+  SlashCommandBuilder,
+  StringSelectMenuBuilder
 } from 'discord.js';
 import {
   LIARS_BAR_MAX_PLAYERS,
@@ -85,6 +86,10 @@ export function getLiarsBarCommandPayloads() {
 }
 
 export async function handleLiarsBarCommand(interaction, manager = DEFAULT_LIARS_BAR_MANAGER, logger = console) {
+  if (interaction.isStringSelectMenu?.() && interaction.customId?.startsWith('liarsbar_play_select:')) {
+    return handleLiarsBarPlaySelect(interaction, manager, logger);
+  }
+
   if (interaction.isButton?.() && interaction.customId?.startsWith('liarsbar_')) {
     return handleLiarsBarButton(interaction, manager, logger);
   }
@@ -132,7 +137,7 @@ export async function handleLiarsBarCommand(interaction, manager = DEFAULT_LIARS
         userId: interaction.user.id
       });
       await interaction.reply({
-        ...createLiarsBarHandPayload(result),
+        ...createLiarsBarHandPayload(result, interaction.user.id),
         flags: MessageFlags.Ephemeral,
       });
       return true;
@@ -210,7 +215,7 @@ async function handleLiarsBarButton(interaction, manager) {
         userId: interaction.user.id
       });
       await interaction.reply({
-        ...createLiarsBarHandPayload(result),
+        ...createLiarsBarHandPayload(result, interaction.user.id),
         flags: MessageFlags.Ephemeral,
       });
     } catch (error) {
@@ -325,6 +330,72 @@ async function handleLiarsBarButton(interaction, manager) {
   }
 
   return false;
+}
+
+async function handleLiarsBarPlaySelect(interaction, manager) {
+  const [, gameId, ownerId, roundValue] = interaction.customId.split(':');
+  const state = manager.getGame({
+    guildId: interaction.guildId,
+    channelId: interaction.channelId
+  });
+
+  if (!state || state.id !== gameId) {
+    await interaction.reply({
+      content: '이미 종료되었거나 다른 채널의 라이어바 손패 메뉴입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (ownerId !== interaction.user.id) {
+    await interaction.reply({
+      content: '이 손패 선택 메뉴는 본인만 사용할 수 있습니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (state.status !== 'playing') {
+    await interaction.reply({
+      content: '진행 중인 라이어바 게임이 아닙니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (String(state.round) !== String(roundValue)) {
+    await interaction.reply({
+      content: '라운드가 바뀌어 손패 메뉴가 만료되었습니다. **내 손패**를 다시 눌러주세요.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  const cardNumbers = (interaction.values ?? []).map((value) => Number(value));
+  const result = manager.playCards({
+    guildId: interaction.guildId,
+    channelId: interaction.channelId,
+    userId: interaction.user.id,
+    cardNumbers
+  });
+
+  if (!result.ok) {
+    await interaction.reply({
+      content: `❌ ${result.reason}`,
+      flags: MessageFlags.Ephemeral,
+      allowedMentions: { parse: [] }
+    });
+    return true;
+  }
+
+  const publicPayload = createLiarsBarActionPayload(result);
+  if (typeof interaction.channel?.send === 'function') {
+    await interaction.channel.send(publicPayload);
+    await interaction.update(createLiarsBarSelectionAckPayload(result));
+  } else {
+    await interaction.reply(publicPayload);
+  }
+  return true;
 }
 
 async function replyWithLiarsBarActionResult(interaction, result) {
@@ -471,10 +542,11 @@ function createLiarsBarStatusPayload(state, { prefix = null } = {}) {
   };
 }
 
-function createLiarsBarHandPayload(result) {
+function createLiarsBarHandPayload(result, userId) {
   return {
     content: formatLiarsBarHand(result),
     embeds: [createLiarsBarHandEmbed(result)],
+    components: createLiarsBarHandComponents(result, userId),
     allowedMentions: { parse: [] }
   };
 }
@@ -487,6 +559,24 @@ function createLiarsBarActionPayload(result) {
       createLiarsBarStatusEmbed(result.game)
     ],
     components: createLiarsBarComponents(result.game),
+    allowedMentions: { parse: [] }
+  };
+}
+
+function createLiarsBarSelectionAckPayload(result) {
+  return {
+    content: [
+      '✅ 선택한 카드를 제출했습니다.',
+      '공개 테이블 메시지에서 현재 진행 상황을 확인하세요.'
+    ].join('\n'),
+    embeds: [
+      new EmbedBuilder()
+        .setTitle('✅ 라이어바 카드 제출 완료')
+        .setDescription(result.events.join('\n'))
+        .setColor(LIARS_BAR_COLORS.truthful)
+        .setFooter({ text: '손패가 바뀌었으면 내 손패 버튼을 다시 눌러주세요.' })
+    ],
+    components: [],
     allowedMentions: { parse: [] }
   };
 }
@@ -668,6 +758,29 @@ function createLiarsBarGameActionRow(state) {
   );
 }
 
+function createLiarsBarHandComponents({ game, hand }, userId) {
+  if (game.status !== 'playing'
+    || game.currentPlayer?.userId !== userId
+    || hand.length <= 0) {
+    return [];
+  }
+
+  return [
+    new ActionRowBuilder().addComponents(
+      new StringSelectMenuBuilder()
+        .setCustomId(`liarsbar_play_select:${game.id}:${userId}:${game.round}`)
+        .setPlaceholder('낼 카드 1~3장을 선택하면 바로 제출됩니다')
+        .setMinValues(1)
+        .setMaxValues(Math.min(3, hand.length))
+        .addOptions(hand.map((card, index) => ({
+          label: `${String(index + 1).padStart(2, '0')}번 ${formatLiarsBarCardOptionLabel(card)}`,
+          description: '선택하면 이 카드를 뒤집어 제출합니다.',
+          value: String(index + 1)
+        })))
+    )
+  ];
+}
+
 function formatLiarsBarCardGrid(cards) {
   const slots = cards.map((card, index) => `${formatCardIndex(index)} ${formatLiarsBarCard(card)}`);
   const rows = [];
@@ -675,6 +788,12 @@ function formatLiarsBarCardGrid(cards) {
     rows.push(slots.slice(index, index + 3).join('   '));
   }
   return rows.join('\n');
+}
+
+function formatLiarsBarCardOptionLabel(card) {
+  return formatLiarsBarCard(card)
+    .replaceAll('**', '')
+    .replaceAll('`', '');
 }
 
 function formatLiarsBarParticipants(state) {
