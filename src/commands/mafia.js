@@ -17,9 +17,12 @@ import {
 
 export const MAFIA_COLLECTION_MS = 60_000;
 export const MAFIA_INTRO_MS = 60_000;
-export const MAFIA_NIGHT_MS = 45_000;
-export const MAFIA_DISCUSSION_MS = 120_000;
-export const MAFIA_VOTING_MS = 60_000;
+export const MAFIA_NIGHT_MS = 30_000;
+export const MAFIA_DISCUSSION_MS = 0;
+export const MAFIA_DISCUSSION_MS_PER_PLAYER = 20_000;
+export const MAFIA_VOTING_MS = 20_000;
+export const MAFIA_DEFENSE_MS = 20_000;
+export const MAFIA_APPROVAL_MS = 10_000;
 
 const MAFIA_COLOR = 0x7f1d1d;
 const CITIZEN_COLOR = 0x2563eb;
@@ -116,15 +119,23 @@ async function createMafiaLobby(interaction, economy, logger, options) {
     nightMs: options.nightMs ?? MAFIA_NIGHT_MS,
     discussionMs: options.discussionMs ?? MAFIA_DISCUSSION_MS,
     votingMs: options.votingMs ?? MAFIA_VOTING_MS,
+    defenseMs: options.defenseMs ?? MAFIA_DEFENSE_MS,
+    approvalMs: options.approvalMs ?? MAFIA_APPROVAL_MS,
     randomInt: options.randomInt,
     collectionTimer: null,
     introTimer: null,
     nightTimer: null,
     discussionTimer: null,
     voteTimer: null,
+    defenseTimer: null,
+    approvalTimer: null,
     voteMessage: null,
+    approvalMessage: null,
+    trialCandidate: null,
     lastNightResult: null,
-    lastVoteResult: null
+    lastVoteResult: null,
+    lastNominationResult: null,
+    lastApprovalResult: null
   };
 
   state.participants.set(interaction.user.id, createHumanParticipant(interaction.user));
@@ -188,6 +199,11 @@ async function handleMafiaButton(interaction, economy, logger, options) {
 
   if (action === 'mafia_vote') {
     await handleVoteButton(interaction, state, targetId, economy, logger);
+    return true;
+  }
+
+  if (action === 'mafia_approve') {
+    await handleApprovalButton(interaction, state, targetId, economy, logger);
     return true;
   }
 
@@ -382,6 +398,8 @@ async function startNightPhase(state, economy, logger) {
   state.game.clearNightActions();
   clearIntroTimer(state);
   clearNightTimer(state);
+  clearDefenseTimer(state);
+  clearApprovalTimer(state);
 
   state.nightTimer = setManagedTimeout(
     () => resolveNightPhase(state, economy, logger, { reason: 'time' }).catch((error) => logger.error(error)),
@@ -519,9 +537,12 @@ async function startDiscussionPhase(state, economy, logger) {
   if (state.status === 'ended') return;
   state.status = 'discussion';
   clearDiscussionTimer(state);
+  clearVoteTimer(state);
+  clearDefenseTimer(state);
+  clearApprovalTimer(state);
   state.discussionTimer = setManagedTimeout(
     () => startVotingPhase(state, economy, logger).catch((error) => logger.error(error)),
-    state.discussionMs
+    getDiscussionMs(state)
   );
 
   await sendGameMessage(state, {
@@ -535,9 +556,13 @@ async function startVotingPhase(state, economy, logger) {
   state.status = 'voting';
   clearDiscussionTimer(state);
   clearVoteTimer(state);
+  clearDefenseTimer(state);
+  clearApprovalTimer(state);
   state.game.clearVotes();
+  state.game.clearApprovalVotes({ clearCandidate: true });
+  state.trialCandidate = null;
 
-  state.voteMessage = await sendGameMessage(state, createVoteMessagePayload(state, '토론이 끝났습니다. 마을 회의에서 처형할 사람을 고르세요.'));
+  state.voteMessage = await sendGameMessage(state, createVoteMessagePayload(state, '토론이 끝났습니다. 처형 후보를 투표하세요.'));
   state.voteTimer = setManagedTimeout(
     () => resolveVotingPhase(state, economy, logger, { reason: 'time' }).catch((error) => logger.error(error)),
     state.votingMs
@@ -570,10 +595,97 @@ async function resolveVotingPhase(state, economy, logger, { reason = 'time' } = 
   state.status = 'resolving_vote';
   await disableVoteMessage(state).catch(() => null);
 
-  const result = state.game.resolveVote();
+  const result = state.game.resolveNomination();
   state.lastVoteResult = result;
+  state.lastNominationResult = result;
 
-  await sendGameMessage(state, formatVoteResultMessage(result, reason));
+  await sendGameMessage(state, formatNominationResultMessage(result, reason));
+  if (result.candidate) {
+    await startDefensePhase(state, economy, logger, result.candidate);
+    return;
+  }
+
+  state.game.advanceRound();
+  await startNightPhase(state, economy, logger);
+}
+
+async function startDefensePhase(state, economy, logger, candidate) {
+  if (state.status === 'ended') return;
+  state.status = 'defense';
+  state.trialCandidate = candidate;
+  clearDefenseTimer(state);
+
+  await sendGameMessage(state, {
+    content: formatDefenseMessage(state, candidate),
+    components: [createSkipActionRow(state)]
+  });
+
+  state.defenseTimer = setManagedTimeout(
+    () => startApprovalPhase(state, economy, logger).catch((error) => logger.error(error)),
+    state.defenseMs
+  );
+}
+
+async function startApprovalPhase(state, economy, logger) {
+  if (!['defense', 'approval'].includes(state.status)) return;
+  const candidate = state.game.getTrialCandidate() ?? state.trialCandidate;
+  if (!candidate?.alive) {
+    await sendGameMessage(state, '⚖️ 최후의 반론 대상이 사라져 투표를 종료합니다.');
+    state.game.advanceRound();
+    await startNightPhase(state, economy, logger);
+    return;
+  }
+
+  state.status = 'approval';
+  state.trialCandidate = candidate;
+  clearDefenseTimer(state);
+  clearApprovalTimer(state);
+
+  state.approvalMessage = await sendGameMessage(state, createApprovalMessagePayload(
+    state,
+    '최후의 반론이 끝났습니다. 이제 찬반 투표로 처형 여부를 결정합니다.'
+  ));
+  state.approvalTimer = setManagedTimeout(
+    () => resolveApprovalPhase(state, economy, logger, { reason: 'time' }).catch((error) => logger.error(error)),
+    state.approvalMs
+  );
+}
+
+async function handleApprovalButton(interaction, state, value, economy, logger) {
+  if (state.status !== 'approval') {
+    await interaction.reply({ content: '현재 찬반 투표 시간이 아닙니다.', flags: MessageFlags.Ephemeral });
+    return;
+  }
+
+  const result = state.game.castApprovalVote({
+    voterId: interaction.user.id,
+    approve: value === 'yes'
+  });
+  if (!result.accepted) {
+    await interaction.reply({ content: result.reason, flags: MessageFlags.Ephemeral });
+    return;
+  }
+
+  const choice = result.approve ? '찬성' : '반대';
+  await interaction.update(createApprovalMessagePayload(state, `${formatPlayerMention(result.voter)}님이 **${choice}**에 투표했습니다.`));
+
+  if (result.complete) {
+    await resolveApprovalPhase(state, economy, logger, { reason: 'complete' });
+  }
+}
+
+async function resolveApprovalPhase(state, economy, logger, { reason = 'time' } = {}) {
+  if (state.status !== 'approval') return;
+  clearApprovalTimer(state);
+  state.status = 'resolving_vote';
+  await disableApprovalMessage(state).catch(() => null);
+
+  const result = state.game.resolveApprovalVote();
+  state.lastVoteResult = result;
+  state.lastApprovalResult = result;
+  state.trialCandidate = null;
+
+  await sendGameMessage(state, formatApprovalResultMessage(result, reason));
   if (result.executed) {
     await removeDeadPlayersFromPrivateRooms(state, [result.executed], logger);
   }
@@ -613,6 +725,18 @@ async function handleHostSkip(interaction, state, economy, logger) {
   if (state.status === 'voting') {
     await interaction.reply({ content: '⏭️ 투표를 마감합니다.', flags: MessageFlags.Ephemeral });
     await resolveVotingPhase(state, economy, logger, { reason: 'host' });
+    return;
+  }
+
+  if (state.status === 'defense') {
+    await interaction.reply({ content: '⏭️ 최후의 반론을 마감하고 찬반 투표를 시작합니다.', flags: MessageFlags.Ephemeral });
+    await startApprovalPhase(state, economy, logger);
+    return;
+  }
+
+  if (state.status === 'approval') {
+    await interaction.reply({ content: '⏭️ 찬반 투표를 마감합니다.', flags: MessageFlags.Ephemeral });
+    await resolveApprovalPhase(state, economy, logger, { reason: 'host' });
     return;
   }
 
@@ -778,7 +902,8 @@ function formatDiscussionMessage(state) {
   return [
     `☀️ **${state.game.round}일차 낮 토론 시간**`,
     '마을 회의가 열렸습니다. 생존자들은 서로의 말을 듣고 수상한 점을 찾아야 합니다.',
-    `토론 시간: ${formatSeconds(state.discussionMs)}`,
+    `토론 시간: ${formatSeconds(getDiscussionMs(state))}`,
+    '토론 뒤에는 투표, 최후의 반론, 찬반 투표가 이어집니다.',
     `생존: ${state.game.livingPlayers.map(formatPlayerMention).join(', ')}`
   ].join('\n');
 }
@@ -788,7 +913,7 @@ function createVoteMessagePayload(state, description, disabled = false) {
     .setColor(CITIZEN_COLOR)
     .setTitle(`🗳️ ${state.game.round}일차 투표`)
     .setDescription(description)
-    .setFooter({ text: `과반 ${Math.floor(state.game.livingPlayers.length / 2) + 1}표 필요` });
+    .setFooter({ text: '최다 득표자 1명은 최후의 반론으로 이동' });
 
   for (const entry of state.game.getVoteCounts()) {
     embed.addFields({
@@ -804,14 +929,81 @@ function createVoteMessagePayload(state, description, disabled = false) {
   };
 }
 
-function formatVoteResultMessage(result, reason) {
-  const suffix = reason === 'time' ? '시간 종료' : reason === 'host' ? '방장 마감' : '전원 투표';
-  if (result.executed) {
-    return `⚖️ **마을 재판 결과** (${suffix})\n마을은 ${formatPlayerMention(result.executed)}님을 처형했습니다. 역할은 **${getMafiaRoleLabel(result.executed.role)}**였습니다.`;
+function formatNominationResultMessage(result, reason) {
+  const suffix = formatPhaseEndReason(reason);
+  if (result.candidate) {
+    return [
+      `🗳️ **투표 결과** (${suffix})`,
+      `${formatPlayerMention(result.candidate)}님이 최다 득표자로 선정되었습니다.`,
+      `득표: ${result.maxVotes}표`
+    ].join('\n');
   }
 
-  const reasonText = result.reason === 'tie' ? '동률' : '과반 실패';
-  return `⚖️ **마을 재판 결과** (${suffix})\n의견이 모이지 않아 오늘은 아무도 처형하지 않았습니다. (${reasonText})`;
+  const reasonText = result.reason === 'tie' ? '동률' : '무투표';
+  return `🗳️ **투표 결과** (${suffix})\n최다 득표자가 없어 밤으로 넘어갑니다. (${reasonText})`;
+}
+
+function formatDefenseMessage(state, candidate) {
+  return [
+    `🧑‍⚖️ **${state.game.round}일차 최후의 반론**`,
+    `${formatPlayerMention(candidate)}님만 마지막 발언을 합니다.`,
+    `반론 시간: ${formatSeconds(state.defenseMs)}`,
+    '다른 생존자는 발언을 듣고 찬반 투표를 준비하세요.'
+  ].join('\n');
+}
+
+function createApprovalMessagePayload(state, description, disabled = false) {
+  const counts = state.game.getApprovalCounts();
+  const candidate = counts.candidate ?? state.trialCandidate;
+  const embed = new EmbedBuilder()
+    .setColor(MAFIA_COLOR)
+    .setTitle(`⚖️ ${state.game.round}일차 찬반 투표`)
+    .setDescription([
+      description,
+      candidate ? `대상: ${formatPlayerMention(candidate)}` : null
+    ].filter(Boolean).join('\n'))
+    .addFields(
+      { name: '찬성', value: `${counts.approve.toLocaleString()}표`, inline: true },
+      { name: '반대', value: `${counts.reject.toLocaleString()}표`, inline: true },
+      { name: '미투표', value: `${counts.abstain.toLocaleString()}명`, inline: true }
+    )
+    .setFooter({ text: `후보 제외 · 찬성 과반 ${counts.majority}표 필요` });
+
+  return {
+    embeds: [embed],
+    components: createApprovalRows(state, disabled)
+  };
+}
+
+function formatApprovalResultMessage(result, reason) {
+  const suffix = formatPhaseEndReason(reason);
+  const voteLine = `찬성 ${result.approveCount}/${result.majority} · 반대 ${result.rejectCount} · 미투표 ${result.abstainCount}`;
+  if (result.executed) {
+    return [
+      `⚖️ **처형 결과** (${suffix})`,
+      `찬성 과반으로 ${formatPlayerMention(result.executed)}님을 처형했습니다.`,
+      `역할은 **${getMafiaRoleLabel(result.executed.role)}**였습니다.`,
+      voteLine
+    ].join('\n');
+  }
+
+  const candidate = result.candidate ? `${formatPlayerMention(result.candidate)}님` : '대상자';
+  const reasonText = result.reason === 'rejected'
+    ? '반대 과반'
+    : result.reason === 'tie'
+      ? '찬반 동률'
+      : '찬성 과반 실패';
+  return [
+    `⚖️ **처형 결과** (${suffix})`,
+    `${candidate}에 대한 처형안은 부결되었습니다. (${reasonText})`,
+    voteLine
+  ].join('\n');
+}
+
+function formatPhaseEndReason(reason) {
+  if (reason === 'time') return '시간 종료';
+  if (reason === 'host') return '방장 마감';
+  return '전원 투표';
 }
 
 function formatFinishMessage(state, win, rewards) {
@@ -848,6 +1040,10 @@ function formatStatusMessage(state) {
     night: '밤',
     discussion: '낮 토론',
     voting: '투표',
+    defense: '최후의 반론',
+    approval: '찬반 투표',
+    resolving_night: '밤 결과 처리',
+    resolving_vote: '투표 결과 처리',
     ended: '종료'
   }[state.status] ?? state.status;
 
@@ -948,9 +1144,41 @@ function createVoteRows(state, disabled = false) {
   return rows.slice(0, 5);
 }
 
+function createApprovalRows(state, disabled = false) {
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`mafia_approve:${state.id}:yes`)
+        .setLabel('찬성')
+        .setStyle(ButtonStyle.Danger)
+        .setDisabled(disabled),
+      new ButtonBuilder()
+        .setCustomId(`mafia_approve:${state.id}:no`)
+        .setLabel('반대')
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(disabled),
+      new ButtonBuilder()
+        .setCustomId(`mafia_role:${state.id}`)
+        .setLabel('내 역할')
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(disabled),
+      new ButtonBuilder()
+        .setCustomId(`mafia_skip:${state.id}`)
+        .setLabel('방장 마감')
+        .setStyle(ButtonStyle.Primary)
+        .setDisabled(disabled)
+    )
+  ];
+}
+
 async function disableVoteMessage(state) {
   if (typeof state.voteMessage?.edit !== 'function') return;
-  await state.voteMessage.edit(createVoteMessagePayload(state, '마을 재판이 마감되었습니다.', true));
+  await state.voteMessage.edit(createVoteMessagePayload(state, '투표가 마감되었습니다.', true));
+}
+
+async function disableApprovalMessage(state) {
+  if (typeof state.approvalMessage?.edit !== 'function') return;
+  await state.approvalMessage.edit(createApprovalMessagePayload(state, '찬반 투표가 마감되었습니다.', true));
 }
 
 function createHumanParticipant(user) {
@@ -980,6 +1208,12 @@ function createGameId() {
 
 function formatSeconds(ms) {
   return `${Math.ceil(ms / 1000)}초`;
+}
+
+function getDiscussionMs(state) {
+  const configured = Number(state.discussionMs);
+  if (Number.isFinite(configured) && configured > 0) return configured;
+  return Math.max(state.game?.livingPlayers.length ?? 1, 1) * MAFIA_DISCUSSION_MS_PER_PLAYER;
 }
 
 function setManagedTimeout(callback, ms) {
@@ -1013,10 +1247,22 @@ function clearVoteTimer(state) {
   state.voteTimer = null;
 }
 
+function clearDefenseTimer(state) {
+  clearTimeout(state.defenseTimer);
+  state.defenseTimer = null;
+}
+
+function clearApprovalTimer(state) {
+  clearTimeout(state.approvalTimer);
+  state.approvalTimer = null;
+}
+
 function clearAllTimers(state) {
   clearCollectionTimer(state);
   clearIntroTimer(state);
   clearNightTimer(state);
   clearDiscussionTimer(state);
   clearVoteTimer(state);
+  clearDefenseTimer(state);
+  clearApprovalTimer(state);
 }

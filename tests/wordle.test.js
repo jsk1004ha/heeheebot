@@ -253,6 +253,46 @@ test('/워들 도전의 잘못된 단어 응답은 정답을 누설하지 않고
   }
 });
 
+test('/워들 상태는 공개 placeholder 없이 비공개 defer 원본을 채운다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    const interaction = createInteraction('상태', { withDefer: true });
+
+    await handleWordleCommand(interaction, fixture.wordle, fixture.economy);
+
+    assert.equal(interaction.deferPayloads.length, 1);
+    assert.equal(interaction.deferPayloads[0].flags, MessageFlags.Ephemeral);
+    assert.equal(interaction.edits.length, 1);
+    assert.equal(interaction.replies.length, 0);
+    assert.match(interaction.edits[0].content, /오늘의 워들/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('/워들 도전 결과는 비공개 defer 원본을 edit해서 사라지지 않게 보낸다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    const interaction = createInteraction('도전', {
+      stringOptions: { 단어: 'crane' },
+      withDefer: true
+    });
+
+    await handleWordleCommand(interaction, fixture.wordle, fixture.economy);
+
+    assert.equal(interaction.deferPayloads.length, 1);
+    assert.equal(interaction.deferPayloads[0].flags, MessageFlags.Ephemeral);
+    assert.equal(interaction.edits.length, 1);
+    assert.equal(interaction.replies.length, 0);
+    assert.match(interaction.edits[0].content, /CRANE/);
+    assert.match(interaction.edits[0].content, /🟩|🟨|⬛/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 async function createFixture({ economyOptions = {}, ...wordleOptions } = {}) {
   const directory = await mkdtemp(join(tmpdir(), 'heeheebot-wordle-'));
   const store = createSqliteStore(join(directory, 'profiles.sqlite'));
@@ -277,8 +317,8 @@ async function createFixture({ economyOptions = {}, ...wordleOptions } = {}) {
   };
 }
 
-function createInteraction(subcommand, { stringOptions = {} } = {}) {
-  return {
+function createInteraction(subcommand, { stringOptions = {}, withDefer = false } = {}) {
+  const interaction = {
     commandName: '워들',
     guildId: 'guild-1',
     user: { id: 'user-1', username: '테스터' },
@@ -295,6 +335,26 @@ function createInteraction(subcommand, { stringOptions = {} } = {}) {
     },
     async reply(payload) {
       this.replies.push(payload);
+      this.replied = true;
     }
   };
+
+  if (withDefer) {
+    Object.assign(interaction, {
+      deferred: false,
+      replied: false,
+      deferPayloads: [],
+      edits: [],
+      async deferReply(payload) {
+        this.deferPayloads.push(payload);
+        this.deferred = true;
+      },
+      async editReply(payload) {
+        this.edits.push(payload);
+        this.replied = true;
+      }
+    });
+  }
+
+  return interaction;
 }

@@ -1,4 +1,5 @@
 import { MessageFlags, SlashCommandBuilder } from 'discord.js';
+import { safeReplyToInteraction } from './interactions.js';
 import { formatCurrencyAmount } from '../systems/currencies.js';
 
 export const numberBaseballCommands = [
@@ -35,7 +36,7 @@ export async function handleNumberBaseballCommand(interaction, numberBaseball, e
   }
 
   if (!interaction.inGuild()) {
-    await interaction.reply({
+    await replyPrivately(interaction, {
       content: '서버에서만 사용할 수 있는 명령어입니다.',
       flags: MessageFlags.Ephemeral
     });
@@ -50,6 +51,7 @@ export async function handleNumberBaseballCommand(interaction, numberBaseball, e
   };
 
   if (subcommand === '도전') {
+    await deferPrivateReplyIfSupported(interaction);
     const guess = interaction.options.getString('숫자', true);
     const result = await numberBaseball.submitGuess({
       ...basePayload,
@@ -63,7 +65,7 @@ export async function handleNumberBaseballCommand(interaction, numberBaseball, e
       reward = await economy.awardNumberBaseballFailure(basePayload);
     }
 
-    await interaction.reply({
+    await replyPrivately(interaction, {
       content: formatNumberBaseballGuessResult(result, reward),
       flags: MessageFlags.Ephemeral,
       allowedMentions: { parse: [] }
@@ -72,8 +74,9 @@ export async function handleNumberBaseballCommand(interaction, numberBaseball, e
   }
 
   if (subcommand === '상태') {
+    await deferPrivateReplyIfSupported(interaction);
     const status = await numberBaseball.getPlayerStatus(basePayload);
-    await interaction.reply({
+    await replyPrivately(interaction, {
       content: formatNumberBaseballStatus(status),
       flags: MessageFlags.Ephemeral,
       allowedMentions: { parse: [] }
@@ -249,4 +252,29 @@ function formatClockDuration(ms) {
   if (hours > 0) return `${hours}시간 ${minutes}분`;
   if (minutes > 0) return `${minutes}분 ${seconds}초`;
   return `${seconds}초`;
+}
+
+async function replyPrivately(interaction, payload) {
+  if (interaction.deferred && !interaction.replied && typeof interaction.editReply === 'function') {
+    await interaction.editReply(toDeferredEditPayload(payload));
+    return;
+  }
+
+  await safeReplyToInteraction(interaction, payload, { flags: MessageFlags.Ephemeral });
+}
+
+async function deferPrivateReplyIfSupported(interaction) {
+  if (interaction.deferred || interaction.replied || typeof interaction.deferReply !== 'function') return;
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+}
+
+function toDeferredEditPayload(payload) {
+  const {
+    ephemeral,
+    flags,
+    fetchReply,
+    withResponse,
+    ...rest
+  } = payload ?? {};
+  return rest;
 }

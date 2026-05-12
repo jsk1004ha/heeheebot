@@ -1,5 +1,5 @@
 export const MAFIA_MIN_PLAYERS = 4;
-export const MAFIA_MAX_PLAYERS = 16;
+export const MAFIA_MAX_PLAYERS = 12;
 
 export const MAFIA_ROLES = Object.freeze({
   mafia: Object.freeze({ value: 'mafia', label: '마피아', team: 'mafia', nightAction: 'kill', privateChat: true }),
@@ -11,8 +11,7 @@ export const MAFIA_ROLES = Object.freeze({
 export const MAFIA_ROLE_DISTRIBUTIONS = Object.freeze([
   Object.freeze({ min: 4, max: 6, mafia: 1, police: 1, doctor: 1 }),
   Object.freeze({ min: 7, max: 9, mafia: 2, police: 1, doctor: 2 }),
-  Object.freeze({ min: 10, max: 12, mafia: 2, police: 2, doctor: 2 }),
-  Object.freeze({ min: 13, max: 16, mafia: 3, police: 2, doctor: 3 })
+  Object.freeze({ min: 10, max: 12, mafia: 2, police: 2, doctor: 2 })
 ]);
 
 const ROLE_ORDER = Object.freeze(['mafia', 'police', 'doctor', 'citizen']);
@@ -31,6 +30,8 @@ export class MafiaGame {
       doctorProtects: new Map()
     };
     this.votes = new Map();
+    this.approvalVotes = new Map();
+    this.trialCandidateId = null;
     this.nightHistory = [];
     this.voteHistory = [];
   }
@@ -215,6 +216,11 @@ export class MafiaGame {
     this.votes.clear();
   }
 
+  clearApprovalVotes({ clearCandidate = false } = {}) {
+    this.approvalVotes.clear();
+    if (clearCandidate) this.trialCandidateId = null;
+  }
+
   castVote({ voterId, targetId }) {
     const voter = this.getPlayer(voterId);
     if (!voter) return rejected('not_player', '참가자만 투표할 수 있습니다.');
@@ -222,7 +228,6 @@ export class MafiaGame {
 
     const target = this.getPlayer(targetId);
     if (!target?.alive) return rejected('invalid_target', '살아있는 플레이어에게만 투표할 수 있습니다.');
-    if (voter.userId === target.userId) return rejected('self_vote', '자기 자신에게는 투표할 수 없습니다.');
 
     this.votes.set(voter.userId, target.userId);
     return {
@@ -253,29 +258,146 @@ export class MafiaGame {
     }));
   }
 
-  resolveVote() {
+  resolveNomination() {
     const counts = this.getVoteCounts();
     const livingCount = this.livingPlayers.length;
-    const majority = Math.floor(livingCount / 2) + 1;
     const maxVotes = counts.reduce((max, entry) => Math.max(max, entry.count), 0);
     const tied = counts.filter((entry) => entry.count === maxVotes && maxVotes > 0);
 
-    let executed = null;
-    let reason = 'no_majority';
-    if (maxVotes >= majority && tied.length === 1) {
-      executed = this.killPlayer(tied[0].player.userId, { phase: 'vote' });
-      reason = 'executed';
-    } else if (maxVotes >= majority && tied.length > 1) {
+    let candidate = null;
+    let reason = 'no_votes';
+    if (tied.length === 1) {
+      candidate = tied[0].player;
+      this.setTrialCandidate(candidate.userId);
+      reason = 'candidate';
+    } else if (tied.length > 1) {
       reason = 'tie';
+      this.clearApprovalVotes({ clearCandidate: true });
+    } else {
+      this.clearApprovalVotes({ clearCandidate: true });
     }
 
     const result = {
+      type: 'nomination',
       round: this.round,
       counts,
       livingCount,
-      majority,
       maxVotes,
       tied: tied.map((entry) => entry.player),
+      candidate,
+      noCandidate: !candidate,
+      reason
+    };
+
+    this.voteHistory.push(result);
+    this.clearVotes();
+    return result;
+  }
+
+  resolveVote() {
+    return this.resolveNomination();
+  }
+
+  setTrialCandidate(candidateId) {
+    const candidate = this.getPlayer(candidateId);
+    if (!candidate?.alive) {
+      this.trialCandidateId = null;
+      this.clearApprovalVotes();
+      return null;
+    }
+
+    this.trialCandidateId = candidate.userId;
+    this.clearApprovalVotes();
+    return candidate;
+  }
+
+  getTrialCandidate() {
+    if (!this.trialCandidateId) return null;
+    const candidate = this.getPlayer(this.trialCandidateId);
+    return candidate?.alive ? candidate : null;
+  }
+
+  getApprovalEligiblePlayers() {
+    const candidate = this.getTrialCandidate();
+    if (!candidate) return [];
+    return this.livingPlayers.filter((player) => player.userId !== candidate.userId);
+  }
+
+  castApprovalVote({ voterId, approve }) {
+    const candidate = this.getTrialCandidate();
+    if (!candidate) return rejected('no_candidate', '최후의 반론 대상이 없습니다.');
+
+    const voter = this.getPlayer(voterId);
+    if (!voter) return rejected('not_player', '참가자만 찬반 투표할 수 있습니다.');
+    if (!voter.alive) return rejected('dead_voter', '사망자는 찬반 투표할 수 없습니다.');
+    if (voter.userId === candidate.userId) return rejected('candidate_no_vote', '최후의 반론 대상자는 찬반 투표할 수 없습니다.');
+
+    this.approvalVotes.set(voter.userId, Boolean(approve));
+    return {
+      accepted: true,
+      voter,
+      candidate,
+      approve: Boolean(approve),
+      complete: this.isApprovalVoteComplete()
+    };
+  }
+
+  isApprovalVoteComplete() {
+    const eligibleIds = new Set(this.getApprovalEligiblePlayers().map((player) => player.userId));
+    return eligibleIds.size > 0 && [...eligibleIds].every((userId) => this.approvalVotes.has(userId));
+  }
+
+  getApprovalCounts() {
+    const candidate = this.getTrialCandidate();
+    const eligiblePlayers = this.getApprovalEligiblePlayers();
+    const eligibleIds = new Set(eligiblePlayers.map((player) => player.userId));
+    let approve = 0;
+    let reject = 0;
+
+    for (const [voterId, value] of this.approvalVotes.entries()) {
+      if (!eligibleIds.has(voterId)) continue;
+      if (value) approve += 1;
+      else reject += 1;
+    }
+
+    return {
+      candidate,
+      eligiblePlayers,
+      eligibleCount: eligiblePlayers.length,
+      majority: Math.floor(eligiblePlayers.length / 2) + 1,
+      approve,
+      reject,
+      abstain: Math.max(eligiblePlayers.length - approve - reject, 0)
+    };
+  }
+
+  resolveApprovalVote() {
+    const counts = this.getApprovalCounts();
+    let executed = null;
+    let reason = 'no_candidate';
+
+    if (counts.candidate) {
+      if (counts.approve >= counts.majority) {
+        executed = this.killPlayer(counts.candidate.userId, { phase: 'vote' });
+        reason = 'executed';
+      } else if (counts.reject >= counts.majority) {
+        reason = 'rejected';
+      } else if (counts.approve === counts.reject && counts.approve > 0) {
+        reason = 'tie';
+      } else {
+        reason = 'no_majority';
+      }
+    }
+
+    const result = {
+      type: 'approval',
+      round: this.round,
+      candidate: counts.candidate,
+      eligibleCount: counts.eligibleCount,
+      majority: counts.majority,
+      approveCount: counts.approve,
+      rejectCount: counts.reject,
+      abstainCount: counts.abstain,
       executed,
       noExecution: !executed,
       reason,
@@ -283,7 +405,7 @@ export class MafiaGame {
     };
 
     this.voteHistory.push(result);
-    this.clearVotes();
+    this.clearApprovalVotes({ clearCandidate: true });
     return result;
   }
 
@@ -301,6 +423,7 @@ export class MafiaGame {
     this.round += 1;
     this.clearNightActions();
     this.clearVotes();
+    this.clearApprovalVotes({ clearCandidate: true });
     return this.round;
   }
 

@@ -1,4 +1,5 @@
 import { MessageFlags, SlashCommandBuilder } from 'discord.js';
+import { safeReplyToInteraction } from './interactions.js';
 import { formatCurrencyAmount } from '../systems/currencies.js';
 
 const FEEDBACK_EMOJI = Object.freeze({
@@ -46,7 +47,7 @@ export async function handleWordleCommand(interaction, wordle, economy) {
   }
 
   if (!interaction.inGuild()) {
-    await interaction.reply({
+    await replyPrivately(interaction, {
       content: '서버에서만 사용할 수 있는 명령어입니다.',
       flags: MessageFlags.Ephemeral
     });
@@ -61,6 +62,7 @@ export async function handleWordleCommand(interaction, wordle, economy) {
   };
 
   if (subcommand === '도전') {
+    await deferPrivateReplyIfSupported(interaction);
     const guess = interaction.options.getString('단어', true);
     const result = await wordle.submitGuess({
       ...basePayload,
@@ -72,7 +74,7 @@ export async function handleWordleCommand(interaction, wordle, economy) {
       reward = await economy.awardWordleSuccess(basePayload);
     }
 
-    await interaction.reply({
+    await replyPrivately(interaction, {
       content: formatWordleGuessResult(result, reward),
       flags: MessageFlags.Ephemeral,
       allowedMentions: { parse: [] }
@@ -81,8 +83,9 @@ export async function handleWordleCommand(interaction, wordle, economy) {
   }
 
   if (subcommand === '상태') {
+    await deferPrivateReplyIfSupported(interaction);
     const status = await wordle.getPlayerStatus(basePayload);
-    await interaction.reply({
+    await replyPrivately(interaction, {
       content: formatWordleStatus(status),
       flags: MessageFlags.Ephemeral,
       allowedMentions: { parse: [] }
@@ -91,10 +94,11 @@ export async function handleWordleCommand(interaction, wordle, economy) {
   }
 
   if (subcommand === '랭킹') {
+    await deferPrivateReplyIfSupported(interaction);
     const ranking = await wordle.listTodayRankings({
       guildId: interaction.guildId
     });
-    await interaction.reply({
+    await replyPrivately(interaction, {
       content: formatWordleRanking(ranking),
       flags: MessageFlags.Ephemeral,
       allowedMentions: { parse: [] }
@@ -312,4 +316,29 @@ function sanitizeDisplayName(name) {
     .replaceAll('~', '～')
     .replaceAll('|', '｜')
     .slice(0, 32);
+}
+
+async function replyPrivately(interaction, payload) {
+  if (interaction.deferred && !interaction.replied && typeof interaction.editReply === 'function') {
+    await interaction.editReply(toDeferredEditPayload(payload));
+    return;
+  }
+
+  await safeReplyToInteraction(interaction, payload, { flags: MessageFlags.Ephemeral });
+}
+
+async function deferPrivateReplyIfSupported(interaction) {
+  if (interaction.deferred || interaction.replied || typeof interaction.deferReply !== 'function') return;
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+}
+
+function toDeferredEditPayload(payload) {
+  const {
+    ephemeral,
+    flags,
+    fetchReply,
+    withResponse,
+    ...rest
+  } = payload ?? {};
+  return rest;
 }

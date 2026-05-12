@@ -190,7 +190,9 @@ export function createBot({
       if (preDeferAccountSelection) return;
 
       responseGuard = guardInteractionResponse(interaction, { logger });
-      if (shouldDeferBeforeCommandHandling(interaction)) {
+      if (shouldDeferPrivatelyBeforeCommandHandling(interaction)) {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      } else if (shouldDeferBeforeCommandHandling(interaction)) {
         const deferred = await responseGuard.deferNow();
         if (!deferred) return;
       }
@@ -382,6 +384,18 @@ export function shouldDeferBeforeCommandHandling(interaction) {
   return false;
 }
 
+export function shouldDeferPrivatelyBeforeCommandHandling(interaction) {
+  return Boolean(
+    interaction?.isChatInputCommand?.()
+      && PRIVATE_INITIAL_RESPONSE_COMMANDS.has(interaction.commandName)
+  );
+}
+
+const PRIVATE_INITIAL_RESPONSE_COMMANDS = new Set([
+  '워들',
+  '숫자야구'
+]);
+
 function shouldKeepInitialComponentResponseOpen(interaction) {
   const customId = interaction?.customId ?? '';
 
@@ -389,6 +403,7 @@ function shouldKeepInitialComponentResponseOpen(interaction) {
 }
 
 function shouldKeepInitialChatInputResponseOpen(interaction) {
+  if (['워들', '숫자야구'].includes(interaction?.commandName)) return true;
   if (interaction?.commandName !== '우노') return false;
 
   try {

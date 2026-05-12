@@ -249,6 +249,46 @@ test('/숫자야구 도전 실패 응답은 경험치만 지급하고 다음 판
   }
 });
 
+test('/숫자야구 상태는 공개 placeholder 없이 비공개 defer 원본을 채운다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    const interaction = createInteraction('상태', { withDefer: true });
+
+    await handleNumberBaseballCommand(interaction, fixture.numberBaseball, fixture.economy);
+
+    assert.equal(interaction.deferPayloads.length, 1);
+    assert.equal(interaction.deferPayloads[0].flags, MessageFlags.Ephemeral);
+    assert.equal(interaction.edits.length, 1);
+    assert.equal(interaction.replies.length, 0);
+    assert.match(interaction.edits[0].content, /숫자야구/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('/숫자야구 도전 결과는 비공개 defer 원본을 edit해서 사라지지 않게 보낸다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    const interaction = createInteraction('도전', {
+      stringOptions: { 숫자: '1234' },
+      withDefer: true
+    });
+
+    await handleNumberBaseballCommand(interaction, fixture.numberBaseball, fixture.economy);
+
+    assert.equal(interaction.deferPayloads.length, 1);
+    assert.equal(interaction.deferPayloads[0].flags, MessageFlags.Ephemeral);
+    assert.equal(interaction.edits.length, 1);
+    assert.equal(interaction.replies.length, 0);
+    assert.match(interaction.edits[0].content, /정답입니다/);
+    assert.match(interaction.edits[0].content, /1234/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 async function createFixture({ economyOptions = {}, secrets = ['1234'], ...numberBaseballOptions } = {}) {
   const directory = await mkdtemp(join(tmpdir(), 'heeheebot-number-baseball-'));
   const store = createSqliteStore(join(directory, 'profiles.sqlite'));
@@ -273,8 +313,8 @@ async function createFixture({ economyOptions = {}, secrets = ['1234'], ...numbe
   };
 }
 
-function createInteraction(subcommand, { stringOptions = {} } = {}) {
-  return {
+function createInteraction(subcommand, { stringOptions = {}, withDefer = false } = {}) {
+  const interaction = {
     commandName: '숫자야구',
     guildId: 'guild-1',
     user: { id: 'user-1', username: '테스터' },
@@ -291,6 +331,26 @@ function createInteraction(subcommand, { stringOptions = {} } = {}) {
     },
     async reply(payload) {
       this.replies.push(payload);
+      this.replied = true;
     }
   };
+
+  if (withDefer) {
+    Object.assign(interaction, {
+      deferred: false,
+      replied: false,
+      deferPayloads: [],
+      edits: [],
+      async deferReply(payload) {
+        this.deferPayloads.push(payload);
+        this.deferred = true;
+      },
+      async editReply(payload) {
+        this.edits.push(payload);
+        this.replied = true;
+      }
+    });
+  }
+
+  return interaction;
 }
