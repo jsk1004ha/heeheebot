@@ -22,6 +22,7 @@ import {
 import { SEASON_POINT_SOURCES } from '../src/systems/seasons.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const KOREA_TIME_OFFSET_MS = 9 * 60 * 60 * 1000;
 const quietLogger = { error() {} };
 
 test('커뮤니티 명령 payload는 업적, 칭호, 미션, 복권, 상점, 서버이벤트를 등록한다', () => {
@@ -856,12 +857,13 @@ test('활동요약 명령은 오래 걸릴 수 있는 조회 전에 먼저 defer
 
 test('미션 일일 완료 수령은 시즌 포인트를 지급하고 응답에 시즌 라인을 표시한다', async () => {
   const today = Math.floor(Date.now() / DAY_MS);
+  const fortuneDay = Math.floor((Date.now() + KOREA_TIME_OFFSET_MS) / DAY_MS);
   const fixture = await createFixture();
 
   try {
     await seedProfile(fixture.store, {
       lastDailyDay: today,
-      lastFortuneXpDay: today,
+      lastFortuneXpDay: fortuneDay,
       community: {
         daily: {
           day: today,

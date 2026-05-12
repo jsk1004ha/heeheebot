@@ -149,6 +149,9 @@ const DEFAULT_OPTIONS = Object.freeze({
   liarGameLiarWinMoney: 1500,
   liarGameCitizenLoseXp: 20,
   liarGameLiarLoseXp: 50,
+  mafiaGameWinnerXp: 150,
+  mafiaGameWinnerMoney: 1000,
+  mafiaGameLoserXp: 40,
   wordleWinXp: 120,
   wordleWinMoney: 600,
   numberBaseballWinXp: 120,
@@ -562,6 +565,50 @@ export class EconomyService {
         participants: results,
         liar: results.find((result) => result.userId === liarUserId) ?? null,
         citizens: results.filter((result) => result.userId !== liarUserId)
+      };
+    });
+  }
+
+  async awardMafiaGameResults({ guildId, participants, winner }) {
+    const normalizedParticipants = normalizeMafiaGameParticipants(participants);
+    const winnerTeam = winner === 'mafia' ? 'mafia' : 'citizens';
+
+    return this.store.update((data) => {
+      const results = normalizedParticipants.map((participant) => {
+        const team = participant.role === 'mafia' ? 'mafia' : 'citizens';
+        const won = team === winnerTeam;
+        const xpGained = won
+          ? this.options.mafiaGameWinnerXp
+          : this.options.mafiaGameLoserXp;
+        const moneyGained = won
+          ? this.options.mafiaGameWinnerMoney
+          : 0;
+        const profile = getOrCreateProfile(data, guildId, participant.userId, participant.username, this);
+        const levelResult = addXp(profile, xpGained, this);
+
+        if (moneyGained > 0) {
+          creditCurrency(profile, CURRENCY_MAIN, moneyGained);
+        }
+
+        return {
+          userId: participant.userId,
+          username: participant.username,
+          role: participant.role,
+          team,
+          won,
+          xpGained,
+          moneyGained,
+          ...levelResult,
+          profile: cloneProfile(profile)
+        };
+      });
+
+      return {
+        source: '마피아게임 결과',
+        winner: winnerTeam,
+        participants: results,
+        winners: results.filter((result) => result.won),
+        losers: results.filter((result) => !result.won)
       };
     });
   }
@@ -3684,6 +3731,37 @@ function normalizeLiarGameParticipants(participants) {
   }
 
   return [...uniqueParticipants.values()];
+}
+
+function normalizeMafiaGameParticipants(participants) {
+  if (!Array.isArray(participants)) {
+    throw new Error('마피아게임 참가자 목록이 필요합니다.');
+  }
+
+  const uniqueParticipants = new Map();
+
+  for (const participant of participants) {
+    if (!participant?.userId) {
+      throw new Error('마피아게임 참가자 userId가 필요합니다.');
+    }
+
+    if (!uniqueParticipants.has(participant.userId)) {
+      uniqueParticipants.set(participant.userId, {
+        userId: participant.userId,
+        username: participant.username || 'Unknown',
+        role: normalizeMafiaRole(participant.role)
+      });
+    }
+  }
+
+  return [...uniqueParticipants.values()];
+}
+
+function normalizeMafiaRole(role) {
+  const normalized = String(role ?? '').trim().toLowerCase();
+  return ['mafia', 'police', 'doctor', 'citizen'].includes(normalized)
+    ? normalized
+    : 'citizen';
 }
 
 function getLiarGameXp(options, winner, isLiar) {

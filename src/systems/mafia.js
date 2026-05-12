@@ -1,81 +1,41 @@
 export const MAFIA_MIN_PLAYERS = 4;
-export const MAFIA_MAX_PLAYERS = 12;
+export const MAFIA_MAX_PLAYERS = 16;
 
 export const MAFIA_ROLES = Object.freeze({
-  mafia: 'mafia',
-  police: 'police',
-  doctor: 'doctor',
-  citizen: 'citizen'
+  mafia: Object.freeze({ value: 'mafia', label: '마피아', team: 'mafia', nightAction: 'kill', privateChat: true }),
+  citizen: Object.freeze({ value: 'citizen', label: '시민', team: 'citizens', nightAction: null, privateChat: false }),
+  police: Object.freeze({ value: 'police', label: '경찰', team: 'citizens', nightAction: 'investigate', privateChat: true }),
+  doctor: Object.freeze({ value: 'doctor', label: '의사', team: 'citizens', nightAction: 'protect', privateChat: true })
 });
 
-export const MAFIA_TEAMS = Object.freeze({
-  mafia: 'mafia',
-  citizens: 'citizens'
-});
+export const MAFIA_ROLE_DISTRIBUTIONS = Object.freeze([
+  Object.freeze({ min: 4, max: 6, mafia: 1, police: 1, doctor: 1 }),
+  Object.freeze({ min: 7, max: 9, mafia: 2, police: 1, doctor: 2 }),
+  Object.freeze({ min: 10, max: 12, mafia: 2, police: 2, doctor: 2 }),
+  Object.freeze({ min: 13, max: 16, mafia: 3, police: 2, doctor: 3 })
+]);
 
-const ROLE_LABELS = Object.freeze({
-  [MAFIA_ROLES.mafia]: '마피아',
-  [MAFIA_ROLES.police]: '경찰',
-  [MAFIA_ROLES.doctor]: '의사',
-  [MAFIA_ROLES.citizen]: '시민'
-});
-
-const ROLE_EMOJIS = Object.freeze({
-  [MAFIA_ROLES.mafia]: '🔪',
-  [MAFIA_ROLES.police]: '🔎',
-  [MAFIA_ROLES.doctor]: '💊',
-  [MAFIA_ROLES.citizen]: '👤'
-});
-
-let nextMafiaGameSequence = 1;
+const ROLE_ORDER = Object.freeze(['mafia', 'police', 'doctor', 'citizen']);
 
 export class MafiaGame {
-  constructor({
-    id = createMafiaGameId(Date.now()),
-    guildId = 'guild',
-    channelId = 'channel',
-    players,
-    revealGhostRoles = false,
-    roleAssignments = null,
-    randomInt = defaultRandomInt,
-    now = () => Date.now()
-  }) {
-    const normalizedPlayers = normalizeMafiaPlayers(players);
-    if (normalizedPlayers.length < MAFIA_MIN_PLAYERS || normalizedPlayers.length > MAFIA_MAX_PLAYERS) {
-      throw new Error(`마피아 게임은 ${MAFIA_MIN_PLAYERS}~${MAFIA_MAX_PLAYERS}명이어야 합니다.`);
-    }
-
-    this.id = id;
-    this.guildId = normalizeId(guildId, 'guildId');
-    this.channelId = normalizeId(channelId, 'channelId');
-    this.players = normalizedPlayers.map((player) => ({
-      ...player,
-      role: null,
-      alive: true,
-      eliminatedAt: null,
-      eliminatedBy: null
-    }));
-    this.revealGhostRoles = Boolean(revealGhostRoles);
+  constructor({ players, randomInt = defaultRandomInt, roleAssignments = null } = {}) {
     this.randomInt = randomInt;
-    this.now = now;
-    this.phase = 'setup';
-    this.dayNumber = 0;
-    this.nightNumber = 0;
-    this.winner = null;
-    this.completedReason = null;
-    this.nightActions = createEmptyNightActions();
-    this.nominationVotes = new Map();
-    this.approvalVotes = new Map();
-    this.approvalCandidateId = null;
-    this.events = [];
-    this.createdAt = this.now();
-    this.updatedAt = this.createdAt;
+    const normalizedPlayers = normalizePlayers(players);
+    validatePlayerCount(normalizedPlayers.length);
 
-    this.#assignRoles(roleAssignments);
-    this.startNight();
+    this.players = assignRoles(normalizedPlayers, randomInt, roleAssignments);
+    this.round = 1;
+    this.nightActions = {
+      mafiaKills: new Map(),
+      policeChecks: new Map(),
+      doctorProtects: new Map()
+    };
+    this.votes = new Map();
+    this.nightHistory = [];
+    this.voteHistory = [];
   }
 
-  get alivePlayers() {
+  get livingPlayers() {
     return this.players.filter((player) => player.alive);
   }
 
@@ -83,611 +43,416 @@ export class MafiaGame {
     return this.players.filter((player) => !player.alive);
   }
 
-  get aliveMafia() {
-    return this.alivePlayers.filter((player) => player.role === MAFIA_ROLES.mafia);
-  }
-
-  get aliveCitizensTeam() {
-    return this.alivePlayers.filter((player) => player.role !== MAFIA_ROLES.mafia);
-  }
-
-  get mafiaPlayers() {
-    return this.players.filter((player) => player.role === MAFIA_ROLES.mafia);
-  }
-
-  get policePlayer() {
-    return this.players.find((player) => player.role === MAFIA_ROLES.police) ?? null;
-  }
-
-  get doctorPlayer() {
-    return this.players.find((player) => player.role === MAFIA_ROLES.doctor) ?? null;
-  }
-
   get roleCounts() {
     return countRoles(this.players);
+  }
+
+  get livingRoleCounts() {
+    return countRoles(this.livingPlayers);
+  }
+
+  getPlayer(userId) {
+    const normalizedUserId = normalizeText(userId);
+    return this.players.find((player) => player.userId === normalizedUserId) ?? null;
   }
 
   getAssignment(userId) {
     const player = this.getPlayer(userId);
     if (!player) return null;
 
+    const role = getRoleConfig(player.role);
+    const sameRolePlayers = role.privateChat
+      ? this.players.filter((candidate) => candidate.role === player.role)
+      : [];
+
     return {
-      player: publicPlayer(player),
+      player,
       role: player.role,
-      roleLabel: formatMafiaRoleLabel(player.role),
-      roleEmoji: formatMafiaRoleEmoji(player.role),
-      team: player.role === MAFIA_ROLES.mafia ? MAFIA_TEAMS.mafia : MAFIA_TEAMS.citizens,
-      mafiaTeammates: player.role === MAFIA_ROLES.mafia
-        ? this.mafiaPlayers.map(publicPlayer)
-        : []
+      roleLabel: role.label,
+      team: role.team,
+      teamLabel: role.team === 'mafia' ? '마피아 팀' : '시민 팀',
+      nightAction: role.nightAction,
+      sameRolePlayers
     };
   }
 
-  getPlayer(userId) {
-    const normalizedUserId = String(userId);
-    return this.players.find((player) => player.userId === normalizedUserId) ?? null;
+  getRoleGroups({ minSize = 2, aliveOnly = true } = {}) {
+    const source = aliveOnly ? this.livingPlayers : this.players;
+    return ROLE_ORDER
+      .filter((role) => getRoleConfig(role).privateChat)
+      .map((role) => ({
+        role,
+        label: getRoleConfig(role).label,
+        players: source.filter((player) => player.role === role)
+      }))
+      .filter((group) => group.players.length >= minSize);
   }
 
-  requirePlayer(userId) {
+  getNightActionActors() {
+    return this.livingPlayers.filter((player) => getRoleConfig(player.role).nightAction);
+  }
+
+  getNightActionTargets(actorId) {
+    const actor = this.getPlayer(actorId);
+    if (!actor?.alive) return [];
+
+    if (actor.role === 'mafia') {
+      return this.livingPlayers.filter((player) => player.role !== 'mafia');
+    }
+
+    if (actor.role === 'police') {
+      return this.livingPlayers.filter((player) => player.userId !== actor.userId);
+    }
+
+    if (actor.role === 'doctor') {
+      return this.livingPlayers;
+    }
+
+    return [];
+  }
+
+  submitNightAction({ actorId, targetId }) {
+    const actor = this.getPlayer(actorId);
+    if (!actor) return rejected('not_player', '참가자만 밤 행동을 제출할 수 있습니다.');
+    if (!actor.alive) return rejected('dead_actor', '사망자는 밤 행동을 할 수 없습니다.');
+
+    const role = getRoleConfig(actor.role);
+    if (!role.nightAction) return rejected('no_action', '이 역할은 밤 행동이 없습니다.');
+
+    const targets = this.getNightActionTargets(actor.userId);
+    const target = targets.find((candidate) => candidate.userId === normalizeText(targetId));
+    if (!target) return rejected('invalid_target', '선택할 수 없는 대상입니다.');
+
+    if (actor.role === 'mafia') {
+      this.nightActions.mafiaKills.set(actor.userId, target.userId);
+    } else if (actor.role === 'police') {
+      this.nightActions.policeChecks.set(actor.userId, target.userId);
+    } else if (actor.role === 'doctor') {
+      this.nightActions.doctorProtects.set(actor.userId, target.userId);
+    }
+
+    const investigation = actor.role === 'police'
+      ? { target, isMafia: target.role === 'mafia' }
+      : null;
+
+    return {
+      accepted: true,
+      actor,
+      target,
+      action: role.nightAction,
+      investigation,
+      complete: this.isNightActionComplete()
+    };
+  }
+
+  hasSubmittedNightAction(userId) {
     const player = this.getPlayer(userId);
-    if (!player) throw new Error('이 마피아 게임의 참가자가 아닙니다.');
-    return player;
-  }
-
-  startNight() {
-    if (this.winner) {
-      this.phase = 'ended';
-      return;
-    }
-
-    this.phase = 'night';
-    this.nightNumber += 1;
-    this.nightActions = createEmptyNightActions();
-    this.nominationVotes.clear();
-    this.approvalVotes.clear();
-    this.approvalCandidateId = null;
-    this.updatedAt = this.now();
-  }
-
-  castNightAction({ userId, targetId }) {
-    if (this.phase !== 'night') {
-      throw new Error('현재 밤 행동 시간이 아닙니다.');
-    }
-
-    const actor = this.requireAlivePlayer(userId);
-    const target = this.requireAlivePlayer(targetId);
-
-    if (actor.role === MAFIA_ROLES.citizen) {
-      throw new Error('시민은 밤에 사용할 능력이 없습니다.');
-    }
-
-    if (actor.role === MAFIA_ROLES.mafia) {
-      if (target.role === MAFIA_ROLES.mafia) {
-        throw new Error('마피아는 같은 마피아를 처형 대상으로 지정할 수 없습니다.');
-      }
-
-      this.nightActions.mafiaVotes.set(actor.userId, target.userId);
-      this.nightActions.mafiaVoteSequence.push({
-        actorId: actor.userId,
-        targetId: target.userId,
-        sequence: this.nightActions.mafiaVoteSequence.length + 1
-      });
-      this.updatedAt = this.now();
-      return {
-        accepted: true,
-        type: 'mafia',
-        actor: publicPlayer(actor),
-        target: publicPlayer(target),
-        complete: this.isNightActionComplete()
-      };
-    }
-
-    if (actor.role === MAFIA_ROLES.police) {
-      if (actor.userId === target.userId) {
-        throw new Error('경찰은 자기 자신을 조사할 수 없습니다.');
-      }
-      if (this.nightActions.police) {
-        throw new Error('경찰은 이미 이번 밤 조사를 마쳤습니다.');
-      }
-
-      this.nightActions.police = {
-        actorId: actor.userId,
-        targetId: target.userId,
-        targetIsMafia: target.role === MAFIA_ROLES.mafia
-      };
-      this.updatedAt = this.now();
-      return {
-        accepted: true,
-        type: 'police',
-        actor: publicPlayer(actor),
-        target: publicPlayer(target),
-        targetIsMafia: target.role === MAFIA_ROLES.mafia,
-        complete: this.isNightActionComplete()
-      };
-    }
-
-    if (actor.role === MAFIA_ROLES.doctor) {
-      if (this.nightActions.doctor) {
-        throw new Error('의사는 이미 이번 밤 치료 대상을 정했습니다.');
-      }
-
-      this.nightActions.doctor = {
-        actorId: actor.userId,
-        targetId: target.userId
-      };
-      this.updatedAt = this.now();
-      return {
-        accepted: true,
-        type: 'doctor',
-        actor: publicPlayer(actor),
-        target: publicPlayer(target),
-        complete: this.isNightActionComplete()
-      };
-    }
-
-    throw new Error('알 수 없는 역할입니다.');
+    if (!player) return false;
+    if (player.role === 'mafia') return this.nightActions.mafiaKills.has(player.userId);
+    if (player.role === 'police') return this.nightActions.policeChecks.has(player.userId);
+    if (player.role === 'doctor') return this.nightActions.doctorProtects.has(player.userId);
+    return true;
   }
 
   isNightActionComplete() {
-    if (this.phase !== 'night') return false;
-
-    const aliveMafia = this.aliveMafia;
-    const mafiaComplete = aliveMafia.length === 0
-      || aliveMafia.every((player) => this.nightActions.mafiaVotes.has(player.userId));
-    const police = this.policePlayer;
-    const policeComplete = !police?.alive || Boolean(this.nightActions.police);
-    const doctor = this.doctorPlayer;
-    const doctorComplete = !doctor?.alive || Boolean(this.nightActions.doctor);
-
-    return mafiaComplete && policeComplete && doctorComplete;
-  }
-
-  resolveNight() {
-    if (this.phase !== 'night') {
-      throw new Error('현재 밤을 정산할 수 없습니다.');
-    }
-
-    const killCandidate = this.#resolveMafiaTarget();
-    const protectedId = this.nightActions.doctor?.targetId ?? null;
-    let death = null;
-    let protectedTarget = null;
-    let reason = 'no_target';
-
-    if (killCandidate) {
-      if (killCandidate.userId === protectedId) {
-        protectedTarget = publicPlayer(killCandidate);
-        reason = 'protected';
-      } else {
-        death = this.#eliminatePlayer(killCandidate.userId, 'night');
-        reason = 'killed';
-      }
-    }
-
-    const result = {
-      phase: 'night',
-      nightNumber: this.nightNumber,
-      killTarget: killCandidate ? publicPlayer(killCandidate) : null,
-      protectedTarget,
-      death,
-      reason,
-      police: this.nightActions.police ? {
-        target: publicPlayer(this.requirePlayer(this.nightActions.police.targetId)),
-        targetIsMafia: this.nightActions.police.targetIsMafia
-      } : null
-    };
-
-    this.nightActions = createEmptyNightActions();
-    this.#updateWinner();
-
-    if (!this.winner) {
-      this.phase = 'day_discussion';
-      this.dayNumber += 1;
-    }
-
-    this.events.push(result);
-    this.updatedAt = this.now();
-    return result;
-  }
-
-  beginNominationVote() {
-    if (this.phase !== 'day_discussion') {
-      throw new Error('현재 자유투표를 시작할 수 없습니다.');
-    }
-
-    this.phase = 'nomination';
-    this.nominationVotes.clear();
-    this.updatedAt = this.now();
-  }
-
-  castNominationVote({ voterId, targetId }) {
-    if (this.phase !== 'nomination') {
-      throw new Error('현재 자유투표 시간이 아닙니다.');
-    }
-
-    const voter = this.requireAlivePlayer(voterId);
-    const target = this.requireAlivePlayer(targetId);
-    if (voter.userId === target.userId) {
-      throw new Error('자기 자신에게는 투표할 수 없습니다.');
-    }
-
-    this.nominationVotes.set(voter.userId, target.userId);
-    this.updatedAt = this.now();
-    return {
-      accepted: true,
-      voter: publicPlayer(voter),
-      target: publicPlayer(target),
-      complete: this.isNominationVoteComplete(),
-      tally: this.getNominationTally()
-    };
-  }
-
-  isNominationVoteComplete() {
-    return this.phase === 'nomination' && this.nominationVotes.size >= this.alivePlayers.length;
-  }
-
-  getNominationTally() {
-    return createTargetTally(this.alivePlayers, this.nominationVotes, this.players);
-  }
-
-  resolveNominationVote() {
-    if (this.phase !== 'nomination') {
-      throw new Error('현재 자유투표를 정산할 수 없습니다.');
-    }
-
-    const tally = this.getNominationTally();
-    const votedEntries = tally.filter((entry) => entry.count > 0);
-    let result;
-
-    if (votedEntries.length === 0) {
-      result = {
-        phase: 'nomination',
-        noVotes: true,
-        tie: false,
-        candidate: null,
-        tiedUserIds: [],
-        tally
-      };
-      this.startNight();
-      return result;
-    }
-
-    const maxCount = Math.max(...votedEntries.map((entry) => entry.count));
-    const leaders = votedEntries.filter((entry) => entry.count === maxCount);
-
-    if (leaders.length !== 1) {
-      result = {
-        phase: 'nomination',
-        noVotes: false,
-        tie: true,
-        candidate: null,
-        tiedUserIds: leaders.map((entry) => entry.player.userId),
-        tally
-      };
-      this.startNight();
-      return result;
-    }
-
-    this.phase = 'approval';
-    this.approvalCandidateId = leaders[0].player.userId;
-    this.approvalVotes.clear();
-    this.updatedAt = this.now();
-
-    return {
-      phase: 'nomination',
-      noVotes: false,
-      tie: false,
-      candidate: leaders[0].player,
-      tiedUserIds: [],
-      tally
-    };
-  }
-
-  castApprovalVote({ voterId, approve }) {
-    if (this.phase !== 'approval') {
-      throw new Error('현재 찬반투표 시간이 아닙니다.');
-    }
-
-    const voter = this.requireAlivePlayer(voterId);
-    this.approvalVotes.set(voter.userId, Boolean(approve));
-    this.updatedAt = this.now();
-    return {
-      accepted: true,
-      voter: publicPlayer(voter),
-      approve: Boolean(approve),
-      candidate: publicPlayer(this.requirePlayer(this.approvalCandidateId)),
-      complete: this.isApprovalVoteComplete(),
-      tally: this.getApprovalTally()
-    };
-  }
-
-  isApprovalVoteComplete() {
-    return this.phase === 'approval' && this.approvalVotes.size >= this.alivePlayers.length;
-  }
-
-  getApprovalTally() {
-    const yes = [];
-    const no = [];
-
-    for (const [voterId, approve] of this.approvalVotes.entries()) {
-      const voter = this.getPlayer(voterId);
-      if (!voter) continue;
-      (approve ? yes : no).push(publicPlayer(voter));
-    }
-
-    return {
-      candidate: this.approvalCandidateId ? publicPlayer(this.requirePlayer(this.approvalCandidateId)) : null,
-      yes,
-      no,
-      yesCount: yes.length,
-      noCount: no.length,
-      totalVotes: yes.length + no.length
-    };
-  }
-
-  resolveApprovalVote() {
-    if (this.phase !== 'approval') {
-      throw new Error('현재 찬반투표를 정산할 수 없습니다.');
-    }
-
-    const tally = this.getApprovalTally();
-    let death = null;
-    let executed = false;
-
-    if (tally.yesCount > tally.noCount && tally.yesCount > 0) {
-      death = this.#eliminatePlayer(this.approvalCandidateId, 'trial');
-      executed = true;
-    }
-
-    const result = {
-      phase: 'approval',
-      candidate: tally.candidate,
-      tally,
-      executed,
-      death
-    };
-
-    this.approvalVotes.clear();
-    this.approvalCandidateId = null;
-    this.#updateWinner();
-
-    if (!this.winner) {
-      this.startNight();
-    }
-
-    this.events.push(result);
-    this.updatedAt = this.now();
-    return result;
-  }
-
-  end(reason = 'cancelled') {
-    this.phase = 'ended';
-    this.completedReason = reason;
-    this.updatedAt = this.now();
-  }
-
-  requireAlivePlayer(userId) {
-    const player = this.requirePlayer(userId);
-    if (!player.alive) throw new Error('이미 사망한 참가자는 행동할 수 없습니다.');
-    return player;
-  }
-
-  #assignRoles(roleAssignments) {
-    const assignmentMap = roleAssignments ? normalizeRoleAssignments(roleAssignments) : null;
-
-    if (assignmentMap) {
-      for (const player of this.players) {
-        const role = assignmentMap.get(player.userId);
-        if (!role) throw new Error(`${player.username}님의 역할 배정이 없습니다.`);
-        player.role = role;
-      }
-      validateRequiredRoles(this.players);
-      return;
-    }
-
-    const composition = getMafiaRoleComposition(this.players.length);
-    const roles = [
-      ...Array.from({ length: composition.mafia }, () => MAFIA_ROLES.mafia),
-      ...Array.from({ length: composition.police }, () => MAFIA_ROLES.police),
-      ...Array.from({ length: composition.doctor }, () => MAFIA_ROLES.doctor),
-      ...Array.from({ length: composition.citizen }, () => MAFIA_ROLES.citizen)
-    ];
-    const shuffledPlayers = shuffle(this.players, this.randomInt);
-
-    shuffledPlayers.forEach((player, index) => {
-      player.role = roles[index];
+    return this.getNightActionActors().every((actor) => {
+      const targets = this.getNightActionTargets(actor.userId);
+      return targets.length === 0 || this.hasSubmittedNightAction(actor.userId);
     });
   }
 
-  #resolveMafiaTarget() {
-    if (this.nightActions.mafiaVotes.size === 0) return null;
+  resolveNight() {
+    const protectedTargetIds = new Set(
+      [...this.nightActions.doctorProtects.entries()]
+        .filter(([actorId]) => this.getPlayer(actorId)?.alive)
+        .map(([, targetId]) => targetId)
+        .filter((targetId) => this.getPlayer(targetId)?.alive)
+    );
+    const attemptedKillIds = [...new Set(
+      [...this.nightActions.mafiaKills.entries()]
+        .filter(([actorId]) => this.getPlayer(actorId)?.alive)
+        .map(([, targetId]) => targetId)
+        .filter((targetId) => this.getPlayer(targetId)?.alive)
+    )];
+    const blocked = attemptedKillIds
+      .filter((targetId) => protectedTargetIds.has(targetId))
+      .map((targetId) => this.getPlayer(targetId));
+    const killed = attemptedKillIds
+      .filter((targetId) => !protectedTargetIds.has(targetId))
+      .map((targetId) => this.killPlayer(targetId, { phase: 'night' }))
+      .filter(Boolean);
+    const policeResults = [...this.nightActions.policeChecks.entries()]
+      .map(([actorId, targetId]) => {
+        const actor = this.getPlayer(actorId);
+        const target = this.getPlayer(targetId);
+        if (!actor || !target) return null;
+        return { actor, target, isMafia: target.role === 'mafia' };
+      })
+      .filter(Boolean);
 
-    const counts = new Map();
-    for (const targetId of this.nightActions.mafiaVotes.values()) {
-      counts.set(targetId, (counts.get(targetId) ?? 0) + 1);
-    }
+    const result = {
+      round: this.round,
+      attemptedKills: attemptedKillIds.map((targetId) => this.getPlayer(targetId)).filter(Boolean),
+      protectedPlayers: [...protectedTargetIds].map((targetId) => this.getPlayer(targetId)).filter(Boolean),
+      blocked,
+      killed,
+      policeResults,
+      win: this.checkWin()
+    };
 
-    const maxCount = Math.max(...counts.values());
-    const tiedTargetIds = [...counts.entries()]
-      .filter(([, count]) => count === maxCount)
-      .map(([targetId]) => targetId);
-
-    let targetId = tiedTargetIds[0];
-    if (tiedTargetIds.length > 1) {
-      const latestTieVote = [...this.nightActions.mafiaVoteSequence]
-        .reverse()
-        .find((entry) => tiedTargetIds.includes(entry.targetId));
-      targetId = latestTieVote?.targetId ?? targetId;
-    }
-
-    const target = this.getPlayer(targetId);
-    return target?.alive ? target : null;
+    this.nightHistory.push(result);
+    this.clearNightActions();
+    return result;
   }
 
-  #eliminatePlayer(userId, eliminatedBy) {
-    const player = this.requireAlivePlayer(userId);
-    player.alive = false;
-    player.eliminatedAt = this.now();
-    player.eliminatedBy = eliminatedBy;
+  clearNightActions() {
+    this.nightActions.mafiaKills.clear();
+    this.nightActions.policeChecks.clear();
+    this.nightActions.doctorProtects.clear();
+  }
 
+  clearVotes() {
+    this.votes.clear();
+  }
+
+  castVote({ voterId, targetId }) {
+    const voter = this.getPlayer(voterId);
+    if (!voter) return rejected('not_player', '참가자만 투표할 수 있습니다.');
+    if (!voter.alive) return rejected('dead_voter', '사망자는 투표할 수 없습니다.');
+
+    const target = this.getPlayer(targetId);
+    if (!target?.alive) return rejected('invalid_target', '살아있는 플레이어에게만 투표할 수 있습니다.');
+    if (voter.userId === target.userId) return rejected('self_vote', '자기 자신에게는 투표할 수 없습니다.');
+
+    this.votes.set(voter.userId, target.userId);
     return {
-      player: publicPlayer(player),
-      role: this.revealGhostRoles ? player.role : null,
-      roleLabel: this.revealGhostRoles ? formatMafiaRoleLabel(player.role) : null,
-      eliminatedBy
+      accepted: true,
+      voter,
+      target,
+      complete: this.isVotingComplete()
     };
   }
 
-  #updateWinner() {
-    const mafiaCount = this.aliveMafia.length;
-    const citizenTeamCount = this.aliveCitizensTeam.length;
+  isVotingComplete() {
+    return this.livingPlayers.every((player) => this.votes.has(player.userId));
+  }
 
-    if (mafiaCount === 0) {
-      this.winner = MAFIA_TEAMS.citizens;
-      this.completedReason = 'all_mafia_eliminated';
-      this.phase = 'ended';
-      return this.winner;
+  getVoteCounts() {
+    const livingIds = new Set(this.livingPlayers.map((player) => player.userId));
+    const counts = new Map(this.livingPlayers.map((player) => [player.userId, 0]));
+
+    for (const [voterId, targetId] of this.votes.entries()) {
+      if (livingIds.has(voterId) && counts.has(targetId)) {
+        counts.set(targetId, counts.get(targetId) + 1);
+      }
     }
 
-    if (mafiaCount >= citizenTeamCount) {
-      this.winner = MAFIA_TEAMS.mafia;
-      this.completedReason = 'mafia_parity';
-      this.phase = 'ended';
-      return this.winner;
+    return this.livingPlayers.map((player) => ({
+      player,
+      count: counts.get(player.userId) ?? 0
+    }));
+  }
+
+  resolveVote() {
+    const counts = this.getVoteCounts();
+    const livingCount = this.livingPlayers.length;
+    const majority = Math.floor(livingCount / 2) + 1;
+    const maxVotes = counts.reduce((max, entry) => Math.max(max, entry.count), 0);
+    const tied = counts.filter((entry) => entry.count === maxVotes && maxVotes > 0);
+
+    let executed = null;
+    let reason = 'no_majority';
+    if (maxVotes >= majority && tied.length === 1) {
+      executed = this.killPlayer(tied[0].player.userId, { phase: 'vote' });
+      reason = 'executed';
+    } else if (maxVotes >= majority && tied.length > 1) {
+      reason = 'tie';
+    }
+
+    const result = {
+      round: this.round,
+      counts,
+      livingCount,
+      majority,
+      maxVotes,
+      tied: tied.map((entry) => entry.player),
+      executed,
+      noExecution: !executed,
+      reason,
+      win: this.checkWin()
+    };
+
+    this.voteHistory.push(result);
+    this.clearVotes();
+    return result;
+  }
+
+  killPlayer(userId, { phase }) {
+    const player = this.getPlayer(userId);
+    if (!player?.alive) return null;
+
+    player.alive = false;
+    player.deathRound = this.round;
+    player.deathPhase = phase;
+    return player;
+  }
+
+  advanceRound() {
+    this.round += 1;
+    this.clearNightActions();
+    this.clearVotes();
+    return this.round;
+  }
+
+  checkWin() {
+    const mafiaAlive = this.livingPlayers.filter((player) => player.role === 'mafia').length;
+    const nonMafiaAlive = this.livingPlayers.length - mafiaAlive;
+
+    if (mafiaAlive <= 0) {
+      return {
+        winner: 'citizens',
+        reason: '모든 마피아가 사망했습니다.',
+        mafiaAlive,
+        nonMafiaAlive
+      };
+    }
+
+    if (mafiaAlive >= nonMafiaAlive) {
+      return {
+        winner: 'mafia',
+        reason: '마피아 수가 시민 팀 수 이상이 되었습니다.',
+        mafiaAlive,
+        nonMafiaAlive
+      };
     }
 
     return null;
   }
 }
 
-export function getMafiaRoleComposition(playerCount) {
+export function getMafiaRoleDistribution(playerCount) {
   const count = Number(playerCount);
-  if (!Number.isInteger(count) || count < MAFIA_MIN_PLAYERS || count > MAFIA_MAX_PLAYERS) {
-    throw new Error(`마피아 게임은 ${MAFIA_MIN_PLAYERS}~${MAFIA_MAX_PLAYERS}명이어야 합니다.`);
+  const distribution = MAFIA_ROLE_DISTRIBUTIONS.find((candidate) => count >= candidate.min && count <= candidate.max);
+  if (!distribution) {
+    throw new Error(`마피아게임은 ${MAFIA_MIN_PLAYERS}~${MAFIA_MAX_PLAYERS}명으로 시작할 수 있습니다.`);
   }
 
-  const mafia = count <= 5 ? 1 : count <= 8 ? 2 : 3;
-  const police = 1;
-  const doctor = 1;
-  const citizen = count - mafia - police - doctor;
+  const citizen = count - distribution.mafia - distribution.police - distribution.doctor;
+  if (citizen < 0) {
+    throw new Error('역할 분포가 참가자 수보다 많습니다.');
+  }
 
-  return { mafia, police, doctor, citizen };
-}
-
-export function formatMafiaRoleLabel(role) {
-  return ROLE_LABELS[role] ?? String(role);
-}
-
-export function formatMafiaRoleEmoji(role) {
-  return ROLE_EMOJIS[role] ?? '❔';
-}
-
-export function publicPlayer(player) {
   return {
-    userId: player.userId,
-    username: player.username,
-    bot: Boolean(player.bot),
-    alive: player.alive !== false
+    mafia: distribution.mafia,
+    police: distribution.police,
+    doctor: distribution.doctor,
+    citizen
   };
 }
 
-export function normalizeMafiaPlayers(players) {
-  if (!Array.isArray(players)) {
-    throw new Error('참가자 목록이 필요합니다.');
+export function getMafiaRoleLabel(role) {
+  return getRoleConfig(role).label;
+}
+
+export function getMafiaTeam(role) {
+  return getRoleConfig(role).team;
+}
+
+function assignRoles(players, randomInt, roleAssignments) {
+  if (roleAssignments) {
+    const assignments = normalizeRoleAssignments(roleAssignments);
+    return players.map((player) => createMafiaPlayer(player, assignments.get(player.userId) ?? 'citizen'));
   }
 
-  const seen = new Set();
-  return players.map((player) => {
-    const userId = normalizeId(player.userId ?? player.id, 'userId');
-    if (seen.has(userId)) throw new Error('중복된 참가자가 있습니다.');
-    seen.add(userId);
-    return {
-      userId,
-      username: String(player.username ?? player.displayName ?? player.globalName ?? userId),
-      bot: Boolean(player.bot)
-    };
-  });
-}
+  const distribution = getMafiaRoleDistribution(players.length);
+  const roles = [
+    ...Array.from({ length: distribution.mafia }, () => 'mafia'),
+    ...Array.from({ length: distribution.police }, () => 'police'),
+    ...Array.from({ length: distribution.doctor }, () => 'doctor'),
+    ...Array.from({ length: distribution.citizen }, () => 'citizen')
+  ];
+  const shuffledRoles = shuffle(roles, randomInt);
 
-function createTargetTally(targetPlayers, votes, allPlayers) {
-  const playersById = new Map(allPlayers.map((player) => [player.userId, player]));
-  return targetPlayers.map((target) => {
-    const voters = [...votes.entries()]
-      .filter(([, targetId]) => targetId === target.userId)
-      .map(([voterId]) => playersById.get(voterId))
-      .filter(Boolean)
-      .map(publicPlayer);
-
-    return {
-      player: publicPlayer(target),
-      count: voters.length,
-      voters
-    };
-  });
-}
-
-function createEmptyNightActions() {
-  return {
-    mafiaVotes: new Map(),
-    mafiaVoteSequence: [],
-    police: null,
-    doctor: null
-  };
-}
-
-function countRoles(players) {
-  return Object.freeze({
-    mafia: players.filter((player) => player.role === MAFIA_ROLES.mafia).length,
-    police: players.filter((player) => player.role === MAFIA_ROLES.police).length,
-    doctor: players.filter((player) => player.role === MAFIA_ROLES.doctor).length,
-    citizen: players.filter((player) => player.role === MAFIA_ROLES.citizen).length
-  });
+  return players.map((player, index) => createMafiaPlayer(player, shuffledRoles[index] ?? 'citizen'));
 }
 
 function normalizeRoleAssignments(roleAssignments) {
   const entries = roleAssignments instanceof Map
     ? [...roleAssignments.entries()]
-    : Object.entries(roleAssignments);
+    : Object.entries(roleAssignments ?? {});
   const normalized = new Map();
 
   for (const [userId, role] of entries) {
-    if (!Object.values(MAFIA_ROLES).includes(role)) {
-      throw new Error(`알 수 없는 마피아 역할입니다: ${role}`);
-    }
-    normalized.set(String(userId), role);
+    const normalizedUserId = normalizeText(userId);
+    const normalizedRole = normalizeRole(role);
+    if (normalizedUserId && normalizedRole) normalized.set(normalizedUserId, normalizedRole);
   }
 
   return normalized;
 }
 
-function validateRequiredRoles(players) {
-  const counts = countRoles(players);
-  if (counts.mafia < 1) throw new Error('마피아 역할이 최소 1명 필요합니다.');
-  if (counts.police > 1) throw new Error('경찰은 최대 1명입니다.');
-  if (counts.doctor > 1) throw new Error('의사는 최대 1명입니다.');
+function createMafiaPlayer(player, role) {
+  return {
+    ...player,
+    role: normalizeRole(role) ?? 'citizen',
+    alive: true,
+    deathRound: null,
+    deathPhase: null
+  };
+}
+
+function normalizePlayers(players) {
+  const seen = new Set();
+  return [...(players ?? [])].map((player) => ({
+    userId: normalizeText(player.userId),
+    username: normalizeText(player.username) || '플레이어',
+    bot: Boolean(player.bot)
+  })).filter((player) => {
+    if (!player.userId || player.bot || seen.has(player.userId)) return false;
+    seen.add(player.userId);
+    return true;
+  });
+}
+
+function validatePlayerCount(count) {
+  if (count < MAFIA_MIN_PLAYERS || count > MAFIA_MAX_PLAYERS) {
+    throw new Error(`마피아게임은 ${MAFIA_MIN_PLAYERS}~${MAFIA_MAX_PLAYERS}명으로 시작할 수 있습니다.`);
+  }
+}
+
+function countRoles(players) {
+  return ROLE_ORDER.reduce((counts, role) => ({
+    ...counts,
+    [role]: players.filter((player) => player.role === role).length
+  }), {});
+}
+
+function getRoleConfig(role) {
+  return MAFIA_ROLES[normalizeRole(role)] ?? MAFIA_ROLES.citizen;
+}
+
+function normalizeRole(role) {
+  const value = normalizeText(role).toLowerCase();
+  return Object.hasOwn(MAFIA_ROLES, value) ? value : null;
 }
 
 function shuffle(items, randomInt) {
-  const copy = [...items];
-  for (let index = copy.length - 1; index > 0; index -= 1) {
-    const swapIndex = randomInt(0, index);
-    [copy[index], copy[swapIndex]] = [copy[swapIndex], copy[index]];
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = randomInt(index + 1);
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
   }
-  return copy;
+  return shuffled;
 }
 
-function normalizeId(value, fieldName) {
-  if (value === undefined || value === null || value === '') {
-    throw new Error(`${fieldName} 값이 필요합니다.`);
-  }
-  return String(value);
+function rejected(code, reason) {
+  return { accepted: false, code, reason };
 }
 
-function defaultRandomInt(min, max) {
-  const low = Math.ceil(min);
-  const high = Math.floor(max);
-  return Math.floor(Math.random() * (high - low + 1)) + low;
+function normalizeText(value) {
+  return String(value ?? '').trim().replace(/\s+/g, ' ');
 }
 
-function createMafiaGameId(now) {
-  return `mafia-${Number(now).toString(36)}-${nextMafiaGameSequence++}`;
+function defaultRandomInt(max) {
+  return Math.floor(Math.random() * max);
 }

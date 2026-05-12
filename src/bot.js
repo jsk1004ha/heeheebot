@@ -229,7 +229,7 @@ export function createBot({
         || await handleWordChainCommand(interaction, economy, logger)
         || await handleChoseongCommand(interaction, economy, logger)
         || await handleLiarGameCommand(interaction, economy, logger)
-        || await handleMafiaCommand(interaction, logger)
+        || await handleMafiaCommand(interaction, economy, logger)
         || await handleWordleCommand(interaction, wordle, economy)
         || await handleNumberBaseballCommand(interaction, numberBaseball, economy)
         || await handleFortuneCommand(interaction, fortune, economy)
