@@ -63,6 +63,18 @@ export const liarGameCommands = [
             .addChoices(...getLiarGameCategoryChoices())
         )
     )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('제출')
+        .setDescription('내 설명 차례에 라이어게임 설명을 제출합니다.')
+        .addStringOption((option) =>
+          option
+            .setName('내용')
+            .setDescription('제시어를 직접 말하지 않는 짧은 설명')
+            .setRequired(true)
+            .setMaxLength(300)
+        )
+    )
 ];
 
 export function getLiarGameCommandPayloads() {
@@ -96,35 +108,49 @@ export async function handleLiarGameCommand(interaction, economy = null, logger 
     return true;
   }
 
+  if (subcommand === '제출') {
+    await submitLiarGameDescription(interaction, economy, logger);
+    return true;
+  }
+
   return false;
 }
 
-export async function handleLiarGameMessage(message, economy = null, logger = console) {
-  if (!message.inGuild?.() || message.author.bot) return false;
+export async function handleLiarGameMessage() {
+  return false;
+}
 
-  const state = activeLiarGamesByChannel.get(createChannelKey(message.guild.id, message.channel.id));
-  if (!state || state.status !== 'describing') return false;
+async function submitLiarGameDescription(interaction, economy, logger) {
+  const key = createChannelKey(interaction.guildId, interaction.channelId);
+  const state = activeLiarGamesByChannel.get(key);
 
-  const currentTurn = state.game.currentTurn;
-  if (!currentTurn || currentTurn.player.userId !== message.author.id) return false;
+  if (!state || state.status !== 'describing' || !state.game) {
+    await interaction.reply({
+      content: '현재 이 채널에서 제출할 라이어게임 설명이 없습니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return;
+  }
 
   const result = state.game.submitDescription({
-    userId: message.author.id,
-    text: message.content
+    userId: interaction.user.id,
+    text: interaction.options.getString?.('내용') ?? ''
   });
 
   if (!result.accepted) {
-    await message.reply(result.reason);
-    return true;
+    await interaction.reply({
+      content: result.reason,
+      flags: MessageFlags.Ephemeral
+    });
+    return;
   }
 
   clearTurnTimer(state);
 
-  try {
-    await message.react('✅');
-  } catch (error) {
-    logger.debug?.('Failed to react to liar-game description:', error);
-  }
+  await interaction.reply({
+    content: `✅ ${formatPlayerMention(result.entry.player)}님 설명 제출: ${result.entry.text}`,
+    allowedMentions: { parse: [] }
+  });
 
   await continueLiarDescriptionPhase(state, economy, logger);
   return true;
@@ -348,7 +374,7 @@ async function continueLiarDescriptionPhase(state, economy, logger) {
 
   await state.channel.send([
     `➡️ **${turn.round}/${state.game.turnCount}턴** ${formatPlayerMention(turn.player)} 차례입니다.`,
-    `제시어를 직접 말하지 말고 ${formatSeconds(state.descriptionMs)} 안에 설명을 입력하세요.`
+    `제시어를 직접 말하지 말고 ${formatSeconds(state.descriptionMs)} 안에 \`/라이어게임 제출 내용:...\`으로 설명을 제출하세요.`
   ].join('\n'));
 }
 
@@ -639,6 +665,7 @@ function formatStartMessage(state) {
     `설명 턴: **${state.game.turnCount}턴**`,
     '',
     '아래 **내 제시어 보기** 버튼을 눌러 본인에게만 보이는 제시어를 확인하세요.',
+    '자기 차례가 되면 `/라이어게임 제출 내용:...`으로 설명을 제출하세요.',
     '라이어가 알아채지 못하게 너무 직접적인 설명은 피하고, 너무 모호하면 의심받을 수 있습니다.',
     '',
     '설명 순서(랜덤):',
