@@ -1479,7 +1479,7 @@ function stripLeadingStockName(message, stockName) {
   if (!safeStockName) return message;
 
   return message
-    .replace(new RegExp(`^${escapeRegExp(safeStockName)}(?:\\s+|\\s*[:：\\-—]\\s*)`, 'u'), '')
+    .replace(new RegExp(`^${escapeRegExp(safeStockName)}(?:\\s+|\\s*[,，:：\\-—]\\s*)`, 'u'), '')
     .trim();
 }
 
