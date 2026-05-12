@@ -1,0 +1,23 @@
+{
+  "id": "pickaxe_032",
+  "kind": "pickaxe",
+  "skill": "$generate2dsprite",
+  "label": "+32 수정 곡괭이",
+  "oreId": null,
+  "level": 32,
+  "rarity": null,
+  "tier": "crystal",
+  "source": {
+    "rawAtlas": "assets/mining/_incoming/generate2dsprite/pickaxe-atlas-026-050/image-gen-raw.png",
+    "originalRawImageName": "ig_0dd17cbbaa371fb2016a032304079481919668c1792c6b0cc2.png",
+    "processedAtlas": "assets/mining/_incoming/generate2dsprite/pickaxe-atlas-026-050",
+    "sheetTransparent": "assets/mining/_incoming/generate2dsprite/pickaxe-atlas-026-050/sheet-transparent.png",
+    "processor": "$generate2dsprite/scripts/generate2dsprite.py process",
+    "rows": 5,
+    "cols": 5,
+    "cellIndex": 6,
+    "row": 1,
+    "col": 1
+  },
+  "generatedAt": "2026-05-12T13:28:31.514Z"
+}

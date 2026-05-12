@@ -1,0 +1,9 @@
+{
+  "skill": "$generate2dsprite",
+  "originalRawImageName": "ig_0dd17cbbaa371fb2016a032304079481919668c1792c6b0cc2.png",
+  "copiedRawImage": "assets/mining/_incoming/generate2dsprite/pickaxe-atlas-026-050/image-gen-raw.png",
+  "rows": 5,
+  "cols": 5,
+  "deliveredAssets": 25,
+  "edgeTouchFrames": []
+}

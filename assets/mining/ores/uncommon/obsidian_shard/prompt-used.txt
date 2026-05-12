@@ -1,0 +1,1 @@
+Use $generate2dsprite to create a clean HD transparent 2D game ore or gemstone item icon, single asset, 흑요석 파편, 고급 rarity, 유리질 vein, readable chunky mineral silhouette, centered in canvas, full object inside safe area, premium mobile RPG item-icon polish, no UI frame, no text, no watermark, solid #FF00FF background for chroma key cleanup.

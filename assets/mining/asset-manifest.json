@@ -1,0 +1,963 @@
+{
+  "skill": "$generate2dsprite",
+  "note": "Mining assets are regenerated from built-in image_gen raw atlases and postprocessed by generate2dsprite.py.",
+  "counts": {
+    "ores": 50,
+    "pickaxes": 100,
+    "total": 150
+  },
+  "ores": [
+    {
+      "id": "ore_stone_fragment",
+      "oreId": "stone_fragment",
+      "label": "암석 조각",
+      "rarity": "common",
+      "imagePath": "assets/mining/ores/common/stone_fragment/icon.png"
+    },
+    {
+      "id": "ore_copper_ore",
+      "oreId": "copper_ore",
+      "label": "구리광석",
+      "rarity": "common",
+      "imagePath": "assets/mining/ores/common/copper_ore/icon.png"
+    },
+    {
+      "id": "ore_tin_ore",
+      "oreId": "tin_ore",
+      "label": "주석광석",
+      "rarity": "common",
+      "imagePath": "assets/mining/ores/common/tin_ore/icon.png"
+    },
+    {
+      "id": "ore_iron_ore",
+      "oreId": "iron_ore",
+      "label": "철광석",
+      "rarity": "common",
+      "imagePath": "assets/mining/ores/common/iron_ore/icon.png"
+    },
+    {
+      "id": "ore_coal_chunk",
+      "oreId": "coal_chunk",
+      "label": "석탄 덩어리",
+      "rarity": "common",
+      "imagePath": "assets/mining/ores/common/coal_chunk/icon.png"
+    },
+    {
+      "id": "ore_limestone",
+      "oreId": "limestone",
+      "label": "석회석",
+      "rarity": "common",
+      "imagePath": "assets/mining/ores/common/limestone/icon.png"
+    },
+    {
+      "id": "ore_claystone",
+      "oreId": "claystone",
+      "label": "점토석",
+      "rarity": "common",
+      "imagePath": "assets/mining/ores/common/claystone/icon.png"
+    },
+    {
+      "id": "ore_salt_crystal",
+      "oreId": "salt_crystal",
+      "label": "소금 결정",
+      "rarity": "common",
+      "imagePath": "assets/mining/ores/common/salt_crystal/icon.png"
+    },
+    {
+      "id": "ore_lead_ore",
+      "oreId": "lead_ore",
+      "label": "납광석",
+      "rarity": "common",
+      "imagePath": "assets/mining/ores/common/lead_ore/icon.png"
+    },
+    {
+      "id": "ore_zinc_ore",
+      "oreId": "zinc_ore",
+      "label": "아연광석",
+      "rarity": "common",
+      "imagePath": "assets/mining/ores/common/zinc_ore/icon.png"
+    },
+    {
+      "id": "ore_silica_ore",
+      "oreId": "silica_ore",
+      "label": "규석",
+      "rarity": "common",
+      "imagePath": "assets/mining/ores/common/silica_ore/icon.png"
+    },
+    {
+      "id": "ore_mica_sheet",
+      "oreId": "mica_sheet",
+      "label": "운모 조각",
+      "rarity": "common",
+      "imagePath": "assets/mining/ores/common/mica_sheet/icon.png"
+    },
+    {
+      "id": "ore_ochre_stone",
+      "oreId": "ochre_stone",
+      "label": "황토석",
+      "rarity": "common",
+      "imagePath": "assets/mining/ores/common/ochre_stone/icon.png"
+    },
+    {
+      "id": "ore_manganese_ore",
+      "oreId": "manganese_ore",
+      "label": "망간광석",
+      "rarity": "common",
+      "imagePath": "assets/mining/ores/common/manganese_ore/icon.png"
+    },
+    {
+      "id": "ore_basalt_core",
+      "oreId": "basalt_core",
+      "label": "현무암 심",
+      "rarity": "common",
+      "imagePath": "assets/mining/ores/common/basalt_core/icon.png"
+    },
+    {
+      "id": "ore_silver_ore",
+      "oreId": "silver_ore",
+      "label": "은광석",
+      "rarity": "uncommon",
+      "imagePath": "assets/mining/ores/uncommon/silver_ore/icon.png"
+    },
+    {
+      "id": "ore_black_iron",
+      "oreId": "black_iron",
+      "label": "흑철광석",
+      "rarity": "uncommon",
+      "imagePath": "assets/mining/ores/uncommon/black_iron/icon.png"
+    },
+    {
+      "id": "ore_cobalt_ore",
+      "oreId": "cobalt_ore",
+      "label": "코발트광석",
+      "rarity": "uncommon",
+      "imagePath": "assets/mining/ores/uncommon/cobalt_ore/icon.png"
+    },
+    {
+      "id": "ore_dolomite",
+      "oreId": "dolomite",
+      "label": "백운석",
+      "rarity": "uncommon",
+      "imagePath": "assets/mining/ores/uncommon/dolomite/icon.png"
+    },
+    {
+      "id": "ore_quartz_crystal",
+      "oreId": "quartz_crystal",
+      "label": "석영 결정",
+      "rarity": "uncommon",
+      "imagePath": "assets/mining/ores/uncommon/quartz_crystal/icon.png"
+    },
+    {
+      "id": "ore_fluorite",
+      "oreId": "fluorite",
+      "label": "형석",
+      "rarity": "uncommon",
+      "imagePath": "assets/mining/ores/uncommon/fluorite/icon.png"
+    },
+    {
+      "id": "ore_sulfur_crystal",
+      "oreId": "sulfur_crystal",
+      "label": "유황 결정",
+      "rarity": "uncommon",
+      "imagePath": "assets/mining/ores/uncommon/sulfur_crystal/icon.png"
+    },
+    {
+      "id": "ore_magnetite",
+      "oreId": "magnetite",
+      "label": "자철석",
+      "rarity": "uncommon",
+      "imagePath": "assets/mining/ores/uncommon/magnetite/icon.png"
+    },
+    {
+      "id": "ore_obsidian_shard",
+      "oreId": "obsidian_shard",
+      "label": "흑요석 파편",
+      "rarity": "uncommon",
+      "imagePath": "assets/mining/ores/uncommon/obsidian_shard/icon.png"
+    },
+    {
+      "id": "ore_moonstone_raw",
+      "oreId": "moonstone_raw",
+      "label": "월장석 원석",
+      "rarity": "uncommon",
+      "imagePath": "assets/mining/ores/uncommon/moonstone_raw/icon.png"
+    },
+    {
+      "id": "ore_gold_ore",
+      "oreId": "gold_ore",
+      "label": "금광석",
+      "rarity": "rare",
+      "imagePath": "assets/mining/ores/rare/gold_ore/icon.png"
+    },
+    {
+      "id": "ore_platinum_ore",
+      "oreId": "platinum_ore",
+      "label": "백금광석",
+      "rarity": "rare",
+      "imagePath": "assets/mining/ores/rare/platinum_ore/icon.png"
+    },
+    {
+      "id": "ore_ruby_raw",
+      "oreId": "ruby_raw",
+      "label": "루비 원석",
+      "rarity": "rare",
+      "imagePath": "assets/mining/ores/rare/ruby_raw/icon.png"
+    },
+    {
+      "id": "ore_sapphire_raw",
+      "oreId": "sapphire_raw",
+      "label": "사파이어 원석",
+      "rarity": "rare",
+      "imagePath": "assets/mining/ores/rare/sapphire_raw/icon.png"
+    },
+    {
+      "id": "ore_emerald_raw",
+      "oreId": "emerald_raw",
+      "label": "에메랄드 원석",
+      "rarity": "rare",
+      "imagePath": "assets/mining/ores/rare/emerald_raw/icon.png"
+    },
+    {
+      "id": "ore_amethyst_geode",
+      "oreId": "amethyst_geode",
+      "label": "자수정 정동",
+      "rarity": "rare",
+      "imagePath": "assets/mining/ores/rare/amethyst_geode/icon.png"
+    },
+    {
+      "id": "ore_titanium_ore",
+      "oreId": "titanium_ore",
+      "label": "티타늄광석",
+      "rarity": "rare",
+      "imagePath": "assets/mining/ores/rare/titanium_ore/icon.png"
+    },
+    {
+      "id": "ore_meteor_iron",
+      "oreId": "meteor_iron",
+      "label": "운석철",
+      "rarity": "rare",
+      "imagePath": "assets/mining/ores/rare/meteor_iron/icon.png"
+    },
+    {
+      "id": "ore_mithril_ore",
+      "oreId": "mithril_ore",
+      "label": "미스릴광석",
+      "rarity": "epic",
+      "imagePath": "assets/mining/ores/epic/mithril_ore/icon.png"
+    },
+    {
+      "id": "ore_orichalcum_ore",
+      "oreId": "orichalcum_ore",
+      "label": "오리하르콘",
+      "rarity": "epic",
+      "imagePath": "assets/mining/ores/epic/orichalcum_ore/icon.png"
+    },
+    {
+      "id": "ore_starlight_crystal",
+      "oreId": "starlight_crystal",
+      "label": "별빛 수정",
+      "rarity": "epic",
+      "imagePath": "assets/mining/ores/epic/starlight_crystal/icon.png"
+    },
+    {
+      "id": "ore_dragon_bloodstone",
+      "oreId": "dragon_bloodstone",
+      "label": "용혈석",
+      "rarity": "epic",
+      "imagePath": "assets/mining/ores/epic/dragon_bloodstone/icon.png"
+    },
+    {
+      "id": "ore_sunstone_core",
+      "oreId": "sunstone_core",
+      "label": "태양석 핵",
+      "rarity": "epic",
+      "imagePath": "assets/mining/ores/epic/sunstone_core/icon.png"
+    },
+    {
+      "id": "ore_moonpearl_vein",
+      "oreId": "moonpearl_vein",
+      "label": "달빛진주광",
+      "rarity": "epic",
+      "imagePath": "assets/mining/ores/epic/moonpearl_vein/icon.png"
+    },
+    {
+      "id": "ore_resonance_crystal",
+      "oreId": "resonance_crystal",
+      "label": "공명 수정",
+      "rarity": "epic",
+      "imagePath": "assets/mining/ores/epic/resonance_crystal/icon.png"
+    },
+    {
+      "id": "ore_adamantite_ore",
+      "oreId": "adamantite_ore",
+      "label": "아다만타이트",
+      "rarity": "legendary",
+      "imagePath": "assets/mining/ores/legendary/adamantite_ore/icon.png"
+    },
+    {
+      "id": "ore_celestial_diamond",
+      "oreId": "celestial_diamond",
+      "label": "천상 다이아몬드",
+      "rarity": "legendary",
+      "imagePath": "assets/mining/ores/legendary/celestial_diamond/icon.png"
+    },
+    {
+      "id": "ore_void_opal",
+      "oreId": "void_opal",
+      "label": "공허 오팔",
+      "rarity": "legendary",
+      "imagePath": "assets/mining/ores/legendary/void_opal/icon.png"
+    },
+    {
+      "id": "ore_phoenix_emberstone",
+      "oreId": "phoenix_emberstone",
+      "label": "불사조 잿불석",
+      "rarity": "legendary",
+      "imagePath": "assets/mining/ores/legendary/phoenix_emberstone/icon.png"
+    },
+    {
+      "id": "ore_worldroot_fossil",
+      "oreId": "worldroot_fossil",
+      "label": "세계수 화석광",
+      "rarity": "legendary",
+      "imagePath": "assets/mining/ores/legendary/worldroot_fossil/icon.png"
+    },
+    {
+      "id": "ore_hidden_developer_gem",
+      "oreId": "hidden_developer_gem",
+      "label": "개발자의 보석",
+      "rarity": "hidden",
+      "imagePath": "assets/mining/ores/hidden/hidden_developer_gem/icon.png"
+    },
+    {
+      "id": "ore_hidden_404_crystal",
+      "oreId": "hidden_404_crystal",
+      "label": "404 수정",
+      "rarity": "hidden",
+      "imagePath": "assets/mining/ores/hidden/hidden_404_crystal/icon.png"
+    },
+    {
+      "id": "ore_hidden_time_ore",
+      "oreId": "hidden_time_ore",
+      "label": "시공 광석",
+      "rarity": "hidden",
+      "imagePath": "assets/mining/ores/hidden/hidden_time_ore/icon.png"
+    },
+    {
+      "id": "ore_hidden_shadow_mithril",
+      "oreId": "hidden_shadow_mithril",
+      "label": "그림자 미스릴",
+      "rarity": "hidden",
+      "imagePath": "assets/mining/ores/hidden/hidden_shadow_mithril/icon.png"
+    },
+    {
+      "id": "ore_hidden_dawn_core",
+      "oreId": "hidden_dawn_core",
+      "label": "새벽의 핵석",
+      "rarity": "hidden",
+      "imagePath": "assets/mining/ores/hidden/hidden_dawn_core/icon.png"
+    }
+  ],
+  "pickaxes": [
+    {
+      "id": "pickaxe_001",
+      "level": 1,
+      "tier": "copper",
+      "imagePath": "assets/mining/pickaxes/level-001/icon.png"
+    },
+    {
+      "id": "pickaxe_002",
+      "level": 2,
+      "tier": "copper",
+      "imagePath": "assets/mining/pickaxes/level-002/icon.png"
+    },
+    {
+      "id": "pickaxe_003",
+      "level": 3,
+      "tier": "copper",
+      "imagePath": "assets/mining/pickaxes/level-003/icon.png"
+    },
+    {
+      "id": "pickaxe_004",
+      "level": 4,
+      "tier": "copper",
+      "imagePath": "assets/mining/pickaxes/level-004/icon.png"
+    },
+    {
+      "id": "pickaxe_005",
+      "level": 5,
+      "tier": "copper",
+      "imagePath": "assets/mining/pickaxes/level-005/icon.png"
+    },
+    {
+      "id": "pickaxe_006",
+      "level": 6,
+      "tier": "copper",
+      "imagePath": "assets/mining/pickaxes/level-006/icon.png"
+    },
+    {
+      "id": "pickaxe_007",
+      "level": 7,
+      "tier": "copper",
+      "imagePath": "assets/mining/pickaxes/level-007/icon.png"
+    },
+    {
+      "id": "pickaxe_008",
+      "level": 8,
+      "tier": "copper",
+      "imagePath": "assets/mining/pickaxes/level-008/icon.png"
+    },
+    {
+      "id": "pickaxe_009",
+      "level": 9,
+      "tier": "copper",
+      "imagePath": "assets/mining/pickaxes/level-009/icon.png"
+    },
+    {
+      "id": "pickaxe_010",
+      "level": 10,
+      "tier": "iron",
+      "imagePath": "assets/mining/pickaxes/level-010/icon.png"
+    },
+    {
+      "id": "pickaxe_011",
+      "level": 11,
+      "tier": "iron",
+      "imagePath": "assets/mining/pickaxes/level-011/icon.png"
+    },
+    {
+      "id": "pickaxe_012",
+      "level": 12,
+      "tier": "iron",
+      "imagePath": "assets/mining/pickaxes/level-012/icon.png"
+    },
+    {
+      "id": "pickaxe_013",
+      "level": 13,
+      "tier": "iron",
+      "imagePath": "assets/mining/pickaxes/level-013/icon.png"
+    },
+    {
+      "id": "pickaxe_014",
+      "level": 14,
+      "tier": "iron",
+      "imagePath": "assets/mining/pickaxes/level-014/icon.png"
+    },
+    {
+      "id": "pickaxe_015",
+      "level": 15,
+      "tier": "iron",
+      "imagePath": "assets/mining/pickaxes/level-015/icon.png"
+    },
+    {
+      "id": "pickaxe_016",
+      "level": 16,
+      "tier": "iron",
+      "imagePath": "assets/mining/pickaxes/level-016/icon.png"
+    },
+    {
+      "id": "pickaxe_017",
+      "level": 17,
+      "tier": "iron",
+      "imagePath": "assets/mining/pickaxes/level-017/icon.png"
+    },
+    {
+      "id": "pickaxe_018",
+      "level": 18,
+      "tier": "iron",
+      "imagePath": "assets/mining/pickaxes/level-018/icon.png"
+    },
+    {
+      "id": "pickaxe_019",
+      "level": 19,
+      "tier": "iron",
+      "imagePath": "assets/mining/pickaxes/level-019/icon.png"
+    },
+    {
+      "id": "pickaxe_020",
+      "level": 20,
+      "tier": "steel",
+      "imagePath": "assets/mining/pickaxes/level-020/icon.png"
+    },
+    {
+      "id": "pickaxe_021",
+      "level": 21,
+      "tier": "steel",
+      "imagePath": "assets/mining/pickaxes/level-021/icon.png"
+    },
+    {
+      "id": "pickaxe_022",
+      "level": 22,
+      "tier": "steel",
+      "imagePath": "assets/mining/pickaxes/level-022/icon.png"
+    },
+    {
+      "id": "pickaxe_023",
+      "level": 23,
+      "tier": "steel",
+      "imagePath": "assets/mining/pickaxes/level-023/icon.png"
+    },
+    {
+      "id": "pickaxe_024",
+      "level": 24,
+      "tier": "steel",
+      "imagePath": "assets/mining/pickaxes/level-024/icon.png"
+    },
+    {
+      "id": "pickaxe_025",
+      "level": 25,
+      "tier": "steel",
+      "imagePath": "assets/mining/pickaxes/level-025/icon.png"
+    },
+    {
+      "id": "pickaxe_026",
+      "level": 26,
+      "tier": "steel",
+      "imagePath": "assets/mining/pickaxes/level-026/icon.png"
+    },
+    {
+      "id": "pickaxe_027",
+      "level": 27,
+      "tier": "steel",
+      "imagePath": "assets/mining/pickaxes/level-027/icon.png"
+    },
+    {
+      "id": "pickaxe_028",
+      "level": 28,
+      "tier": "steel",
+      "imagePath": "assets/mining/pickaxes/level-028/icon.png"
+    },
+    {
+      "id": "pickaxe_029",
+      "level": 29,
+      "tier": "steel",
+      "imagePath": "assets/mining/pickaxes/level-029/icon.png"
+    },
+    {
+      "id": "pickaxe_030",
+      "level": 30,
+      "tier": "crystal",
+      "imagePath": "assets/mining/pickaxes/level-030/icon.png"
+    },
+    {
+      "id": "pickaxe_031",
+      "level": 31,
+      "tier": "crystal",
+      "imagePath": "assets/mining/pickaxes/level-031/icon.png"
+    },
+    {
+      "id": "pickaxe_032",
+      "level": 32,
+      "tier": "crystal",
+      "imagePath": "assets/mining/pickaxes/level-032/icon.png"
+    },
+    {
+      "id": "pickaxe_033",
+      "level": 33,
+      "tier": "crystal",
+      "imagePath": "assets/mining/pickaxes/level-033/icon.png"
+    },
+    {
+      "id": "pickaxe_034",
+      "level": 34,
+      "tier": "crystal",
+      "imagePath": "assets/mining/pickaxes/level-034/icon.png"
+    },
+    {
+      "id": "pickaxe_035",
+      "level": 35,
+      "tier": "crystal",
+      "imagePath": "assets/mining/pickaxes/level-035/icon.png"
+    },
+    {
+      "id": "pickaxe_036",
+      "level": 36,
+      "tier": "crystal",
+      "imagePath": "assets/mining/pickaxes/level-036/icon.png"
+    },
+    {
+      "id": "pickaxe_037",
+      "level": 37,
+      "tier": "crystal",
+      "imagePath": "assets/mining/pickaxes/level-037/icon.png"
+    },
+    {
+      "id": "pickaxe_038",
+      "level": 38,
+      "tier": "crystal",
+      "imagePath": "assets/mining/pickaxes/level-038/icon.png"
+    },
+    {
+      "id": "pickaxe_039",
+      "level": 39,
+      "tier": "crystal",
+      "imagePath": "assets/mining/pickaxes/level-039/icon.png"
+    },
+    {
+      "id": "pickaxe_040",
+      "level": 40,
+      "tier": "gold",
+      "imagePath": "assets/mining/pickaxes/level-040/icon.png"
+    },
+    {
+      "id": "pickaxe_041",
+      "level": 41,
+      "tier": "gold",
+      "imagePath": "assets/mining/pickaxes/level-041/icon.png"
+    },
+    {
+      "id": "pickaxe_042",
+      "level": 42,
+      "tier": "gold",
+      "imagePath": "assets/mining/pickaxes/level-042/icon.png"
+    },
+    {
+      "id": "pickaxe_043",
+      "level": 43,
+      "tier": "gold",
+      "imagePath": "assets/mining/pickaxes/level-043/icon.png"
+    },
+    {
+      "id": "pickaxe_044",
+      "level": 44,
+      "tier": "gold",
+      "imagePath": "assets/mining/pickaxes/level-044/icon.png"
+    },
+    {
+      "id": "pickaxe_045",
+      "level": 45,
+      "tier": "gold",
+      "imagePath": "assets/mining/pickaxes/level-045/icon.png"
+    },
+    {
+      "id": "pickaxe_046",
+      "level": 46,
+      "tier": "gold",
+      "imagePath": "assets/mining/pickaxes/level-046/icon.png"
+    },
+    {
+      "id": "pickaxe_047",
+      "level": 47,
+      "tier": "gold",
+      "imagePath": "assets/mining/pickaxes/level-047/icon.png"
+    },
+    {
+      "id": "pickaxe_048",
+      "level": 48,
+      "tier": "gold",
+      "imagePath": "assets/mining/pickaxes/level-048/icon.png"
+    },
+    {
+      "id": "pickaxe_049",
+      "level": 49,
+      "tier": "gold",
+      "imagePath": "assets/mining/pickaxes/level-049/icon.png"
+    },
+    {
+      "id": "pickaxe_050",
+      "level": 50,
+      "tier": "platinum",
+      "imagePath": "assets/mining/pickaxes/level-050/icon.png"
+    },
+    {
+      "id": "pickaxe_051",
+      "level": 51,
+      "tier": "platinum",
+      "imagePath": "assets/mining/pickaxes/level-051/icon.png"
+    },
+    {
+      "id": "pickaxe_052",
+      "level": 52,
+      "tier": "platinum",
+      "imagePath": "assets/mining/pickaxes/level-052/icon.png"
+    },
+    {
+      "id": "pickaxe_053",
+      "level": 53,
+      "tier": "platinum",
+      "imagePath": "assets/mining/pickaxes/level-053/icon.png"
+    },
+    {
+      "id": "pickaxe_054",
+      "level": 54,
+      "tier": "platinum",
+      "imagePath": "assets/mining/pickaxes/level-054/icon.png"
+    },
+    {
+      "id": "pickaxe_055",
+      "level": 55,
+      "tier": "platinum",
+      "imagePath": "assets/mining/pickaxes/level-055/icon.png"
+    },
+    {
+      "id": "pickaxe_056",
+      "level": 56,
+      "tier": "platinum",
+      "imagePath": "assets/mining/pickaxes/level-056/icon.png"
+    },
+    {
+      "id": "pickaxe_057",
+      "level": 57,
+      "tier": "platinum",
+      "imagePath": "assets/mining/pickaxes/level-057/icon.png"
+    },
+    {
+      "id": "pickaxe_058",
+      "level": 58,
+      "tier": "platinum",
+      "imagePath": "assets/mining/pickaxes/level-058/icon.png"
+    },
+    {
+      "id": "pickaxe_059",
+      "level": 59,
+      "tier": "platinum",
+      "imagePath": "assets/mining/pickaxes/level-059/icon.png"
+    },
+    {
+      "id": "pickaxe_060",
+      "level": 60,
+      "tier": "mithril",
+      "imagePath": "assets/mining/pickaxes/level-060/icon.png"
+    },
+    {
+      "id": "pickaxe_061",
+      "level": 61,
+      "tier": "mithril",
+      "imagePath": "assets/mining/pickaxes/level-061/icon.png"
+    },
+    {
+      "id": "pickaxe_062",
+      "level": 62,
+      "tier": "mithril",
+      "imagePath": "assets/mining/pickaxes/level-062/icon.png"
+    },
+    {
+      "id": "pickaxe_063",
+      "level": 63,
+      "tier": "mithril",
+      "imagePath": "assets/mining/pickaxes/level-063/icon.png"
+    },
+    {
+      "id": "pickaxe_064",
+      "level": 64,
+      "tier": "mithril",
+      "imagePath": "assets/mining/pickaxes/level-064/icon.png"
+    },
+    {
+      "id": "pickaxe_065",
+      "level": 65,
+      "tier": "mithril",
+      "imagePath": "assets/mining/pickaxes/level-065/icon.png"
+    },
+    {
+      "id": "pickaxe_066",
+      "level": 66,
+      "tier": "mithril",
+      "imagePath": "assets/mining/pickaxes/level-066/icon.png"
+    },
+    {
+      "id": "pickaxe_067",
+      "level": 67,
+      "tier": "mithril",
+      "imagePath": "assets/mining/pickaxes/level-067/icon.png"
+    },
+    {
+      "id": "pickaxe_068",
+      "level": 68,
+      "tier": "mithril",
+      "imagePath": "assets/mining/pickaxes/level-068/icon.png"
+    },
+    {
+      "id": "pickaxe_069",
+      "level": 69,
+      "tier": "mithril",
+      "imagePath": "assets/mining/pickaxes/level-069/icon.png"
+    },
+    {
+      "id": "pickaxe_070",
+      "level": 70,
+      "tier": "dragon",
+      "imagePath": "assets/mining/pickaxes/level-070/icon.png"
+    },
+    {
+      "id": "pickaxe_071",
+      "level": 71,
+      "tier": "dragon",
+      "imagePath": "assets/mining/pickaxes/level-071/icon.png"
+    },
+    {
+      "id": "pickaxe_072",
+      "level": 72,
+      "tier": "dragon",
+      "imagePath": "assets/mining/pickaxes/level-072/icon.png"
+    },
+    {
+      "id": "pickaxe_073",
+      "level": 73,
+      "tier": "dragon",
+      "imagePath": "assets/mining/pickaxes/level-073/icon.png"
+    },
+    {
+      "id": "pickaxe_074",
+      "level": 74,
+      "tier": "dragon",
+      "imagePath": "assets/mining/pickaxes/level-074/icon.png"
+    },
+    {
+      "id": "pickaxe_075",
+      "level": 75,
+      "tier": "dragon",
+      "imagePath": "assets/mining/pickaxes/level-075/icon.png"
+    },
+    {
+      "id": "pickaxe_076",
+      "level": 76,
+      "tier": "dragon",
+      "imagePath": "assets/mining/pickaxes/level-076/icon.png"
+    },
+    {
+      "id": "pickaxe_077",
+      "level": 77,
+      "tier": "dragon",
+      "imagePath": "assets/mining/pickaxes/level-077/icon.png"
+    },
+    {
+      "id": "pickaxe_078",
+      "level": 78,
+      "tier": "dragon",
+      "imagePath": "assets/mining/pickaxes/level-078/icon.png"
+    },
+    {
+      "id": "pickaxe_079",
+      "level": 79,
+      "tier": "dragon",
+      "imagePath": "assets/mining/pickaxes/level-079/icon.png"
+    },
+    {
+      "id": "pickaxe_080",
+      "level": 80,
+      "tier": "celestial",
+      "imagePath": "assets/mining/pickaxes/level-080/icon.png"
+    },
+    {
+      "id": "pickaxe_081",
+      "level": 81,
+      "tier": "celestial",
+      "imagePath": "assets/mining/pickaxes/level-081/icon.png"
+    },
+    {
+      "id": "pickaxe_082",
+      "level": 82,
+      "tier": "celestial",
+      "imagePath": "assets/mining/pickaxes/level-082/icon.png"
+    },
+    {
+      "id": "pickaxe_083",
+      "level": 83,
+      "tier": "celestial",
+      "imagePath": "assets/mining/pickaxes/level-083/icon.png"
+    },
+    {
+      "id": "pickaxe_084",
+      "level": 84,
+      "tier": "celestial",
+      "imagePath": "assets/mining/pickaxes/level-084/icon.png"
+    },
+    {
+      "id": "pickaxe_085",
+      "level": 85,
+      "tier": "celestial",
+      "imagePath": "assets/mining/pickaxes/level-085/icon.png"
+    },
+    {
+      "id": "pickaxe_086",
+      "level": 86,
+      "tier": "celestial",
+      "imagePath": "assets/mining/pickaxes/level-086/icon.png"
+    },
+    {
+      "id": "pickaxe_087",
+      "level": 87,
+      "tier": "celestial",
+      "imagePath": "assets/mining/pickaxes/level-087/icon.png"
+    },
+    {
+      "id": "pickaxe_088",
+      "level": 88,
+      "tier": "celestial",
+      "imagePath": "assets/mining/pickaxes/level-088/icon.png"
+    },
+    {
+      "id": "pickaxe_089",
+      "level": 89,
+      "tier": "celestial",
+      "imagePath": "assets/mining/pickaxes/level-089/icon.png"
+    },
+    {
+      "id": "pickaxe_090",
+      "level": 90,
+      "tier": "void",
+      "imagePath": "assets/mining/pickaxes/level-090/icon.png"
+    },
+    {
+      "id": "pickaxe_091",
+      "level": 91,
+      "tier": "void",
+      "imagePath": "assets/mining/pickaxes/level-091/icon.png"
+    },
+    {
+      "id": "pickaxe_092",
+      "level": 92,
+      "tier": "void",
+      "imagePath": "assets/mining/pickaxes/level-092/icon.png"
+    },
+    {
+      "id": "pickaxe_093",
+      "level": 93,
+      "tier": "void",
+      "imagePath": "assets/mining/pickaxes/level-093/icon.png"
+    },
+    {
+      "id": "pickaxe_094",
+      "level": 94,
+      "tier": "void",
+      "imagePath": "assets/mining/pickaxes/level-094/icon.png"
+    },
+    {
+      "id": "pickaxe_095",
+      "level": 95,
+      "tier": "void",
+      "imagePath": "assets/mining/pickaxes/level-095/icon.png"
+    },
+    {
+      "id": "pickaxe_096",
+      "level": 96,
+      "tier": "void",
+      "imagePath": "assets/mining/pickaxes/level-096/icon.png"
+    },
+    {
+      "id": "pickaxe_097",
+      "level": 97,
+      "tier": "void",
+      "imagePath": "assets/mining/pickaxes/level-097/icon.png"
+    },
+    {
+      "id": "pickaxe_098",
+      "level": 98,
+      "tier": "void",
+      "imagePath": "assets/mining/pickaxes/level-098/icon.png"
+    },
+    {
+      "id": "pickaxe_099",
+      "level": 99,
+      "tier": "void",
+      "imagePath": "assets/mining/pickaxes/level-099/icon.png"
+    },
+    {
+      "id": "pickaxe_100",
+      "level": 100,
+      "tier": "mythic",
+      "imagePath": "assets/mining/pickaxes/level-100/icon.png"
+    }
+  ]
+}

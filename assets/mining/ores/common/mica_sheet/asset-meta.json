@@ -1,0 +1,23 @@
+{
+  "id": "ore_mica_sheet",
+  "kind": "sprite",
+  "skill": "$generate2dsprite",
+  "label": "운모 조각 아이콘",
+  "oreId": "mica_sheet",
+  "level": null,
+  "rarity": "common",
+  "tier": null,
+  "source": {
+    "rawAtlas": "assets/mining/_incoming/generate2dsprite/ore-atlas-001-025/image-gen-raw.png",
+    "originalRawImageName": "ig_0dd17cbbaa371fb2016a0321dfa1648191ac92b803cbd8f12f.png",
+    "processedAtlas": "assets/mining/_incoming/generate2dsprite/ore-atlas-001-025",
+    "sheetTransparent": "assets/mining/_incoming/generate2dsprite/ore-atlas-001-025/sheet-transparent.png",
+    "processor": "$generate2dsprite/scripts/generate2dsprite.py process",
+    "rows": 5,
+    "cols": 5,
+    "cellIndex": 11,
+    "row": 2,
+    "col": 1
+  },
+  "generatedAt": "2026-05-12T13:28:07.663Z"
+}

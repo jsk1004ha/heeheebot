@@ -1,0 +1,23 @@
+{
+  "id": "ore_hidden_time_ore",
+  "kind": "sprite",
+  "skill": "$generate2dsprite",
+  "label": "시공 광석 아이콘",
+  "oreId": "hidden_time_ore",
+  "level": null,
+  "rarity": "hidden",
+  "tier": null,
+  "source": {
+    "rawAtlas": "assets/mining/_incoming/generate2dsprite/ore-atlas-026-050/image-gen-raw.png",
+    "originalRawImageName": "ig_0dd17cbbaa371fb2016a03223ecb748191a8e14380a3a347ae.png",
+    "processedAtlas": "assets/mining/_incoming/generate2dsprite/ore-atlas-026-050",
+    "sheetTransparent": "assets/mining/_incoming/generate2dsprite/ore-atlas-026-050/sheet-transparent.png",
+    "processor": "$generate2dsprite/scripts/generate2dsprite.py process",
+    "rows": 5,
+    "cols": 5,
+    "cellIndex": 22,
+    "row": 4,
+    "col": 2
+  },
+  "generatedAt": "2026-05-12T13:28:13.593Z"
+}

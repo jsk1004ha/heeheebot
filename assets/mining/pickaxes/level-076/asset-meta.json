@@ -1,0 +1,23 @@
+{
+  "id": "pickaxe_076",
+  "kind": "pickaxe",
+  "skill": "$generate2dsprite",
+  "label": "+76 용혈 곡괭이",
+  "oreId": null,
+  "level": 76,
+  "rarity": null,
+  "tier": "dragon",
+  "source": {
+    "rawAtlas": "assets/mining/_incoming/generate2dsprite/pickaxe-atlas-076-100/image-gen-raw.png",
+    "originalRawImageName": "ig_0dd17cbbaa371fb2016a0323ec0de08191b416b43f92ebb1a7.png",
+    "processedAtlas": "assets/mining/_incoming/generate2dsprite/pickaxe-atlas-076-100",
+    "sheetTransparent": "assets/mining/_incoming/generate2dsprite/pickaxe-atlas-076-100/sheet-transparent.png",
+    "processor": "$generate2dsprite/scripts/generate2dsprite.py process",
+    "rows": 5,
+    "cols": 5,
+    "cellIndex": 0,
+    "row": 0,
+    "col": 0
+  },
+  "generatedAt": "2026-05-12T13:28:58.897Z"
+}

@@ -1,0 +1,9 @@
+{
+  "skill": "$generate2dsprite",
+  "originalRawImageName": "ig_0dd17cbbaa371fb2016a0321dfa1648191ac92b803cbd8f12f.png",
+  "copiedRawImage": "assets/mining/_incoming/generate2dsprite/ore-atlas-001-025/image-gen-raw.png",
+  "rows": 5,
+  "cols": 5,
+  "deliveredAssets": 25,
+  "edgeTouchFrames": []
+}

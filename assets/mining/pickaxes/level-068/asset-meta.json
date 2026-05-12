@@ -1,0 +1,23 @@
+{
+  "id": "pickaxe_068",
+  "kind": "pickaxe",
+  "skill": "$generate2dsprite",
+  "label": "+68 미스릴 곡괭이",
+  "oreId": null,
+  "level": 68,
+  "rarity": null,
+  "tier": "mithril",
+  "source": {
+    "rawAtlas": "assets/mining/_incoming/generate2dsprite/pickaxe-atlas-051-075/image-gen-raw.png",
+    "originalRawImageName": "ig_0dd17cbbaa371fb2016a03237acad081918472c370b5bd747c.png",
+    "processedAtlas": "assets/mining/_incoming/generate2dsprite/pickaxe-atlas-051-075",
+    "sheetTransparent": "assets/mining/_incoming/generate2dsprite/pickaxe-atlas-051-075/sheet-transparent.png",
+    "processor": "$generate2dsprite/scripts/generate2dsprite.py process",
+    "rows": 5,
+    "cols": 5,
+    "cellIndex": 17,
+    "row": 3,
+    "col": 2
+  },
+  "generatedAt": "2026-05-12T13:28:44.619Z"
+}

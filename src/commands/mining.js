@@ -17,7 +17,6 @@ import {
 import { SEASON_POINT_SOURCES } from '../systems/seasons.js';
 import { formatSeasonAwardLine } from './seasons.js';
 import {
-  createAllowedMentionsForUsers,
   formatUserMention,
   truncateEmbedDescription
 } from './ui.js';

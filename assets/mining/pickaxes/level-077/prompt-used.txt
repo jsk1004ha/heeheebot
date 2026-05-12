@@ -1,0 +1,1 @@
+Use $generate2dsprite to create a clean HD transparent 2D game pickaxe item icon, single asset, +77 enhancement, dragon bloodstone alloy pickaxe, red ember glow accents, centered diagonal tool, full item inside safe area, premium mobile RPG item-icon polish, no UI frame, no text, no watermark, solid #FF00FF background for chroma key cleanup.

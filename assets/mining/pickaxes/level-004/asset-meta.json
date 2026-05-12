@@ -1,0 +1,23 @@
+{
+  "id": "pickaxe_004",
+  "kind": "pickaxe",
+  "skill": "$generate2dsprite",
+  "label": "+4 초보 구리 곡괭이",
+  "oreId": null,
+  "level": 4,
+  "rarity": null,
+  "tier": "copper",
+  "source": {
+    "rawAtlas": "assets/mining/_incoming/generate2dsprite/pickaxe-atlas-001-025/image-gen-raw.png",
+    "originalRawImageName": "ig_0dd17cbbaa371fb2016a0322a0f4e4819196998635cf44f5d6.png",
+    "processedAtlas": "assets/mining/_incoming/generate2dsprite/pickaxe-atlas-001-025",
+    "sheetTransparent": "assets/mining/_incoming/generate2dsprite/pickaxe-atlas-001-025/sheet-transparent.png",
+    "processor": "$generate2dsprite/scripts/generate2dsprite.py process",
+    "rows": 5,
+    "cols": 6,
+    "cellIndex": 3,
+    "row": 0,
+    "col": 3
+  },
+  "generatedAt": "2026-05-12T13:28:18.953Z"
+}
