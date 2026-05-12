@@ -205,6 +205,14 @@ export function createBot({
         if (needsAccountSelection) return;
       }
 
+      const handledPrivateMiniGame = await handleWordleCommand(interaction, wordle, economy)
+        || await handleNumberBaseballCommand(interaction, numberBaseball, economy);
+      if (handledPrivateMiniGame) {
+        await recordCommandActivity(interaction, economy, community, logger);
+        await sendAutomaticAchievementNotice(interaction, community, logger, seasons);
+        return;
+      }
+
       const handledCasino = await handleCasinoCommand(interaction, economy, logger);
       if (handledCasino) {
         if (interaction.isChatInputCommand()
@@ -232,8 +240,6 @@ export function createBot({
         || await handleChoseongCommand(interaction, economy, logger)
         || await handleLiarGameCommand(interaction, economy, logger)
         || await handleMafiaCommand(interaction, economy, logger)
-        || await handleWordleCommand(interaction, wordle, economy)
-        || await handleNumberBaseballCommand(interaction, numberBaseball, economy)
         || await handleFortuneCommand(interaction, fortune, economy)
         || await handleStartCommand(interaction, { economy, community, fishing, stocks, seasons, logger })
         || await handleTodayCommand(interaction, { economy, community, seasons, logger })
