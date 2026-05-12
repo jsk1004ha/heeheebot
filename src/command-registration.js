@@ -10,6 +10,7 @@ import { getFortuneCommandPayloads } from './commands/fortune.js';
 import { getHelpCommandPayloads } from './commands/help.js';
 import { getMealCommandPayloads } from './commands/meals.js';
 import { getLiarGameCommandPayloads } from './commands/liar-game.js';
+import { getMafiaCommandPayloads } from './commands/mafia.js';
 import { getModerationCommandPayloads } from './commands/moderation.js';
 import { getNumberBaseballCommandPayloads } from './commands/number-baseball.js';
 import { getPollCommandPayloads } from './commands/poll.js';
@@ -41,6 +42,7 @@ export function getApplicationCommandPayloads() {
     ...getWordChainCommandPayloads(),
     ...getChoseongCommandPayloads(),
     ...getLiarGameCommandPayloads(),
+    ...getMafiaCommandPayloads(),
     ...getWordleCommandPayloads(),
     ...getNumberBaseballCommandPayloads(),
     ...getMealCommandPayloads(),

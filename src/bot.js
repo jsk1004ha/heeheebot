@@ -27,6 +27,7 @@ import {
   handleLiarGameCommand,
   handleLiarGameMessage
 } from './commands/liar-game.js';
+import { handleMafiaCommand } from './commands/mafia.js';
 import {
   handleModerationCommand,
   inspectMessageForModeration
@@ -228,6 +229,7 @@ export function createBot({
         || await handleWordChainCommand(interaction, economy, logger)
         || await handleChoseongCommand(interaction, economy, logger)
         || await handleLiarGameCommand(interaction, economy, logger)
+        || await handleMafiaCommand(interaction, logger)
         || await handleWordleCommand(interaction, wordle, economy)
         || await handleNumberBaseballCommand(interaction, numberBaseball, economy)
         || await handleFortuneCommand(interaction, fortune, economy)

@@ -189,6 +189,7 @@ export class WordleService {
     this.dayOffsetMs = Number.isFinite(options.dayOffsetMs)
       ? Math.trunc(options.dayOffsetMs)
       : WORDLE_DAY_OFFSET_MS;
+    this.now = typeof options.now === 'function' ? options.now : () => Date.now();
     this.selectWordIndex = options.selectWordIndex ?? selectDailyWordIndex;
     this.acceptedGuesses = buildAcceptedGuessSet({
       words: this.words,
@@ -196,7 +197,7 @@ export class WordleService {
     });
   }
 
-  getDailyPuzzle({ now = Date.now() } = {}) {
+  getDailyPuzzle({ now = this.now() } = {}) {
     const day = getWordleDayInfo(now, this.dayOffsetMs);
     const index = normalizeWordIndex(
       this.selectWordIndex({
@@ -217,7 +218,7 @@ export class WordleService {
     };
   }
 
-  async getPlayerStatus({ userId, now = Date.now() }) {
+  async getPlayerStatus({ userId, now = this.now() }) {
     return this.store.update((data) => {
       const state = ensureWordleState(data);
       const daily = this.getDailyPuzzle({ now });
@@ -231,7 +232,7 @@ export class WordleService {
     });
   }
 
-  async submitGuess({ guildId, userId, username = 'Unknown', guess, now = Date.now() }) {
+  async submitGuess({ guildId, userId, username = 'Unknown', guess, now = this.now() }) {
     const normalizedGuess = normalizeGuess(guess);
 
     return this.store.update((data) => {
@@ -339,7 +340,7 @@ export class WordleService {
     });
   }
 
-  async listTodayRankings({ guildId, now = Date.now(), limit = 10 }) {
+  async listTodayRankings({ guildId, now = this.now(), limit = 10 }) {
     const normalizedLimit = Math.min(25, normalizePositiveInteger(limit, '표시 개수'));
 
     return this.store.update((data) => {

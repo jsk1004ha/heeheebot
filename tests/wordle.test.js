@@ -256,6 +256,7 @@ async function createFixture({ economyOptions = {}, ...wordleOptions } = {}) {
   const directory = await mkdtemp(join(tmpdir(), 'heeheebot-wordle-'));
   const store = createSqliteStore(join(directory, 'profiles.sqlite'));
   const wordle = new WordleService(store, {
+    now: () => KST_MIDNIGHT + 120_000,
     ...WORDLE_OPTIONS,
     ...wordleOptions
   });

@@ -1,6 +1,6 @@
 {
   "name": "heeheebot",
-  "version": "0.8.3",
+  "version": "0.9.0",
   "description": "Discord bot foundation with level and money systems.",
   "type": "module",
   "private": true,
