@@ -2,6 +2,7 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  EmbedBuilder,
   MessageFlags,
   SlashCommandBuilder
 } from 'discord.js';
@@ -15,6 +16,14 @@ import {
 } from '../systems/liars-bar.js';
 
 const DEFAULT_LIARS_BAR_MANAGER = new LiarsBarGameManager();
+const LIARS_BAR_COLORS = Object.freeze({
+  lobby: 0xf59e0b,
+  playing: 0xec4899,
+  truthful: 0x22c55e,
+  danger: 0xef4444,
+  complete: 0x8b5cf6,
+  hand: 0x38bdf8
+});
 
 export const liarsBarCommands = [
   new SlashCommandBuilder()
@@ -101,11 +110,7 @@ export async function handleLiarsBarCommand(interaction, manager = DEFAULT_LIARS
         channelId: interaction.channelId,
         host: interaction.user
       });
-      await interaction.reply({
-        content: formatLiarsBarLobbyMessage(state),
-        components: [createLiarsBarLobbyActionRow(state)],
-        allowedMentions: { parse: [] }
-      });
+      await interaction.reply(createLiarsBarLobbyPayload(state));
       return true;
     }
 
@@ -114,11 +119,9 @@ export async function handleLiarsBarCommand(interaction, manager = DEFAULT_LIARS
         guildId: interaction.guildId,
         channelId: interaction.channelId
       });
-      await interaction.reply({
-        content: state ? formatLiarsBarStatus(state) : '이 채널에는 라이어바 방이 없습니다. `/라이어바 시작`으로 방을 만들 수 있습니다.',
-        components: state ? createLiarsBarComponents(state) : [],
-        allowedMentions: { parse: [] }
-      });
+      await interaction.reply(state
+        ? createLiarsBarStatusPayload(state)
+        : createLiarsBarEmptyPayload());
       return true;
     }
 
@@ -129,9 +132,8 @@ export async function handleLiarsBarCommand(interaction, manager = DEFAULT_LIARS
         userId: interaction.user.id
       });
       await interaction.reply({
-        content: formatLiarsBarHand(result),
+        ...createLiarsBarHandPayload(result),
         flags: MessageFlags.Ephemeral,
-        allowedMentions: { parse: [] }
       });
       return true;
     }
@@ -167,10 +169,9 @@ export async function handleLiarsBarCommand(interaction, manager = DEFAULT_LIARS
         channelId: interaction.channelId,
         userId: interaction.user.id
       });
-      await interaction.reply({
-        content: `⏹️ 라이어바 방을 종료했습니다.\n${formatLiarsBarStatus(state)}`,
-        allowedMentions: { parse: [] }
-      });
+      await interaction.reply(createLiarsBarStatusPayload(state, {
+        prefix: '⏹️ 라이어바 방을 종료했습니다.'
+      }));
       return true;
     }
   } catch (error) {
@@ -209,9 +210,8 @@ async function handleLiarsBarButton(interaction, manager) {
         userId: interaction.user.id
       });
       await interaction.reply({
-        content: formatLiarsBarHand(result),
+        ...createLiarsBarHandPayload(result),
         flags: MessageFlags.Ephemeral,
-        allowedMentions: { parse: [] }
       });
     } catch (error) {
       await interaction.reply({
@@ -253,11 +253,7 @@ async function handleLiarsBarButton(interaction, manager) {
       });
       return true;
     }
-    await interaction.update({
-      content: formatLiarsBarLobbyMessage(joined),
-      components: [createLiarsBarLobbyActionRow(joined)],
-      allowedMentions: { parse: [] }
-    });
+    await interaction.update(createLiarsBarLobbyPayload(joined));
     return true;
   }
 
@@ -285,17 +281,12 @@ async function handleLiarsBarButton(interaction, manager) {
       return true;
     }
 
-    await interaction.update({
-      content: `${formatLiarsBarLobbyMessage(state)}\n\n▶️ 방장이 모집을 종료하고 라이어바를 시작했습니다.`,
-      components: [],
-      allowedMentions: { parse: [] }
-    });
+    await interaction.update(createLiarsBarLobbyPayload(state, {
+      suffix: '▶️ 방장이 모집을 종료하고 라이어바를 시작했습니다.',
+      components: []
+    }));
 
-    const payload = {
-      content: formatLiarsBarStartMessage(started),
-      components: createLiarsBarComponents(started),
-      allowedMentions: { parse: [] }
-    };
+    const payload = createLiarsBarStartPayload(started);
     if (typeof interaction.channel?.send === 'function') {
       await interaction.channel.send(payload);
     } else if (typeof interaction.followUp === 'function') {
@@ -337,16 +328,16 @@ async function handleLiarsBarButton(interaction, manager) {
 }
 
 async function replyWithLiarsBarActionResult(interaction, result) {
-  const payload = result.ok
-    ? formatLiarsBarActionResult(result)
-    : `❌ ${result.reason}`;
+  if (!result.ok) {
+    await interaction.reply({
+      content: `❌ ${result.reason}`,
+      flags: MessageFlags.Ephemeral,
+      allowedMentions: { parse: [] }
+    });
+    return;
+  }
 
-  await interaction.reply({
-    content: payload,
-    components: result.ok ? createLiarsBarComponents(result.game) : [],
-    flags: result.ok ? undefined : MessageFlags.Ephemeral,
-    allowedMentions: { parse: [] }
-  });
+  await interaction.reply(createLiarsBarActionPayload(result));
 }
 
 export function formatLiarsBarLobbyMessage(state) {
@@ -439,20 +430,225 @@ export function formatLiarsBarActionResult(result) {
   ].join('\n');
 }
 
+function createLiarsBarLobbyPayload(state, {
+  suffix = null,
+  components = [createLiarsBarLobbyActionRow(state)]
+} = {}) {
+  return {
+    content: [formatLiarsBarLobbyMessage(state), suffix].filter(Boolean).join('\n\n'),
+    embeds: [createLiarsBarLobbyEmbed(state)],
+    components,
+    allowedMentions: { parse: [] }
+  };
+}
+
+function createLiarsBarStartPayload(state) {
+  return {
+    content: formatLiarsBarStartMessage(state),
+    embeds: [createLiarsBarStatusEmbed(state, {
+      title: '🃏 LIAR\'S BAR START!',
+      footer: '내 손패 버튼은 본인에게만 보입니다.'
+    })],
+    components: createLiarsBarComponents(state),
+    allowedMentions: { parse: [] }
+  };
+}
+
+function createLiarsBarStatusPayload(state, { prefix = null } = {}) {
+  if (state.status === 'lobby') {
+    const payload = createLiarsBarLobbyPayload(state);
+    return {
+      ...payload,
+      content: [prefix, payload.content].filter(Boolean).join('\n')
+    };
+  }
+
+  return {
+    content: [prefix, formatLiarsBarStatus(state)].filter(Boolean).join('\n'),
+    embeds: [createLiarsBarStatusEmbed(state)],
+    components: createLiarsBarComponents(state),
+    allowedMentions: { parse: [] }
+  };
+}
+
+function createLiarsBarHandPayload(result) {
+  return {
+    content: formatLiarsBarHand(result),
+    embeds: [createLiarsBarHandEmbed(result)],
+    allowedMentions: { parse: [] }
+  };
+}
+
+function createLiarsBarActionPayload(result) {
+  return {
+    content: formatLiarsBarActionResult(result),
+    embeds: [
+      createLiarsBarActionEmbed(result),
+      createLiarsBarStatusEmbed(result.game)
+    ],
+    components: createLiarsBarComponents(result.game),
+    allowedMentions: { parse: [] }
+  };
+}
+
+function createLiarsBarEmptyPayload() {
+  return {
+    content: '이 채널에는 라이어바 방이 없습니다. `/라이어바 시작`으로 방을 만들 수 있습니다.',
+    embeds: [
+      new EmbedBuilder()
+        .setTitle('🃏 라이어바 방 없음')
+        .setDescription('`/라이어바 시작`으로 2~4인 Liar\'s Bar 방을 만들 수 있습니다.')
+        .setColor(LIARS_BAR_COLORS.lobby)
+    ],
+    components: [],
+    allowedMentions: { parse: [] }
+  };
+}
+
+function createLiarsBarLobbyEmbed(state) {
+  return new EmbedBuilder()
+    .setTitle('🃏 LIAR\'S BAR ROOM')
+    .setDescription('참가자를 모은 뒤 방장이 시작합니다. 시작 후 손패는 비공개 버튼/명령으로만 확인합니다.')
+    .setColor(LIARS_BAR_COLORS.lobby)
+    .addFields(
+      {
+        name: '인원',
+        value: `**${state.players.length}/${LIARS_BAR_MAX_PLAYERS}명** ${createPlayerCapacityBar(state.players.length, LIARS_BAR_MAX_PLAYERS)}\n최소 ${LIARS_BAR_MIN_PLAYERS}명부터 시작 가능`,
+        inline: true
+      },
+      {
+        name: '룰',
+        value: '5장 손패 · 1~3장 제출 · 조커는 항상 안전 · 벌칙은 6칸 리볼버',
+        inline: true
+      },
+      {
+        name: '참가자',
+        value: formatLiarsBarParticipants(state),
+        inline: false
+      },
+      {
+        name: '명령어',
+        value: '`/라이어바 손패` · `/라이어바 내기 카드1:<번호>` · `/라이어바 라이어`',
+        inline: false
+      }
+    );
+}
+
+function createLiarsBarStatusEmbed(state, {
+  title = '🃏 LIAR\'S BAR TABLE',
+  footer = '조커는 어떤 테이블 카드 주장에도 안전합니다.'
+} = {}) {
+  const color = state.status === 'complete'
+    ? LIARS_BAR_COLORS.complete
+    : LIARS_BAR_COLORS.playing;
+  const currentTurn = state.currentPlayer
+    ? `<@${state.currentPlayer.userId}>`
+    : '없음';
+  const tableSummary = state.status === 'complete'
+    ? '게임 종료'
+    : `라운드 **${state.round}** · 테이블 카드 ${formatLiarsBarCardType(state.tableType)} · 차례 ${currentTurn}`;
+
+  const embed = new EmbedBuilder()
+    .setTitle(title)
+    .setColor(color)
+    .setDescription(tableSummary)
+    .addFields(
+      {
+        name: '직전 주장',
+        value: formatLiarsBarPreviousClaim(state),
+        inline: false
+      },
+      {
+        name: '플레이어',
+        value: formatLiarsBarPlayerBoard(state),
+        inline: false
+      },
+      {
+        name: '다음 행동',
+        value: state.status === 'playing'
+          ? '현재 차례는 카드를 내거나, 직전 주장이 있으면 `/라이어바 라이어`로 의심할 수 있습니다.'
+          : state.winner ? `승자: <@${state.winner.userId}>` : '게임이 종료되었습니다.',
+        inline: false
+      }
+    )
+    .setFooter({ text: footer });
+
+  if (state.lastReveal) {
+    embed.addFields({
+      name: '최근 공개',
+      value: `${state.lastReveal.cards.map(formatLiarsBarCard).join(' ')}\n${state.lastReveal.hasLiarCard ? '거짓 적발' : '진실'} · 벌칙: <@${state.lastReveal.penaltyPlayer.userId}>`,
+      inline: false
+    });
+  }
+
+  return embed;
+}
+
+function createLiarsBarHandEmbed({ game, hand }) {
+  return new EmbedBuilder()
+    .setTitle(`🔒 내 라이어바 손패 · ${hand.length}장`)
+    .setColor(LIARS_BAR_COLORS.hand)
+    .setDescription(`테이블 카드: ${formatLiarsBarCardType(game.tableType)}\n차례: ${game.currentPlayer ? `<@${game.currentPlayer.userId}>` : '없음'}`)
+    .addFields(
+      {
+        name: '카드 선택 번호',
+        value: hand.length > 0
+          ? formatLiarsBarCardGrid(hand)
+          : '손패가 비어 있습니다. 차례가 오면 `/라이어바 라이어`만 가능합니다.',
+        inline: false
+      },
+      {
+        name: '빠른 입력',
+        value: '`/라이어바 내기 카드1:<번호> 카드2:<번호> 카드3:<번호>`\n의심: `/라이어바 라이어`',
+        inline: false
+      }
+    )
+    .setFooter({ text: '이 손패 메시지는 본인에게만 보입니다.' });
+}
+
+function createLiarsBarActionEmbed(result) {
+  const isDanger = result.code === 'liar_caught' || result.roulette?.eliminated;
+  const title = result.roulette
+    ? result.roulette.eliminated ? '💥 라이어바 판정 · 탈락' : '🔫 라이어바 판정 · 생존'
+    : '🃏 라이어바 행동';
+
+  return new EmbedBuilder()
+    .setTitle(title)
+    .setColor(isDanger ? LIARS_BAR_COLORS.danger : LIARS_BAR_COLORS.truthful)
+    .setDescription(result.events.join('\n'))
+    .addFields(
+      {
+        name: '현재 차례',
+        value: result.game.currentPlayer ? `<@${result.game.currentPlayer.userId}>` : '없음',
+        inline: true
+      },
+      {
+        name: '테이블 카드',
+        value: result.game.tableType ? formatLiarsBarCardType(result.game.tableType) : '없음',
+        inline: true
+      }
+    );
+}
+
 function createLiarsBarLobbyActionRow(state) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`liarsbar_join:${state.id}`)
       .setLabel('참가')
-      .setStyle(ButtonStyle.Success),
+      .setStyle(ButtonStyle.Success)
+      .setEmoji('🙋')
+      .setDisabled(state.players.length >= LIARS_BAR_MAX_PLAYERS),
     new ButtonBuilder()
       .setCustomId(`liarsbar_start:${state.id}`)
       .setLabel('방장 시작')
-      .setStyle(ButtonStyle.Primary),
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('▶️')
+      .setDisabled(state.players.length < LIARS_BAR_MIN_PLAYERS),
     new ButtonBuilder()
       .setCustomId(`liarsbar_cancel:${state.id}`)
       .setLabel('취소')
       .setStyle(ButtonStyle.Danger)
+      .setEmoji('⏹️')
   );
 }
 
@@ -479,6 +675,25 @@ function formatLiarsBarCardGrid(cards) {
     rows.push(slots.slice(index, index + 3).join('   '));
   }
   return rows.join('\n');
+}
+
+function formatLiarsBarParticipants(state) {
+  return state.players
+    .map((player, index) => `${formatPlayerSeat(index, state.players.length)} <@${player.userId}>`)
+    .join('\n') || '아직 참가자가 없습니다.';
+}
+
+function formatLiarsBarPreviousClaim(state) {
+  if (!state.previousPlay) return '없음';
+  return `<@${state.previousPlay.player.userId}>님이 **${state.previousPlay.count}장**을 ${formatLiarsBarCardType(state.previousPlay.claimedType)}라고 냈습니다.`;
+}
+
+function formatLiarsBarPlayerBoard(state) {
+  return state.players.map((player, index) => {
+    const marker = state.currentPlayer?.userId === player.userId ? '➡️' : player.eliminated ? '☠️' : '▫️';
+    const hand = player.eliminated ? '탈락' : `${player.handCount}장`;
+    return `${marker} ${formatPlayerSeat(index, state.players.length)} <@${player.userId}> · 손패 ${hand} · 벌칙 ${player.shotsFired}/${LIARS_BAR_REVOLVER_CHAMBERS}`;
+  }).join('\n');
 }
 
 function formatCardIndex(index) {
