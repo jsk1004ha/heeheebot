@@ -1,14 +1,15 @@
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { existsSync } from 'node:fs';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import {
   ensureMusicRuntime,
   GENERATED_CONFIG_MARKER,
-  normalizeMusicAutoSetupConfig
+  normalizeMusicAutoSetupConfig,
+  resolveJava17Command
 } from '../src/systems/music-setup.js';
 
 test('음악 자동 설정 기본값은 npm start에서 로컬 런타임과 yt-dlp 자동 다운로드를 켠다', () => {
@@ -75,6 +76,29 @@ test('로컬 Lavalink 자동 설정은 jar, application.yml을 준비하고 준�
     assert.equal(spawned[0].cwd, directory);
 
     result.cleanup();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('Windows에서 PATH java가 없어도 Temurin 설치 경로를 자동 탐색한다', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'heeheebot-java-'));
+  const javaPath = join(directory, 'Eclipse Adoptium', 'jdk-17.0.19.10-hotspot', 'bin', 'java.exe');
+
+  try {
+    await mkdir(join(directory, 'Eclipse Adoptium', 'jdk-17.0.19.10-hotspot', 'bin'), { recursive: true });
+    const resolved = resolveJava17Command({
+      platform: 'win32',
+      env: { ProgramFiles: directory },
+      spawnSyncFn(command) {
+        if (command === 'java') return { status: 1, error: new Error('not found') };
+        assert.equal(command, javaPath);
+        return { status: 0, stderr: 'openjdk version "17.0.19"' };
+      },
+      logger: quietLogger
+    });
+
+    assert.equal(resolved, javaPath);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

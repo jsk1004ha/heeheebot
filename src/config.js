@@ -20,9 +20,10 @@ export function loadConfig(env = process.env) {
         autoStart: parseBooleanEnv(env.LAVALINK_AUTO_START, true),
         jarPath: emptyToNull(env.LAVALINK_JAR_PATH),
         jarUrl: env.LAVALINK_JAR_URL,
+        javaCommand: emptyToNull(env.LAVALINK_JAVA_COMMAND),
         configPath: emptyToNull(env.LAVALINK_CONFIG_PATH),
         youtubePluginVersion: emptyToNull(env.LAVALINK_YOUTUBE_PLUGIN_VERSION),
-        readyTimeoutMs: parseIntegerEnv(env.LAVALINK_READY_TIMEOUT_MS, 90000)
+        readyTimeoutMs: parseIntegerEnv(env.LAVALINK_READY_TIMEOUT_MS, 180000)
       },
       ytdlp: {
         enabled: parseBooleanEnv(env.YTDLP_ENABLED, true),
