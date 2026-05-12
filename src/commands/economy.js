@@ -64,6 +64,101 @@ export const economyCommands = [
         .setRequired(true)
     ),
   new SlashCommandBuilder()
+    .setName('돈빌리기')
+    .setDescription('다른 유저에게 골드 대출을 요청합니다.')
+    .addUserOption((option) =>
+      option
+        .setName('대상')
+        .setDescription('돈을 빌려줄 유저')
+        .setRequired(true)
+    )
+    .addIntegerOption((option) =>
+      option
+        .setName('돈')
+        .setDescription('빌릴 골드')
+        .setMinValue(1)
+        .setRequired(true)
+    )
+    .addIntegerOption((option) =>
+      option
+        .setName('기간')
+        .setDescription('상환 기간(실제 시간, 시간 단위 / 1~720)')
+        .setMinValue(1)
+        .setMaxValue(720)
+        .setRequired(true)
+    )
+    .addStringOption((option) =>
+      option
+        .setName('상환방식')
+        .setDescription('상환 방식')
+        .setRequired(true)
+        .addChoices(
+          { name: '매번 조금씩 갚기', value: 'installment' },
+          { name: '한번에 갚기', value: 'lump_sum' }
+        )
+    ),
+  new SlashCommandBuilder()
+    .setName('돈빌리기수락')
+    .setDescription('받은 대출 요청에 이자 조건을 제시합니다.')
+    .addUserOption((option) =>
+      option
+        .setName('대상')
+        .setDescription('돈을 빌리려는 유저')
+        .setRequired(true)
+    )
+    .addIntegerOption((option) =>
+      option
+        .setName('이자')
+        .setDescription('기간별 이자율(%, 0~100)')
+        .setMinValue(0)
+        .setMaxValue(100)
+        .setRequired(true)
+    )
+    .addStringOption((option) =>
+      option
+        .setName('이자방식')
+        .setDescription('단리 또는 복리')
+        .setRequired(true)
+        .addChoices(
+          { name: '단리', value: 'simple' },
+          { name: '복리', value: 'compound' }
+        )
+    ),
+  new SlashCommandBuilder()
+    .setName('돈빌리기결정')
+    .setDescription('제시된 대출 조건을 최종 수락하거나 거절합니다.')
+    .addUserOption((option) =>
+      option
+        .setName('대상')
+        .setDescription('돈을 빌려줄 유저')
+        .setRequired(true)
+    )
+    .addStringOption((option) =>
+      option
+        .setName('선택')
+        .setDescription('대출 실행 여부')
+        .setRequired(true)
+        .addChoices(
+          { name: '빌리기', value: 'accept' },
+          { name: '거절', value: 'decline' }
+        )
+    ),
+  new SlashCommandBuilder()
+    .setName('돈갚기')
+    .setDescription('빌린 돈을 직접 상환합니다. 금액을 생략하면 해당 유저에게 갚을 전액을 갚습니다.')
+    .addUserOption((option) =>
+      option
+        .setName('대상')
+        .setDescription('돈을 빌려준 유저')
+        .setRequired(true)
+    )
+    .addIntegerOption((option) =>
+      option
+        .setName('돈')
+        .setDescription('갚을 골드(생략 시 전액)')
+        .setMinValue(1)
+    ),
+  new SlashCommandBuilder()
     .setName('랭킹')
     .setDescription('이 서버의 레벨/경험치 랭킹 또는 음악 인기곡 랭킹을 확인합니다.')
     .addStringOption((option) =>
@@ -220,6 +315,158 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
     } catch (error) {
       await interaction.reply({
         content: `송금 실패: ${error.message}`,
+        flags: MessageFlags.Ephemeral
+      });
+    }
+
+    return true;
+  }
+
+  if (interaction.commandName === '돈빌리기') {
+    const target = interaction.options.getUser('대상', true);
+    const amount = interaction.options.getInteger('돈', true);
+    const termHours = interaction.options.getInteger('기간', true);
+    const repaymentMode = interaction.options.getString('상환방식', true);
+
+    if (target.bot) {
+      await safeReplyToInteraction(interaction, {
+        content: '봇에게는 돈을 빌릴 수 없습니다.',
+        flags: MessageFlags.Ephemeral
+      });
+      return true;
+    }
+
+    try {
+      const result = await economy.requestUserLoan({
+        guildId,
+        borrowerUserId: user.id,
+        borrowerUsername: user.username,
+        lenderUserId: target.id,
+        lenderUsername: target.username,
+        amount,
+        termHours,
+        repaymentMode
+      });
+
+      await safeReplyToInteraction(interaction, {
+        content: [
+          `📨 ${formatUserMention(target, target.username)}님에게 **${formatCurrencyAmount(result.request.amount, 'main')}** 대출 요청을 보냈습니다.`,
+          `기간: **${formatDuration(result.request.termMs)}** / 상환: **${formatLoanRepaymentMode(result.request.repaymentMode)}**`,
+          `대상 유저는 \`/돈빌리기수락 대상:${user.username} 이자 이자방식\`으로 조건을 제시할 수 있습니다.`
+        ].join('\n'),
+        allowedMentions: createAllowedMentionsForUsers([target.id])
+      });
+    } catch (error) {
+      await safeReplyToInteraction(interaction, {
+        content: `대출 요청 실패: ${error.message}`,
+        flags: MessageFlags.Ephemeral
+      });
+    }
+
+    return true;
+  }
+
+  if (interaction.commandName === '돈빌리기수락') {
+    const target = interaction.options.getUser('대상', true);
+    const interestPercent = interaction.options.getInteger('이자', true);
+    const interestType = interaction.options.getString('이자방식', true);
+
+    if (target.bot) {
+      await safeReplyToInteraction(interaction, {
+        content: '봇의 대출 요청은 수락할 수 없습니다.',
+        flags: MessageFlags.Ephemeral
+      });
+      return true;
+    }
+
+    try {
+      const result = await economy.offerUserLoan({
+        guildId,
+        lenderUserId: user.id,
+        lenderUsername: user.username,
+        borrowerUserId: target.id,
+        borrowerUsername: target.username,
+        interestPercent,
+        interestType
+      });
+
+      await safeReplyToInteraction(interaction, {
+        content: [
+          `✅ ${formatUserMention(target, target.username)}님의 대출 요청에 조건을 제시했습니다.`,
+          `원금: **${formatCurrencyAmount(result.offer.amount, 'main')}** → 상환 예정액: **${formatCurrencyAmount(result.offer.totalDue, 'main')}**`,
+          `이자: **${interestPercent}% ${formatLoanInterestType(result.offer.interestType)}** / 기간: **${formatDuration(result.offer.termMs)}** / 상환: **${formatLoanRepaymentMode(result.offer.repaymentMode)}**`,
+          `빌리는 유저가 \`/돈빌리기결정 대상:${user.username} 선택:빌리기\`를 실행해야 실제로 돈이 이동합니다.`
+        ].join('\n'),
+        allowedMentions: createAllowedMentionsForUsers([target.id])
+      });
+    } catch (error) {
+      await safeReplyToInteraction(interaction, {
+        content: `대출 조건 제시 실패: ${error.message}`,
+        flags: MessageFlags.Ephemeral
+      });
+    }
+
+    return true;
+  }
+
+  if (interaction.commandName === '돈빌리기결정') {
+    const target = interaction.options.getUser('대상', true);
+    const choice = interaction.options.getString('선택', true);
+
+    try {
+      const result = await economy.decideUserLoan({
+        guildId,
+        borrowerUserId: user.id,
+        borrowerUsername: user.username,
+        lenderUserId: target.id,
+        lenderUsername: target.username,
+        accept: choice === 'accept'
+      });
+
+      await safeReplyToInteraction(interaction, {
+        content: result.accepted
+          ? [
+              `🤝 ${formatUserMention(target, target.username)}님에게서 **${formatCurrencyAmount(result.loan.principal, 'main')}**를 빌렸습니다.`,
+              `갚을 금액: **${formatCurrencyAmount(result.loan.totalDue, 'main')}** / 만기: **${formatTimestamp(result.loan.dueAt)}**`,
+              `상환 방식: **${formatLoanRepaymentMode(result.loan.repaymentMode)}**${result.loan.repaymentMode === 'lump_sum' ? ' / 만기 후 수익 35% 자동 상환' : ' / 수익 35% 자동 상환'}`
+            ].join('\n')
+          : `🚫 ${formatUserMention(target, target.username)}님의 대출 조건을 거절했습니다.`,
+        allowedMentions: createAllowedMentionsForUsers([target.id])
+      });
+    } catch (error) {
+      await safeReplyToInteraction(interaction, {
+        content: `대출 결정 실패: ${error.message}`,
+        flags: MessageFlags.Ephemeral
+      });
+    }
+
+    return true;
+  }
+
+  if (interaction.commandName === '돈갚기') {
+    const target = interaction.options.getUser('대상', true);
+    const amount = interaction.options.getInteger('돈');
+
+    try {
+      const result = await economy.repayUserLoan({
+        guildId,
+        borrowerUserId: user.id,
+        borrowerUsername: user.username,
+        lenderUserId: target.id,
+        lenderUsername: target.username,
+        amount
+      });
+
+      await safeReplyToInteraction(interaction, {
+        content: [
+          `💳 ${formatUserMention(target, target.username)}님에게 **${formatCurrencyAmount(result.repaid, 'main')}**를 상환했습니다.`,
+          `남은 대출금: **${formatCurrencyAmount(result.remaining, 'main')}** / 내 골드: **${formatCurrencyAmount(result.borrower.balance, 'main')}**`
+        ].join('\n'),
+        allowedMentions: createAllowedMentionsForUsers([target.id])
+      });
+    } catch (error) {
+      await safeReplyToInteraction(interaction, {
+        content: `상환 실패: ${error.message}`,
         flags: MessageFlags.Ephemeral
       });
     }
@@ -391,6 +638,7 @@ function createProfileCardSections(profile, context = {}) {
         `성장 배지: ${formatLevelBadgeGallery(level)}`,
         `꾸미기 배지: ${formatShopBadgeGallery(profile)}`,
         `카드 효과: **${tier.aura}**`,
+        `대출: ${formatSocialLoanSummary(profile)}`,
         migrationText
       ].join('\n')
     }
@@ -578,6 +826,44 @@ function formatCommunityBadgeName(badgeId) {
   const badge = getCommunityCosmeticBadge(badgeId);
   const label = badge?.label ?? badgeId;
   return label.replace(/^[^\p{L}\p{N}]+/u, '').trim() || label;
+}
+
+function formatSocialLoanSummary(profile) {
+  const requests = Array.isArray(profile.socialLoans?.requests)
+    ? profile.socialLoans.requests
+    : [];
+  const loans = Array.isArray(profile.socialLoans?.loans)
+    ? profile.socialLoans.loans
+    : [];
+  const activeDebt = loans.reduce((sum, loan) => {
+    const totalDue = Number(loan.totalDue ?? 0);
+    const repaid = Number(loan.repaid ?? 0);
+    return sum + Math.max(0, totalDue - repaid);
+  }, 0);
+  const offered = requests.filter((request) => request.status === 'offered').length;
+
+  if (activeDebt <= 0 && requests.length === 0) return '없음';
+
+  return [
+    activeDebt > 0 ? `남은 대출금 **${formatCurrencyAmount(activeDebt, 'main')}**` : null,
+    requests.length > 0 ? `대기 요청 **${requests.length.toLocaleString()}건**` : null,
+    offered > 0 ? `조건 확인 필요 **${offered.toLocaleString()}건**` : null
+  ].filter(Boolean).join(' / ');
+}
+
+function formatLoanRepaymentMode(mode) {
+  return mode === 'installment'
+    ? '매번 조금씩 갚기'
+    : '한번에 갚기';
+}
+
+function formatLoanInterestType(type) {
+  return type === 'compound' ? '복리' : '단리';
+}
+
+function formatTimestamp(ms) {
+  const seconds = Math.floor(Number(ms ?? 0) / 1000);
+  return seconds > 0 ? `<t:${seconds}:F>` : '알 수 없음';
 }
 
 function formatCurrencyInfo() {

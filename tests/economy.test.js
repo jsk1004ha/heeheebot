@@ -626,6 +626,116 @@ test('출석 골드 보상은 남은 파산채무를 자동 상환한다', async
   }
 });
 
+test('유저 대출은 조건 제시와 최종 수락 후 만기 뒤 수익 35%를 빌려준 유저에게 자동 상환한다', async () => {
+  const fixture = await createFixture({
+    dailyCoinReward: 1_000,
+    dailyXpReward: 0,
+    levelBaseXp: 10_000
+  });
+
+  try {
+    await fixture.store.update((data) => {
+      data.guilds['guild-1'] = {
+        users: {
+          borrower: {
+            userId: 'borrower',
+            username: '빌리는사람',
+            level: 1,
+            xp: 0,
+            totalXp: 0,
+            balance: 0
+          },
+          lender: {
+            userId: 'lender',
+            username: '빌려준사람',
+            level: 1,
+            xp: 0,
+            totalXp: 0,
+            balance: 5_000
+          }
+        }
+      };
+    });
+
+    const request = await fixture.economy.requestUserLoan({
+      guildId: 'guild-1',
+      borrowerUserId: 'borrower',
+      borrowerUsername: '빌리는사람',
+      lenderUserId: 'lender',
+      lenderUsername: '빌려준사람',
+      amount: 1_000,
+      termHours: 1,
+      repaymentMode: 'lump_sum',
+      now: 1_000
+    });
+    const offer = await fixture.economy.offerUserLoan({
+      guildId: 'guild-1',
+      lenderUserId: 'lender',
+      lenderUsername: '빌려준사람',
+      borrowerUserId: 'borrower',
+      borrowerUsername: '빌리는사람',
+      interestPercent: 10,
+      interestType: 'simple',
+      now: 2_000
+    });
+    const accepted = await fixture.economy.decideUserLoan({
+      guildId: 'guild-1',
+      borrowerUserId: 'borrower',
+      borrowerUsername: '빌리는사람',
+      lenderUserId: 'lender',
+      lenderUsername: '빌려준사람',
+      accept: true,
+      now: 3_000
+    });
+
+    assert.equal(request.request.repaymentMode, 'lump_sum');
+    assert.equal(offer.offer.totalDue, 1_100);
+    assert.equal(accepted.borrower.balance, 1_000);
+    assert.equal(accepted.lender.balance, 4_000);
+    assert.equal(accepted.loan.dueAt, 3_603_000);
+
+    const beforeDue = await fixture.economy.claimDaily({
+      guildId: 'guild-1',
+      userId: 'borrower',
+      username: '빌리는사람',
+      now: 4_000
+    });
+    assert.equal(beforeDue.profile.balance, 2_000);
+    assert.equal(beforeDue.profile.socialLoans.loans[0].repaid, 0);
+
+    const afterDue = await fixture.economy.claimDaily({
+      guildId: 'guild-1',
+      userId: 'borrower',
+      username: '빌리는사람',
+      now: 24 * 60 * 60 * 1000 + 4_000
+    });
+    const lenderAfterAuto = await fixture.economy.getProfile('guild-1', 'lender', '빌려준사람');
+
+    assert.equal(afterDue.profile.balance, 2_650);
+    assert.equal(afterDue.profile.socialLoans.loans[0].repaid, 350);
+    assert.equal(afterDue.profile.socialLoans.loans[0].remaining, 750);
+    assert.equal(lenderAfterAuto.balance, 4_350);
+
+    const repaid = await fixture.economy.repayUserLoan({
+      guildId: 'guild-1',
+      borrowerUserId: 'borrower',
+      borrowerUsername: '빌리는사람',
+      lenderUserId: 'lender',
+      lenderUsername: '빌려준사람',
+      now: 24 * 60 * 60 * 1000 + 5_000
+    });
+    const finalLender = await fixture.economy.getProfile('guild-1', 'lender', '빌려준사람');
+
+    assert.equal(repaid.repaid, 750);
+    assert.equal(repaid.remaining, 0);
+    assert.equal(repaid.borrower.balance, 1_900);
+    assert.equal(repaid.borrower.socialLoans.loans.length, 0);
+    assert.equal(finalLender.balance, 5_100);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 test('연속 출석 3일과 5일에는 추가 경험치를 지급한다', async () => {
   const fixture = await createFixture({
     dailyStreakXpBonuses: {
