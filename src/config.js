@@ -33,7 +33,8 @@ export function loadConfig(env = process.env) {
         assetUrl: env.YTDLP_ASSET_URL
       },
       defaultSearchPrefix: env.MUSIC_SEARCH_PREFIX ?? 'ytsearch',
-      pinPanel: parseBooleanEnv(env.MUSIC_PIN_PANEL, false)
+      pinPanel: parseBooleanEnv(env.MUSIC_PIN_PANEL, false),
+      panelRefreshIntervalMs: parseIntegerEnv(env.MUSIC_PANEL_REFRESH_INTERVAL_MS, 15000)
     }
   };
 }

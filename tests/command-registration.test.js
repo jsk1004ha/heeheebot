@@ -62,6 +62,8 @@ test('명령 등록 함수는 공유 레지스트리 payload를 Discord REST에 
 
 test('봇 시작 경로는 로그인 전에 slash command를 자동 동기화한다', async () => {
   const events = [];
+  const logs = [];
+  const logger = { log: (message) => logs.push(String(message)) };
   const config = loadConfig({
     DISCORD_TOKEN: 'token',
     DISCORD_CLIENT_ID: 'client-id',
@@ -78,12 +80,14 @@ test('봇 시작 경로는 로그인 전에 slash command를 자동 동기화한
     },
     createBotImpl(options) {
       events.push(['create', options.databasePath]);
+      assert.equal(options.logger, logger);
       return {
         async start(token) {
           events.push(['start', token]);
         }
       };
-    }
+    },
+    logger
   });
 
   assert.deepEqual(events, [
@@ -92,6 +96,7 @@ test('봇 시작 경로는 로그인 전에 slash command를 자동 동기화한
     ['create', 'data/profiles.sqlite'],
     ['start', 'token']
   ]);
+  assert.ok(logs.some((message) => message.includes('Discord 봇 로그인을 시작')));
   assert.equal(typeof bot.start, 'function');
 });
 

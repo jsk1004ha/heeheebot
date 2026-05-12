@@ -121,6 +121,48 @@ test('음악 서비스는 현재곡을 플레이리스트에 저장하고 공개
   }
 });
 
+test('Lavalink 진행도 업데이트는 현재 재생 패널 메시지를 자동 갱신한다', async () => {
+  const store = createSqliteStore(':memory:');
+  const textChannel = createEditableTextChannel();
+  const music = new MusicService({
+    store,
+    lavalink: new MockLavalink(),
+    config: {
+      lavalink: { host: 'localhost', password: 'pw' },
+      panelRefreshIntervalMs: 5000
+    },
+    now: createClock(1000, 6000)
+  });
+  music.setPanelRenderer((state) => ({
+    content: `position:${Math.floor(state.position)}`
+  }));
+
+  try {
+    await music.playQuery({
+      guild: createGuild([]),
+      textChannel,
+      voiceChannel: createVoiceChannel(),
+      requester: { id: 'user-1', username: 'Junseo' },
+      query: 'ditto'
+    });
+
+    assert.equal(textChannel.sent.length, 1);
+    assert.match(textChannel.sent[0].content, /position:/);
+
+    await music.handleLavalinkMessage({
+      op: 'playerUpdate',
+      guildId: 'guild-1',
+      state: { position: 42000 }
+    });
+
+    assert.equal(textChannel.edits.length, 1);
+    const editedPosition = Number(textChannel.edits[0].content.match(/position:(\d+)/)?.[1] ?? 0);
+    assert.ok(editedPosition >= 42000, '진행도 패널은 Lavalink position 이상으로 갱신되어야 합니다.');
+  } finally {
+    store.close();
+  }
+});
+
 test('음악 패널과 랭킹/통계 payload는 핵심 정보를 임베드와 컨트롤로 표현한다', () => {
   const panel = createMusicPanelPayload({
     current: {
@@ -213,10 +255,37 @@ function createTextChannel() {
   };
 }
 
-function createClock(start) {
+function createEditableTextChannel() {
+  const channel = {
+    id: 'text-1',
+    sent: [],
+    edits: [],
+    message: null,
+    async send(payload) {
+      this.sent.push(payload);
+      this.message = {
+        id: 'panel-1',
+        channelId: 'text-1',
+        async edit(nextPayload) {
+          channel.edits.push(nextPayload);
+          return this;
+        }
+      };
+      return this.message;
+    },
+    messages: {
+      async fetch() {
+        return channel.message;
+      }
+    }
+  };
+  return channel;
+}
+
+function createClock(start, step = 1000) {
   let value = start;
   return () => {
-    value += 1000;
+    value += step;
     return value;
   };
 }

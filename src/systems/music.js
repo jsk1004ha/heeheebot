@@ -8,6 +8,7 @@ export const DEFAULT_LAVALINK_PASSWORD = 'youshallnotpass';
 export const DEFAULT_YTDLP_TIMEOUT_MS = 12_000;
 export const MAX_PLAYLIST_TRACKS = 200;
 export const MAX_SEARCH_RESULTS = 5;
+export const DEFAULT_PANEL_REFRESH_INTERVAL_MS = 15_000;
 
 export const MUSIC_FILTER_PRESETS = Object.freeze({
   none: Object.freeze({
@@ -569,6 +570,11 @@ export class MusicService {
       if (state) {
         state.position = Math.max(0, Number(message.state?.position) || 0);
         state.lastPositionUpdateAt = this.now();
+        if (this.shouldRefreshProgressPanel(state)) {
+          await this.refreshPanel(message.guildId).catch((error) => {
+            this.logger.warn?.('Failed to auto-refresh music progress panel:', error);
+          });
+        }
       }
       return;
     }
@@ -812,6 +818,7 @@ export class MusicService {
   async refreshPanel(guildId) {
     const state = this.players.get(guildId);
     if (!state?.textChannel || !this.panelRenderer) return null;
+    state.lastPanelRefreshAt = this.now();
     const payload = this.panelRenderer(this.getPlayerState(guildId));
     if (!payload) return null;
 
@@ -840,6 +847,13 @@ export class MusicService {
       this.logger.warn?.('Failed to refresh music panel:', error);
       return null;
     }
+  }
+
+  shouldRefreshProgressPanel(state) {
+    const intervalMs = this.config.panelRefreshIntervalMs;
+    if (!state?.current || state.paused || !state.textChannel || !this.panelRenderer) return false;
+    if (!Number.isFinite(intervalMs) || intervalMs <= 0) return false;
+    return this.now() - (state.lastPanelRefreshAt ?? 0) >= intervalMs;
   }
 
   getOrCreatePlayerState(guildId) {
@@ -876,7 +890,12 @@ export function normalizeMusicConfig(config = {}) {
     lavalink: normalizeLavalinkConfig(config.lavalink ?? config),
     ytdlp: normalizeYtDlpConfig(config.ytdlp ?? {}),
     defaultSearchPrefix: normalizeSearchPrefix(config.defaultSearchPrefix ?? DEFAULT_SEARCH_PREFIX),
-    pinPanel: Boolean(config.pinPanel)
+    pinPanel: Boolean(config.pinPanel),
+    panelRefreshIntervalMs: clampInteger(
+      config.panelRefreshIntervalMs ?? DEFAULT_PANEL_REFRESH_INTERVAL_MS,
+      5_000,
+      60_000
+    )
   };
 }
 
@@ -993,6 +1012,7 @@ function createPlayerState(guildId, now) {
     filter: 'none',
     position: 0,
     lastPositionUpdateAt: now,
+    lastPanelRefreshAt: 0,
     panelMessageId: null,
     panelChannelId: null,
     panelMessage: null,
