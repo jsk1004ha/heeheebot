@@ -27,6 +27,7 @@ import {
   handleLiarGameCommand,
   handleLiarGameMessage
 } from './commands/liar-game.js';
+import { handleLiarsBarCommand } from './commands/liars-bar.js';
 import { handleMafiaCommand } from './commands/mafia.js';
 import {
   handleModerationCommand,
@@ -239,6 +240,7 @@ export function createBot({
         || await handleWordChainCommand(interaction, economy, logger)
         || await handleChoseongCommand(interaction, economy, logger)
         || await handleLiarGameCommand(interaction, economy, logger)
+        || await handleLiarsBarCommand(interaction, undefined, logger)
         || await handleMafiaCommand(interaction, economy, logger)
         || await handleFortuneCommand(interaction, fortune, economy)
         || await handleStartCommand(interaction, { economy, community, fishing, stocks, seasons, logger })
@@ -410,7 +412,7 @@ function shouldKeepInitialComponentResponseOpen(interaction) {
 
 function shouldKeepInitialChatInputResponseOpen(interaction) {
   if (['워들', '숫자야구'].includes(interaction?.commandName)) return true;
-  if (interaction?.commandName !== '우노') return false;
+  if (!['우노', '라이어바'].includes(interaction?.commandName)) return false;
 
   try {
     return interaction.options?.getSubcommand?.() === '손패';

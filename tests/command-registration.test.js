@@ -13,6 +13,7 @@ const COMMANDS_ADDED_IN_44FA961 = Object.freeze([
   '투표',
   '초성게임',
   '라이어게임',
+  '라이어바',
   '마피아게임',
   '우노',
   '워들',
