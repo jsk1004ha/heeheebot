@@ -506,14 +506,14 @@ export class MusicService {
     const state = this.players.get(guildId);
     if (!state?.guild) return;
     const previousVoiceChannelId = state.voiceChannelId;
-    const previousLavalinkVoiceChannelId = state.voice.channelId;
+    const previousVoiceState = { ...state.voice };
     state.voiceChannelId = null;
-    state.voice.channelId = null;
+    state.voice = createEmptyVoiceState();
     try {
       await sendGuildVoiceStateUpdate(state.guild, null);
     } catch (error) {
       state.voiceChannelId = previousVoiceChannelId;
-      state.voice.channelId = previousLavalinkVoiceChannelId;
+      state.voice = previousVoiceState;
       throw error;
     }
   }
@@ -699,8 +699,16 @@ export class MusicService {
       const payload = packet.d;
       if (payload.user_id !== botUserId || !payload.guild_id) return false;
       const state = this.getOrCreatePlayerState(payload.guild_id);
+      if (Object.hasOwn(payload, 'channel_id') && !payload.channel_id) {
+        state.voiceChannelId = null;
+        state.voice = createEmptyVoiceState();
+        return true;
+      }
+
       state.voice.sessionId = payload.session_id ?? null;
-      state.voice.channelId = Object.hasOwn(payload, 'channel_id') ? payload.channel_id : state.voiceChannelId ?? null;
+      state.voice.channelId = Object.hasOwn(payload, 'channel_id')
+        ? payload.channel_id
+        : state.voice.channelId ?? state.voiceChannelId ?? null;
       state.voiceChannelId = state.voice.channelId;
       await this.maybeSendVoiceUpdate(payload.guild_id);
       return true;
@@ -721,7 +729,8 @@ export class MusicService {
 
   async maybeSendVoiceUpdate(guildId) {
     const state = this.players.get(guildId);
-    if (!state || !state.voice.token || !state.voice.endpoint || !state.voice.sessionId) return false;
+    const channelId = state?.voice?.channelId ?? state?.voiceChannelId ?? null;
+    if (!state || !state.voice.token || !state.voice.endpoint || !state.voice.sessionId || !channelId) return false;
     if (!this.lavalink?.sessionId) return false;
 
     await this.lavalink.updatePlayer(guildId, {
@@ -729,7 +738,7 @@ export class MusicService {
         token: state.voice.token,
         endpoint: state.voice.endpoint,
         sessionId: state.voice.sessionId,
-        channelId: state.voice.channelId ?? state.voiceChannelId ?? null
+        channelId
       }
     });
     return true;
@@ -739,9 +748,7 @@ export class MusicService {
     const state = this.players.get(guildId);
     if (!state?.guild || !state.voiceChannelId || !state.current) return false;
     state.voice = {
-      token: null,
-      endpoint: null,
-      sessionId: null,
+      ...createEmptyVoiceState(),
       channelId: state.voiceChannelId
     };
     await sendGuildVoiceStateUpdate(state.guild, state.voiceChannelId);
@@ -1212,12 +1219,16 @@ function createPlayerState(guildId, now) {
     panelMessageId: null,
     panelChannelId: null,
     panelMessage: null,
-    voice: {
-      token: null,
-      endpoint: null,
-      sessionId: null,
-      channelId: null
-    }
+    voice: createEmptyVoiceState()
+  };
+}
+
+function createEmptyVoiceState(channelId = null) {
+  return {
+    token: null,
+    endpoint: null,
+    sessionId: null,
+    channelId
   };
 }
 

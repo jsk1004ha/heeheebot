@@ -114,6 +114,96 @@ test('Lavalink stopped 이벤트는 큐를 임의로 다음 곡으로 넘기지 
   assert.equal(music.getPlayerState('guild-1').queue.length, 0);
 });
 
+test('Discord raw 음성 이벤트는 완전한 voice state일 때만 Lavalink에 전달한다', async () => {
+  const lavalink = new MockLavalink();
+  const music = new MusicService({
+    lavalink,
+    config: { lavalink: { host: 'localhost', password: 'pw' } },
+    now: createClock(1000)
+  });
+
+  const serverHandled = await music.handleRawDiscordPacket({
+    t: 'VOICE_SERVER_UPDATE',
+    d: {
+      guild_id: 'guild-1',
+      token: 'voice-token',
+      endpoint: 'voice.example.test'
+    }
+  }, 'bot-1');
+  assert.equal(serverHandled, true);
+  assert.equal(lavalink.updates.length, 0);
+
+  const stateHandled = await music.handleRawDiscordPacket({
+    t: 'VOICE_STATE_UPDATE',
+    d: {
+      guild_id: 'guild-1',
+      user_id: 'bot-1',
+      session_id: 'discord-session',
+      channel_id: 'voice-1'
+    }
+  }, 'bot-1');
+  assert.equal(stateHandled, true);
+  assert.equal(lavalink.updates.length, 1);
+  assert.deepEqual(lavalink.updates[0].payload.voice, {
+    token: 'voice-token',
+    endpoint: 'voice.example.test',
+    sessionId: 'discord-session',
+    channelId: 'voice-1'
+  });
+});
+
+test('Discord raw 음성 퇴장 이벤트는 channelId 없는 Lavalink 업데이트를 보내지 않는다', async () => {
+  const lavalink = new MockLavalink();
+  const voicePackets = [];
+  const music = new MusicService({
+    lavalink,
+    config: { lavalink: { host: 'localhost', password: 'pw' } },
+    now: createClock(1000)
+  });
+
+  await music.handleRawDiscordPacket({
+    t: 'VOICE_SERVER_UPDATE',
+    d: {
+      guild_id: 'guild-1',
+      token: 'voice-token',
+      endpoint: 'voice.example.test'
+    }
+  }, 'bot-1');
+  await music.handleRawDiscordPacket({
+    t: 'VOICE_STATE_UPDATE',
+    d: {
+      guild_id: 'guild-1',
+      user_id: 'bot-1',
+      session_id: 'discord-session',
+      channel_id: 'voice-1'
+    }
+  }, 'bot-1');
+  assert.equal(lavalink.updates.length, 1);
+
+  const disconnectHandled = await music.handleRawDiscordPacket({
+    t: 'VOICE_STATE_UPDATE',
+    d: {
+      guild_id: 'guild-1',
+      user_id: 'bot-1',
+      session_id: 'discord-session-after-leave',
+      channel_id: null
+    }
+  }, 'bot-1');
+  assert.equal(disconnectHandled, true);
+  assert.equal(lavalink.updates.length, 1);
+  assert.deepEqual(music.getPlayerState('guild-1').voice, {
+    token: null,
+    endpoint: null,
+    sessionId: null,
+    channelId: null
+  });
+  assert.equal(music.getPlayerState('guild-1').voiceChannelId, null);
+
+  await music.joinVoiceChannel(createGuild(voicePackets), 'voice-2');
+  assert.equal(voicePackets.at(-1).d.channel_id, 'voice-2');
+  assert.equal(lavalink.updates.length, 1, '재입장 직후에도 이전 token/session으로 Lavalink에 보내면 안 됩니다.');
+});
+
 test('음악 서비스는 현재곡을 플레이리스트에 저장하고 공개 가져오기와 통계를 유지한다', async () => {
   const store = createSqliteStore(':memory:');
   const lavalink = new MockLavalink();
@@ -388,6 +478,11 @@ class MockLavalink {
   }
 
   async updatePlayer(guildId, payload) {
+    if (payload.voice) {
+      for (const field of ['token', 'endpoint', 'sessionId', 'channelId']) {
+        assert.ok(payload.voice[field], `voice.${field} must be provided`);
+      }
+    }
     this.updates.push({ guildId, payload });
     return { guildId, ...payload };
   }
