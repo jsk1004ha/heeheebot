@@ -17,6 +17,7 @@ import {
   replyWithAccountLinkSelectionIfNeeded
 } from './commands/economy.js';
 import { handleFishingCommand } from './commands/fishing.js';
+import { handleMiningCommand } from './commands/mining.js';
 import { handleFortuneCommand } from './commands/fortune.js';
 import {
   formatMealMessage,
@@ -80,6 +81,7 @@ import {
 } from './systems/community.js';
 import { EconomyService } from './systems/economy.js';
 import { FishingService } from './systems/fishing.js';
+import { MiningService } from './systems/mining.js';
 import { FortuneService } from './systems/fortune.js';
 import {
   MealService,
@@ -125,6 +127,7 @@ export function createBot({
   const community = new CommunityService(store);
   const economy = new EconomyService(store);
   const fishing = new FishingService(store, { economy });
+  const mining = new MiningService(store, { economy });
   const fortune = new FortuneService();
   const meals = new MealService({ store, apiKey: neisApiKey });
   const music = new MusicService({ store, config: musicConfig, logger });
@@ -263,7 +266,7 @@ export function createBot({
         || await handleLiarsBarCommand(interaction, undefined, logger)
         || await handleMafiaCommand(interaction, economy, logger)
         || await handleFortuneCommand(interaction, fortune, economy)
-        || await handleStartCommand(interaction, { economy, community, fishing, stocks, seasons, logger })
+        || await handleStartCommand(interaction, { economy, community, fishing, mining, stocks, seasons, logger })
         || await handleTodayCommand(interaction, { economy, community, seasons, logger })
         || await handleMealCommand(interaction, meals)
         || await handleTimetableCommand(interaction, timetable)
@@ -271,6 +274,7 @@ export function createBot({
         || await handleStockCommand(interaction, stocks, { seasons, logger })
         || await handleTamagotchiCommand(interaction, tamagotchi, logger)
         || await handleFishingCommand(interaction, fishing, { seasons, logger })
+        || await handleMiningCommand(interaction, mining, { seasons, logger })
         || await handleSwordCommand(interaction, economy, logger, { seasons })
         || await handleRpgCommand(interaction, economy, { seasons })
         || await handleEconomyCommand(interaction, economy, { stocks });
@@ -359,6 +363,7 @@ export function createBot({
     client,
     economy,
     fishing,
+    mining,
     fortune,
     meals,
     music,
@@ -553,6 +558,14 @@ function isEligibleMutatingButton(customId, userId) {
 
   if (parts[0] === 'fishing_quick') {
     return parts[1] === 'fish' && (!parts[2] || parts[2] === userId);
+  }
+
+  if (parts[0] === 'mining_quick') {
+    return ['mine', 'sell'].includes(parts[1]) && (!parts[2] || parts[2] === userId);
+  }
+
+  if (parts[0] === 'mining_sell') {
+    return parts[2] === userId;
   }
 
   if (parts[0] === 'today_checkin' || parts[0] === 'today_missions') {

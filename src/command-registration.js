@@ -9,6 +9,7 @@ import { getFishingCommandPayloads } from './commands/fishing.js';
 import { getFortuneCommandPayloads } from './commands/fortune.js';
 import { getHelpCommandPayloads } from './commands/help.js';
 import { getMealCommandPayloads } from './commands/meals.js';
+import { getMiningCommandPayloads } from './commands/mining.js';
 import { getLiarGameCommandPayloads } from './commands/liar-game.js';
 import { getLiarsBarCommandPayloads } from './commands/liars-bar.js';
 import { getMafiaCommandPayloads } from './commands/mafia.js';
@@ -55,6 +56,7 @@ export function getApplicationCommandPayloads() {
     ...getStockCommandPayloads(),
     ...getTamagotchiCommandPayloads(),
     ...getFishingCommandPayloads(),
+    ...getMiningCommandPayloads(),
     ...getSwordCommandPayloads(),
     ...getRpgCommandPayloads(),
     ...getCasinoCommandPayloads()

@@ -89,7 +89,7 @@ async function createStartPayload(interaction, services) {
 async function buildStartContext(interaction, services) {
   const base = createBaseContext(interaction);
   const logger = services.logger ?? services.log ?? null;
-  const [communityOverview, rpgStatus, swordStatus, fishingStatus, stockOverview, seasonOverview] = await Promise.all([
+  const [communityOverview, rpgStatus, swordStatus, fishingStatus, miningStatus, stockOverview, seasonOverview] = await Promise.all([
     services.community?.getOverview
       ? settleOptional('community status', services.community.getOverview(base), logger)
       : null,
@@ -101,6 +101,9 @@ async function buildStartContext(interaction, services) {
       : null,
     services.fishing?.getProfile
       ? settleOptional('fishing status', services.fishing.getProfile(base.guildId, base.userId, base.username), logger)
+      : null,
+    services.mining?.getProfile
+      ? settleOptional('mining status', services.mining.getProfile(base.guildId, base.userId, base.username), logger)
       : null,
     services.stocks?.getPortfolio
       ? settleOptional('stock status', services.stocks.getPortfolio(base), logger)
@@ -132,12 +135,14 @@ async function buildStartContext(interaction, services) {
       rpg: isUnavailable(rpgStatus),
       sword: isUnavailable(swordStatus),
       fishing: isUnavailable(fishingStatus),
+      mining: isUnavailable(miningStatus),
       stocks: isUnavailable(stockOverview),
       seasons: isUnavailable(seasonOverview)
     },
     rpg,
     swordStatus,
     fishingStatus,
+    miningStatus,
     stockOverview,
     seasonOverview
   };
@@ -180,7 +185,7 @@ function formatStartGuide(context) {
   ].join('\n');
 }
 
-function buildStartSteps({ profile, unavailable, rpg, swordStatus, fishingStatus, stockOverview, seasonOverview }) {
+function buildStartSteps({ profile, unavailable, rpg, swordStatus, fishingStatus, miningStatus, stockOverview, seasonOverview }) {
   return [
     {
       label: '출석 받기',
@@ -205,6 +210,12 @@ function buildStartSteps({ profile, unavailable, rpg, swordStatus, fishingStatus
       command: '`/낚시`',
       unavailable: unavailable.fishing,
       complete: !unavailable.fishing && (fishingStatus?.stats?.totalCatches ?? 0) > 0
+    },
+    {
+      label: '광산 채굴 1회',
+      command: '`/광산`',
+      unavailable: unavailable.mining,
+      complete: !unavailable.mining && (miningStatus?.stats?.totalMines ?? 0) > 0
     },
     {
       label: '검 선물받기',

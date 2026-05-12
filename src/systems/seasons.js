@@ -22,6 +22,7 @@ export const SEASON_POINT_SOURCES = Object.freeze({
   SWORD_BATTLE_WIN: 'sword_battle_win',
   SWORD_BATTLE_PLAY: 'sword_battle_play',
   FISHING_CATCH: 'fishing_catch',
+  MINING_MINE: 'mining_mine',
   STOCK_TRADE: 'stock_trade',
   COMMUNITY_MISSION_CLAIM: 'community_mission_claim',
   ACHIEVEMENT_EARN: 'achievement_earn',
@@ -37,6 +38,7 @@ export const SEASON_SOURCE_LABELS = Object.freeze({
   [SEASON_POINT_SOURCES.SWORD_BATTLE_WIN]: '검배틀 승리',
   [SEASON_POINT_SOURCES.SWORD_BATTLE_PLAY]: '검배틀 참가',
   [SEASON_POINT_SOURCES.FISHING_CATCH]: '낚시 성공',
+  [SEASON_POINT_SOURCES.MINING_MINE]: '광산 채굴',
   [SEASON_POINT_SOURCES.STOCK_TRADE]: '주식 거래',
   [SEASON_POINT_SOURCES.COMMUNITY_MISSION_CLAIM]: '커뮤니티 미션',
   [SEASON_POINT_SOURCES.ACHIEVEMENT_EARN]: '업적 달성',
@@ -89,6 +91,16 @@ export const SEASON_CHALLENGES = Object.freeze([
     requiredPoints: 20,
     rewardPoints: 20,
     sources: [SEASON_POINT_SOURCES.FISHING_CATCH]
+  }),
+
+  seasonChallenge({
+    id: 'daily_mining_mine',
+    period: 'daily',
+    label: '오늘의 첫 채굴',
+    description: '광산 채굴로 시즌 포인트 10점 획득',
+    requiredPoints: 10,
+    rewardPoints: 15,
+    sources: [SEASON_POINT_SOURCES.MINING_MINE]
   }),
   seasonChallenge({
     id: 'daily_stock_trade',
@@ -153,6 +165,7 @@ export const SEASON_CHALLENGES = Object.freeze([
       SEASON_POINT_SOURCES.SWORD_BATTLE_PLAY,
       SEASON_POINT_SOURCES.SWORD_BATTLE_WIN,
       SEASON_POINT_SOURCES.FISHING_CATCH,
+      SEASON_POINT_SOURCES.MINING_MINE,
       SEASON_POINT_SOURCES.STOCK_TRADE,
       SEASON_POINT_SOURCES.COMMUNITY_MISSION_CLAIM,
       SEASON_POINT_SOURCES.ACHIEVEMENT_EARN,

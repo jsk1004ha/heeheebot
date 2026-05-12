@@ -10,6 +10,7 @@ export const ACHIEVEMENT_CATEGORIES = Object.freeze([
   Object.freeze({ id: 'collection', label: '수집' }),
   Object.freeze({ id: 'rpg', label: 'RPG' }),
   Object.freeze({ id: 'fishing', label: '낚시' }),
+  Object.freeze({ id: 'mining', label: '광산' }),
   Object.freeze({ id: 'sword', label: '검강화' }),
   Object.freeze({ id: 'stocks', label: '주식' }),
   Object.freeze({ id: 'tamagotchi', label: '다마고치' })
@@ -48,11 +49,13 @@ export const COMMUNITY_TITLES = Object.freeze([
   title('dungeon_breaker', '🏰 던전 돌파자', 'RPG 던전 클리어 업적으로 획득', { rarity: 'epic', category: 'rpg', source: 'RPG 업적' }),
   title('season_dungeon_title', '🏰 던전 개척자', '희희봇 시즌 1 보상으로 획득', { rarity: 'legendary', category: 'rpg', source: '시즌 1' }),
   title('angler', '🎣 강태공', '낚시 업적으로 획득', { rarity: 'rare', category: 'fishing', source: '낚시 업적' }),
+  title('miner', '⛏️ 광부', '광산 업적으로 획득', { rarity: 'rare', category: 'mining', source: '광산 업적' }),
   title('blade_master', '⚔️ 검의 주인', '검강화 업적으로 획득', { rarity: 'epic', category: 'sword', source: '검강화 업적' }),
   title('market_maker', '📈 시장 감시자', '주식 거래 업적으로 획득', { rarity: 'rare', category: 'stocks', source: '주식 업적' }),
   title('pet_guardian', '🐣 희진 수호자', '다마고치 돌봄 업적으로 획득', { rarity: 'rare', category: 'tamagotchi', source: '다마고치 업적' }),
   title('blacksmith_nightmare', '💥 대장장이의 악몽', '숨겨진 검강화 업적으로 획득', { rarity: 'legendary', category: 'sword', source: '히든 업적', hidden: true }),
   title('abyss_angler', '🌫️ 심연의 낚시꾼', '숨겨진 낚시 업적으로 획득', { rarity: 'legendary', category: 'fishing', source: '히든 업적', hidden: true }),
+  title('deep_miner', '💎 심층 광부', '숨겨진 광산 업적으로 획득', { rarity: 'legendary', category: 'mining', source: '히든 업적', hidden: true }),
   title('reborn_guardian', '🕯️ 다시 만난 보호자', '숨겨진 다마고치 업적으로 획득', { rarity: 'epic', category: 'tamagotchi', source: '히든 업적', hidden: true })
 ]);
 
@@ -94,6 +97,11 @@ const ACHIEVEMENTS = Object.freeze([
   achievement('fishing_collection_20', '작은 수족관', '물고기 도감 20종 발견', ({ sources }) => countKeys(getFishing(sources).collection) >= 20, ({ sources }) => `${Math.min(countKeys(getFishing(sources).collection), 20)} / 20종`, { coins: 500, xp: 200 }, { category: 'fishing', tier: 'silver', target: 20, current: ({ sources }) => countKeys(getFishing(sources).collection) }),
   achievement('fishing_rod_10', '손에 익은 낚싯대', '낚싯대 +10 달성', ({ sources }) => getFishing(sources).rod.level >= 10, ({ sources }) => `+${Math.min(getFishing(sources).rod.level, 10)} / +10`, { coins: 400, xp: 160 }, { category: 'fishing', tier: 'silver', target: 10, current: ({ sources }) => getFishing(sources).rod.level }),
   achievement('fishing_battle_win_5', '어항 결투가', '물고기배틀 5승', ({ sources }) => getFishing(sources).battle.wins >= 5, ({ sources }) => `${Math.min(getFishing(sources).battle.wins, 5)} / 5승`, { coins: 500, xp: 200 }, { category: 'fishing', tier: 'gold', target: 5, current: ({ sources }) => getFishing(sources).battle.wins }),
+
+  achievement('mining_mine_25', '손에 굳은살', '광산 채굴 25회 성공', ({ sources }) => getMining(sources).stats.totalMines >= 25, ({ sources }) => `${Math.min(getMining(sources).stats.totalMines, 25)} / 25회`, { coins: 0, xp: 110, titleId: 'miner' }, { category: 'mining', tier: 'bronze', target: 25, current: ({ sources }) => getMining(sources).stats.totalMines }),
+  achievement('mining_collection_20', '작은 광물 창고', '광석 도감 20종 발견', ({ sources }) => countKeys(getMining(sources).collection) >= 20, ({ sources }) => `${Math.min(countKeys(getMining(sources).collection), 20)} / 20종`, { coins: 0, xp: 200 }, { category: 'mining', tier: 'silver', target: 20, current: ({ sources }) => countKeys(getMining(sources).collection) }),
+  achievement('mining_pickaxe_50', '심층으로 가는 곡괭이', '곡괭이 +50 달성', ({ sources }) => getMining(sources).pickaxe.highestLevel >= 50, ({ sources }) => `+${Math.min(getMining(sources).pickaxe.highestLevel, 50)} / +50`, { coins: 0, xp: 320 }, { category: 'mining', tier: 'gold', target: 50, current: ({ sources }) => getMining(sources).pickaxe.highestLevel }),
+  achievement('hidden_mining_core', '깊은 곳에서 나온 것', '히든 광석 1종 발견', ({ sources }) => getMining(sources).hiddenCollectionCount >= 1, ({ sources }) => `${Math.min(getMining(sources).hiddenCollectionCount, 1)} / 1종`, { coins: 0, xp: 220, titleId: 'deep_miner' }, { category: 'mining', tier: 'legendary', target: 1, current: ({ sources }) => getMining(sources).hiddenCollectionCount, hidden: true }),
 
   achievement('sword_level_10', '날이 선 검', '검 +10 달성', ({ sources }) => getSword(sources).highestLevel >= 10, ({ sources }) => `+${Math.min(getSword(sources).highestLevel, 10)} / +10`, { coins: 300, xp: 130, titleId: 'blade_master' }, { category: 'sword', tier: 'silver', target: 10, current: ({ sources }) => getSword(sources).highestLevel }),
   achievement('sword_level_50_global', '반짝이는 전설의 시작', '검 +50 달성', ({ sources }) => getSword(sources).highestLevel >= 50, ({ sources }) => `+${Math.min(getSword(sources).highestLevel, 50)} / +50`, { coins: 700, xp: 400 }, { category: 'sword', tier: 'gold', target: 50, current: ({ sources }) => getSword(sources).highestLevel }),
@@ -311,6 +319,25 @@ function getFishing(sources = {}) {
     battle: {
       wins: normalizeStoredNonNegativeInteger(fishing.battle?.wins)
     }
+  };
+}
+
+function getMining(sources = {}) {
+  const mining = sources.mining && typeof sources.mining === 'object' ? sources.mining : {};
+  const collection = safeObject(mining.collection);
+  return {
+    pickaxe: {
+      level: normalizeStoredNonNegativeInteger(mining.pickaxe?.level, 1),
+      highestLevel: normalizeStoredNonNegativeInteger(mining.pickaxe?.highestLevel ?? mining.pickaxe?.level, 1)
+    },
+    stats: {
+      totalMines: normalizeStoredNonNegativeInteger(mining.stats?.totalMines),
+      totalSold: normalizeStoredNonNegativeInteger(mining.stats?.totalSold)
+    },
+    collection,
+    hiddenCollectionCount: Object.keys(collection)
+      .filter((oreId) => String(oreId).startsWith('hidden_'))
+      .length
   };
 }
 

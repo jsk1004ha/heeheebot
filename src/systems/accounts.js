@@ -1,10 +1,11 @@
 const ACCOUNT_STATE_KEY = 'accounts';
 const ACCOUNT_SELECT_ID_PREFIX = 'guild:';
-const LINKED_FEATURE_KEYS = Object.freeze(['fishing', 'stocks']);
+const LINKED_FEATURE_KEYS = Object.freeze(['fishing', 'stocks', 'mining']);
 const LINKED_FEATURE_LABELS = Object.freeze({
   account: '계정',
   fishing: '낚시',
-  stocks: '주식'
+  stocks: '주식',
+  mining: '광산'
 });
 
 export const ACCOUNT_LINK_SELECT_CUSTOM_ID_PREFIX = 'account_link_select';
