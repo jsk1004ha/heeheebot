@@ -1,6 +1,19 @@
 const CARD_RANKS = Object.freeze(['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']);
 const POKER_SUITS = Object.freeze(['♠', '♥', '♦', '♣']);
 const POKER_HAND_SIZE = 5;
+const HOLDEM_HOLE_SIZE = 2;
+const HOLDEM_COMMUNITY_SIZE = 5;
+const HOLDEM_MIN_DECK_SIZE = (HOLDEM_HOLE_SIZE * 2) + HOLDEM_COMMUNITY_SIZE;
+const HOLDEM_STREETS = Object.freeze({
+  preflop: Object.freeze({ next: 'flop', reveal: 0, label: '프리플랍' }),
+  flop: Object.freeze({ next: 'turn', reveal: 3, label: '플랍' }),
+  turn: Object.freeze({ next: 'river', reveal: 4, label: '턴' }),
+  river: Object.freeze({ next: 'showdown', reveal: 5, label: '리버' }),
+  showdown: Object.freeze({ next: null, reveal: 5, label: '쇼다운' })
+});
+const HOLDEM_PARTICIPANTS = Object.freeze(['challenger', 'opponent']);
+const HOLDEM_BUTTON = 'challenger';
+const HOLDEM_BIG_BLIND_DIVISOR = 50;
 const POKER_PAYOUTS = Object.freeze({
   royal_flush: Object.freeze({ id: 'royal_flush', label: '로열 플러시', multiplier: 250, order: 10 }),
   straight_flush: Object.freeze({ id: 'straight_flush', label: '스트레이트 플러시', multiplier: 50, order: 9 }),
@@ -457,6 +470,241 @@ export function drawPokerRound(round) {
     handRank,
     payout: Math.floor(current.bet * handRank.multiplier)
   });
+}
+
+export function createPlayerPokerRound({
+  bet,
+  deck = null,
+  randomInt = defaultRandomInt
+} = {}) {
+  const normalizedBet = normalizePokerBet(bet);
+  const pokerDeck = deck
+    ? normalizePokerDeck(deck)
+    : createShuffledPokerDeck(randomInt);
+  if (pokerDeck.length < POKER_HAND_SIZE * 4) {
+    throw new Error('유저 포커 덱에는 양쪽 시작 패와 교체 패를 합쳐 최소 20장이 필요합니다.');
+  }
+
+  return buildPlayerPokerRound({
+    bet: normalizedBet,
+    challenger: {
+      initialHand: pokerDeck.slice(0, POKER_HAND_SIZE),
+      hand: pokerDeck.slice(0, POKER_HAND_SIZE),
+      held: Array.from({ length: POKER_HAND_SIZE }, () => false),
+      status: 'holding',
+      drawCount: 0,
+      replacedCount: 0
+    },
+    opponent: {
+      initialHand: pokerDeck.slice(POKER_HAND_SIZE, POKER_HAND_SIZE * 2),
+      hand: pokerDeck.slice(POKER_HAND_SIZE, POKER_HAND_SIZE * 2),
+      held: Array.from({ length: POKER_HAND_SIZE }, () => false),
+      status: 'holding',
+      drawCount: 0,
+      replacedCount: 0
+    },
+    deck: pokerDeck.slice(POKER_HAND_SIZE * 2),
+    currentTurn: 'challenger',
+    status: 'holding',
+    winner: null
+  });
+}
+
+export function togglePlayerPokerHold(round, participant, index) {
+  const current = buildPlayerPokerRound(round);
+  const key = assertPlayerPokerTurn(current, participant);
+  const normalizedIndex = normalizePokerCardIndex(index);
+  const held = [...current[key].held];
+  held[normalizedIndex] = !held[normalizedIndex];
+
+  return buildPlayerPokerRound({
+    ...current,
+    [key]: {
+      ...current[key],
+      held
+    }
+  });
+}
+
+export function applyPlayerPokerRecommendedHold(round, participant) {
+  const current = buildPlayerPokerRound(round);
+  const key = assertPlayerPokerTurn(current, participant);
+  const recommendation = getPokerHoldRecommendation(current[key].hand);
+
+  return buildPlayerPokerRound({
+    ...current,
+    [key]: {
+      ...current[key],
+      held: recommendation.held
+    }
+  });
+}
+
+export function clearPlayerPokerHold(round, participant) {
+  const current = buildPlayerPokerRound(round);
+  const key = assertPlayerPokerTurn(current, participant);
+
+  return buildPlayerPokerRound({
+    ...current,
+    [key]: {
+      ...current[key],
+      held: Array.from({ length: POKER_HAND_SIZE }, () => false)
+    }
+  });
+}
+
+export function drawPlayerPokerRound(round, participant) {
+  const current = buildPlayerPokerRound(round);
+  const key = assertPlayerPokerTurn(current, participant);
+  const player = current[key];
+  const deck = [...current.deck];
+  const hand = player.hand.map((card, index) => {
+    if (player.held[index]) return card;
+    const replacement = deck.shift();
+    if (!replacement) {
+      throw new Error('유저 포커 교체 카드가 부족합니다.');
+    }
+    return replacement;
+  });
+  const replacedCount = player.held.filter((held) => !held).length;
+  const nextRound = buildPlayerPokerRound({
+    ...current,
+    deck,
+    [key]: {
+      ...player,
+      hand,
+      status: 'drawn',
+      drawCount: player.drawCount + 1,
+      replacedCount,
+      handRank: evaluatePokerHand(hand)
+    }
+  });
+
+  const otherKey = key === 'challenger' ? 'opponent' : 'challenger';
+  if (nextRound[otherKey].status === 'drawn') {
+    return settlePlayerPokerRound(nextRound);
+  }
+
+  return buildPlayerPokerRound({
+    ...nextRound,
+    currentTurn: otherKey
+  });
+}
+
+export function createPlayerHoldemRound({
+  bet,
+  players = null,
+  stacks = null,
+  deck = null,
+  randomInt = defaultRandomInt
+} = {}) {
+  const normalizedBet = normalizePokerBet(bet);
+  const playerSpecs = normalizeHoldemPlayerSpecs(players);
+  const playerCount = playerSpecs.length;
+  const { smallBlind, bigBlind } = calculateHoldemBlinds(normalizedBet);
+  const pokerDeck = deck
+    ? normalizePokerDeck(deck)
+    : createShuffledPokerDeck(randomInt);
+  const requiredDeckSize = (HOLDEM_HOLE_SIZE * playerCount) + HOLDEM_COMMUNITY_SIZE;
+  if (pokerDeck.length < requiredDeckSize) {
+    throw new Error(`텍사스 홀덤 덱에는 참가자 홀카드와 커뮤니티 카드를 합쳐 최소 ${requiredDeckSize}장이 필요합니다.`);
+  }
+  const buttonIndex = 0;
+  const smallBlindIndex = playerCount === 2 ? buttonIndex : 1;
+  const bigBlindIndex = playerCount === 2 ? 1 : 2;
+  const holdemPlayers = playerSpecs.map((player, index) => createHoldemParticipant({
+    key: player.key,
+    holeCards: pokerDeck.slice(index * HOLDEM_HOLE_SIZE, (index + 1) * HOLDEM_HOLE_SIZE),
+    stack: getHoldemInitialStack(stacks, player.key, index, normalizedBet)
+  }));
+  holdemPlayers[smallBlindIndex] = commitHoldemChips(holdemPlayers[smallBlindIndex], smallBlind);
+  holdemPlayers[bigBlindIndex] = commitHoldemChips(holdemPlayers[bigBlindIndex], bigBlind);
+
+  return buildPlayerHoldemRound({
+    bet: normalizedBet,
+    button: holdemPlayers[buttonIndex].key,
+    smallBlindParticipant: holdemPlayers[smallBlindIndex].key,
+    bigBlindParticipant: holdemPlayers[bigBlindIndex].key,
+    smallBlind,
+    bigBlind,
+    players: holdemPlayers,
+    communityCards: pokerDeck.slice(HOLDEM_HOLE_SIZE * playerCount, requiredDeckSize),
+    deck: pokerDeck.slice(requiredDeckSize),
+    street: 'preflop',
+    revealedCommunityCount: 0,
+    currentTurn: getHoldemFirstActorForStreetFromPlayers(holdemPlayers, 'preflop', buttonIndex, bigBlindIndex),
+    currentBet: bigBlind,
+    minRaise: bigBlind,
+    pot: holdemPlayers.reduce((total, player) => total + player.totalCommitted, 0),
+    status: 'betting',
+    winner: null,
+    winners: [],
+    pots: [],
+    settlementReason: null
+  });
+}
+
+export function actPlayerHoldemRound(round, participant, action) {
+  const current = buildPlayerHoldemRound(round);
+  const key = assertPlayerHoldemTurn(current, participant);
+  const normalizedAction = normalizeHoldemAction(action);
+
+  if (normalizedAction.type === 'fold') {
+    return resolveHoldemAfterAction(updateHoldemPlayer(current, key, {
+      ...current[key],
+      folded: true,
+      acted: true
+    }));
+  }
+
+  if (normalizedAction.type === 'check') {
+    return resolveHoldemAfterAction(applyHoldemCheck(current, key));
+  }
+
+  if (normalizedAction.type === 'call') {
+    return resolveHoldemAfterAction(applyHoldemCall(current, key));
+  }
+
+  return resolveHoldemAfterAction(applyHoldemBetOrRaise(current, key, normalizedAction));
+}
+
+export function comparePokerHands(firstHand, secondHand) {
+  const first = Array.isArray(firstHand)
+    ? firstHand.length === POKER_HAND_SIZE
+      ? evaluatePokerHand(firstHand)
+      : evaluateBestPokerHand(firstHand)
+    : normalizePokerHandRank(firstHand);
+  const second = Array.isArray(secondHand)
+    ? secondHand.length === POKER_HAND_SIZE
+      ? evaluatePokerHand(secondHand)
+      : evaluateBestPokerHand(secondHand)
+    : normalizePokerHandRank(secondHand);
+
+  if (first.order !== second.order) return first.order - second.order;
+
+  const firstTieBreakers = getPokerHandTieBreakers(first);
+  const secondTieBreakers = getPokerHandTieBreakers(second);
+  const length = Math.max(firstTieBreakers.length, secondTieBreakers.length);
+  for (let index = 0; index < length; index += 1) {
+    const difference = (firstTieBreakers[index] ?? 0) - (secondTieBreakers[index] ?? 0);
+    if (difference !== 0) return difference;
+  }
+
+  return 0;
+}
+
+export function evaluateBestPokerHand(cards) {
+  const normalized = normalizePokerCards(cards, POKER_HAND_SIZE, 7, '포커 비교 카드');
+  let best = null;
+
+  for (const hand of getPokerCombinations(normalized, POKER_HAND_SIZE)) {
+    const rank = evaluatePokerHand(hand);
+    if (!best || comparePokerHands(rank, best) > 0) {
+      best = rank;
+    }
+  }
+
+  return normalizeCommunityPokerHandRank(best);
 }
 
 export function getPokerHoldRecommendation(hand) {
@@ -1136,10 +1384,749 @@ function buildPokerRound(round) {
   };
 }
 
+function buildPlayerPokerRound(round) {
+  const bet = normalizePokerBet(round.bet);
+  const status = round.status ?? 'holding';
+  const hasCurrentTurn = Object.hasOwn(round, 'currentTurn');
+  const currentTurn = hasCurrentTurn
+    ? round.currentTurn
+    : status === 'settled'
+      ? null
+      : 'challenger';
+  const winner = round.winner ?? null;
+
+  if (!['holding', 'settled'].includes(status)) {
+    throw new Error('유저 포커 상태가 올바르지 않습니다.');
+  }
+
+  if (status === 'holding' && !['challenger', 'opponent'].includes(currentTurn)) {
+    throw new Error('유저 포커 차례가 올바르지 않습니다.');
+  }
+
+  if (status === 'settled' && currentTurn !== null) {
+    throw new Error('종료된 유저 포커에는 현재 차례가 없어야 합니다.');
+  }
+
+  if (![null, 'challenger', 'opponent'].includes(winner)) {
+    throw new Error('유저 포커 승자가 올바르지 않습니다.');
+  }
+
+  return {
+    game: '유저 포커',
+    ...round,
+    bet,
+    challenger: buildPlayerPokerParticipant(round.challenger),
+    opponent: buildPlayerPokerParticipant(round.opponent),
+    deck: normalizePokerDeck(round.deck ?? []),
+    currentTurn,
+    status,
+    winner
+  };
+}
+
+function buildPlayerPokerParticipant(participant) {
+  const hand = normalizePokerHand(participant?.hand);
+  const initialHand = participant?.initialHand
+    ? normalizePokerHand(participant.initialHand)
+    : [...hand];
+  const held = normalizePokerHeld(participant?.held);
+  const status = participant?.status ?? 'holding';
+  const handRank = participant?.handRank
+    ? normalizePokerHandRank(participant.handRank)
+    : evaluatePokerHand(hand);
+
+  if (!['holding', 'drawn'].includes(status)) {
+    throw new Error('유저 포커 참가자 상태가 올바르지 않습니다.');
+  }
+
+  return {
+    ...participant,
+    initialHand,
+    hand,
+    held,
+    status,
+    handRank,
+    drawCount: normalizeNonNegativeSafeInteger(participant?.drawCount ?? 0, '유저 포커 교체 횟수'),
+    replacedCount: normalizeNonNegativeSafeInteger(participant?.replacedCount ?? 0, '유저 포커 교체 카드 수')
+  };
+}
+
+function buildPlayerHoldemRound(round) {
+  const bet = normalizePokerBet(round.bet);
+  const status = round.status ?? 'betting';
+  const street = normalizeHoldemStreet(round.street ?? 'preflop');
+  const { smallBlind: defaultSmallBlind, bigBlind: defaultBigBlind } = calculateHoldemBlinds(bet);
+  const smallBlind = normalizeNonNegativeSafeInteger(round.smallBlind ?? defaultSmallBlind, '텍사스 홀덤 스몰 블라인드');
+  const bigBlind = normalizeNonNegativeSafeInteger(round.bigBlind ?? defaultBigBlind, '텍사스 홀덤 빅 블라인드');
+  const rawPlayers = Array.isArray(round.players)
+    ? round.players
+    : [
+      { key: 'challenger', ...round.challenger },
+      { key: 'opponent', ...round.opponent }
+    ];
+  const players = rawPlayers.map((player, index) => buildHoldemParticipant(
+    { ...player, key: player?.key ?? (index === 0 ? 'challenger' : `player${index}`) },
+    round.communityCards,
+    status
+  ));
+  const playerKeys = players.map((player) => player.key);
+  const button = normalizeHoldemParticipantKey(round.button ?? players[0]?.key ?? HOLDEM_BUTTON, playerKeys);
+  const smallBlindParticipant = normalizeHoldemParticipantKey(
+    round.smallBlindParticipant ?? (players.length === 2 ? button : players[1]?.key),
+    playerKeys
+  );
+  const bigBlindParticipant = normalizeHoldemParticipantKey(
+    round.bigBlindParticipant ?? (players.length === 2 ? players[1]?.key : players[2]?.key),
+    playerKeys
+  );
+  const hasCurrentTurn = Object.hasOwn(round, 'currentTurn');
+  const currentTurn = hasCurrentTurn
+    ? round.currentTurn
+    : status === 'settled'
+      ? null
+      : 'challenger';
+  const winner = round.winner ?? null;
+  const winners = normalizeHoldemWinners(round.winners ?? (winner ? [winner] : []), playerKeys);
+  const settlementReason = round.settlementReason ?? null;
+  const revealedCommunityCount = normalizeHoldemRevealCount(round.revealedCommunityCount ?? HOLDEM_STREETS[street].reveal);
+  const pot = normalizeNonNegativeSafeInteger(
+    round.pot ?? players.reduce((total, player) => total + player.totalCommitted, 0),
+    '텍사스 홀덤 팟'
+  );
+  const currentBet = normalizeNonNegativeSafeInteger(round.currentBet ?? 0, '텍사스 홀덤 현재 베팅');
+  const minRaise = normalizeNonNegativeSafeInteger(round.minRaise ?? bigBlind, '텍사스 홀덤 최소 레이즈');
+  const pots = Array.isArray(round.pots) ? round.pots.map((sidePot) => ({
+    amount: normalizeNonNegativeSafeInteger(sidePot.amount ?? 0, '텍사스 홀덤 사이드팟'),
+    eligible: Array.isArray(sidePot.eligible)
+      ? sidePot.eligible.map((key) => normalizeHoldemParticipantKey(key, playerKeys))
+      : [],
+    winners: Array.isArray(sidePot.winners)
+      ? sidePot.winners.map((key) => normalizeHoldemParticipantKey(key, playerKeys))
+      : []
+  })) : [];
+
+  if (!['betting', 'settled'].includes(status)) {
+    throw new Error('텍사스 홀덤 상태가 올바르지 않습니다.');
+  }
+
+  if (status === 'betting' && !playerKeys.includes(currentTurn)) {
+    throw new Error('텍사스 홀덤 차례가 올바르지 않습니다.');
+  }
+
+  if (status === 'settled' && currentTurn !== null) {
+    throw new Error('종료된 텍사스 홀덤에는 현재 차례가 없어야 합니다.');
+  }
+
+  if (winner !== null && !playerKeys.includes(winner)) {
+    throw new Error('텍사스 홀덤 승자가 올바르지 않습니다.');
+  }
+  const aliases = Object.fromEntries(players.map((player) => [player.key, player]));
+
+  return {
+    game: '텍사스 홀덤',
+    ...round,
+    bet,
+    button,
+    smallBlindParticipant,
+    bigBlindParticipant,
+    smallBlind,
+    bigBlind,
+    players,
+    ...aliases,
+    communityCards: normalizePokerCards(round.communityCards, HOLDEM_COMMUNITY_SIZE, HOLDEM_COMMUNITY_SIZE, '텍사스 홀덤 커뮤니티 카드'),
+    deck: normalizePokerDeck(round.deck ?? []),
+    street,
+    streetLabel: HOLDEM_STREETS[street].label,
+    revealedCommunityCount,
+    currentTurn,
+    currentBet,
+    minRaise,
+    pot,
+    status,
+    winner,
+    winners,
+    pots,
+    settlementReason
+  };
+}
+
+function createHoldemParticipant({ key, holeCards, stack = 0 }) {
+  return {
+    key,
+    holeCards,
+    stack,
+    streetCommitted: 0,
+    totalCommitted: 0,
+    acted: false,
+    folded: false,
+    allIn: false,
+    handRank: null
+  };
+}
+
+function buildHoldemParticipant(participant, communityCards, roundStatus) {
+  const key = String(participant?.key ?? '').trim();
+  if (!key) {
+    throw new Error('텍사스 홀덤 참가자 키가 올바르지 않습니다.');
+  }
+  const holeCards = normalizePokerCards(participant?.holeCards, HOLDEM_HOLE_SIZE, HOLDEM_HOLE_SIZE, '텍사스 홀덤 홀카드');
+  const stack = normalizeNonNegativeSafeInteger(participant?.stack ?? 0, '텍사스 홀덤 스택');
+  const streetCommitted = normalizeNonNegativeSafeInteger(participant?.streetCommitted ?? 0, '텍사스 홀덤 현재 스트리트 베팅');
+  const totalCommitted = normalizeNonNegativeSafeInteger(participant?.totalCommitted ?? streetCommitted, '텍사스 홀덤 누적 베팅');
+  const shouldRank = roundStatus === 'settled' && Array.isArray(communityCards) && communityCards.length >= HOLDEM_COMMUNITY_SIZE;
+  const handRank = participant?.handRank
+    ? normalizeCommunityPokerHandRank(participant.handRank)
+    : shouldRank
+      ? evaluateBestPokerHand([...holeCards, ...communityCards])
+      : null;
+
+  return {
+    ...participant,
+    key,
+    holeCards,
+    stack,
+    streetCommitted,
+    totalCommitted,
+    acted: Boolean(participant?.acted),
+    folded: Boolean(participant?.folded),
+    allIn: Boolean(participant?.allIn) || stack === 0,
+    handRank
+  };
+}
+
 function assertPokerHoldingRound(round) {
   if (!round || round.status !== 'holding') {
     throw new Error('이미 정산된 포커입니다.');
   }
+}
+
+function assertPlayerPokerTurn(round, participant) {
+  if (round.status !== 'holding') {
+    throw new Error('이미 종료된 유저 포커입니다.');
+  }
+
+  const key = normalizePlayerCasinoParticipant(participant);
+  if (round.currentTurn !== key) {
+    throw new Error('지금은 상대 차례입니다.');
+  }
+
+  if (round[key].status !== 'holding') {
+    throw new Error('이미 교체를 마친 유저 포커 참가자입니다.');
+  }
+
+  return key;
+}
+
+function settlePlayerPokerRound(round) {
+  const current = buildPlayerPokerRound(round);
+  const comparison = comparePokerHands(current.challenger.hand, current.opponent.hand);
+  const winner = comparison > 0
+    ? 'challenger'
+    : comparison < 0
+      ? 'opponent'
+      : null;
+
+  return buildPlayerPokerRound({
+    ...current,
+    currentTurn: null,
+    status: 'settled',
+    winner
+  });
+}
+
+function normalizePlayerCasinoParticipant(participant) {
+  if (participant === 'challenger' || participant === 'opponent') return participant;
+  throw new Error('유저 포커 참가자는 challenger 또는 opponent여야 합니다.');
+}
+
+function normalizeHoldemPlayerSpecs(players) {
+  const rawPlayers = players ?? ['challenger', 'opponent'];
+  if (!Array.isArray(rawPlayers) || rawPlayers.length < 2 || rawPlayers.length > 6) {
+    throw new Error('텍사스 홀덤 참가자는 2~6명이어야 합니다.');
+  }
+
+  const normalized = rawPlayers.map((player, index) => {
+    const key = typeof player === 'string'
+      ? player
+      : player?.key ?? player?.id ?? (index === 0 ? 'challenger' : `player${index}`);
+    const normalizedKey = String(key ?? '').trim();
+    if (!normalizedKey) {
+      throw new Error('텍사스 홀덤 참가자 키가 올바르지 않습니다.');
+    }
+    return {
+      ...(typeof player === 'object' && player !== null ? player : {}),
+      key: normalizedKey
+    };
+  });
+  const keys = normalized.map((player) => player.key);
+  if (new Set(keys).size !== keys.length) {
+    throw new Error('텍사스 홀덤 참가자는 중복될 수 없습니다.');
+  }
+  return normalized;
+}
+
+function getHoldemInitialStack(stacks, key, index, fallback) {
+  if (stacks === null || stacks === undefined) return fallback;
+  if (Array.isArray(stacks)) {
+    return normalizePokerBet(stacks[index] ?? fallback);
+  }
+  if (typeof stacks === 'object') {
+    return normalizePokerBet(stacks[key] ?? fallback);
+  }
+  return normalizePokerBet(stacks);
+}
+
+function normalizeHoldemParticipantKey(participant, playerKeys) {
+  const key = String(participant ?? '').trim();
+  if (playerKeys.includes(key)) return key;
+  throw new Error('텍사스 홀덤 참가자가 올바르지 않습니다.');
+}
+
+function normalizeHoldemWinners(winners, playerKeys) {
+  if (!Array.isArray(winners)) return [];
+  return winners.map((key) => normalizeHoldemParticipantKey(key, playerKeys));
+}
+
+function getHoldemPlayerKeys(round) {
+  return round.players.map((player) => player.key);
+}
+
+function getHoldemPlayerIndex(round, participant) {
+  const key = normalizeHoldemParticipantKey(participant, getHoldemPlayerKeys(round));
+  return round.players.findIndex((player) => player.key === key);
+}
+
+function getHoldemPlayer(round, participant) {
+  return round.players[getHoldemPlayerIndex(round, participant)];
+}
+
+function updateHoldemPlayer(round, participant, player) {
+  const key = normalizeHoldemParticipantKey(participant, getHoldemPlayerKeys(round));
+  return buildPlayerHoldemRound({
+    ...round,
+    players: round.players.map((current) => current.key === key ? player : current)
+  });
+}
+
+function updateHoldemPlayers(round, updates) {
+  return buildPlayerHoldemRound({
+    ...round,
+    players: round.players.map((player) => updates[player.key] ?? player)
+  });
+}
+
+function assertPlayerHoldemTurn(round, participant) {
+  if (round.status !== 'betting') {
+    throw new Error('이미 종료된 텍사스 홀덤입니다.');
+  }
+
+  const key = normalizeHoldemParticipantKey(participant, getHoldemPlayerKeys(round));
+  if (round.currentTurn !== key) {
+    throw new Error('지금은 상대 차례입니다.');
+  }
+
+  if (round[key].folded) {
+    throw new Error('이미 폴드한 참가자입니다.');
+  }
+
+  return key;
+}
+
+function normalizeHoldemAction(action) {
+  if (action && typeof action === 'object') {
+    return normalizeHoldemActionObject(action);
+  }
+
+  const normalized = String(action ?? '').trim().toLocaleLowerCase('ko-KR');
+  if (['check', '체크'].includes(normalized)) return { type: 'check' };
+  if (['call', 'continue', '콜', '진행'].includes(normalized)) return { type: 'call' };
+  if (['fold', '폴드', '다이'].includes(normalized)) return { type: 'fold' };
+  if (['half_pot', 'half-pot', 'halfpot', '하프팟', '1/2팟'].includes(normalized)) {
+    return { type: 'raise', sizing: 'half_pot' };
+  }
+  if (['pot', '팟', '팟베팅', 'pot_bet'].includes(normalized)) {
+    return { type: 'raise', sizing: 'pot' };
+  }
+  if (['all_in', 'all-in', 'allin', '올인'].includes(normalized)) {
+    return { type: 'raise', sizing: 'all_in' };
+  }
+  throw new Error('텍사스 홀덤 행동은 체크, 콜, 레이즈, 올인 또는 폴드여야 합니다.');
+}
+
+function normalizeHoldemActionObject(action) {
+  const type = String(action.type ?? action.action ?? '').trim().toLocaleLowerCase('ko-KR');
+  if (['check', '체크'].includes(type)) return { type: 'check' };
+  if (['call', '콜'].includes(type)) return { type: 'call' };
+  if (['fold', '폴드'].includes(type)) return { type: 'fold' };
+  if (['raise', 'bet', '레이즈', '베팅'].includes(type)) {
+    const sizing = String(action.sizing ?? action.size ?? 'pot').trim().toLocaleLowerCase('ko-KR');
+    if (['half_pot', 'half-pot', 'halfpot', '하프팟', '1/2팟'].includes(sizing)) {
+      return { type: 'raise', sizing: 'half_pot' };
+    }
+    if (['pot', '팟', '팟베팅'].includes(sizing)) {
+      return { type: 'raise', sizing: 'pot' };
+    }
+    if (['all_in', 'all-in', 'allin', '올인'].includes(sizing)) {
+      return { type: 'raise', sizing: 'all_in' };
+    }
+    if (action.amount !== undefined) {
+      return {
+        type: 'raise',
+        sizing: 'amount',
+        amount: normalizeNonNegativeSafeInteger(action.amount, '텍사스 홀덤 레이즈 금액')
+      };
+    }
+  }
+  throw new Error('텍사스 홀덤 행동은 체크, 콜, 레이즈, 올인 또는 폴드여야 합니다.');
+}
+
+function normalizeHoldemStreet(street) {
+  const normalized = String(street ?? '').trim();
+  if (Object.hasOwn(HOLDEM_STREETS, normalized)) return normalized;
+  throw new Error('텍사스 홀덤 거리 상태가 올바르지 않습니다.');
+}
+
+function normalizeHoldemRevealCount(count) {
+  const normalized = Number(count);
+  if (!Number.isSafeInteger(normalized) || normalized < 0 || normalized > HOLDEM_COMMUNITY_SIZE) {
+    throw new Error('텍사스 홀덤 공개 카드 수가 올바르지 않습니다.');
+  }
+  return normalized;
+}
+
+function calculateHoldemBlinds(stackSize) {
+  const normalizedStack = normalizePokerBet(stackSize);
+  const bigBlind = Math.min(
+    normalizedStack,
+    Math.max(2, Math.floor(normalizedStack / HOLDEM_BIG_BLIND_DIVISOR))
+  );
+  const smallBlind = Math.min(
+    bigBlind,
+    Math.max(1, Math.floor(bigBlind / 2))
+  );
+
+  return {
+    smallBlind,
+    bigBlind
+  };
+}
+
+function getHoldemCallAmount(round, participant) {
+  const player = getHoldemPlayer(round, participant);
+  return Math.max(0, round.currentBet - player.streetCommitted);
+}
+
+function commitHoldemChips(participant, amount) {
+  const chips = Math.min(
+    normalizeNonNegativeSafeInteger(amount, '텍사스 홀덤 투입 칩'),
+    participant.stack
+  );
+
+  return {
+    ...participant,
+    stack: participant.stack - chips,
+    streetCommitted: participant.streetCommitted + chips,
+    totalCommitted: participant.totalCommitted + chips,
+    allIn: participant.stack - chips === 0
+  };
+}
+
+function applyHoldemCheck(round, participant) {
+  const callAmount = getHoldemCallAmount(round, participant);
+  if (callAmount > 0) {
+    throw new Error(`체크할 수 없습니다. ${callAmount.toLocaleString()}골드를 콜해야 합니다.`);
+  }
+
+  const player = getHoldemPlayer(round, participant);
+  return updateHoldemPlayer(round, participant, {
+    ...player,
+    acted: true
+  });
+}
+
+function applyHoldemCall(round, participant) {
+  const callAmount = getHoldemCallAmount(round, participant);
+  const player = getHoldemPlayer(round, participant);
+  const committed = commitHoldemChips(player, callAmount);
+
+  return updateHoldemPlayer({
+    ...round,
+    pot: round.pot + Math.min(callAmount, player.stack)
+  }, participant, {
+    ...committed,
+    acted: true
+  });
+}
+
+function applyHoldemBetOrRaise(round, participant, action) {
+  const player = getHoldemPlayer(round, participant);
+  if (player.stack <= 0) {
+    throw new Error('남은 스택이 없어 베팅할 수 없습니다.');
+  }
+
+  const targetTotal = getHoldemRaiseTarget(round, participant, action);
+  const maxTotal = player.streetCommitted + player.stack;
+  if (targetTotal <= round.currentBet && targetTotal < maxTotal) {
+    throw new Error('현재 베팅보다 높게 레이즈해야 합니다.');
+  }
+
+  const raiseSize = Math.max(0, targetTotal - round.currentBet);
+  const minBetOrRaise = round.currentBet === 0 ? round.bigBlind : round.minRaise;
+  const isAllIn = targetTotal >= maxTotal;
+  if (raiseSize < minBetOrRaise && !isAllIn) {
+    throw new Error(`최소 ${minBetOrRaise.toLocaleString()}골드 이상 베팅/레이즈해야 합니다.`);
+  }
+
+  const committedAmount = targetTotal - player.streetCommitted;
+  const committed = commitHoldemChips(player, committedAmount);
+  const reopensAction = raiseSize >= minBetOrRaise;
+  const updates = Object.fromEntries(round.players.map((current) => [
+    current.key,
+    current.key === player.key
+      ? {
+        ...committed,
+        acted: true
+      }
+      : {
+        ...current,
+        acted: reopensAction && !current.folded && !current.allIn ? false : current.acted
+      }
+  ]));
+
+  return updateHoldemPlayers({
+    ...round,
+    pot: round.pot + Math.min(committedAmount, player.stack),
+    currentBet: Math.max(round.currentBet, committed.streetCommitted),
+    minRaise: reopensAction ? Math.max(raiseSize, round.bigBlind) : round.minRaise
+  }, updates);
+}
+
+function getHoldemRaiseTarget(round, participant, action) {
+  const player = getHoldemPlayer(round, participant);
+  const maxTotal = player.streetCommitted + player.stack;
+  if (action.sizing === 'all_in') return maxTotal;
+  if (action.sizing === 'amount') return Math.min(maxTotal, action.amount);
+
+  const callAmount = getHoldemCallAmount(round, participant);
+  const potAfterCall = round.pot + Math.min(callAmount, player.stack);
+  const rawRaise = action.sizing === 'half_pot'
+    ? Math.floor(potAfterCall / 2)
+    : potAfterCall;
+  const raiseOrBet = Math.max(round.currentBet === 0 ? round.bigBlind : round.minRaise, rawRaise);
+  const targetTotal = round.currentBet === 0
+    ? raiseOrBet
+    : round.currentBet + raiseOrBet;
+
+  return Math.min(maxTotal, targetTotal);
+}
+
+function resolveHoldemAfterAction(round) {
+  const current = buildPlayerHoldemRound(round);
+  const active = current.players.filter((player) => !player.folded).map((player) => player.key);
+
+  if (active.length === 1) {
+    return settlePlayerHoldemRound(current, active[0], 'fold');
+  }
+
+  if (isHoldemAllInShowdown(current)) {
+    return settlePlayerHoldemRound({
+      ...current,
+      revealedCommunityCount: HOLDEM_COMMUNITY_SIZE,
+      street: 'showdown'
+    }, null, 'showdown');
+  }
+
+  if (isHoldemBettingRoundClosed(current)) {
+    return advancePlayerHoldemStreet(current);
+  }
+
+  return buildPlayerHoldemRound({
+    ...current,
+    currentTurn: getNextHoldemActor(current)
+  });
+}
+
+function isHoldemAllInShowdown(round) {
+  const active = round.players.filter((player) => !player.folded);
+  return active.length > 1
+    && active.some((player) => player.allIn)
+    && active.filter((player) => !player.allIn).length <= 1
+    && active.every((player) => player.allIn || (player.acted && player.streetCommitted === round.currentBet));
+}
+
+function isHoldemBettingRoundClosed(round) {
+  const active = round.players.filter((player) => !player.folded);
+  return active.length > 1 && active.every((player) => (
+    player.allIn
+      || (player.acted && player.streetCommitted === round.currentBet)
+  ));
+}
+
+function getNextHoldemActor(round) {
+  const currentIndex = getHoldemPlayerIndex(round, round.currentTurn);
+  for (let offset = 1; offset <= round.players.length; offset += 1) {
+    const player = round.players[(currentIndex + offset) % round.players.length];
+    if (!player.folded && !player.allIn) return player.key;
+  }
+  return null;
+}
+
+function getHoldemFirstActorForStreet(street, round) {
+  const buttonIndex = getHoldemPlayerIndex(round, round.button);
+  const bigBlindIndex = getHoldemPlayerIndex(round, round.bigBlindParticipant);
+  return getHoldemFirstActorForStreetFromPlayers(round.players, street, buttonIndex, bigBlindIndex);
+}
+
+function getHoldemFirstActorForStreetFromPlayers(players, street, buttonIndex, bigBlindIndex) {
+  const startIndex = street === 'preflop'
+    ? (bigBlindIndex + 1) % players.length
+    : (buttonIndex + 1) % players.length;
+  for (let offset = 0; offset < players.length; offset += 1) {
+    const player = players[(startIndex + offset) % players.length];
+    if (!player.folded && !player.allIn) return player.key;
+  }
+  return null;
+}
+
+function advancePlayerHoldemStreet(round) {
+  const current = buildPlayerHoldemRound(round);
+  const street = HOLDEM_STREETS[current.street];
+
+  if (street.next === 'showdown') {
+    return settlePlayerHoldemRound({
+      ...current,
+      revealedCommunityCount: HOLDEM_COMMUNITY_SIZE,
+      street: 'showdown'
+    }, null, 'showdown');
+  }
+
+  return buildPlayerHoldemRound({
+    ...current,
+    street: street.next,
+    revealedCommunityCount: HOLDEM_STREETS[street.next].reveal,
+    currentTurn: getHoldemFirstActorForStreet(street.next, current),
+    currentBet: 0,
+    minRaise: current.bigBlind,
+    players: current.players.map((player) => ({
+      ...player,
+      streetCommitted: 0,
+      acted: false
+    }))
+  });
+}
+
+function settlePlayerHoldemRound(round, forcedWinner = null, settlementReason = 'showdown') {
+  const current = buildPlayerHoldemRound(round);
+  const rankedPlayers = current.players.map((player) => ({
+    ...player,
+    acted: true,
+    handRank: evaluateBestPokerHand([...player.holeCards, ...current.communityCards])
+  }));
+  const settlement = forcedWinner
+    ? settleHoldemForcedWinner(current, rankedPlayers, forcedWinner)
+    : settleHoldemShowdown(current, rankedPlayers);
+  const updatedPlayers = rankedPlayers.map((player) => ({
+    ...player,
+    stack: player.stack + (settlement.payouts[player.key] ?? 0)
+  }));
+  const winners = Object.keys(settlement.payouts)
+    .filter((key) => settlement.payouts[key] > 0);
+  const winner = winners.length === 1 ? winners[0] : null;
+
+  return buildPlayerHoldemRound({
+    ...current,
+    players: updatedPlayers,
+    currentTurn: null,
+    currentBet: 0,
+    revealedCommunityCount: HOLDEM_COMMUNITY_SIZE,
+    street: settlementReason === 'fold' ? current.street : 'showdown',
+    status: 'settled',
+    winner,
+    winners,
+    pots: settlement.pots,
+    settlementReason
+  });
+}
+
+function settleHoldemForcedWinner(round, rankedPlayers, forcedWinner) {
+  const winner = normalizeHoldemParticipantKey(forcedWinner, rankedPlayers.map((player) => player.key));
+  return {
+    payouts: {
+      [winner]: round.pot
+    },
+    pots: [{
+      amount: round.pot,
+      eligible: rankedPlayers.filter((player) => player.totalCommitted > 0).map((player) => player.key),
+      winners: [winner]
+    }]
+  };
+}
+
+function settleHoldemShowdown(round, rankedPlayers) {
+  const pots = buildHoldemSidePots(rankedPlayers);
+  const payouts = Object.fromEntries(rankedPlayers.map((player) => [player.key, 0]));
+  const settledPots = pots.map((pot) => {
+    const eligiblePlayers = rankedPlayers.filter((player) => (
+      pot.eligible.includes(player.key) && !player.folded
+    ));
+    const winners = getBestHoldemPlayers(eligiblePlayers);
+    const share = Math.floor(pot.amount / winners.length);
+    let remainder = pot.amount % winners.length;
+    for (const winner of winners) {
+      payouts[winner.key] += share + (remainder > 0 ? 1 : 0);
+      remainder -= remainder > 0 ? 1 : 0;
+    }
+    return {
+      ...pot,
+      winners: winners.map((winner) => winner.key)
+    };
+  });
+
+  return {
+    payouts,
+    pots: settledPots
+  };
+}
+
+function buildHoldemSidePots(players) {
+  const levels = [...new Set(players
+    .map((player) => player.totalCommitted)
+    .filter((amount) => amount > 0))]
+    .sort((a, b) => a - b);
+  const pots = [];
+  let previous = 0;
+
+  for (const level of levels) {
+    const contributors = players.filter((player) => player.totalCommitted >= level);
+    const amount = (level - previous) * contributors.length;
+    if (amount > 0) {
+      pots.push({
+        amount,
+        eligible: contributors.map((player) => player.key),
+        winners: []
+      });
+    }
+    previous = level;
+  }
+
+  return pots;
+}
+
+function getBestHoldemPlayers(players) {
+  let winners = [];
+  for (const player of players) {
+    if (winners.length === 0) {
+      winners = [player];
+      continue;
+    }
+    const comparison = comparePokerHands(player.handRank, winners[0].handRank);
+    if (comparison > 0) {
+      winners = [player];
+    } else if (comparison === 0) {
+      winners.push(player);
+    }
+  }
+  return winners;
 }
 
 function createShuffledPokerDeck(randomInt) {
@@ -1173,9 +2160,17 @@ function normalizePokerHand(hand) {
     throw new Error(`포커 패는 ${POKER_HAND_SIZE}장이어야 합니다.`);
   }
 
-  const normalized = hand.map(normalizePokerCard);
+  return normalizePokerCards(hand, POKER_HAND_SIZE, POKER_HAND_SIZE, '포커 패');
+}
+
+function normalizePokerCards(cards, minLength, maxLength, label = '포커 카드') {
+  if (!Array.isArray(cards) || cards.length < minLength || cards.length > maxLength) {
+    throw new Error(`${label}는 ${minLength}${minLength === maxLength ? '' : `~${maxLength}`}장이어야 합니다.`);
+  }
+
+  const normalized = cards.map(normalizePokerCard);
   if (new Set(normalized).size !== normalized.length) {
-    throw new Error('포커 패에는 중복 카드가 있을 수 없습니다.');
+    throw new Error(`${label}에는 중복 카드가 있을 수 없습니다.`);
   }
 
   return normalized;
@@ -1349,6 +2344,89 @@ function normalizePokerHandRank(handRank) {
       }))
       : []
   };
+}
+
+function normalizeCommunityPokerHandRank(handRank) {
+  const normalized = normalizePokerHandRank(handRank);
+  if (normalized.id === 'high_pair' || normalized.id === 'low_pair') {
+    return {
+      ...normalized,
+      label: '원페어'
+    };
+  }
+  return normalized;
+}
+
+function getPokerHandTieBreakers(handRank) {
+  const rank = normalizePokerHandRank(handRank);
+  const counts = rank.counts
+    .map((entry) => ({ rank: Number(entry.rank) || 0, count: Number(entry.count) || 0 }))
+    .sort((a, b) => b.count - a.count || b.rank - a.rank);
+  const ranksDescending = rank.cards
+    .map((card) => pokerRankValue(parsePokerCard(card).rank))
+    .sort((a, b) => b - a);
+
+  if (rank.id === 'royal_flush') return [14];
+  if (rank.id === 'straight_flush' || rank.id === 'straight') return [rank.highRank];
+  if (rank.id === 'four_kind') {
+    const quad = counts.find((entry) => entry.count === 4)?.rank ?? 0;
+    const kicker = counts.find((entry) => entry.count === 1)?.rank ?? 0;
+    return [quad, kicker];
+  }
+  if (rank.id === 'full_house') {
+    const triple = counts.find((entry) => entry.count === 3)?.rank ?? 0;
+    const pair = counts.find((entry) => entry.count === 2)?.rank ?? 0;
+    return [triple, pair];
+  }
+  if (rank.id === 'flush' || rank.id === 'high_card') return ranksDescending;
+  if (rank.id === 'three_kind') {
+    const triple = counts.find((entry) => entry.count === 3)?.rank ?? 0;
+    const kickers = counts
+      .filter((entry) => entry.count === 1)
+      .map((entry) => entry.rank)
+      .sort((a, b) => b - a);
+    return [triple, ...kickers];
+  }
+  if (rank.id === 'two_pair') {
+    const pairs = counts
+      .filter((entry) => entry.count === 2)
+      .map((entry) => entry.rank)
+      .sort((a, b) => b - a);
+    const kicker = counts.find((entry) => entry.count === 1)?.rank ?? 0;
+    return [...pairs, kicker];
+  }
+  if (rank.id === 'high_pair' || rank.id === 'low_pair') {
+    const pair = counts.find((entry) => entry.count === 2)?.rank ?? 0;
+    const kickers = counts
+      .filter((entry) => entry.count === 1)
+      .map((entry) => entry.rank)
+      .sort((a, b) => b - a);
+    return [pair, ...kickers];
+  }
+
+  return [rank.highRank, ...ranksDescending];
+}
+
+function getPokerCombinations(cards, size) {
+  const results = [];
+  const current = [];
+
+  function visit(start) {
+    if (current.length === size) {
+      results.push([...current]);
+      return;
+    }
+
+    const needed = size - current.length;
+    for (let index = start; index <= cards.length - needed; index += 1) {
+      current.push(cards[index]);
+      visit(index + 1);
+      current.pop();
+    }
+  }
+
+  visit(0);
+  return results;
 }
 
 function getPokerHandRankId({ counts, flush, straight, straightHigh }) {

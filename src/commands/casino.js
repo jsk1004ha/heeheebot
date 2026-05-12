@@ -10,9 +10,11 @@ import {
   cashOutDeadlineRound,
   applyPokerRecommendedHold,
   clearPokerHold,
+  actPlayerHoldemRound,
   createBlackjackRound,
   createDeadlineRound,
   createPlayerBlackjackRound,
+  createPlayerHoldemRound,
   createPokerRound,
   createScratchTicket,
   createTimingRound,
@@ -74,12 +76,15 @@ const CHALLENGE_TTL_MS = 60_000;
 const SCRATCH_TICKET_TTL_MS = 5 * 60_000;
 const CASINO_PENDING_CLEANUP_MIN_DELAY_MS = 1_000;
 const EMOJI_RACE_FRAME_DELAY_MS = 500;
+const POKER_LOBBY_MAX_PLAYERS = 6;
 const pendingBlackjackChallenges = new Map();
 const pendingDeadlineGames = new Map();
 const pendingTimingGames = new Map();
 const pendingAiBlackjackGames = new Map();
 const pendingPlayerBlackjackGames = new Map();
 const pendingPokerGames = new Map();
+const pendingPokerLobbies = new Map();
+const pendingPlayerPokerGames = new Map();
 const pendingScratchTickets = new Map();
 let pendingCasinoCleanupTimer = null;
 
@@ -225,11 +230,11 @@ export const casinoCommands = [
     ),
   new SlashCommandBuilder()
     .setName('포커')
-    .setDescription('5장 드로우 포커입니다. 보류할 카드를 고르고 한 번 교체합니다.')
+    .setDescription('참가 버튼으로 들어오는 텍사스 홀덤 포커방을 만듭니다.')
     .addIntegerOption((option) =>
       option
-        .setName('돈')
-        .setDescription('베팅할 골드')
+        .setName('시작칩')
+        .setDescription('포커방 시작 스택으로 사용할 칩. 시작하면 같은 수의 골드가 칩으로 바뀝니다.')
         .setMinValue(1)
         .setRequired(true)
     ),
@@ -459,15 +464,26 @@ export async function cleanupExpiredCasinoGames(economy, logger = console, now =
     removed += 1;
   }
 
-  const playerResult = await cleanupExpiredCasinoPendingMap(
+  for (const [lobbyId, lobby] of pendingPokerLobbies.entries()) {
+    if (lobby.expiresAt > now) continue;
+    pendingPokerLobbies.delete(lobbyId);
+    removed += 1;
+  }
+
+  for (const pendingPlayerGames of [
     pendingPlayerBlackjackGames,
-    economy,
-    logger,
-    now,
-    refundReservedPlayerCasinoPot
-  );
-  removed += playerResult.removed;
-  refunded += playerResult.refunded;
+    pendingPlayerPokerGames
+  ]) {
+    const playerResult = await cleanupExpiredCasinoPendingMap(
+      pendingPlayerGames,
+      economy,
+      logger,
+      now,
+      refundReservedPlayerCasinoPot
+    );
+    removed += playerResult.removed;
+    refunded += playerResult.refunded;
+  }
 
   if (removed > 0) {
     logger.debug?.(`Cleaned up ${removed} expired casino game(s); refunded ${refunded} reserved wager(s).`);
@@ -522,10 +538,26 @@ function getNextPendingCasinoExpiry() {
     ...[...pendingPokerGames.values()].map((pending) => pending.expiresAt),
     ...[...pendingAiBlackjackGames.values()].map((pending) => pending.expiresAt),
     ...[...pendingBlackjackChallenges.values()].map((pending) => pending.expiresAt),
-    ...[...pendingPlayerBlackjackGames.values()].map((pending) => pending.expiresAt)
+    ...[...pendingPokerLobbies.values()].map((pending) => pending.expiresAt),
+    ...[...pendingPlayerBlackjackGames.values()].map((pending) => pending.expiresAt),
+    ...[...pendingPlayerPokerGames.values()].map((pending) => pending.expiresAt)
   ].filter((expiresAt) => Number.isFinite(expiresAt) && expiresAt > 0);
 
   return expiries.length > 0 ? Math.min(...expiries) : null;
+}
+
+function getCasinoBetOption(interaction) {
+  if (interaction.commandName !== '포커') {
+    return interaction.options.getInteger('돈', true);
+  }
+
+  const chips = interaction.options.getInteger('시작칩');
+
+  if (chips === null || chips === undefined) {
+    throw new Error('포커 시작칩을 입력해주세요.');
+  }
+
+  return chips;
 }
 
 async function refundReservedCasinoWager(economy, logger, pending) {
@@ -547,18 +579,24 @@ async function refundReservedCasinoWager(economy, logger, pending) {
 }
 
 async function refundReservedPlayerCasinoPot(economy, logger, pending) {
-  if (!pending?.reserved || typeof economy?.resolveReservedPlayerPot !== 'function') return 0;
+  if (!pending?.reserved) return 0;
 
   try {
-    await economy.resolveReservedPlayerPot({
-      guildId: pending.guildId,
-      challenger: pending.challenger,
-      opponent: pending.opponent,
-      bet: pending.bet,
-      winnerUserId: null
-    });
+    if (pending.players?.length > 2) {
+      await refundReservedPlayerPokerTable(economy, pending);
+    } else if (typeof economy?.resolveReservedPlayerPot === 'function') {
+      await economy.resolveReservedPlayerPot({
+        guildId: pending.guildId,
+        challenger: pending.challenger,
+        opponent: pending.opponent,
+        bet: pending.bet,
+        winnerUserId: null
+      });
+    } else {
+      return 0;
+    }
     pending.reserved = false;
-    return 2;
+    return pending.players?.length ?? 2;
   } catch (error) {
     logger.error?.('Failed to refund expired player casino pot:', error);
     return 0;
@@ -577,7 +615,7 @@ async function routeCasinoCommand(interaction, economy, logger = console, option
     return;
   }
 
-  const bet = interaction.options.getInteger('돈', true);
+  const bet = getCasinoBetOption(interaction);
 
   if (interaction.commandName === '홀짝') {
     const choice = normalizeOddEvenChoice(interaction.options.getString('선택', true));
@@ -694,7 +732,7 @@ async function routeCasinoCommand(interaction, economy, logger = console, option
   }
 
   if (interaction.commandName === '포커') {
-    await playPoker(interaction, economy, bet, options);
+    await createPlayerPokerLobby(interaction, economy, bet, options);
     return;
   }
 
@@ -769,7 +807,7 @@ function formatCasinoInfo() {
     '- `/럭키세븐`: 주사위 2개 합이 7이면 5.5배',
     '- `/하이로우`: 두 번째 카드가 높음/낮음 적중 시 1.9배, 같은 숫자는 환불',
     '- `/블랙잭`: 승리 1.5배, 내추럴 블랙잭 2배, 무승부 환불',
-    '- `/포커`: 5장 드로우 포커. 보류할 카드를 고르고 한 번 교체, J 이상 원페어부터 환급',
+    '- `/포커`: `시작칩`을 시작 스택으로 쓰는 텍사스 홀덤 포커방 생성, 원하는 유저가 참가하고 방장이 시작',
     '- `/룰렛`: 색상/홀짝/구간 2배, 0은 36배',
     '- `/바카라`: 플레이어 2배, 뱅커 1.95배, 타이 9배',
     '- `/크랩스`: 패스/돈패스 라인 승리 2배, 일부 무효는 환불',
@@ -1260,8 +1298,170 @@ async function playPoker(interaction, economy, bet, options = {}) {
   }
 }
 
+async function createPlayerPokerLobby(interaction, economy, bet, options = {}) {
+  const hostProfile = await economy.getProfile(interaction.guildId, interaction.user.id, interaction.user.username);
+  if (getCasinoChips(hostProfile) < bet) {
+    throw new Error(`내 골드이 부족합니다. 현재 골드: ${getCasinoChips(hostProfile).toLocaleString()}골드`);
+  }
+
+  const host = {
+    key: 'challenger',
+    userId: interaction.user.id,
+    username: interaction.user.username
+  };
+  const lobbyId = createChallengeId();
+  const lobby = {
+    guildId: interaction.guildId,
+    channelId: interaction.channelId,
+    host,
+    challenger: host,
+    players: [host],
+    maxPlayers: POKER_LOBBY_MAX_PLAYERS,
+    bet,
+    deck: options.playerPokerDeck ?? options.pokerDeck ?? null,
+    expiresAt: Date.now() + CHALLENGE_TTL_MS
+  };
+
+  pendingPokerLobbies.set(lobbyId, lobby);
+
+  await interaction.reply({
+    content: formatPlayerPokerLobby(lobby),
+    allowedMentions: { parse: [] },
+    components: [createPlayerPokerLobbyRow(lobbyId, lobby)]
+  });
+}
+
+function createPlayerPokerLobbyRow(lobbyId, lobby) {
+  const isFull = lobby.players.length >= lobby.maxPlayers;
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`poker_join:${lobbyId}`)
+      .setLabel('참가')
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(isFull),
+    new ButtonBuilder()
+      .setCustomId(`poker_leave:${lobbyId}`)
+      .setLabel('나가기')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(`poker_start:${lobbyId}`)
+      .setLabel('시작')
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(lobby.players.length < 2),
+    new ButtonBuilder()
+      .setCustomId(`poker_cancel:${lobbyId}`)
+      .setLabel('취소')
+      .setStyle(ButtonStyle.Danger)
+  );
+}
+
+function formatPlayerPokerLobby(lobby) {
+  return [
+    '🃏 **텍사스 홀덤 포커방**',
+    `방장: ${formatPlayerPokerParticipantMention(lobby.host)}`,
+    `인원: **${lobby.players.length}명** / 최대 **${lobby.maxPlayers}명**`,
+    `참가자: ${lobby.players.map(formatPlayerPokerParticipantMention).join(', ')}`,
+    `시작칩: **${lobby.bet.toLocaleString()}칩 = ${lobby.bet.toLocaleString()}골드**`,
+    '시작 전에는 골드가 빠지지 않습니다. 시작하면 골드가 칩으로 바뀝니다.',
+    '방식: **텍사스 홀덤** — 블라인드, 콜, 레이즈, 올인, 폴드로 칩 팟을 만들고 최종 남은 칩만 골드로 돌아옵니다.',
+    '원하는 사람은 **참가**를 누르고, 방장은 2명 이상 모이면 **시작**을 누르세요.',
+    '60초 동안 입력이 없으면 방이 만료됩니다.'
+  ].join('\n');
+}
+
+function createPokerLobbyUpdatePayload(lobbyId, lobby) {
+  return {
+    content: formatPlayerPokerLobby(lobby),
+    allowedMentions: { parse: [] },
+    components: [createPlayerPokerLobbyRow(lobbyId, lobby)]
+  };
+}
+
+function createPokerLobbyPlayerKey(index) {
+  if (index === 0) return 'challenger';
+  if (index === 1) return 'opponent';
+  return `player${index}`;
+}
+
+function normalizePokerLobbyPlayersForGame(players) {
+  return players.map((player, index) => ({
+    ...player,
+    key: createPokerLobbyPlayerKey(index)
+  }));
+}
+
+function createPokerLobbyParticipant(user, index) {
+  return {
+    key: createPokerLobbyPlayerKey(index),
+    userId: user.id,
+    username: user.username
+  };
+}
+
+async function reservePlayerPokerTable(economy, challenge) {
+  if (challenge.players.length === 2 && typeof economy.reservePlayerPot === 'function') {
+    return economy.reservePlayerPot({
+      guildId: challenge.guildId,
+      challenger: challenge.challenger,
+      opponent: challenge.opponent,
+      bet: challenge.bet
+    });
+  }
+
+  if (typeof economy.reservePlayerTablePot !== 'function') {
+    throw new Error('3인 이상 포커 예약 정산 기능을 사용할 수 없습니다.');
+  }
+
+  return economy.reservePlayerTablePot({
+    guildId: challenge.guildId,
+    players: challenge.players,
+    bet: challenge.bet
+  });
+}
+
+async function refundReservedPlayerPokerTable(economy, pending) {
+  if (pending.players?.length > 2) {
+    if (typeof economy.resolveReservedPlayerTableStacks !== 'function') {
+      throw new Error('3인 이상 포커 환불 기능을 사용할 수 없습니다.');
+    }
+    return economy.resolveReservedPlayerTableStacks({
+      guildId: pending.guildId,
+      players: pending.players,
+      bet: pending.bet,
+      pot: 0,
+      winnerUserIds: [],
+      payouts: Object.fromEntries(pending.players.map((player) => [player.key, pending.bet]))
+    });
+  }
+
+  return economy.resolveReservedPlayerPot({
+    guildId: pending.guildId,
+    challenger: pending.challenger,
+    opponent: pending.opponent,
+    bet: pending.bet,
+    winnerUserId: null
+  });
+}
+
 async function handlePokerButton(interaction, economy, logger) {
   const [action, gameId, rawIndex] = interaction.customId.split(':');
+
+  if (['poker_join', 'poker_leave', 'poker_start', 'poker_cancel'].includes(action)) {
+    return handlePokerLobbyButton(interaction, economy, logger);
+  }
+
+  if ([
+    'poker_pvp_peek',
+    'poker_pvp_check',
+    'poker_pvp_call',
+    'poker_pvp_half_pot',
+    'poker_pvp_pot',
+    'poker_pvp_all_in',
+    'poker_pvp_fold'
+  ].includes(action)) {
+    return handlePlayerPokerButton(interaction, economy, logger);
+  }
+
   const pending = pendingPokerGames.get(gameId);
 
   if (!pending) {
@@ -1414,6 +1614,421 @@ async function handlePokerButton(interaction, economy, logger) {
   }
 
   return true;
+}
+
+async function handlePokerLobbyButton(interaction, economy, logger) {
+  const [action, lobbyId] = interaction.customId.split(':');
+  const lobby = pendingPokerLobbies.get(lobbyId);
+
+  if (!lobby) {
+    await safeReplyToInteraction(interaction, {
+      content: '이미 만료되었거나 처리된 포커방입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (Date.now() > lobby.expiresAt) {
+    pendingPokerLobbies.delete(lobbyId);
+    await interaction.update({
+      content: '⏰ 포커방이 만료되었습니다.',
+      components: []
+    });
+    return true;
+  }
+
+  if (action === 'poker_join') {
+    if (interaction.user.bot) {
+      await safeReplyToInteraction(interaction, {
+        content: '봇 유저는 포커방에 참가할 수 없습니다.',
+        flags: MessageFlags.Ephemeral
+      });
+      return true;
+    }
+
+    if (lobby.players.some((player) => player.userId === interaction.user.id)) {
+      await safeReplyToInteraction(interaction, {
+        content: '이미 이 포커방에 참가했습니다.',
+        flags: MessageFlags.Ephemeral
+      });
+      return true;
+    }
+
+    if (lobby.players.length >= lobby.maxPlayers) {
+      await safeReplyToInteraction(interaction, {
+        content: '이미 포커방 인원이 가득 찼습니다.',
+        flags: MessageFlags.Ephemeral
+      });
+      return true;
+    }
+
+    const profile = await economy.getProfile(interaction.guildId, interaction.user.id, interaction.user.username);
+    if (getCasinoChips(profile) < lobby.bet) {
+      await safeReplyToInteraction(interaction, {
+        content: `골드이 부족합니다. 현재 골드: ${getCasinoChips(profile).toLocaleString()}골드`,
+        flags: MessageFlags.Ephemeral
+      });
+      return true;
+    }
+
+    lobby.players.push(createPokerLobbyParticipant(interaction.user, lobby.players.length));
+    lobby.expiresAt = Date.now() + CHALLENGE_TTL_MS;
+    await interaction.update(createPokerLobbyUpdatePayload(lobbyId, lobby));
+    return true;
+  }
+
+  if (action === 'poker_leave') {
+    const playerIndex = lobby.players.findIndex((player) => player.userId === interaction.user.id);
+    if (playerIndex === -1) {
+      await safeReplyToInteraction(interaction, {
+        content: '이 포커방에 참가 중이 아닙니다.',
+        flags: MessageFlags.Ephemeral
+      });
+      return true;
+    }
+
+    if (lobby.players[playerIndex].userId === lobby.host.userId) {
+      await safeReplyToInteraction(interaction, {
+        content: '방장은 나가기 대신 취소 버튼으로 방을 닫을 수 있습니다.',
+        flags: MessageFlags.Ephemeral
+      });
+      return true;
+    }
+
+    lobby.players.splice(playerIndex, 1);
+    lobby.expiresAt = Date.now() + CHALLENGE_TTL_MS;
+    await interaction.update(createPokerLobbyUpdatePayload(lobbyId, lobby));
+    return true;
+  }
+
+  if (action === 'poker_cancel') {
+    if (interaction.user.id !== lobby.host.userId) {
+      await safeReplyToInteraction(interaction, {
+        content: '포커방은 방장만 취소할 수 있습니다.',
+        flags: MessageFlags.Ephemeral
+      });
+      return true;
+    }
+
+    pendingPokerLobbies.delete(lobbyId);
+    await interaction.update({
+      content: `🃏 ${formatPlayerPokerParticipantMention(lobby.host)}님이 포커방을 취소했습니다.`,
+      allowedMentions: { parse: [] },
+      components: []
+    });
+    return true;
+  }
+
+  if (action !== 'poker_start') {
+    await safeReplyToInteraction(interaction, {
+      content: '알 수 없는 포커방 버튼입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (interaction.user.id !== lobby.host.userId) {
+    await safeReplyToInteraction(interaction, {
+      content: '포커방은 방장만 시작할 수 있습니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (lobby.players.length < 2) {
+    await safeReplyToInteraction(interaction, {
+      content: '텍사스 홀덤은 최소 2명이 필요합니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (lobby.processing) {
+    await safeReplyToInteraction(interaction, {
+      content: '포커방을 시작하는 중입니다. 잠시 후 다시 확인해주세요.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  lobby.processing = true;
+  let reserved = false;
+  let reservedTable = null;
+
+  try {
+    const tablePlayers = normalizePokerLobbyPlayersForGame(lobby.players);
+    const table = {
+      ...lobby,
+      players: tablePlayers,
+      host: tablePlayers[0],
+      challenger: tablePlayers[0],
+      opponent: tablePlayers[1]
+    };
+    reservedTable = table;
+    const gameId = createChallengeId();
+    await reservePlayerPokerTable(economy, table);
+    reserved = true;
+
+    const game = createPlayerHoldemRound({
+      bet: table.bet,
+      players: table.players.map((player) => player.key),
+      deck: table.deck
+    });
+
+    pendingPokerLobbies.delete(lobbyId);
+    pendingPlayerPokerGames.set(gameId, {
+      ...table,
+      game,
+      reserved: true,
+      processing: false,
+      expiresAt: Date.now() + CHALLENGE_TTL_MS
+    });
+
+    await interaction.update(createPlayerPokerProgressPayload(
+      table,
+      game,
+      createPlayerPokerRows(gameId, game)
+    ));
+  } catch (error) {
+    pendingPokerLobbies.delete(lobbyId);
+    if (reserved) {
+      await refundReservedPlayerPokerTable(economy, reservedTable ?? lobby)
+        .catch((refundError) => logger.error('Failed to refund poker pot:', refundError));
+    }
+    logger.error(error);
+    await interaction.update({
+      content: `포커방 시작 실패: ${error.message}`,
+      components: []
+    });
+  } finally {
+    lobby.processing = false;
+  }
+
+  return true;
+}
+
+async function handlePlayerPokerButton(interaction, economy, logger) {
+  const [action, gameId] = interaction.customId.split(':');
+  const pending = pendingPlayerPokerGames.get(gameId);
+
+  if (!pending) {
+    await safeReplyToInteraction(interaction, {
+      content: '이미 만료되었거나 처리된 포커 대결입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  const participant = getPlayerPokerParticipant(pending, interaction.user.id);
+  if (!participant) {
+    await safeReplyToInteraction(interaction, {
+      content: '이 포커 대결의 참여자만 버튼을 누를 수 있습니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (action === 'poker_pvp_peek') {
+    await safeReplyToInteraction(interaction, {
+      content: formatPlayerPokerPrivateHand(pending, participant),
+      flags: MessageFlags.Ephemeral,
+      allowedMentions: { parse: [] }
+    });
+    return true;
+  }
+
+  if (![
+    'poker_pvp_check',
+    'poker_pvp_call',
+    'poker_pvp_half_pot',
+    'poker_pvp_pot',
+    'poker_pvp_all_in',
+    'poker_pvp_fold'
+  ].includes(action)) {
+    await safeReplyToInteraction(interaction, {
+      content: '알 수 없는 포커 대결 버튼입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (pending.game.currentTurn !== participant) {
+    await safeReplyToInteraction(interaction, {
+      content: '아직 내 차례가 아닙니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  const acknowledged = await safeDeferUpdate(interaction);
+  if (!acknowledged) {
+    logger.warn?.('Player poker interaction expired before it could be acknowledged.');
+    return true;
+  }
+
+  if (pendingPlayerPokerGames.get(gameId) !== pending) {
+    await safeReplyToInteraction(interaction, {
+      content: '이미 만료되었거나 처리된 포커 대결입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (pending.processing) {
+    await safeReplyToInteraction(interaction, {
+      content: '이전 포커 입력을 처리 중입니다. 잠시 후 다시 눌러주세요.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  pending.processing = true;
+
+  try {
+    if (Date.now() > pending.expiresAt) {
+      pendingPlayerPokerGames.delete(gameId);
+      await refundReservedPlayerPokerTable(economy, pending);
+      pending.reserved = false;
+      const updated = await sendInteractionUpdate(interaction, {
+        content: '⏰ 포커 대결이 만료되었습니다. 양쪽 베팅금은 환불되었습니다.',
+        components: []
+      });
+      if (!updated) {
+        logger.warn?.('Player poker expired message could not be sent because the interaction expired.');
+      }
+      return true;
+    }
+
+    const game = actPlayerHoldemRound(
+      pending.game,
+      participant,
+      getPlayerPokerAction(action)
+    );
+    pending.game = game;
+
+    if (game.status !== 'settled') {
+      pending.expiresAt = Date.now() + CHALLENGE_TTL_MS;
+      const updated = await sendInteractionUpdate(
+        interaction,
+        createPlayerPokerProgressPayload(
+          pending,
+          game,
+          createPlayerPokerRows(gameId, game)
+        )
+      );
+      if (!updated) {
+        logger.warn?.('Player poker progress update could not be sent because the interaction expired.');
+      }
+      return true;
+    }
+
+    pendingPlayerPokerGames.delete(gameId);
+    const settlement = await resolveReservedPlayerPokerStack(economy, pending, game);
+    pending.reserved = false;
+
+    const updated = await sendInteractionUpdate(
+      interaction,
+      createPlayerPokerResultPayload(pending, game, settlement)
+    );
+    if (!updated) {
+      logger.warn?.('Player poker result could not be sent because the interaction expired.');
+    }
+  } catch (error) {
+    pendingPlayerPokerGames.delete(gameId);
+    if (pending.reserved) {
+      await refundReservedPlayerPokerTable(economy, pending)
+        .catch((refundError) => logger.error('Failed to refund poker pot:', refundError));
+    }
+    logger.error(error);
+    const updated = await sendInteractionUpdate(interaction, {
+      content: `포커 대결 실패: ${error.message}`,
+      components: []
+    });
+    if (!updated) {
+      logger.warn?.('Player poker failure could not be sent because the interaction expired.');
+    }
+  } finally {
+    if (pendingPlayerPokerGames.get(gameId) === pending) {
+      pending.processing = false;
+    }
+  }
+
+  return true;
+}
+
+function getPlayerPokerAction(action) {
+  if (action === 'poker_pvp_fold') return 'fold';
+  if (action === 'poker_pvp_check') return 'check';
+  if (action === 'poker_pvp_call') return 'call';
+  if (action === 'poker_pvp_half_pot') return 'half_pot';
+  if (action === 'poker_pvp_pot') return 'pot';
+  if (action === 'poker_pvp_all_in') return 'all_in';
+  throw new Error('알 수 없는 포커 대결 버튼입니다.');
+}
+
+async function resolveReservedPlayerPokerStack(economy, pending, game) {
+  if (pending.players?.length > 2) {
+    if (typeof economy.resolveReservedPlayerTableStacks !== 'function') {
+      throw new Error('3인 이상 포커 스택 정산 기능을 사용할 수 없습니다.');
+    }
+    return economy.resolveReservedPlayerTableStacks({
+      guildId: pending.guildId,
+      players: pending.players,
+      bet: pending.bet,
+      pot: game.pot,
+      winnerUserIds: game.winners.map((winnerKey) => getPlayerPokerParticipantInfo(pending, winnerKey)?.userId).filter(Boolean),
+      payouts: Object.fromEntries(game.players.map((player) => [player.key, player.stack]))
+    });
+  }
+
+  const winnerUserId = game.winner === 'challenger'
+    ? pending.challenger.userId
+    : game.winner === 'opponent'
+      ? pending.opponent.userId
+      : null;
+  const payload = {
+    guildId: pending.guildId,
+    challenger: pending.challenger,
+    opponent: pending.opponent,
+    bet: pending.bet,
+    pot: game.pot,
+    winnerUserId,
+    challengerPayout: game.challenger.stack,
+    opponentPayout: game.opponent.stack
+  };
+
+  if (typeof economy.resolveReservedPlayerStackPot === 'function') {
+    return economy.resolveReservedPlayerStackPot(payload);
+  }
+
+  if (typeof economy.resolveReservedPlayerPot !== 'function') {
+    throw new Error('포커 스택 정산 기능을 사용할 수 없습니다.');
+  }
+
+  if (payload.challengerPayout === pending.bet && payload.opponentPayout === pending.bet) {
+    return economy.resolveReservedPlayerPot({
+      guildId: pending.guildId,
+      challenger: pending.challenger,
+      opponent: pending.opponent,
+      bet: pending.bet,
+      winnerUserId: null
+    });
+  }
+
+  if (payload.winnerUserId && (
+    (payload.winnerUserId === pending.challenger.userId && payload.challengerPayout === pending.bet * 2 && payload.opponentPayout === 0)
+      || (payload.winnerUserId === pending.opponent.userId && payload.opponentPayout === pending.bet * 2 && payload.challengerPayout === 0)
+  )) {
+    return economy.resolveReservedPlayerPot({
+      guildId: pending.guildId,
+      challenger: pending.challenger,
+      opponent: pending.opponent,
+      bet: pending.bet,
+      winnerUserId: payload.winnerUserId
+    });
+  }
+
+  throw new Error('현재 경제 서비스가 부분 팟 정산을 지원하지 않습니다.');
 }
 
 async function playDeadline(interaction, economy, bet) {
@@ -2246,6 +2861,120 @@ function formatPokerResult(user, game, settlement) {
   ].join('\n');
 }
 
+function createPlayerPokerProgressPayload(challenge, game, components = []) {
+  const currentPlayer = getPlayerPokerParticipantInfo(challenge, game.currentTurn);
+  return {
+    content: formatPlayerPokerProgress(challenge, game),
+    allowedMentions: createAllowedMentionsForUsers([currentPlayer?.userId]),
+    components
+  };
+}
+
+function formatPlayerPokerProgress(challenge, game) {
+  const currentMention = formatPlayerPokerParticipantMention(getPlayerPokerParticipantInfo(challenge, game.currentTurn));
+  const callAmount = getPlayerPokerCallAmount(game, game.currentTurn);
+
+  return [
+    '🃏 **텍사스 홀덤 진행 중**',
+    `인원: **${game.players.length}명** / 시작칩: **${game.bet.toLocaleString()}칩** / 블라인드: **${game.smallBlind.toLocaleString()}/${game.bigBlind.toLocaleString()}칩** / 단계: **${game.streetLabel}**`,
+    `팟: **${game.pot.toLocaleString()}칩** / 현재 베팅: **${game.currentBet.toLocaleString()}칩** / 콜 필요: **${callAmount.toLocaleString()}칩** / 최소 레이즈: **${game.minRaise.toLocaleString()}칩**`,
+    `커뮤니티: ${formatHoldemCommunityCards(game)}`,
+    ...game.players.map((player) => `${formatPlayerPokerParticipantMention(getPlayerPokerParticipantInfo(challenge, player.key))}: ${formatHoldemPublicParticipant(player)}`),
+    `현재 차례: ${currentMention}`,
+    '각자 **내 패 보기**로 홀카드를 비공개 확인하고, 차례에는 체크/콜, 하프팟, 팟, 올인, 폴드를 선택합니다.'
+  ].join('\n');
+}
+
+function formatHoldemPublicParticipant(participant) {
+  if (participant.folded) return '폴드';
+  const state = participant.allIn
+    ? '올인'
+    : participant.acted
+      ? '행동 완료'
+      : '대기 중';
+  return [
+    `스택 **${participant.stack.toLocaleString()}칩**`,
+    `이번 베팅 **${participant.streetCommitted.toLocaleString()}칩**`,
+    state
+  ].join(' · ');
+}
+
+function formatPlayerPokerPrivateHand(challenge, participant) {
+  const player = getPlayerPokerParticipantInfo(challenge, participant);
+  const gamePlayer = challenge.game[participant];
+  const callAmount = getPlayerPokerCallAmount(challenge.game, participant);
+
+  return [
+    `🃏 **내 텍사스 홀덤 패 — ${player?.username ?? '참가자'}**`,
+    `홀카드: **${formatPokerHand(gamePlayer.holeCards)}**`,
+    `커뮤니티: ${formatHoldemCommunityCards(challenge.game)}`,
+    `내 스택: **${gamePlayer.stack.toLocaleString()}칩** / 콜 필요: **${callAmount.toLocaleString()}칩**`,
+    '이 메시지는 본인에게만 보입니다.'
+  ].join('\n');
+}
+
+function createPlayerPokerResultPayload(challenge, game, settlement) {
+  const winnerUserIds = game.winners
+    .map((winnerKey) => getPlayerPokerParticipantInfo(challenge, winnerKey)?.userId)
+    .filter(Boolean);
+
+  return {
+    content: formatPlayerPokerResult(challenge, game, settlement),
+    allowedMentions: createAllowedMentionsForUsers([
+      ...winnerUserIds,
+      ...challenge.players.map((player) => player.userId)
+    ]),
+    components: []
+  };
+}
+
+function formatPlayerPokerResult(challenge, game, settlement) {
+  const reason = game.settlementReason === 'fold' ? '폴드' : '쇼다운';
+  const playerLines = game.players.map((player) => (
+    `${formatPlayerPokerParticipantMention(getPlayerPokerParticipantInfo(challenge, player.key))}: ${formatPokerHand(player.holeCards)} · **${player.handRank.label}**`
+  ));
+  const stackLine = game.players
+    .map((player) => `${formatPlayerPokerParticipantMention(getPlayerPokerParticipantInfo(challenge, player.key))} **${player.stack.toLocaleString()}골드**`)
+    .join(' / ');
+
+  if (game.winners.length === 0) {
+    return [
+      `🃏 **텍사스 홀덤 결과 — ${reason}**`,
+      `커뮤니티: ${formatPokerHand(game.communityCards)}`,
+      ...playerLines,
+      `획득 팟: **${game.pot.toLocaleString()}칩**`,
+      `최종 반환: ${stackLine}`,
+      '결과: **무승부** — 팟을 나눠 가졌습니다.'
+    ].join('\n');
+  }
+
+  const winnerMention = game.winners
+    .map((winnerKey) => formatPlayerPokerParticipantMention(getPlayerPokerParticipantInfo(challenge, winnerKey)))
+    .join(', ');
+  const winnerBalance = settlement.winner ? getCasinoChips(settlement.winner).toLocaleString() : null;
+
+  return [
+    `🃏 **텍사스 홀덤 결과 — ${reason}**`,
+    `커뮤니티: ${formatPokerHand(game.communityCards)}`,
+    ...playerLines,
+    `승자: ${winnerMention}`,
+    `획득 팟: **${game.pot.toLocaleString()}칩**`,
+    `최종 반환: ${stackLine}`,
+    winnerBalance ? `승자 골드: **${winnerBalance}골드**` : null
+  ].filter((line) => line !== null).join('\n');
+}
+
+function formatHoldemCommunityCards(game) {
+  return game.communityCards
+    .map((card, index) => index < game.revealedCommunityCount ? card : '🂠')
+    .join(' ');
+}
+
+function getPlayerPokerCallAmount(game, participant) {
+  if (!participant) return 0;
+  return Math.max(0, game.currentBet - game[participant].streetCommitted);
+}
+
 function formatPokerHand(cards, held = []) {
   return cards
     .map((card, index) => held[index] ? `**[${card}]**` : card)
@@ -2389,6 +3118,53 @@ function createPokerRows(gameId, game) {
   );
 
   return [cardRow, actionRow];
+}
+
+function createPlayerPokerRows(gameId, game) {
+  const current = game.currentTurn ? game[game.currentTurn] : null;
+  const callAmount = game.currentTurn ? getPlayerPokerCallAmount(game, game.currentTurn) : 0;
+  const canAct = game.status === 'betting' && current && !current.folded && !current.allIn;
+
+  const mainRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`poker_pvp_peek:${gameId}`)
+      .setLabel('내 패 보기')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(`${callAmount > 0 ? 'poker_pvp_call' : 'poker_pvp_check'}:${gameId}`)
+      .setLabel(callAmount > 0 ? `콜 ${formatShortChip(callAmount)}` : '체크')
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(!canAct),
+    new ButtonBuilder()
+      .setCustomId(`poker_pvp_fold:${gameId}`)
+      .setLabel('폴드')
+      .setStyle(ButtonStyle.Danger)
+      .setDisabled(!canAct)
+  );
+
+  const betRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`poker_pvp_half_pot:${gameId}`)
+      .setLabel('1/2팟')
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(!canAct || current.stack <= 0),
+    new ButtonBuilder()
+      .setCustomId(`poker_pvp_pot:${gameId}`)
+      .setLabel('팟')
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(!canAct || current.stack <= 0),
+    new ButtonBuilder()
+      .setCustomId(`poker_pvp_all_in:${gameId}`)
+      .setLabel(`올인 ${formatShortChip(current?.stack ?? 0)}`)
+      .setStyle(ButtonStyle.Danger)
+      .setDisabled(!canAct || current.stack <= 0)
+  );
+
+  return [mainRow, betRow];
+}
+
+function formatShortChip(amount) {
+  return `${Number(amount || 0).toLocaleString()}칩`;
 }
 
 function getRevealedScratchTicketAmountCount(ticket, amount) {
@@ -2709,6 +3485,22 @@ function getBlackjackParticipant(game, userId) {
   if (game.challenger.userId === userId) return 'challenger';
   if (game.opponent.userId === userId) return 'opponent';
   return null;
+}
+
+function getPlayerPokerParticipant(game, userId) {
+  const player = game.players?.find((participant) => participant.userId === userId);
+  if (player) return player.key;
+  return getBlackjackParticipant(game, userId);
+}
+
+function getPlayerPokerParticipantInfo(game, participantKey) {
+  if (!participantKey) return null;
+  return game.players?.find((participant) => participant.key === participantKey) ?? null;
+}
+
+function formatPlayerPokerParticipantMention(player) {
+  if (!player) return '알 수 없음';
+  return `<@${player.userId}>`;
 }
 
 function formatRouletteChoice(choice) {

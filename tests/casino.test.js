@@ -17,6 +17,8 @@ import {
   clearPokerHold,
   createBlackjackRound,
   createDeadlineRound,
+  actPlayerHoldemRound,
+  createPlayerHoldemRound,
   createPlayerBlackjackRound,
   createPokerRound,
   createScratchTicket,
@@ -27,6 +29,8 @@ import {
   getScratchTicketProductStats,
   drawPokerRound,
   evaluatePokerHand,
+  evaluateBestPokerHand,
+  comparePokerHands,
   getPokerHoldRecommendation,
   hitBlackjackRound,
   hitPlayerBlackjackRound,
@@ -146,8 +150,15 @@ test('카지노 명령 payload는 다양한 게임을 등록한다', () => {
 
   const deadlineCommand = payloads.find((command) => command.name === '데드라인');
   const deadlineBetOption = deadlineCommand.options.find((option) => option.name === '돈');
+  const pokerCommand = payloads.find((command) => command.name === '포커');
+  const pokerOpponentOption = pokerCommand.options.find((option) => option.name === '상대');
+  const pokerPlayersOption = pokerCommand.options.find((option) => option.name === '인원');
 
   assert.equal(deadlineBetOption.min_value, DEADLINE_MIN_BET);
+  assert.equal(pokerOpponentOption, undefined);
+  assert.equal(pokerPlayersOption, undefined);
+  assert.deepEqual(pokerCommand.options.map((option) => option.name), ['시작칩']);
+  assert.match(pokerCommand.options[0].description, /시작 스택/);
 });
 
 test('카지노정보 명령은 베팅금 없이 게임 배수와 환급 규칙만 안내한다', async () => {
@@ -160,7 +171,7 @@ test('카지노정보 명령은 베팅금 없이 게임 배수와 환급 규칙�
   assert.match(interaction.replied.content, /데드라인.*꽝 확률/);
   assert.match(interaction.replied.content, /타이밍.*5.*20/);
   assert.match(interaction.replied.content, /이모지경마.*2\.7배/);
-  assert.match(interaction.replied.content, /포커.*J 이상 원페어/);
+  assert.match(interaction.replied.content, /포커.*텍사스 홀덤/);
   assert.match(interaction.replied.content, /키노.*번호 1~5개/);
   assert.match(interaction.replied.content, /스크래치복권.*같은 금액 3개/);
   assert.doesNotMatch(interaction.replied.content, /기대|지급률|RTP|%/);
@@ -751,76 +762,314 @@ test('유저 블랙잭 신청과 진행 안내는 상대와 현재 차례를 실
   });
 });
 
-test('포커 명령은 베팅을 예약하고 HOLD/교체 버튼으로 정산한다', async () => {
+test('유저 포커는 원하는 유저가 방에 참가하고 방장이 시작하면 텍사스 홀덤을 진행한다', async () => {
   const calls = [];
   const fakeEconomy = {
-    async reserveWager(payload) {
-      calls.push(['reserve', payload]);
+    async getProfile(_guildId, userId, username) {
       return {
-        bet: payload.bet,
-        profile: { balance: 900 }
+        userId,
+        username,
+        balance: 1_000
       };
     },
-    async resolveReservedWager(payload) {
-      calls.push(['resolve', payload]);
+    async reservePlayerPot(payload) {
+      calls.push(['reservePot', payload]);
       return {
-        bet: payload.bet,
-        payout: payload.payout,
-        profit: payload.payout - payload.bet,
-        profile: { balance: 900 + payload.payout }
+        challenger: { ...payload.challenger, balance: 900 },
+        opponent: { ...payload.opponent, balance: 900 },
+        pot: payload.bet * 2
       };
     },
-    async refundReservedWager(payload) {
-      calls.push(['refund', payload]);
+    async resolveReservedPlayerStackPot(payload) {
+      calls.push(['resolveStackPot', payload]);
       return {
-        bet: payload.bet,
-        payout: payload.bet,
-        profit: 0,
-        profile: { balance: 1000 }
+        challenger: { ...payload.challenger, balance: 900 + payload.challengerPayout },
+        opponent: { ...payload.opponent, balance: 900 + payload.opponentPayout },
+        winner: payload.winnerUserId
+          ? {
+            userId: payload.winnerUserId,
+            username: payload.winnerUserId === 'user-1' ? payload.challenger.username : payload.opponent.username,
+            balance: payload.winnerUserId === 'user-1'
+              ? 900 + payload.challengerPayout
+              : 900 + payload.opponentPayout
+          }
+          : null,
+        pot: payload.pot
       };
     }
   };
-  const interaction = createChatInputInteraction('포커', {
-    integers: { 돈: 100 }
+  const pokerDeck = [
+    'A♠', 'A♥',
+    'K♠', 'Q♠',
+    'J♠', '10♠', '9♠',
+    '2♦',
+    '3♣'
+  ];
+  const room = createChatInputInteraction('포커', {
+    integers: { 시작칩: 100 }
   });
-  const pokerDeck = ['A♠', 'A♥', '3♣', '4♦', '5♠', 'K♣', 'K♦', 'A♦', '2♣', '9♥'];
 
-  assert.equal(await handleCasinoCommand(interaction, fakeEconomy, quietLogger, { pokerDeck }), true);
-  assert.deepEqual(calls.map(([type]) => type), ['reserve']);
-  assert.match(interaction.replied.content, /드로우 포커/);
-  assert.match(interaction.replied.content, /A♠ A♥ 3♣ 4♦ 5♠/);
-  assert.match(interaction.replied.content, /추천 HOLD: \*\*A♠ A♥/);
+  assert.equal(await handleCasinoCommand(room, fakeEconomy, quietLogger, { playerPokerDeck: pokerDeck }), true);
+  assert.match(room.replied.content, /텍사스 홀덤 포커방/);
+  assert.match(room.replied.content, /인원: \*\*1명\*\* \/ 최대 \*\*6명\*\*/);
+  assert.match(room.replied.content, /참가자: <@user-1>/);
+  assert.doesNotMatch(room.replied.content, /<@user-2>/);
+  assert.deepEqual(room.replied.allowedMentions, { parse: [] });
 
-  const recommendId = interaction.replied.components[1].components[0].data.custom_id;
-  const recommend = createCasinoButtonInteraction({ customId: recommendId });
-  assert.equal(await handleCasinoCommand(recommend, fakeEconomy, quietLogger), true);
-  assert.equal(recommend.deferUpdateCalls, 1);
-  assert.match(recommend.updated.content, /\*\*\[A♠\]\*\* \*\*\[A♥\]\*\*/);
+  const joinId = room.replied.components[0].components[0].data.custom_id;
+  const join = createCasinoButtonInteraction({
+    customId: joinId,
+    userId: 'user-2'
+  });
+  assert.equal(await handleCasinoCommand(join, fakeEconomy, quietLogger, { playerPokerDeck: pokerDeck }), true);
+  assert.match(join.updated.content, /인원: \*\*2명\*\* \/ 최대 \*\*6명\*\*/);
+  assert.match(join.updated.content, /참가자: <@user-1>, <@user-2>/);
+  assert.equal(calls.length, 0);
 
-  const clearId = recommend.updated.components[1].components[1].data.custom_id;
-  const clear = createCasinoButtonInteraction({ customId: clearId });
-  assert.equal(await handleCasinoCommand(clear, fakeEconomy, quietLogger), true);
-  assert.doesNotMatch(clear.updated.content, /현재 패: .*\*\*\[A♠\]\*\*/);
-
-  const firstHoldId = clear.updated.components[0].components[0].data.custom_id;
-  const secondHoldId = clear.updated.components[0].components[1].data.custom_id;
-  await handleCasinoCommand(createCasinoButtonInteraction({ customId: firstHoldId }), fakeEconomy, quietLogger);
-  const holdSecond = createCasinoButtonInteraction({ customId: secondHoldId });
-  await handleCasinoCommand(holdSecond, fakeEconomy, quietLogger);
-
-  const drawId = holdSecond.updated.components[1].components[2].data.custom_id;
-  const draw = createCasinoButtonInteraction({ customId: drawId });
-  assert.equal(await handleCasinoCommand(draw, fakeEconomy, quietLogger), true);
-
-  assert.deepEqual(calls.map(([type]) => type), ['reserve', 'resolve']);
-  assert.equal(calls[1][1].payout, 900);
-  assert.match(draw.updated.content, /포커 결과 — 당첨/);
-  assert.match(draw.updated.content, /풀하우스/);
-  assert.match(draw.updated.content, /지급: 900골드/);
-  assert.deepEqual(draw.updated.allowedMentions, {
+  const startId = join.updated.components[0].components[2].data.custom_id;
+  const start = createCasinoButtonInteraction({
+    customId: startId,
+    userId: 'user-1'
+  });
+  assert.equal(await handleCasinoCommand(start, fakeEconomy, quietLogger, { playerPokerDeck: pokerDeck }), true);
+  assert.match(start.updated.content, /텍사스 홀덤 진행 중/);
+  assert.match(start.updated.content, /시작칩: \*\*100칩\*\*/);
+  assert.match(start.updated.content, /블라인드: \*\*1\/2칩\*\*/);
+  assert.match(start.updated.content, /팟: \*\*3칩\*\*/);
+  assert.match(start.updated.content, /콜 필요: \*\*1칩\*\*/);
+  assert.match(start.updated.content, /커뮤니티: 🂠 🂠 🂠 🂠 🂠/);
+  assert.doesNotMatch(start.updated.content, /A♠/);
+  assert.doesNotMatch(start.updated.content, /K♠/);
+  assert.equal(start.updated.components[0].components[1].data.label, '콜 1칩');
+  assert.equal(start.updated.components[1].components[2].data.label, '올인 99칩');
+  assert.match(start.updated.content, /현재 차례: <@user-1>/);
+  assert.deepEqual(start.updated.allowedMentions, {
     parse: [],
     users: ['user-1']
   });
+
+  const peekId = start.updated.components[0].components[0].data.custom_id;
+  const challengerPeek = createCasinoButtonInteraction({
+    customId: peekId,
+    userId: 'user-1'
+  });
+  assert.equal(await handleCasinoCommand(challengerPeek, fakeEconomy, quietLogger), true);
+  assert.equal(challengerPeek.replied.flags, MessageFlags.Ephemeral);
+  assert.match(challengerPeek.replied.content, /A♠ A♥/);
+  assert.match(challengerPeek.replied.content, /내 스택: \*\*99칩\*\* \/ 콜 필요: \*\*1칩\*\*/);
+  assert.doesNotMatch(challengerPeek.replied.content, /K♠ Q♠/);
+
+  let message = start;
+  const users = ['user-1', 'user-2', 'user-2', 'user-1', 'user-2', 'user-1', 'user-2', 'user-1'];
+  for (const userId of users) {
+    const checkId = message.updated.components[0].components[1].data.custom_id;
+    const check = createCasinoButtonInteraction({
+      customId: checkId,
+      userId
+    });
+    assert.equal(await handleCasinoCommand(check, fakeEconomy, quietLogger), true);
+    message = check;
+  }
+
+  assert.deepEqual(calls.map(([type]) => type), ['reservePot', 'resolveStackPot']);
+  assert.equal(calls[1][1].winnerUserId, 'user-2');
+  assert.equal(calls[1][1].challengerPayout, 98);
+  assert.equal(calls[1][1].opponentPayout, 102);
+  assert.equal(calls[1][1].pot, 4);
+  assert.match(message.updated.content, /텍사스 홀덤 결과/);
+  assert.match(message.updated.content, /커뮤니티: J♠ 10♠ 9♠ 2♦ 3♣/);
+  assert.match(message.updated.content, /승자: <@user-2>/);
+  assert.match(message.updated.content, /스트레이트 플러시/);
+  assert.match(message.updated.content, /획득 팟: \*\*4칩\*\*/);
+  assert.deepEqual(message.updated.allowedMentions, {
+    parse: [],
+    users: ['user-2', 'user-1']
+  });
+});
+
+test('유저 포커는 폴드하면 즉시 상대가 팟을 가져간다', async () => {
+  const calls = [];
+  const fakeEconomy = {
+    async getProfile(_guildId, userId, username) {
+      return {
+        userId,
+        username,
+        balance: 1_000
+      };
+    },
+    async reservePlayerPot(payload) {
+      calls.push(['reservePot', payload]);
+      return {
+        challenger: { ...payload.challenger, balance: 900 },
+        opponent: { ...payload.opponent, balance: 900 },
+        pot: payload.bet * 2
+      };
+    },
+    async resolveReservedPlayerStackPot(payload) {
+      calls.push(['resolveStackPot', payload]);
+      return {
+        challenger: { ...payload.challenger, balance: 900 + payload.challengerPayout },
+        opponent: { ...payload.opponent, balance: 900 + payload.opponentPayout },
+        winner: payload.winnerUserId
+          ? {
+            userId: payload.winnerUserId,
+            username: payload.winnerUserId === 'user-1' ? payload.challenger.username : payload.opponent.username,
+            balance: payload.winnerUserId === 'user-1'
+              ? 900 + payload.challengerPayout
+              : 900 + payload.opponentPayout
+          }
+          : null,
+        pot: payload.pot
+      };
+    }
+  };
+  const room = createChatInputInteraction('포커', {
+    integers: { 시작칩: 100 }
+  });
+
+  assert.equal(await handleCasinoCommand(room, fakeEconomy, quietLogger), true);
+  const joinId = room.replied.components[0].components[0].data.custom_id;
+  const join = createCasinoButtonInteraction({
+    customId: joinId,
+    userId: 'user-2'
+  });
+  assert.equal(await handleCasinoCommand(join, fakeEconomy, quietLogger), true);
+  const startId = join.updated.components[0].components[2].data.custom_id;
+  const start = createCasinoButtonInteraction({
+    customId: startId,
+    userId: 'user-1'
+  });
+  assert.equal(await handleCasinoCommand(start, fakeEconomy, quietLogger), true);
+
+  const foldId = start.updated.components[0].components[2].data.custom_id;
+  const fold = createCasinoButtonInteraction({
+    customId: foldId,
+    userId: 'user-1'
+  });
+  assert.equal(await handleCasinoCommand(fold, fakeEconomy, quietLogger), true);
+
+  assert.deepEqual(calls.map(([type]) => type), ['reservePot', 'resolveStackPot']);
+  assert.equal(calls[1][1].winnerUserId, 'user-2');
+  assert.equal(calls[1][1].challengerPayout, 99);
+  assert.equal(calls[1][1].opponentPayout, 101);
+  assert.equal(calls[1][1].pot, 3);
+  assert.match(fold.updated.content, /폴드/);
+  assert.match(fold.updated.content, /획득 팟: \*\*3칩\*\*/);
+  assert.match(fold.updated.content, /승자: <@user-2>/);
+  assert.deepEqual(fold.updated.allowedMentions, {
+    parse: [],
+    users: ['user-2', 'user-1']
+  });
+});
+
+test('유저 포커방은 3명 이상도 참가 버튼으로 들어와 방장이 시작한다', async () => {
+  const calls = [];
+  const fakeEconomy = {
+    async getProfile(_guildId, userId, username) {
+      return {
+        userId,
+        username,
+        balance: 1_000
+      };
+    },
+    async reservePlayerTablePot(payload) {
+      calls.push(['reserveTablePot', payload]);
+      return {
+        players: payload.players.map((player) => ({ ...player, balance: 900 })),
+        pot: payload.bet * payload.players.length
+      };
+    },
+    async resolveReservedPlayerTableStacks(payload) {
+      calls.push(['resolveTableStacks', payload]);
+      return {
+        players: payload.players.map((player) => ({
+          ...player,
+          balance: 900 + (payload.payouts[player.key] ?? 0)
+        })),
+        winner: null,
+        pot: payload.pot
+      };
+    }
+  };
+  const room = createChatInputInteraction('포커', {
+    integers: { 시작칩: 100 }
+  });
+
+  assert.equal(await handleCasinoCommand(room, fakeEconomy, quietLogger), true);
+  assert.match(room.replied.content, /텍사스 홀덤 포커방/);
+  assert.match(room.replied.content, /인원: \*\*1명\*\* \/ 최대 \*\*6명\*\*/);
+  assert.match(room.replied.content, /참가자: <@user-1>/);
+  assert.doesNotMatch(room.replied.content, /<@user-2>/);
+  assert.deepEqual(room.replied.allowedMentions, { parse: [] });
+
+  const joinId = room.replied.components[0].components[0].data.custom_id;
+  const firstJoin = createCasinoButtonInteraction({
+    customId: joinId,
+    userId: 'user-2'
+  });
+  assert.equal(await handleCasinoCommand(firstJoin, fakeEconomy, quietLogger), true);
+  assert.match(firstJoin.updated.content, /인원: \*\*2명\*\* \/ 최대 \*\*6명\*\*/);
+  assert.match(firstJoin.updated.content, /참가자: <@user-1>, <@user-2>/);
+  assert.equal(calls.length, 0);
+
+  const secondJoin = createCasinoButtonInteraction({
+    customId: joinId,
+    userId: 'user-3'
+  });
+  assert.equal(await handleCasinoCommand(secondJoin, fakeEconomy, quietLogger), true);
+  assert.match(secondJoin.updated.content, /인원: \*\*3명\*\* \/ 최대 \*\*6명\*\*/);
+  assert.match(secondJoin.updated.content, /참가자: <@user-1>, <@user-2>, <@user-3>/);
+  assert.equal(calls.length, 0);
+
+  const startId = secondJoin.updated.components[0].components[2].data.custom_id;
+  const start = createCasinoButtonInteraction({
+    customId: startId,
+    userId: 'user-1'
+  });
+  assert.equal(await handleCasinoCommand(start, fakeEconomy, quietLogger), true);
+  assert.deepEqual(calls.map(([type]) => type), ['reserveTablePot']);
+  assert.equal(calls[0][1].players.length, 3);
+  assert.deepEqual(calls[0][1].players.map((player) => player.key), ['challenger', 'opponent', 'player2']);
+  assert.match(start.updated.content, /텍사스 홀덤 진행 중/);
+  assert.match(start.updated.content, /<@user-3>/);
+  assert.match(start.updated.content, /현재 차례: <@user-1>/);
+  assert.deepEqual(start.updated.allowedMentions, {
+    parse: [],
+    users: ['user-1']
+  });
+});
+
+test('포커 명령은 시작칩만 받아 오픈 홀덤방을 만들고 시작 전에는 베팅을 예약하지 않는다', async () => {
+  const calls = [];
+  const fakeEconomy = {
+    async getProfile(_guildId, userId, username) {
+      return {
+        userId,
+        username,
+        balance: 1_000
+      };
+    },
+    async reserveWager() {
+      throw new Error('오픈 홀덤방 생성은 5장 드로우 예약금을 잡지 않아야 합니다.');
+    }
+  };
+  const interaction = createChatInputInteraction('포커', {
+    integers: { 시작칩: 100 }
+  });
+
+  assert.equal(await handleCasinoCommand(interaction, fakeEconomy, quietLogger), true);
+  assert.deepEqual(calls, []);
+  assert.match(interaction.replied.content, /텍사스 홀덤 포커방/);
+  assert.match(interaction.replied.content, /시작칩: \*\*100칩 = 100골드\*\*/);
+  assert.match(interaction.replied.content, /시작하면 골드가 칩으로 바뀝니다/);
+  assert.match(interaction.replied.content, /인원: \*\*1명\*\* \/ 최대 \*\*6명\*\*/);
+  assert.match(interaction.replied.content, /방장은 2명 이상 모이면 \*\*시작\*\*/);
+  assert.deepEqual(interaction.replied.components[0].components.map((component) => component.data.label), [
+    '참가',
+    '나가기',
+    '시작',
+    '취소'
+  ]);
 });
 
 test('룰렛, 바카라, 크랩스, 시크보, 키노 결과를 계산한다', () => {
@@ -1191,6 +1440,214 @@ test('유저 블랙잭도 각자 히트/스탠드로 진행한다', () => {
   assert.equal(opponentBusts.winner, 'challenger');
 });
 
+test('텍사스 홀덤은 비공개 패와 커뮤니티 카드 중 최고 5장으로 승자를 비교한다', () => {
+  const round = createPlayerHoldemRound({
+    bet: 100,
+    deck: [
+      'A♠', 'A♥',
+      'K♠', 'Q♠',
+      'J♠', '10♠', '9♠',
+      '2♦',
+      '3♣'
+    ]
+  });
+  const actions = [
+    ['challenger', 'call'],
+    ['opponent', 'check'],
+    ['opponent', 'check'],
+    ['challenger', 'check'],
+    ['opponent', 'check'],
+    ['challenger', 'check'],
+    ['opponent', 'check'],
+    ['challenger', 'check']
+  ];
+  const settled = actions.reduce(
+    (nextRound, [participant, action]) => actPlayerHoldemRound(nextRound, participant, action),
+    round
+  );
+
+  assert.equal(round.currentTurn, 'challenger');
+  assert.equal(round.revealedCommunityCount, 0);
+  assert.equal(round.smallBlind, 1);
+  assert.equal(round.bigBlind, 2);
+  assert.equal(round.pot, 3);
+  assert.equal(round.currentBet, 2);
+  assert.equal(round.challenger.stack, 99);
+  assert.equal(round.opponent.stack, 98);
+  assert.equal(settled.status, 'settled');
+  assert.equal(settled.challenger.handRank.label, '원페어');
+  assert.equal(settled.opponent.handRank.label, '스트레이트 플러시');
+  assert.equal(settled.winner, 'opponent');
+  assert.equal(settled.pot, 4);
+  assert.equal(settled.challenger.stack, 98);
+  assert.equal(settled.opponent.stack, 102);
+  assert.equal(evaluateBestPokerHand([
+    ...settled.opponent.holeCards,
+    ...settled.communityCards
+  ]).label, '스트레이트 플러시');
+  assert.ok(comparePokerHands(
+    [...settled.opponent.holeCards, ...settled.communityCards],
+    [...settled.challenger.holeCards, ...settled.communityCards]
+  ) > 0);
+});
+
+test('텍사스 홀덤은 블라인드 뒤 콜/체크로 플랍을 열고 실제 팟과 스택을 갱신한다', () => {
+  const round = createPlayerHoldemRound({ bet: 100 });
+
+  assert.equal(round.street, 'preflop');
+  assert.equal(round.button, 'challenger');
+  assert.equal(round.smallBlind, 1);
+  assert.equal(round.bigBlind, 2);
+  assert.equal(round.pot, 3);
+  assert.equal(round.currentBet, 2);
+  assert.equal(round.minRaise, 2);
+  assert.equal(round.challenger.streetCommitted, 1);
+  assert.equal(round.opponent.streetCommitted, 2);
+  assert.equal(round.challenger.stack, 99);
+  assert.equal(round.opponent.stack, 98);
+  assert.equal(round.currentTurn, 'challenger');
+
+  const called = actPlayerHoldemRound(round, 'challenger', 'call');
+  assert.equal(called.pot, 4);
+  assert.equal(called.challenger.stack, 98);
+  assert.equal(called.challenger.streetCommitted, 2);
+  assert.equal(called.currentTurn, 'opponent');
+
+  const flop = actPlayerHoldemRound(called, 'opponent', 'check');
+  assert.equal(flop.street, 'flop');
+  assert.equal(flop.revealedCommunityCount, 3);
+  assert.equal(flop.pot, 4);
+  assert.equal(flop.currentBet, 0);
+  assert.equal(flop.challenger.streetCommitted, 0);
+  assert.equal(flop.opponent.streetCommitted, 0);
+  assert.equal(flop.currentTurn, 'opponent');
+});
+
+test('텍사스 홀덤은 3인 이상에서 버튼 뒤 스몰/빅 블라인드와 턴 순서를 적용한다', () => {
+  const round = createPlayerHoldemRound({
+    bet: 100,
+    players: ['challenger', 'opponent', 'player2']
+  });
+
+  assert.equal(round.players.length, 3);
+  assert.equal(round.button, 'challenger');
+  assert.equal(round.smallBlindParticipant, 'opponent');
+  assert.equal(round.bigBlindParticipant, 'player2');
+  assert.equal(round.currentTurn, 'challenger');
+  assert.equal(round.pot, 3);
+  assert.equal(round.challenger.stack, 100);
+  assert.equal(round.opponent.stack, 99);
+  assert.equal(round.player2.stack, 98);
+
+  const challengerCalls = actPlayerHoldemRound(round, 'challenger', 'call');
+  assert.equal(challengerCalls.currentTurn, 'opponent');
+  assert.equal(challengerCalls.pot, 5);
+
+  const smallBlindCalls = actPlayerHoldemRound(challengerCalls, 'opponent', 'call');
+  assert.equal(smallBlindCalls.currentTurn, 'player2');
+  assert.equal(smallBlindCalls.pot, 6);
+
+  const flop = actPlayerHoldemRound(smallBlindCalls, 'player2', 'check');
+  assert.equal(flop.street, 'flop');
+  assert.equal(flop.revealedCommunityCount, 3);
+  assert.equal(flop.currentTurn, 'opponent');
+  assert.equal(flop.currentBet, 0);
+});
+
+test('텍사스 홀덤은 팟 베팅과 콜로 다음 스트리트에 넘어간다', () => {
+  const preflopCalled = actPlayerHoldemRound(createPlayerHoldemRound({ bet: 100 }), 'challenger', 'call');
+  const flop = actPlayerHoldemRound(preflopCalled, 'opponent', 'check');
+  const bet = actPlayerHoldemRound(flop, 'opponent', 'pot');
+
+  assert.equal(bet.street, 'flop');
+  assert.equal(bet.pot, 8);
+  assert.equal(bet.currentBet, 4);
+  assert.equal(bet.minRaise, 4);
+  assert.equal(bet.opponent.stack, 94);
+  assert.equal(bet.opponent.streetCommitted, 4);
+  assert.equal(bet.currentTurn, 'challenger');
+
+  const turn = actPlayerHoldemRound(bet, 'challenger', 'call');
+  assert.equal(turn.street, 'turn');
+  assert.equal(turn.revealedCommunityCount, 4);
+  assert.equal(turn.pot, 12);
+  assert.equal(turn.currentBet, 0);
+  assert.equal(turn.challenger.stack, 94);
+  assert.equal(turn.currentTurn, 'opponent');
+});
+
+test('텍사스 홀덤은 올인 콜이면 남은 커뮤니티를 열고 쇼다운한다', () => {
+  const round = createPlayerHoldemRound({
+    bet: 100,
+    deck: [
+      'A♠', 'A♥',
+      'K♠', 'Q♠',
+      'J♠', '10♠', '9♠',
+      '2♦',
+      '3♣'
+    ]
+  });
+  const shoved = actPlayerHoldemRound(round, 'challenger', 'all_in');
+  assert.equal(shoved.currentBet, 100);
+  assert.equal(shoved.pot, 102);
+  assert.equal(shoved.challenger.stack, 0);
+  assert.equal(shoved.currentTurn, 'opponent');
+
+  const settled = actPlayerHoldemRound(shoved, 'opponent', 'call');
+  assert.equal(settled.status, 'settled');
+  assert.equal(settled.settlementReason, 'showdown');
+  assert.equal(settled.revealedCommunityCount, 5);
+  assert.equal(settled.pot, 200);
+  assert.equal(settled.winner, 'opponent');
+  assert.equal(settled.challenger.stack, 0);
+  assert.equal(settled.opponent.stack, 200);
+});
+
+test('텍사스 홀덤은 3인 올인 쇼다운에서 메인팟과 사이드팟을 나눠 정산한다', () => {
+  const round = createPlayerHoldemRound({
+    bet: 100,
+    players: ['challenger', 'opponent', 'player2'],
+    stacks: {
+      challenger: 50,
+      opponent: 100,
+      player2: 100
+    },
+    deck: [
+      'A♠', 'A♥',
+      'K♣', 'K♦',
+      'Q♣', 'Q♦',
+      '2♠', '3♥', '4♦', '5♣', '9♠'
+    ]
+  });
+
+  const challengerAllIn = actPlayerHoldemRound(round, 'challenger', 'all_in');
+  const opponentCalls = actPlayerHoldemRound(challengerAllIn, 'opponent', 'call');
+  const flop = actPlayerHoldemRound(opponentCalls, 'player2', 'call');
+  const opponentAllIn = actPlayerHoldemRound(flop, 'opponent', 'all_in');
+  const settled = actPlayerHoldemRound(opponentAllIn, 'player2', 'call');
+
+  assert.equal(settled.status, 'settled');
+  assert.equal(settled.pot, 250);
+  assert.equal(settled.challenger.stack, 150);
+  assert.equal(settled.opponent.stack, 100);
+  assert.equal(settled.player2.stack, 0);
+  assert.deepEqual(settled.pots.map((pot) => pot.amount), [150, 100]);
+  assert.deepEqual(settled.pots.map((pot) => pot.winners), [['challenger'], ['opponent']]);
+  assert.deepEqual(settled.winners, ['challenger', 'opponent']);
+});
+
+test('텍사스 홀덤은 폴드하면 쇼다운 없이 현재 팟만 상대가 가져간다', () => {
+  const round = createPlayerHoldemRound({ bet: 100 });
+  const folded = actPlayerHoldemRound(round, 'challenger', 'fold');
+
+  assert.equal(folded.status, 'settled');
+  assert.equal(folded.winner, 'opponent');
+  assert.equal(folded.settlementReason, 'fold');
+  assert.equal(folded.pot, 3);
+  assert.equal(folded.challenger.stack, 99);
+  assert.equal(folded.opponent.stack, 101);
+});
+
 test('베팅 정산은 잔액 부족을 막고 지급액만큼 잔액을 갱신한다', async () => {
   const fixture = await createFixture({ dailyReward: 1000, dailyXpReward: 0 });
 
@@ -1414,6 +1871,124 @@ test('수동 유저 블랙잭 팟은 예약 후 승자 정산과 무승부 환�
   }
 });
 
+test('수동 유저 포커 스택 정산은 예약 시작칩 안에서 부분 팟 반환을 지원한다', async () => {
+  const fixture = await createFixture({ dailyReward: 1000, dailyXpReward: 0 });
+
+  try {
+    await fixture.economy.claimDaily({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '도전자',
+      now: 1000
+    });
+    await fixture.economy.exchangeWallet({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '도전자',
+      fromCurrency: 'main',
+      toCurrency: 'casino',
+      amount: 1000
+    });
+    await fixture.economy.claimDaily({
+      guildId: 'guild-1',
+      userId: 'user-2',
+      username: '상대',
+      now: 1000
+    });
+    await fixture.economy.exchangeWallet({
+      guildId: 'guild-1',
+      userId: 'user-2',
+      username: '상대',
+      fromCurrency: 'main',
+      toCurrency: 'casino',
+      amount: 1000
+    });
+
+    const reserved = await fixture.economy.reservePlayerPot({
+      guildId: 'guild-1',
+      challenger: { userId: 'user-1', username: '도전자' },
+      opponent: { userId: 'user-2', username: '상대' },
+      bet: 100
+    });
+    const settled = await fixture.economy.resolveReservedPlayerStackPot({
+      guildId: 'guild-1',
+      challenger: { userId: 'user-1', username: '도전자' },
+      opponent: { userId: 'user-2', username: '상대' },
+      bet: 100,
+      pot: 3,
+      winnerUserId: 'user-2',
+      challengerPayout: 99,
+      opponentPayout: 101
+    });
+
+    assert.equal(reserved.challenger.balance, 900);
+    assert.equal(reserved.opponent.balance, 900);
+    assert.equal(settled.pot, 3);
+    assert.equal(settled.winner.userId, 'user-2');
+    assert.equal(settled.challenger.balance, 999);
+    assert.equal(settled.opponent.balance, 1001);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('수동 유저 포커 테이블 정산은 3명 이상 예약과 스택 반환을 지원한다', async () => {
+  const fixture = await createFixture({ dailyReward: 1000, dailyXpReward: 0 });
+
+  try {
+    for (const [userId, username] of [
+      ['user-1', '도전자'],
+      ['user-2', '상대1'],
+      ['user-3', '상대2']
+    ]) {
+      await fixture.economy.claimDaily({
+        guildId: 'guild-1',
+        userId,
+        username,
+        now: 1000
+      });
+      await fixture.economy.exchangeWallet({
+        guildId: 'guild-1',
+        userId,
+        username,
+        fromCurrency: 'main',
+        toCurrency: 'casino',
+        amount: 1000
+      });
+    }
+
+    const players = [
+      { key: 'challenger', userId: 'user-1', username: '도전자' },
+      { key: 'opponent', userId: 'user-2', username: '상대1' },
+      { key: 'player2', userId: 'user-3', username: '상대2' }
+    ];
+    const reserved = await fixture.economy.reservePlayerTablePot({
+      guildId: 'guild-1',
+      players,
+      bet: 100
+    });
+    const settled = await fixture.economy.resolveReservedPlayerTableStacks({
+      guildId: 'guild-1',
+      players,
+      bet: 100,
+      pot: 250,
+      winnerUserIds: ['user-1', 'user-2'],
+      payouts: {
+        challenger: 150,
+        opponent: 100,
+        player2: 50
+      }
+    });
+
+    assert.deepEqual(reserved.players.map((player) => player.balance), [900, 900, 900]);
+    assert.equal(settled.pot, 250);
+    assert.deepEqual(settled.winners.map((winner) => winner.userId), ['user-1', 'user-2']);
+    assert.deepEqual(settled.players.map((player) => player.balance), [1050, 1000, 950]);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 test('유저 블랙잭 판정은 무승부도 표현할 수 있다', () => {
   const result = playPlayerBlackjack({
     randomInt: createSequenceRandom([9, 9, 9, 9])
@@ -1430,7 +2005,7 @@ function createSequenceRandom(values) {
 }
 
 function createChatInputInteraction(commandName, options = {}) {
-  const { integers = {}, strings = {}, targetUser = null } = options;
+  const { integers = {}, strings = {}, targetUser = null, targetUsers = null } = options;
 
   return {
     commandName,
@@ -1453,8 +2028,9 @@ function createChatInputInteraction(commandName, options = {}) {
         }
         return strings[name] ?? null;
       },
-      getUser() {
-        return targetUser;
+      getUser(name) {
+        if (targetUsers) return targetUsers[name] ?? null;
+        return name === '상대' ? targetUser : null;
       }
     },
     isButton: () => false,

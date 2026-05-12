@@ -71,7 +71,6 @@ export const stockCommands = [
             .setName('수량')
             .setDescription('매수 수량')
             .setMinValue(1)
-            .setMaxValue(10_000)
             .setRequired(true)
         )
     )
@@ -92,7 +91,6 @@ export const stockCommands = [
             .setName('수량')
             .setDescription('매도 수량')
             .setMinValue(1)
-            .setMaxValue(10_000)
             .setRequired(true)
         )
     )
@@ -113,7 +111,6 @@ export const stockCommands = [
             .setName('수량')
             .setDescription('예약 매수 수량')
             .setMinValue(1)
-            .setMaxValue(10_000)
             .setRequired(true)
         )
         .addIntegerOption((option) =>
@@ -141,7 +138,6 @@ export const stockCommands = [
             .setName('수량')
             .setDescription('예약 매도 수량')
             .setMinValue(1)
-            .setMaxValue(10_000)
             .setRequired(true)
         )
         .addIntegerOption((option) =>

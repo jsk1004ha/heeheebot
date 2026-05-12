@@ -3549,6 +3549,36 @@ export class EconomyService {
     });
   }
 
+  async reservePlayerTablePot({ guildId, players, bet }) {
+    const normalizedBet = normalizePositiveInteger(bet, '베팅액');
+    const normalizedPlayers = normalizePlayerTableParticipants(players);
+
+    return this.store.update((data) => {
+      const profiles = normalizedPlayers.map((player) =>
+        getOrCreateProfile(data, guildId, player.userId, player.username, this)
+      );
+
+      for (const profile of profiles) {
+        if (getCurrencyBalance(profile, CURRENCY_CASINO) < normalizedBet) {
+          throw new Error(`${profile.username}님의 골드가 부족합니다.`);
+        }
+      }
+
+      for (const profile of profiles) {
+        debitCurrency(profile, CURRENCY_CASINO, normalizedBet);
+      }
+
+      return {
+        bet: normalizedBet,
+        pot: normalizedBet * normalizedPlayers.length,
+        players: profiles.map((profile, index) => ({
+          ...normalizedPlayers[index],
+          ...cloneProfile(profile)
+        }))
+      };
+    });
+  }
+
   async resolveReservedPlayerPot({ guildId, challenger, opponent, bet, winnerUserId }) {
     const normalizedBet = normalizePositiveInteger(bet, '베팅액');
 
@@ -3585,6 +3615,108 @@ export class EconomyService {
         winner: cloneProfile(winnerProfile),
         challenger: cloneProfile(challengerProfile),
         opponent: cloneProfile(opponentProfile)
+      };
+    });
+  }
+
+  async resolveReservedPlayerStackPot({
+    guildId,
+    challenger,
+    opponent,
+    bet,
+    pot = null,
+    challengerPayout,
+    opponentPayout,
+    winnerUserId = null
+  }) {
+    const normalizedBet = normalizePositiveInteger(bet, '베팅액');
+    const normalizedChallengerPayout = normalizeNonNegativeInteger(challengerPayout, '도전자 반환 스택');
+    const normalizedOpponentPayout = normalizeNonNegativeInteger(opponentPayout, '상대 반환 스택');
+    const reservedTotal = normalizedBet * 2;
+    const normalizedPot = pot === null || pot === undefined
+      ? Math.abs(normalizedChallengerPayout - normalizedBet) + Math.abs(normalizedOpponentPayout - normalizedBet)
+      : normalizeNonNegativeInteger(pot, '포커 팟');
+
+    if (normalizedChallengerPayout + normalizedOpponentPayout !== reservedTotal) {
+      throw new Error('포커 스택 정산 합계가 예약 시작칩과 일치해야 합니다.');
+    }
+
+    if (winnerUserId && ![challenger.userId, opponent.userId].includes(winnerUserId)) {
+      throw new Error('승자는 대결 참여자 중 한 명이어야 합니다.');
+    }
+
+    return this.store.update((data) => {
+      const challengerProfile = getOrCreateProfile(data, guildId, challenger.userId, challenger.username, this);
+      const opponentProfile = getOrCreateProfile(data, guildId, opponent.userId, opponent.username, this);
+
+      creditCurrency(challengerProfile, CURRENCY_CASINO, normalizedChallengerPayout);
+      creditCurrency(opponentProfile, CURRENCY_CASINO, normalizedOpponentPayout);
+
+      const winnerProfile = winnerUserId === challenger.userId
+        ? challengerProfile
+        : winnerUserId === opponent.userId
+          ? opponentProfile
+          : null;
+
+      return {
+        bet: normalizedBet,
+        pot: normalizedPot,
+        winner: winnerProfile ? cloneProfile(winnerProfile) : null,
+        challenger: cloneProfile(challengerProfile),
+        opponent: cloneProfile(opponentProfile)
+      };
+    });
+  }
+
+  async resolveReservedPlayerTableStacks({
+    guildId,
+    players,
+    bet,
+    pot = null,
+    payouts,
+    winnerUserIds = []
+  }) {
+    const normalizedBet = normalizePositiveInteger(bet, '베팅액');
+    const normalizedPlayers = normalizePlayerTableParticipants(players);
+    const normalizedPayouts = normalizePlayerTablePayouts(payouts, normalizedPlayers);
+    const reservedTotal = normalizedBet * normalizedPlayers.length;
+    const payoutTotal = Object.values(normalizedPayouts).reduce((total, payout) => total + payout, 0);
+    const normalizedPot = pot === null || pot === undefined
+      ? reservedTotal
+      : normalizeNonNegativeInteger(pot, '포커 팟');
+    const winnerSet = new Set(winnerUserIds ?? []);
+
+    if (payoutTotal !== reservedTotal) {
+      throw new Error('포커 스택 정산 합계가 예약 시작칩과 일치해야 합니다.');
+    }
+
+    for (const winnerUserId of winnerSet) {
+      if (!normalizedPlayers.some((player) => player.userId === winnerUserId)) {
+        throw new Error('승자는 대결 참여자 중 한 명이어야 합니다.');
+      }
+    }
+
+    return this.store.update((data) => {
+      const profiles = normalizedPlayers.map((player) =>
+        getOrCreateProfile(data, guildId, player.userId, player.username, this)
+      );
+
+      for (const player of normalizedPlayers) {
+        const profile = profiles.find((candidate) => candidate.userId === player.userId);
+        creditCurrency(profile, CURRENCY_CASINO, normalizedPayouts[player.key]);
+      }
+
+      const winnerProfile = profiles.find((profile) => winnerSet.has(profile.userId)) ?? null;
+
+      return {
+        bet: normalizedBet,
+        pot: normalizedPot,
+        winner: winnerProfile ? cloneProfile(winnerProfile) : null,
+        winners: profiles.filter((profile) => winnerSet.has(profile.userId)).map(cloneProfile),
+        players: normalizedPlayers.map((player, index) => ({
+          ...player,
+          ...cloneProfile(profiles[index])
+        }))
       };
     });
   }
@@ -3676,6 +3808,45 @@ function normalizeNonNegativeInteger(value, label) {
   }
 
   return normalized;
+}
+
+function normalizePlayerTableParticipants(players) {
+  if (!Array.isArray(players) || players.length < 2 || players.length > 6) {
+    throw new Error('대결 참가자는 2~6명이어야 합니다.');
+  }
+
+  const normalized = players.map((player, index) => {
+    const key = String(player?.key ?? (index === 0 ? 'challenger' : `player${index}`)).trim();
+    const userId = String(player?.userId ?? '').trim();
+    const username = String(player?.username ?? userId).trim();
+
+    if (!key || !userId || !username) {
+      throw new Error('대결 참가자 정보가 올바르지 않습니다.');
+    }
+
+    return {
+      key,
+      userId,
+      username
+    };
+  });
+  const keys = new Set(normalized.map((player) => player.key));
+  const userIds = new Set(normalized.map((player) => player.userId));
+  if (keys.size !== normalized.length || userIds.size !== normalized.length) {
+    throw new Error('대결 참가자는 중복될 수 없습니다.');
+  }
+  return normalized;
+}
+
+function normalizePlayerTablePayouts(payouts, players) {
+  if (!payouts || typeof payouts !== 'object') {
+    throw new Error('포커 스택 반환 정보가 올바르지 않습니다.');
+  }
+
+  return Object.fromEntries(players.map((player) => [
+    player.key,
+    normalizeNonNegativeInteger(payouts[player.key] ?? 0, `${player.username} 반환 스택`)
+  ]));
 }
 
 function normalizeSwordLeaderboardCategory(category) {
