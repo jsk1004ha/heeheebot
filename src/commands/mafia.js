@@ -16,6 +16,7 @@ import {
 } from '../systems/mafia.js';
 
 export const MAFIA_COLLECTION_MS = 60_000;
+export const MAFIA_INTRO_MS = 60_000;
 export const MAFIA_NIGHT_MS = 45_000;
 export const MAFIA_DISCUSSION_MS = 120_000;
 export const MAFIA_VOTING_MS = 60_000;
@@ -111,11 +112,13 @@ async function createMafiaLobby(interaction, economy, logger, options) {
     roleRooms: new Map(),
     roleRoomResults: [],
     collectionMs: options.collectionMs ?? MAFIA_COLLECTION_MS,
+    introMs: options.introMs ?? MAFIA_INTRO_MS,
     nightMs: options.nightMs ?? MAFIA_NIGHT_MS,
     discussionMs: options.discussionMs ?? MAFIA_DISCUSSION_MS,
     votingMs: options.votingMs ?? MAFIA_VOTING_MS,
     randomInt: options.randomInt,
     collectionTimer: null,
+    introTimer: null,
     nightTimer: null,
     discussionTimer: null,
     voteTimer: null,
@@ -280,7 +283,7 @@ async function beginMafiaGame(state, economy, logger) {
     components: [createRoleActionRow(state)]
   });
 
-  await startNightPhase(state, economy, logger);
+  await startIntroPhase(state, economy, logger);
 }
 
 async function finishCancelledGame(state, reason) {
@@ -377,6 +380,7 @@ async function startNightPhase(state, economy, logger) {
   state.status = 'night';
   state.lastNightResult = null;
   state.game.clearNightActions();
+  clearIntroTimer(state);
   clearNightTimer(state);
 
   state.nightTimer = setManagedTimeout(
@@ -387,6 +391,21 @@ async function startNightPhase(state, economy, logger) {
   await sendGameMessage(state, {
     content: formatNightMessage(state),
     components: [createNightActionRow(state)]
+  });
+}
+
+async function startIntroPhase(state, economy, logger) {
+  if (state.status === 'ended') return;
+  state.status = 'intro';
+  clearIntroTimer(state);
+  state.introTimer = setManagedTimeout(
+    () => startNightPhase(state, economy, logger).catch((error) => logger.error(error)),
+    state.introMs
+  );
+
+  await sendGameMessage(state, {
+    content: formatIntroMessage(state),
+    components: [createIntroActionRow(state)]
   });
 }
 
@@ -518,7 +537,7 @@ async function startVotingPhase(state, economy, logger) {
   clearVoteTimer(state);
   state.game.clearVotes();
 
-  state.voteMessage = await sendGameMessage(state, createVoteMessagePayload(state, '처형할 사람에게 투표하세요.'));
+  state.voteMessage = await sendGameMessage(state, createVoteMessagePayload(state, '토론이 끝났습니다. 마을 회의에서 처형할 사람을 고르세요.'));
   state.voteTimer = setManagedTimeout(
     () => resolveVotingPhase(state, economy, logger, { reason: 'time' }).catch((error) => logger.error(error)),
     state.votingMs
@@ -537,7 +556,7 @@ async function handleVoteButton(interaction, state, targetId, economy, logger) {
     return;
   }
 
-  const payload = createVoteMessagePayload(state, `${formatPlayerMention(result.voter)}님 투표 완료.`);
+  const payload = createVoteMessagePayload(state, `${formatPlayerMention(result.voter)}님이 표를 던졌습니다.`);
   await interaction.update(payload);
 
   if (result.complete) {
@@ -570,6 +589,12 @@ async function resolveVotingPhase(state, economy, logger, { reason = 'time' } = 
 async function handleHostSkip(interaction, state, economy, logger) {
   if (interaction.user.id !== state.hostUserId) {
     await interaction.reply({ content: '방장만 단계를 넘길 수 있습니다.', flags: MessageFlags.Ephemeral });
+    return;
+  }
+
+  if (state.status === 'intro') {
+    await interaction.reply({ content: '⏭️ 첫 아침 자기소개를 마감하고 밤을 시작합니다.', flags: MessageFlags.Ephemeral });
+    await startNightPhase(state, economy, logger);
     return;
   }
 
@@ -693,18 +718,30 @@ function formatStartMessage(state) {
 
   return [
     '🕵️ **마피아게임 시작**',
+    '조용한 마을에 수상한 기운이 감돌고, 모두에게 비밀 역할이 배정되었습니다.',
     `역할: 마피아 ${counts.mafia} / 경찰 ${counts.police} / 의사 ${counts.doctor} / 시민 ${counts.citizen}`,
     threadLine,
     roomLine,
-    '아래 버튼으로 본인 역할만 확인하세요.'
+    '역할을 확인한 뒤, 첫 아침 자기소개를 시작합니다.'
+  ].join('\n');
+}
+
+function formatIntroMessage(state) {
+  return [
+    '🌤️ **1일차 아침이 밝았습니다**',
+    '아직 마을에는 아무 사건도 일어나지 않았습니다.',
+    `자기소개 시간: ${formatSeconds(state.introMs)}`,
+    '각자 한마디씩 자기소개하고, 어색한 사람을 기억해두세요.',
+    '이 시간이 끝나면 밤이 찾아옵니다.'
   ].join('\n');
 }
 
 function formatNightMessage(state) {
   return [
-    `🌙 **${state.game.round}일차 밤**`,
+    `🌙 **${state.game.round}일차 밤이 되었습니다**`,
+    '마을의 불이 꺼졌습니다. 이제 말은 줄이고, 각자의 역할이 움직일 시간입니다.',
     `행동 시간: ${formatSeconds(state.nightMs)}`,
-    '마피아/경찰/의사는 **내 밤 행동** 버튼으로 제출.'
+    '마피아/경찰/의사는 **내 밤 행동** 버튼으로 비밀 행동을 제출하세요.'
   ].join('\n');
 }
 
@@ -727,19 +764,20 @@ function formatNightActionResult(result) {
 
 function formatNightResultMessage(result, reason) {
   const killed = result.killed.length > 0
-    ? result.killed.map((player) => `${formatPlayerMention(player)}(${getMafiaRoleLabel(player.role)})`).join(', ')
-    : '없음';
+    ? `밤사이 ${result.killed.map((player) => `${formatPlayerMention(player)}(${getMafiaRoleLabel(player.role)})`).join(', ')}님이 쓰러졌습니다.`
+    : '밤사이 아무도 쓰러지지 않았습니다.';
   const blocked = result.blocked.length > 0
-    ? `\n보호 성공: ${result.blocked.map(formatPlayerMention).join(', ')}`
+    ? `\n누군가의 보호가 습격을 막았습니다: ${result.blocked.map(formatPlayerMention).join(', ')}`
     : '';
   const suffix = reason === 'time' ? '시간 종료' : reason === 'host' ? '방장 마감' : '전원 제출';
 
-  return `🌅 **밤 결과** (${suffix})\n사망: ${killed}${blocked}`;
+  return `🌅 **아침이 밝았습니다** (${suffix})\n${killed}${blocked}`;
 }
 
 function formatDiscussionMessage(state) {
   return [
-    `☀️ **${state.game.round}일차 낮 토론**`,
+    `☀️ **${state.game.round}일차 낮 토론 시간**`,
+    '마을 회의가 열렸습니다. 생존자들은 서로의 말을 듣고 수상한 점을 찾아야 합니다.',
     `토론 시간: ${formatSeconds(state.discussionMs)}`,
     `생존: ${state.game.livingPlayers.map(formatPlayerMention).join(', ')}`
   ].join('\n');
@@ -769,11 +807,11 @@ function createVoteMessagePayload(state, description, disabled = false) {
 function formatVoteResultMessage(result, reason) {
   const suffix = reason === 'time' ? '시간 종료' : reason === 'host' ? '방장 마감' : '전원 투표';
   if (result.executed) {
-    return `⚖️ **투표 결과** (${suffix})\n처형: ${formatPlayerMention(result.executed)} (${getMafiaRoleLabel(result.executed.role)})`;
+    return `⚖️ **마을 재판 결과** (${suffix})\n마을은 ${formatPlayerMention(result.executed)}님을 처형했습니다. 역할은 **${getMafiaRoleLabel(result.executed.role)}**였습니다.`;
   }
 
   const reasonText = result.reason === 'tie' ? '동률' : '과반 실패';
-  return `⚖️ **투표 결과** (${suffix})\n처형 없음: ${reasonText}`;
+  return `⚖️ **마을 재판 결과** (${suffix})\n의견이 모이지 않아 오늘은 아무도 처형하지 않았습니다. (${reasonText})`;
 }
 
 function formatFinishMessage(state, win, rewards) {
@@ -806,6 +844,7 @@ function formatStatusMessage(state) {
   const statusLabel = {
     collecting: '모집',
     starting: '시작 준비',
+    intro: '첫 아침 자기소개',
     night: '밤',
     discussion: '낮 토론',
     voting: '투표',
@@ -844,6 +883,13 @@ function createLobbyActionRow(state) {
 function createRoleActionRow(state) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`mafia_role:${state.id}`).setLabel('내 역할 보기').setStyle(ButtonStyle.Primary).setEmoji('🔒')
+  );
+}
+
+function createIntroActionRow(state) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`mafia_role:${state.id}`).setLabel('내 역할').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`mafia_skip:${state.id}`).setLabel('방장 스킵').setStyle(ButtonStyle.Primary)
   );
 }
 
@@ -904,7 +950,7 @@ function createVoteRows(state, disabled = false) {
 
 async function disableVoteMessage(state) {
   if (typeof state.voteMessage?.edit !== 'function') return;
-  await state.voteMessage.edit(createVoteMessagePayload(state, '투표가 마감되었습니다.', true));
+  await state.voteMessage.edit(createVoteMessagePayload(state, '마을 재판이 마감되었습니다.', true));
 }
 
 function createHumanParticipant(user) {
@@ -947,6 +993,11 @@ function clearCollectionTimer(state) {
   state.collectionTimer = null;
 }
 
+function clearIntroTimer(state) {
+  clearTimeout(state.introTimer);
+  state.introTimer = null;
+}
+
 function clearNightTimer(state) {
   clearTimeout(state.nightTimer);
   state.nightTimer = null;
@@ -964,6 +1015,7 @@ function clearVoteTimer(state) {
 
 function clearAllTimers(state) {
   clearCollectionTimer(state);
+  clearIntroTimer(state);
   clearNightTimer(state);
   clearDiscussionTimer(state);
   clearVoteTimer(state);
