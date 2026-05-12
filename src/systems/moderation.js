@@ -5,12 +5,22 @@ const DEFAULT_SETTINGS = Object.freeze({
   autoSpamBan: Object.freeze({
     enabled: true,
     windowMs: 5_000,
-    messageLimit: 5,
-    duplicateLimit: 3,
-    userSlowmodeDurationMs: 10 * 60 * 1000,
-    banAfterOffenses: 2,
-    offenseResetMs: 10 * 60 * 1000
+    messageLimit: 8,
+    duplicateLimit: 5,
+    userSlowmodeDurationMs: 5 * 60 * 1000,
+    banAfterOffenses: null,
+    offenseResetMs: 5 * 60 * 1000
   })
+});
+
+const LEGACY_STRICT_AUTO_SPAM_BAN_SETTINGS = Object.freeze({
+  enabled: true,
+  windowMs: 5_000,
+  messageLimit: 5,
+  duplicateLimit: 3,
+  userSlowmodeDurationMs: 10 * 60 * 1000,
+  banAfterOffenses: 2,
+  offenseResetMs: 10 * 60 * 1000
 });
 
 const MAX_TIMEOUT_MS = 28 * 24 * 60 * 60 * 1000;
@@ -180,7 +190,7 @@ export class ModerationService {
       spamState.offenses.push({ createdAt: now });
 
       const offenseCount = spamState.offenses.length;
-      const shouldBan = offenseCount >= settings.banAfterOffenses;
+      const shouldBan = shouldAutoBanForSpam(settings, offenseCount);
       return {
         detected: true,
         count,
@@ -262,19 +272,48 @@ function getOrCreateModeration(data, guildId) {
   };
 
   const moderation = data.guilds[guildId].moderation;
+  const autoSpamBan = normalizeAutoSpamBanSettings(moderation.settings?.autoSpamBan);
   moderation.settings = {
     ...structuredClone(DEFAULT_SETTINGS),
     ...moderation.settings,
     bannedWords: moderation.settings?.bannedWords ?? [],
-    autoSpamBan: {
-      ...structuredClone(DEFAULT_SETTINGS.autoSpamBan),
-      ...moderation.settings?.autoSpamBan
-    }
+    autoSpamBan
   };
   moderation.warnings ??= {};
   moderation.spam ??= {};
 
   return moderation;
+}
+
+function normalizeAutoSpamBanSettings(settings = {}) {
+  const merged = {
+    ...structuredClone(DEFAULT_SETTINGS.autoSpamBan),
+    ...settings
+  };
+
+  if (isLegacyStrictAutoSpamBanSettings(merged)) {
+    return {
+      ...merged,
+      messageLimit: DEFAULT_SETTINGS.autoSpamBan.messageLimit,
+      duplicateLimit: DEFAULT_SETTINGS.autoSpamBan.duplicateLimit,
+      userSlowmodeDurationMs: DEFAULT_SETTINGS.autoSpamBan.userSlowmodeDurationMs,
+      banAfterOffenses: DEFAULT_SETTINGS.autoSpamBan.banAfterOffenses,
+      offenseResetMs: DEFAULT_SETTINGS.autoSpamBan.offenseResetMs
+    };
+  }
+
+  return merged;
+}
+
+function isLegacyStrictAutoSpamBanSettings(settings) {
+  return Object.entries(LEGACY_STRICT_AUTO_SPAM_BAN_SETTINGS)
+    .every(([key, value]) => settings[key] === value);
+}
+
+function shouldAutoBanForSpam(settings, offenseCount) {
+  return Number.isSafeInteger(settings.banAfterOffenses)
+    && settings.banAfterOffenses > 0
+    && offenseCount >= settings.banAfterOffenses;
 }
 
 function getTriggeredPunishment(warningPunishment, warningCount) {
