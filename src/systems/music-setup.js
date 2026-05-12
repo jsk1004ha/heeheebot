@@ -299,6 +299,9 @@ async function isLavalinkReachable(config, fetchFn) {
   try {
     const protocol = config.lavalink.secure ? 'https' : 'http';
     const response = await fetchFn(`${protocol}://${config.lavalink.host}:${config.lavalink.port}${LAVALINK_VERSION_ENDPOINT}`, {
+      headers: {
+        Authorization: config.lavalink.password
+      },
       signal: AbortSignal.timeout(2_000)
     });
     return response.ok;

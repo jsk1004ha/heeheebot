@@ -37,7 +37,7 @@ test('로컬 Lavalink 자동 설정은 jar, application.yml을 준비하고 준�
       },
       ytdlp: { enabled: false }
     }, {
-      async fetchFn(url) {
+      async fetchFn(url, options = {}) {
         const href = String(url);
         fetchCalls.push(href);
         if (href.includes('youtube-source')) {
@@ -47,6 +47,7 @@ test('로컬 Lavalink 자동 설정은 jar, application.yml을 준비하고 준�
           return new Response('fake jar', { status: 200 });
         }
         if (href.endsWith('/version')) {
+          assert.equal(options.headers.Authorization, 'secret');
           healthChecks += 1;
           return new Response('4.0.0', { status: healthChecks >= 2 ? 200 : 503 });
         }
