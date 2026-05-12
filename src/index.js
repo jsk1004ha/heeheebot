@@ -3,10 +3,12 @@ import { pathToFileURL } from 'node:url';
 import { createBot } from './bot.js';
 import { registerApplicationCommands } from './command-registration.js';
 import { loadConfig, requireBotConfig } from './config.js';
+import { ensureMusicRuntime } from './systems/music-setup.js';
 
 export async function startBot(config, {
   createBotImpl = createBot,
-  registerCommands = registerApplicationCommands
+  registerCommands = registerApplicationCommands,
+  setupMusicRuntime = ensureMusicRuntime
 } = {}) {
   requireBotConfig(config);
 
@@ -14,13 +16,22 @@ export async function startBot(config, {
     await registerCommands(config);
   }
 
+  const musicRuntime = await setupMusicRuntime(config.music);
+
   const bot = createBotImpl({
     databasePath: config.databasePath,
     legacyJsonPath: config.legacyJsonPath,
-    neisApiKey: config.neisApiKey
+    neisApiKey: config.neisApiKey,
+    musicConfig: musicRuntime.musicConfig
   });
+  bot.stopMusicRuntime = musicRuntime.cleanup;
 
-  await bot.start(config.token);
+  try {
+    await bot.start(config.token);
+  } catch (error) {
+    musicRuntime.cleanup();
+    throw error;
+  }
   return bot;
 }
 

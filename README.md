@@ -4,7 +4,7 @@
 
 **희희봇은 라이빗을 침공한 터미네이터 희진이다.**
 
-![Version](https://img.shields.io/badge/version-v0.9.1-orange)
+![Version](https://img.shields.io/badge/version-v0.10.0-orange)
 ![Status](https://img.shields.io/badge/status-pre--1.0-yellow)
 ![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.5-339933?logo=nodedotjs&logoColor=white)
 ![discord.js](https://img.shields.io/badge/discord.js-v14-5865F2?logo=discord&logoColor=white)
@@ -46,8 +46,8 @@
 | 저장소 | SQLite 기본값: `data/profiles.sqlite` |
 | 명령어 등록 | `npm start` 시 자동 동기화, 수동은 `npm run register` |
 | 테스트 | `node --test` 기반 도메인/라우팅/커맨드 테스트 |
-| 현재 커맨드 규모 | 최상위 slash command 82개 + 다수 subcommand |
-| 현재 버전 | `v0.9.1` — 1.0 이전 개발 버전 |
+| 현재 커맨드 규모 | 최상위 slash command 97개 + 다수 subcommand |
+| 현재 버전 | `v0.10.0` — 1.0 이전 개발 버전 |
 | 버전 산정 근거 | `v0.9.0` 마피아 기능 기준선에 이모지경마 다인 배당판 패치를 더해 `v0.9.1`로 산정 |
 
 ### 추천 첫 동선
@@ -149,8 +149,8 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 현재 버전 | `v0.9.1` |
-| npm package version | `0.9.1` |
+| 현재 버전 | `v0.10.0` |
+| npm package version | `0.10.0` |
 | 기준 커밋 범위 | `d6b539a` → `919b758` + working tree |
 | 기준 커밋 수 | 119 commits + working tree |
 | 최신 기준 커밋 | `919b758` — `Merge branch 'main' of https://github.com/jsk1004ha/heeheebot` |
@@ -186,6 +186,14 @@ vMAJOR.MINOR.PATCH
 | `0.8` | `f8fa883` → `2ece970` | 계정 연동, 워들/숫자야구/투표 테스트, command startup sync, 자동급식 권한 체크, 도움말 개선 |
 
 ### 커밋 기록 기반 릴리스 노트
+
+#### `v0.10.0` — Lavalink/yt-dlp 음악 시스템
+
+- **기본 음악 명령**: `/재생`, `/검색`, `/일시정지`, `/다시재생`, `/스킵`, `/정지`, `/큐` 추가
+- **인터랙티브 패널**: 현재곡 embed와 버튼으로 일시정지, 스킵, 반복, 셔플, 큐, 필터 제어
+- **플레이리스트**: `/플리 생성|추가|재생|공개|가져오기`로 개인/공개 플레이리스트 관리
+- **서버 문화 기록**: `/랭킹 종류:인기곡`, `/내음악통계`로 인기곡·아티스트·장르 신청 기록 저장
+- **자동 런타임 세팅**: `npm start` 시 로컬 Lavalink.jar, `application.yml`, YouTube source plugin 설정, yt-dlp 바이너리를 `data/music-runtime`에 자동 준비
 
 #### `v0.9.1` — 이모지경마 다인 배당판
 
@@ -232,7 +240,7 @@ vMAJOR.MINOR.PATCH
 - **RPG**: 캐릭터, 사냥, 탐사, 던전, 보스, 레이드, 직업/전직/스토리/도감, 제작/거래소, 버튼형 메뉴
 - **가상주식·카지노**: 현물/지정가/알림/레버리지, 시장 뉴스/차트, 다양한 카지노 게임
 - **관리·안정화**: 경고/뮤트/킥/밴, 자동 도배 대응, 유저 슬로우모드 해제, 중복 버튼 ID 방지, Discord 응답 길이/페이지 처리
-- **저장소·테스트**: SQLite 저장소, legacy JSON migration, 315개 `node --test` 테스트로 주요 도메인 검증
+- **저장소·테스트**: SQLite 저장소, legacy JSON migration, 497개 `node --test` 테스트로 주요 도메인 검증
 
 ### 릴리스 작성 절차
 
@@ -241,13 +249,13 @@ vMAJOR.MINOR.PATCH
 git log --date=short --pretty=format:'%h %ad %s'
 
 # 2. package.json / package-lock.json 버전 갱신
-npm version 0.9.1 --no-git-tag-version
+npm version 0.10.0 --no-git-tag-version
 
 # 3. 테스트
 npm test
 
 # 4. 태그 생성 예시
-git tag -a v0.9.1 -m "HeeHeeBot v0.9.1"
+git tag -a v0.10.0 -m "HeeHeeBot v0.10.0"
 ```
 
 ---
@@ -277,6 +285,7 @@ npm start
 ```
 
 `npm start`는 시작 전에 slash command를 자동으로 동기화합니다. 개발 서버에 빠르게 등록하려면 `.env`에 `DISCORD_GUILD_ID`를 넣으세요.
+음악 기능은 `MUSIC_AUTO_SETUP=true` 기본값으로 `data/music-runtime`에 Lavalink/yt-dlp 런타임을 자동 준비하고 로컬 Lavalink 노드를 실행합니다. 단, Lavalink 실행에는 시스템에 Java 17 이상이 설치되어 있어야 합니다.
 
 ### 4) 명령어만 수동 동기화
 
@@ -299,6 +308,12 @@ npm run register
 | `NEIS_API_KEY` | 선택 | sample-key 동작 | 급식 API 키. 없으면 공개/sample 동작 사용 |
 | `BOT_SQLITE_PATH` | 선택 | `data/profiles.sqlite` | SQLite DB 파일 경로 |
 | `BOT_JSON_MIGRATION_PATH` | 선택 | `data/profiles.json` | 첫 실행 시 가져올 legacy JSON 경로 |
+| `MUSIC_AUTO_SETUP` | 선택 | `true` | `npm start` 시 로컬 음악 런타임 자동 다운로드/설정 |
+| `MUSIC_RUNTIME_DIR` | 선택 | `data/music-runtime` | 자동 다운로드한 Lavalink.jar, application.yml, yt-dlp 저장 위치 |
+| `LAVALINK_HOST` | 선택 | - | 외부 Lavalink 노드를 쓸 때만 지정. 비어 있으면 로컬 자동 세팅 |
+| `LAVALINK_PORT` / `LAVALINK_PASSWORD` | 선택 | `2333` / `youshallnotpass` | 로컬/외부 Lavalink 접속 설정 |
+| `LAVALINK_AUTO_START` | 선택 | `true` | 자동 세팅한 로컬 Lavalink 프로세스 실행 여부 |
+| `YTDLP_ENABLED` / `YTDLP_AUTO_DOWNLOAD` | 선택 | `true` / `true` | yt-dlp 메타데이터 fallback과 바이너리 자동 다운로드 |
 
 > `.env`는 절대 커밋하지 마세요. 예시는 `.env.example`에만 남겨둡니다.
 
@@ -315,8 +330,21 @@ npm run register
 | `/오늘할일` | 출석, 운세 XP, 미션, 시즌, RPG 일일 목표를 한 번에 확인 |
 | `/송금` | 다른 유저에게 골드 송금 |
 | `/랭킹` | 서버 레벨/경험치 랭킹 |
+| `/랭킹 종류:인기곡` | 서버에서 가장 많이 재생된 음악 TOP 10 |
 | `/재화정보` | 통합 골드 사용처와 지갑 정산 기준 |
 | `/계정연동` | 여러 서버의 희희봇 계정 중 하나를 선택해 통합 |
+
+### 음악
+
+| 명령어 | 설명 |
+| --- | --- |
+| `/재생 검색어` | 검색어 또는 URL로 노래를 찾아 즉시 재생 |
+| `/검색 검색어` | 상위 5개 결과를 버튼으로 보여주고 선택한 곡 재생 |
+| `/일시정지` / `/다시재생` | 현재 곡 일시정지/재개 |
+| `/스킵` / `/정지` | 현재 곡 넘기기 / 재생 중지와 큐 비우기 |
+| `/큐` | 현재곡과 대기열을 embed로 확인 |
+| `/플리 생성|추가|재생|공개|가져오기` | 개인/공개 플레이리스트 관리 |
+| `/내음악통계` | 내가 많이 신청한 장르, 아티스트, 곡 수 확인 |
 
 ### 커뮤니티·시즌
 

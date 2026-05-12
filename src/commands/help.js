@@ -20,7 +20,7 @@ const HELP_CATEGORIES = Object.freeze({
       { name: '처음 시작', value: '`/시작하기` `/오늘할일` `/도움말 분류:시즌`' },
       { name: '성장/프로필', value: '`/프로필` `/출석` `/랭킹` `/재화정보`' },
       { name: '전투 성장', value: '`/rpg 메뉴` `/rpg 사냥` `/검강화` `/검배틀` `/검도감` `/시즌 정보`' },
-      { name: '경제/놀이', value: '`/주식 시세` `/주식 보유` `/낚시` `/카지노정보` `/희진다마고치`' }
+      { name: '경제/놀이', value: '`/주식 시세` `/주식 보유` `/재생` `/검색` `/낚시` `/카지노정보` `/희진다마고치`' }
     ])
   }),
   season: Object.freeze({
@@ -78,6 +78,18 @@ const HELP_CATEGORIES = Object.freeze({
       { name: '생활 정보', value: '`/급식` `/자동급식 상태` `/시간표` `/오늘할일` `/운세` `/선택` `/투표`' },
       { name: '전역 업적/커뮤니티', value: '`/업적` `/칭호` `/미션` `/복권` `/서버이벤트` `/활동요약` `/끝말잇기` `/초성게임`' },
       { name: '관리/안전', value: '`/청소` `/경고` 등 서버 권한 명령은 권한이 있을 때만 사용됩니다.' }
+    ])
+  }),
+  music: Object.freeze({
+    label: '음악',
+    emoji: '🎵',
+    title: '음악 도움말',
+    description: 'Lavalink 오디오 엔진과 선택적 yt-dlp 메타데이터 추출로 서버 음악 문화를 기록합니다.',
+    fields: Object.freeze([
+      { name: '기본 재생', value: '`/재생 검색어` `/검색 검색어` `/일시정지` `/다시재생` `/스킵` `/정지` `/큐`' },
+      { name: '음악 패널', value: '현재 재생 패널 버튼으로 일시정지, 스킵, 반복, 셔플, 큐, 필터를 조작합니다.' },
+      { name: '플레이리스트', value: '`/플리 생성` `/플리 추가 이름 현재곡` `/플리 재생` `/플리 공개` `/플리 가져오기`' },
+      { name: '서버 기록', value: '`/랭킹 종류:인기곡` `/내음악통계`로 인기곡과 개인 신청 통계를 확인합니다.' }
     ])
   }),
   games: Object.freeze({
@@ -198,6 +210,7 @@ function getHelpCategoryColor(categoryId) {
     sword: 0xf59e0b,
     stock: 0x22c55e,
     life: 0x60a5fa,
+    music: 0x8b5cf6,
     games: 0xec4899
   }[categoryId] ?? 0x38bdf8;
 }

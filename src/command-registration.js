@@ -13,6 +13,7 @@ import { getLiarGameCommandPayloads } from './commands/liar-game.js';
 import { getLiarsBarCommandPayloads } from './commands/liars-bar.js';
 import { getMafiaCommandPayloads } from './commands/mafia.js';
 import { getModerationCommandPayloads } from './commands/moderation.js';
+import { getMusicCommandPayloads } from './commands/music.js';
 import { getNumberBaseballCommandPayloads } from './commands/number-baseball.js';
 import { getPollCommandPayloads } from './commands/poll.js';
 import { getRpgCommandPayloads } from './commands/rpg.js';
@@ -38,6 +39,7 @@ export function getApplicationCommandPayloads() {
     ...getStartCommandPayloads(),
     ...getTodayCommandPayloads(),
     ...getPollCommandPayloads(),
+    ...getMusicCommandPayloads(),
     ...getUnoCommandPayloads(),
     ...getModerationCommandPayloads(),
     ...getWordChainCommandPayloads(),

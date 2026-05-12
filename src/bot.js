@@ -33,6 +33,10 @@ import {
   handleModerationCommand,
   inspectMessageForModeration
 } from './commands/moderation.js';
+import {
+  createMusicPanelPayload,
+  handleMusicCommand
+} from './commands/music.js';
 import { handleNumberBaseballCommand } from './commands/number-baseball.js';
 import { handlePollCommand, PollManager } from './commands/poll.js';
 import { handleRpgCommand } from './commands/rpg.js';
@@ -81,6 +85,7 @@ import {
   MealService,
   scheduleDailyMealAnnouncements
 } from './systems/meals.js';
+import { MusicService } from './systems/music.js';
 import {
   StockService,
   scheduleStockAlertAnnouncements
@@ -95,6 +100,7 @@ export function createBot({
   databasePath = 'data/profiles.sqlite',
   legacyJsonPath = 'data/profiles.json',
   neisApiKey = null,
+  musicConfig = {},
   logger = console
 }) {
   const client = new Client({
@@ -102,7 +108,8 @@ export function createBot({
       GatewayIntentBits.Guilds,
       GatewayIntentBits.GuildMessages,
       GatewayIntentBits.MessageContent,
-      GatewayIntentBits.GuildMessageReactions
+      GatewayIntentBits.GuildMessageReactions,
+      GatewayIntentBits.GuildVoiceStates
     ],
     partials: [
       Partials.Message,
@@ -120,6 +127,8 @@ export function createBot({
   const fishing = new FishingService(store, { economy });
   const fortune = new FortuneService();
   const meals = new MealService({ store, apiKey: neisApiKey });
+  const music = new MusicService({ store, config: musicConfig, logger });
+  music.setPanelRenderer(createMusicPanelPayload);
   const stocks = new StockService(store);
   const seasons = new SeasonService(store);
   const tamagotchi = new TamagotchiService(store);
@@ -135,6 +144,10 @@ export function createBot({
 
   client.once(Events.ClientReady, (readyClient) => {
     logger.log(`Logged in as ${readyClient.user.tag}`);
+
+    music.connectNode(readyClient.user.id).catch((error) => {
+      logger.warn?.('Failed to connect Lavalink node:', error);
+    });
 
     stopMealAnnouncementScheduler = scheduleDailyMealAnnouncements({
       logger,
@@ -160,6 +173,12 @@ export function createBot({
 
   client.on(Events.Error, (error) => {
     logger.error('Discord client error:', error);
+  });
+
+  client.on(Events.Raw, (packet) => {
+    music.handleRawDiscordPacket(packet, client.user?.id).catch((error) => {
+      logger.warn?.('Failed to forward Discord voice update to Lavalink:', error);
+    });
   });
 
   client.on(Events.InteractionCreate, async (interaction) => {
@@ -235,6 +254,7 @@ export function createBot({
         || await handleCompatibilityCommand(interaction)
         || await handleHelpCommand(interaction)
         || await handlePollCommand(interaction, polls, logger)
+        || await handleMusicCommand(interaction, music, logger)
         || await handleUnoCommand(interaction, uno, logger)
         || await handleModerationCommand(interaction, moderation, logger)
         || await handleWordChainCommand(interaction, economy, logger)
@@ -341,6 +361,7 @@ export function createBot({
     fishing,
     fortune,
     meals,
+    music,
     stocks,
     seasons,
     tamagotchi,
@@ -358,6 +379,9 @@ export function createBot({
     },
     stopLotteryDraws() {
       stopLotteryDrawScheduler();
+    },
+    stopMusic() {
+      music.close();
     },
     async start(token) {
       await client.login(token);

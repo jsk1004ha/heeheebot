@@ -65,7 +65,16 @@ export const economyCommands = [
     ),
   new SlashCommandBuilder()
     .setName('랭킹')
-    .setDescription('이 서버의 레벨/경험치 랭킹을 확인합니다.')
+    .setDescription('이 서버의 레벨/경험치 랭킹 또는 음악 인기곡 랭킹을 확인합니다.')
+    .addStringOption((option) =>
+      option
+        .setName('종류')
+        .setDescription('확인할 랭킹 종류')
+        .addChoices(
+          { name: '레벨', value: '레벨' },
+          { name: '인기곡', value: '인기곡' }
+        )
+    )
     .addIntegerOption((option) =>
       option
         .setName('개수')
@@ -219,6 +228,9 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
   }
 
   if (interaction.commandName === '랭킹') {
+    const rankingType = interaction.options.getString?.('종류') ?? '레벨';
+    if (rankingType !== '레벨') return false;
+
     const limit = interaction.options.getInteger('개수') ?? 10;
     const rows = await economy.getLeaderboard(guildId, limit);
 

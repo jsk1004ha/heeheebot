@@ -1,0 +1,222 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { ChannelType } from 'discord.js';
+import { getApplicationCommandPayloads } from '../src/command-registration.js';
+import {
+  createMusicPanelPayload,
+  createPopularTracksPayload,
+  createUserMusicStatsPayload,
+  getMusicCommandPayloads
+} from '../src/commands/music.js';
+import { createSqliteStore } from '../src/storage/sqlite-store.js';
+import {
+  MusicService,
+  normalizeLavalinkLoadResult,
+  toLavalinkIdentifier
+} from '../src/systems/music.js';
+
+const SAMPLE_TRACK = Object.freeze({
+  encoded: 'encoded-ditto',
+  info: {
+    title: 'Ditto - NewJeans',
+    author: 'NewJeans',
+    length: 185000,
+    isStream: false,
+    uri: 'https://example.test/ditto',
+    sourceName: 'youtube',
+    identifier: 'ditto-id',
+    artworkUrl: 'https://example.test/ditto.jpg'
+  },
+  pluginInfo: { genre: 'K-Pop' }
+});
+
+test('음악 명령 payload가 기본 재생/검색/플리/통계 명령을 등록한다', () => {
+  const payloads = getMusicCommandPayloads();
+  const names = payloads.map((payload) => payload.name);
+
+  for (const name of ['재생', '검색', '일시정지', '다시재생', '스킵', '정지', '큐', '플리', '내음악통계']) {
+    assert.ok(names.includes(name), `${name} 음악 명령이 있어야 합니다.`);
+  }
+
+  const registeredNames = getApplicationCommandPayloads().map((payload) => payload.name);
+  assert.equal(new Set(registeredNames).size, registeredNames.length, '음악 추가 후에도 slash command 이름 중복이 없어야 합니다.');
+  assert.ok(registeredNames.includes('재생'));
+  assert.ok(registeredNames.includes('내음악통계'));
+});
+
+test('기존 /랭킹 명령은 인기곡 선택지를 포함해 음악 랭킹으로 라우팅될 수 있다', () => {
+  const ranking = getApplicationCommandPayloads().find((payload) => payload.name === '랭킹');
+  assert.ok(ranking);
+  const rankingType = ranking.options.find((option) => option.name === '종류');
+  assert.ok(rankingType);
+  assert.ok(rankingType.choices.some((choice) => choice.value === '인기곡'));
+});
+
+test('Lavalink loadtracks 결과와 검색 prefix를 표준화한다', () => {
+  assert.equal(toLavalinkIdentifier('ditto', 'ytsearch'), 'ytsearch:ditto');
+  assert.equal(toLavalinkIdentifier('https://youtu.be/example', 'ytsearch'), 'https://youtu.be/example');
+
+  const tracks = normalizeLavalinkLoadResult({ loadType: 'search', data: [SAMPLE_TRACK] });
+  assert.equal(tracks.length, 1);
+  assert.equal(tracks[0].title, 'Ditto - NewJeans');
+  assert.equal(tracks[0].author, 'NewJeans');
+  assert.equal(tracks[0].genre, 'K-Pop');
+});
+
+test('음악 서비스는 현재곡을 플레이리스트에 저장하고 공개 가져오기와 통계를 유지한다', async () => {
+  const store = createSqliteStore(':memory:');
+  const lavalink = new MockLavalink();
+  const voicePackets = [];
+  const music = new MusicService({
+    store,
+    lavalink,
+    config: { lavalink: { host: 'localhost', password: 'pw' } },
+    now: createClock(1000)
+  });
+
+  try {
+    const result = await music.playQuery({
+      guild: createGuild(voicePackets),
+      textChannel: createTextChannel(),
+      voiceChannel: createVoiceChannel(),
+      requester: { id: 'user-1', username: 'Junseo' },
+      query: 'ditto'
+    });
+
+    assert.equal(result.startedNow, true);
+    assert.equal(result.current.title, 'Ditto - NewJeans');
+    assert.equal(voicePackets[0].op, 4);
+    assert.equal(voicePackets[0].d.channel_id, 'voice-1');
+    assert.equal(lavalink.updates.at(-1).payload.track.encoded, 'encoded-ditto');
+
+    const playlist = await music.createPlaylist({ guildId: 'guild-1', userId: 'user-1', username: 'Junseo', name: 'Kpop' });
+    assert.equal(playlist.name, 'Kpop');
+
+    const added = await music.addCurrentTrackToPlaylist({ guildId: 'guild-1', userId: 'user-1', username: 'Junseo', name: 'Kpop' });
+    assert.equal(added.playlist.tracks.length, 1);
+    assert.equal(added.track.title, 'Ditto - NewJeans');
+
+    await music.setPlaylistPublic({ guildId: 'guild-1', userId: 'user-1', name: 'Kpop' });
+    const imported = await music.importPublicPlaylist({
+      guildId: 'guild-1',
+      ownerId: 'user-1',
+      importerId: 'user-2',
+      importerName: 'Rabbit',
+      name: 'Kpop'
+    });
+    assert.equal(imported.ownerId, 'user-2');
+    assert.equal(imported.public, false);
+    assert.equal(imported.tracks.length, 1);
+
+    const topTracks = await music.getTopTracks({ guildId: 'guild-1', limit: 10 });
+    assert.equal(topTracks[0].track.title, 'Ditto - NewJeans');
+    assert.equal(topTracks[0].count, 1);
+
+    const stats = await music.getUserStats({ guildId: 'guild-1', userId: 'user-1' });
+    assert.equal(stats.totalRequests, 1);
+    assert.equal(Object.values(stats.artists)[0].label, 'NewJeans');
+    assert.equal(Object.values(stats.genres)[0].label, 'K-Pop');
+  } finally {
+    store.close();
+  }
+});
+
+test('음악 패널과 랭킹/통계 payload는 핵심 정보를 임베드와 컨트롤로 표현한다', () => {
+  const panel = createMusicPanelPayload({
+    current: {
+      title: 'Ditto - NewJeans',
+      author: 'NewJeans',
+      requesterName: 'Junseo',
+      length: 185000,
+      isStream: false,
+      artworkUrl: null
+    },
+    queue: [],
+    paused: false,
+    repeat: false,
+    shuffle: false,
+    filter: 'none',
+    position: 72000
+  });
+
+  assert.match(panel.embeds[0].data.description, /Ditto - NewJeans/);
+  assert.equal(panel.components.length, 2);
+  assert.equal(panel.components[1].components[0].data.custom_id, 'music:filter');
+
+  const ranking = createPopularTracksPayload([{ track: { title: 'Ditto', author: 'NewJeans' }, count: 3 }]);
+  assert.match(ranking.embeds[0].data.description, /3회 재생/);
+
+  const stats = createUserMusicStatsPayload({
+    totalRequests: 4,
+    genres: { kpop: { label: 'K-Pop', count: 4, lastRequestedAt: 1 } },
+    artists: { nj: { label: 'NewJeans', count: 4, lastRequestedAt: 1 } },
+    tracks: { ditto: { label: 'Ditto', count: 4, lastRequestedAt: 1 } }
+  });
+  assert.match(stats.embeds[0].data.description, /4곡/);
+});
+
+class MockLavalink {
+  constructor() {
+    this.configured = true;
+    this.sessionId = 'session-1';
+    this.updates = [];
+  }
+
+  async loadTracks(identifier) {
+    return {
+      loadType: identifier.startsWith('ytsearch:') ? 'search' : 'track',
+      data: identifier.startsWith('ytsearch:') ? [SAMPLE_TRACK] : SAMPLE_TRACK
+    };
+  }
+
+  async updatePlayer(guildId, payload) {
+    this.updates.push({ guildId, payload });
+    return { guildId, ...payload };
+  }
+
+  async destroyPlayer(guildId) {
+    this.destroyed = guildId;
+  }
+
+  close() {}
+}
+
+function createGuild(packets) {
+  return {
+    id: 'guild-1',
+    shard: {
+      async send(packet) {
+        packets.push(packet);
+      }
+    }
+  };
+}
+
+function createVoiceChannel() {
+  return {
+    id: 'voice-1',
+    type: ChannelType.GuildVoice
+  };
+}
+
+function createTextChannel() {
+  return {
+    id: 'text-1',
+    async send() {
+      return { id: 'panel-1', channelId: 'text-1', async edit(payload) { return payload; } };
+    },
+    messages: {
+      async fetch() {
+        return null;
+      }
+    }
+  };
+}
+
+function createClock(start) {
+  let value = start;
+  return () => {
+    value += 1000;
+    return value;
+  };
+}

@@ -1,6 +1,6 @@
 {
   "name": "heeheebot",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "description": "Discord bot foundation with level and money systems.",
   "type": "module",
   "private": true,
@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "discord.js": "^14.0.0",
-    "dotenv": "^17.4.2"
+    "dotenv": "^17.4.2",
+    "ws": "^8.20.0"
   },
   "engines": {
     "node": ">=22.5"
