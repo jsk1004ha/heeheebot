@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
-import { MessageFlags } from 'discord.js';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { Events, MessageFlags } from 'discord.js';
 import { SEASON_POINT_SOURCES } from '../src/systems/seasons.js';
 import test from 'node:test';
 import {
+  createBot,
   isSupportedCommandInteraction,
   shouldDeferBeforeCommandHandling,
   shouldDeferPrivatelyBeforeCommandHandling,
@@ -118,6 +122,33 @@ test('워들과 숫자야구는 라우터에서 처음부터 비공개 defer를 
     isChatInputCommand: () => true,
     commandName: '우노'
   }), false);
+});
+
+test('/워들 도전은 봇 라우팅에서 비공개 defer 원본을 채워 제출 처리한다', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'heeheebot-bot-wordle-'));
+  const bot = createBot({
+    databasePath: join(directory, 'profiles.sqlite'),
+    legacyJsonPath: join(directory, 'missing.json'),
+    logger: quietLogger
+  });
+
+  try {
+    const interaction = createWordleCommandInteraction('crane');
+    const [listener] = bot.client.listeners(Events.InteractionCreate);
+
+    await listener(interaction);
+
+    assert.deepEqual(interaction.calls.map(([name]) => name), ['deferReply', 'editReply']);
+    assert.equal(interaction.calls[0][1].flags, MessageFlags.Ephemeral);
+    assert.equal(interaction.replies.length, 0);
+    assert.equal(interaction.edits.length, 1);
+    assert.match(interaction.edits[0].content, /제출 완료: \*\*CRANE\*\*/);
+    assert.match(interaction.edits[0].content, /🟩|🟨|⬛/);
+  } finally {
+    bot.client.destroy();
+    bot.economy.store.close();
+    await rm(directory, { recursive: true, force: true });
+  }
 });
 
 test('봇 라우팅은 모달을 띄워야 하는 라이어게임 버튼은 사전 defer하지 않는다', () => {
@@ -308,6 +339,74 @@ function createCommandInteraction(commandName) {
   };
 }
 
+function createWordleCommandInteraction(guess) {
+  return {
+    commandName: '워들',
+    guildId: 'guild-1',
+    channelId: 'channel-1',
+    user: {
+      id: 'user-1',
+      username: '테스터'
+    },
+    deferred: false,
+    replied: false,
+    calls: [],
+    replies: [],
+    edits: [],
+    followUps: [],
+    isAutocomplete() {
+      return false;
+    },
+    isChatInputCommand() {
+      return true;
+    },
+    isModalSubmit() {
+      return false;
+    },
+    isButton() {
+      return false;
+    },
+    isStringSelectMenu() {
+      return false;
+    },
+    inGuild() {
+      return true;
+    },
+    options: {
+      getSubcommand() {
+        return '도전';
+      },
+      getString(name, required = false) {
+        const value = name === '단어' ? guess : null;
+        if (required && value === null) throw new Error(`missing string option: ${name}`);
+        return value;
+      }
+    },
+    async deferReply(payload) {
+      this.calls.push(['deferReply', payload]);
+      this.deferred = true;
+    },
+    async reply(payload) {
+      this.calls.push(['reply', payload]);
+      this.replies.push(payload);
+      this.replied = true;
+    },
+    async editReply(payload) {
+      this.calls.push(['editReply', payload]);
+      this.edits.push(payload);
+      this.replied = true;
+    },
+    async followUp(payload) {
+      this.calls.push(['followUp', payload]);
+      this.followUps.push(payload);
+    },
+    async deleteReply() {
+      this.calls.push(['deleteReply']);
+      this.deleted = true;
+    }
+  };
+}
+
 function createButtonInteraction(customId) {
   return {
     customId,
@@ -336,6 +435,13 @@ function createButtonInteraction(customId) {
     }
   };
 }
+
+const quietLogger = {
+  log() {},
+  warn() {},
+  error() {},
+  debug() {}
+};
 
 function createSeasonSpy() {
   const awards = [];
