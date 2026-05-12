@@ -227,9 +227,39 @@ async function handleLiarsBarButton(interaction, manager) {
     return true;
   }
 
+  if (action === 'liarsbar_call') {
+    let result;
+    try {
+      result = manager.callLiar({
+        guildId: interaction.guildId,
+        channelId: interaction.channelId,
+        userId: interaction.user.id
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: `LIAR 선언 실패: ${error.message}`,
+        flags: MessageFlags.Ephemeral,
+        allowedMentions: { parse: [] }
+      });
+      return true;
+    }
+
+    if (!result.ok) {
+      await interaction.reply({
+        content: `❌ ${result.reason}`,
+        flags: MessageFlags.Ephemeral,
+        allowedMentions: { parse: [] }
+      });
+      return true;
+    }
+
+    await interaction.update(createLiarsBarActionPayload(result));
+    return true;
+  }
+
   if (state.status !== 'lobby') {
     await interaction.reply({
-      content: '이미 시작된 라이어바 게임입니다. 공개 메시지의 **내 손패** 버튼이나 `/라이어바 내기`, `/라이어바 라이어`를 사용하세요.',
+      content: '이미 시작된 라이어바 게임입니다. 공개 메시지의 **내 손패** 또는 **LIAR 선언** 버튼을 사용하세요.',
       flags: MessageFlags.Ephemeral
     });
     return true;
@@ -489,7 +519,7 @@ export function formatLiarsBarHand({ game, hand }) {
     '🎴 **카드 선택 번호**',
     cardLines,
     '',
-    'Tip: `/라이어바 내기 카드1:<번호> 카드2:<번호> 카드3:<번호>`로 1~3장을 내거나, 의심하려면 `/라이어바 라이어`.'
+    'Tip: 아래 선택 메뉴로 1~3장을 바로 내거나, 의심하려면 공개 테이블의 **LIAR 선언** 버튼을 누르세요.'
   ].filter(Boolean).join('\n');
 }
 
@@ -656,7 +686,7 @@ function createLiarsBarStatusEmbed(state, {
       {
         name: '다음 행동',
         value: state.status === 'playing'
-          ? '현재 차례는 카드를 내거나, 직전 주장이 있으면 `/라이어바 라이어`로 의심할 수 있습니다.'
+          ? '현재 차례는 카드를 내거나, 직전 주장이 있으면 **LIAR 선언** 버튼으로 의심할 수 있습니다.'
           : state.winner ? `승자: <@${state.winner.userId}>` : '게임이 종료되었습니다.',
         inline: false
       }
@@ -689,7 +719,7 @@ function createLiarsBarHandEmbed({ game, hand }) {
       },
       {
         name: '빠른 입력',
-        value: '`/라이어바 내기 카드1:<번호> 카드2:<번호> 카드3:<번호>`\n의심: `/라이어바 라이어`',
+        value: '카드 제출: 아래 선택 메뉴 또는 `/라이어바 내기 카드1:<번호>`\n의심: 공개 테이블의 **LIAR 선언** 버튼 또는 `/라이어바 라이어`',
         inline: false
       }
     )
@@ -754,7 +784,13 @@ function createLiarsBarGameActionRow(state) {
       .setCustomId(`liarsbar_hand:${state.id}`)
       .setLabel('내 손패')
       .setStyle(ButtonStyle.Primary)
-      .setEmoji('🔒')
+      .setEmoji('🔒'),
+    new ButtonBuilder()
+      .setCustomId(`liarsbar_call:${state.id}`)
+      .setLabel('LIAR 선언')
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji('🕵️')
+      .setDisabled(!state.previousPlay)
   );
 }
 
