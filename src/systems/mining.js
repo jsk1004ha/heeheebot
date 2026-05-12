@@ -20,6 +20,14 @@ const DEFAULT_MARKET_TICK_MS = 3 * 60 * 1000;
 const MAX_MARKET_CATCH_UP_TICKS = 24;
 const ORE_PRICE_HISTORY_LIMIT = 48;
 const MIN_ORE_PRICE = 1;
+const ORE_PRICE_BANDS = Object.freeze({
+  common: Object.freeze({ min: 10, max: 50 }),
+  uncommon: Object.freeze({ min: 70, max: 250 }),
+  rare: Object.freeze({ min: 350, max: 1_500 }),
+  epic: Object.freeze({ min: 2_000, max: 12_000 }),
+  legendary: Object.freeze({ min: 40_000, max: 300_000 }),
+  hidden: Object.freeze({ min: 500_000, max: 5_000_000 })
+});
 
 const RARITIES = Object.freeze({
   common: Object.freeze({ label: '일반', weight: 6500, powerBonus: 0, volatilityBps: 350, eventChance: 7 }),
@@ -31,61 +39,61 @@ const RARITIES = Object.freeze({
 });
 
 const ORE_BLUEPRINTS = Object.freeze([
-  ore('stone_fragment', '암석 조각', 'common', '암석', 18, 58, 1),
-  ore('copper_ore', '구리광석', 'common', '금속', 22, 66, 2),
-  ore('tin_ore', '주석광석', 'common', '금속', 20, 62, 2),
-  ore('iron_ore', '철광석', 'common', '금속', 25, 70, 3),
-  ore('coal_chunk', '석탄 덩어리', 'common', '연료', 15, 55, 2),
-  ore('limestone', '석회석', 'common', '암석', 18, 60, 1),
-  ore('claystone', '점토석', 'common', '점토', 15, 52, 1),
-  ore('salt_crystal', '소금 결정', 'common', '결정', 22, 64, 2),
-  ore('lead_ore', '납광석', 'common', '금속', 20, 63, 2),
-  ore('zinc_ore', '아연광석', 'common', '금속', 23, 68, 3),
-  ore('silica_ore', '규석', 'common', '결정', 24, 69, 2),
-  ore('mica_sheet', '운모 조각', 'common', '결정', 25, 72, 3),
-  ore('ochre_stone', '황토석', 'common', '토양', 15, 54, 1),
-  ore('manganese_ore', '망간광석', 'common', '금속', 24, 71, 3),
-  ore('basalt_core', '현무암 심', 'common', '암석', 18, 59, 2),
+  ore('stone_fragment', '암석 조각', 'common', '암석', 18, 58, 10),
+  ore('copper_ore', '구리광석', 'common', '금속', 22, 66, 24),
+  ore('tin_ore', '주석광석', 'common', '금속', 20, 62, 20),
+  ore('iron_ore', '철광석', 'common', '금속', 25, 70, 34),
+  ore('coal_chunk', '석탄 덩어리', 'common', '연료', 15, 55, 16),
+  ore('limestone', '석회석', 'common', '암석', 18, 60, 14),
+  ore('claystone', '점토석', 'common', '점토', 15, 52, 10),
+  ore('salt_crystal', '소금 결정', 'common', '결정', 22, 64, 28),
+  ore('lead_ore', '납광석', 'common', '금속', 20, 63, 22),
+  ore('zinc_ore', '아연광석', 'common', '금속', 23, 68, 26),
+  ore('silica_ore', '규석', 'common', '결정', 24, 69, 30),
+  ore('mica_sheet', '운모 조각', 'common', '결정', 25, 72, 36),
+  ore('ochre_stone', '황토석', 'common', '토양', 15, 54, 18),
+  ore('manganese_ore', '망간광석', 'common', '금속', 24, 71, 40),
+  ore('basalt_core', '현무암 심', 'common', '암석', 18, 59, 20),
 
-  ore('silver_ore', '은광석', 'uncommon', '귀금속', 30, 78, 5),
-  ore('black_iron', '흑철광석', 'uncommon', '금속', 32, 80, 6),
-  ore('cobalt_ore', '코발트광석', 'uncommon', '금속', 35, 82, 7),
-  ore('dolomite', '백운석', 'uncommon', '암석', 28, 76, 4),
-  ore('quartz_crystal', '석영 결정', 'uncommon', '결정', 34, 84, 6),
-  ore('fluorite', '형석', 'uncommon', '결정', 36, 86, 7),
-  ore('sulfur_crystal', '유황 결정', 'uncommon', '결정', 25, 75, 5),
-  ore('magnetite', '자철석', 'uncommon', '금속', 33, 82, 6),
-  ore('obsidian_shard', '흑요석 파편', 'uncommon', '유리질', 38, 88, 8),
-  ore('moonstone_raw', '월장석 원석', 'uncommon', '보석', 36, 90, 9),
+  ore('silver_ore', '은광석', 'uncommon', '귀금속', 30, 78, 90),
+  ore('black_iron', '흑철광석', 'uncommon', '금속', 32, 80, 110),
+  ore('cobalt_ore', '코발트광석', 'uncommon', '금속', 35, 82, 135),
+  ore('dolomite', '백운석', 'uncommon', '암석', 28, 76, 80),
+  ore('quartz_crystal', '석영 결정', 'uncommon', '결정', 34, 84, 115),
+  ore('fluorite', '형석', 'uncommon', '결정', 36, 86, 145),
+  ore('sulfur_crystal', '유황 결정', 'uncommon', '결정', 25, 75, 75),
+  ore('magnetite', '자철석', 'uncommon', '금속', 33, 82, 120),
+  ore('obsidian_shard', '흑요석 파편', 'uncommon', '유리질', 38, 88, 170),
+  ore('moonstone_raw', '월장석 원석', 'uncommon', '보석', 36, 90, 210),
 
-  ore('gold_ore', '금광석', 'rare', '귀금속', 42, 92, 14),
-  ore('platinum_ore', '백금광석', 'rare', '귀금속', 44, 94, 18),
-  ore('ruby_raw', '루비 원석', 'rare', '보석', 48, 96, 22),
-  ore('sapphire_raw', '사파이어 원석', 'rare', '보석', 48, 96, 21),
-  ore('emerald_raw', '에메랄드 원석', 'rare', '보석', 47, 95, 20),
-  ore('amethyst_geode', '자수정 정동', 'rare', '보석', 43, 93, 16),
-  ore('titanium_ore', '티타늄광석', 'rare', '금속', 45, 96, 19),
-  ore('meteor_iron', '운석철', 'rare', '우주금속', 50, 98, 28),
+  ore('gold_ore', '금광석', 'rare', '귀금속', 42, 92, 420),
+  ore('platinum_ore', '백금광석', 'rare', '귀금속', 44, 94, 620),
+  ore('ruby_raw', '루비 원석', 'rare', '보석', 48, 96, 900),
+  ore('sapphire_raw', '사파이어 원석', 'rare', '보석', 48, 96, 850),
+  ore('emerald_raw', '에메랄드 원석', 'rare', '보석', 47, 95, 800),
+  ore('amethyst_geode', '자수정 정동', 'rare', '보석', 43, 93, 520),
+  ore('titanium_ore', '티타늄광석', 'rare', '금속', 45, 96, 700),
+  ore('meteor_iron', '운석철', 'rare', '우주금속', 50, 98, 1_200),
 
-  ore('mithril_ore', '미스릴광석', 'epic', '환상금속', 56, 100, 55),
-  ore('orichalcum_ore', '오리하르콘', 'epic', '환상금속', 58, 100, 65),
-  ore('starlight_crystal', '별빛 수정', 'epic', '결정', 60, 100, 70),
-  ore('dragon_bloodstone', '용혈석', 'epic', '보석', 62, 100, 78),
-  ore('sunstone_core', '태양석 핵', 'epic', '보석', 60, 100, 72),
-  ore('moonpearl_vein', '달빛진주광', 'epic', '진주광', 59, 100, 68),
-  ore('resonance_crystal', '공명 수정', 'epic', '결정', 61, 100, 75),
+  ore('mithril_ore', '미스릴광석', 'epic', '환상금속', 56, 100, 3_200),
+  ore('orichalcum_ore', '오리하르콘', 'epic', '환상금속', 58, 100, 4_500),
+  ore('starlight_crystal', '별빛 수정', 'epic', '결정', 60, 100, 6_000),
+  ore('dragon_bloodstone', '용혈석', 'epic', '보석', 62, 100, 8_000),
+  ore('sunstone_core', '태양석 핵', 'epic', '보석', 60, 100, 6_800),
+  ore('moonpearl_vein', '달빛진주광', 'epic', '진주광', 59, 100, 5_500),
+  ore('resonance_crystal', '공명 수정', 'epic', '결정', 61, 100, 7_500),
 
-  ore('adamantite_ore', '아다만타이트', 'legendary', '신화금속', 68, 100, 160),
-  ore('celestial_diamond', '천상 다이아몬드', 'legendary', '보석', 72, 100, 210),
-  ore('void_opal', '공허 오팔', 'legendary', '보석', 70, 100, 190),
-  ore('phoenix_emberstone', '불사조 잿불석', 'legendary', '불꽃광', 69, 100, 180),
-  ore('worldroot_fossil', '세계수 화석광', 'legendary', '고대광', 70, 100, 220),
+  ore('adamantite_ore', '아다만타이트', 'legendary', '신화금속', 68, 100, 100_000),
+  ore('celestial_diamond', '천상 다이아몬드', 'legendary', '보석', 72, 100, 180_000),
+  ore('void_opal', '공허 오팔', 'legendary', '보석', 70, 100, 160_000),
+  ore('phoenix_emberstone', '불사조 잿불석', 'legendary', '불꽃광', 69, 100, 140_000),
+  ore('worldroot_fossil', '세계수 화석광', 'legendary', '고대광', 70, 100, 220_000),
 
-  ore('hidden_developer_gem', '개발자의 보석', 'hidden', '비밀', 80, 100, 360),
-  ore('hidden_404_crystal', '404 수정', 'hidden', '오류', 80, 100, 404),
-  ore('hidden_time_ore', '시공 광석', 'hidden', '시간', 82, 100, 450),
-  ore('hidden_shadow_mithril', '그림자 미스릴', 'hidden', '그림자', 82, 100, 480),
-  ore('hidden_dawn_core', '새벽의 핵석', 'hidden', '새벽', 85, 100, 500)
+  ore('hidden_developer_gem', '개발자의 보석', 'hidden', '비밀', 80, 100, 1_000_000),
+  ore('hidden_404_crystal', '404 수정', 'hidden', '오류', 80, 100, 1_500_000),
+  ore('hidden_time_ore', '시공 광석', 'hidden', '시간', 82, 100, 2_500_000),
+  ore('hidden_shadow_mithril', '그림자 미스릴', 'hidden', '그림자', 82, 100, 3_500_000),
+  ore('hidden_dawn_core', '새벽의 핵석', 'hidden', '새벽', 85, 100, 5_000_000)
 ]);
 
 const ORE_SPECIES = Object.freeze(Object.fromEntries(
@@ -96,6 +104,8 @@ const ORE_SPECIES = Object.freeze(Object.fromEntries(
     minQuality: blueprint.minQuality,
     maxQuality: blueprint.maxQuality,
     value: blueprint.value,
+    priceMin: getOrePriceBand(blueprint.rarity).min,
+    priceMax: getOrePriceBand(blueprint.rarity).max,
     hidden: blueprint.rarity === 'hidden',
     assetId: `ore_${blueprint.id}`,
     imagePath: `assets/mining/ores/${blueprint.rarity === 'hidden' ? 'hidden' : blueprint.rarity}/${blueprint.id}/icon.png`
@@ -587,8 +597,8 @@ function getHiddenOreWeight(profile) {
   const level = clampInteger(profile.pickaxe.level, 1, MAX_PICKAXE_LEVEL);
   const mines = normalizeNonNegativeInteger(profile.stats?.totalMines);
   const streak = normalizeNonNegativeInteger(profile.focus?.streak);
-  if (level < 60 || mines < 100 || streak < 20) return 0;
-  return Math.min(35, 1 + Math.floor((level - 60) / 5) + Math.floor(mines / 300) + Math.floor(streak / 50));
+  if (level < 80 || mines < 500 || streak < 50) return 0;
+  return Math.min(8, 1 + Math.floor((level - 80) / 10) + Math.floor(mines / 2000) + Math.floor(streak / 100));
 }
 
 function getEnhancementCost(level) {
@@ -636,7 +646,8 @@ function createInitialMiningMarket(now) {
 
 function createInitialOreMarketState(item, now) {
   const safeNow = normalizeNonNegativeInteger(now);
-  return { price: item.value, previousPrice: item.value, changeBps: 0, eventType: 'listed', updatedAt: safeNow, history: [{ tickIndex: 0, price: item.value, at: safeNow }] };
+  const price = clampOrePrice(item, item.value);
+  return { price, previousPrice: price, changeBps: 0, eventType: 'listed', updatedAt: safeNow, history: [{ tickIndex: 0, price, at: safeNow }] };
 }
 
 function syncMiningMarket(guild, now, service) {
@@ -661,14 +672,14 @@ function advanceMiningMarket(market, now, service) {
 
 function advanceOrePrice(item, state, tickIndex, updatedAt, randomIntFn) {
   const rarityConfig = RARITIES[item.rarity];
-  const previousPrice = Math.max(MIN_ORE_PRICE, normalizeNonNegativeInteger(state?.price) || item.value);
+  const previousPrice = clampOrePrice(item, normalizeNonNegativeInteger(state?.price) || item.value);
   const baseMoveBps = randomIntFn(-rarityConfig.volatilityBps, rarityConfig.volatilityBps);
   const eventRoll = randomIntFn(1, 100);
   const eventMoveBps = eventRoll <= rarityConfig.eventChance
     ? randomIntFn(-Math.floor(rarityConfig.volatilityBps * 1.6), Math.floor(rarityConfig.volatilityBps * 1.6))
     : 0;
   const totalMoveBps = clampInteger(baseMoveBps + eventMoveBps, -3500, 3500);
-  const price = Math.max(MIN_ORE_PRICE, Math.round(previousPrice * (10_000 + totalMoveBps) / 10_000));
+  const price = clampOrePrice(item, Math.round(previousPrice * (10_000 + totalMoveBps) / 10_000));
   return {
     price,
     previousPrice,
@@ -693,10 +704,20 @@ function calculateChangeBps(price, previousPrice) {
   return Math.round(((normalizeNonNegativeInteger(price) - previous) / previous) * 10_000);
 }
 
+function getOrePriceBand(rarity) {
+  return ORE_PRICE_BANDS[rarity] ?? Object.freeze({ min: MIN_ORE_PRICE, max: Number.MAX_SAFE_INTEGER });
+}
+
+function clampOrePrice(itemOrRarity, value) {
+  const rarity = typeof itemOrRarity === 'string' ? itemOrRarity : itemOrRarity?.rarity;
+  const band = getOrePriceBand(rarity);
+  return clampInteger(normalizeNonNegativeInteger(value), band.min, band.max);
+}
+
 function normalizeOreMarketState(state, item, now) {
   const safe = state && typeof state === 'object' ? state : {};
-  const price = Math.max(MIN_ORE_PRICE, normalizeNonNegativeInteger(safe.price) || item.value);
-  const previousPrice = Math.max(MIN_ORE_PRICE, normalizeNonNegativeInteger(safe.previousPrice) || price);
+  const price = clampOrePrice(item, normalizeNonNegativeInteger(safe.price) || item.value);
+  const previousPrice = clampOrePrice(item, normalizeNonNegativeInteger(safe.previousPrice) || price);
   const updatedAt = normalizeNonNegativeInteger(safe.updatedAt) || normalizeNonNegativeInteger(now);
   return {
     price,
