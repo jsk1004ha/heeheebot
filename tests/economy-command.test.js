@@ -15,15 +15,27 @@ test('경제 명령 payload는 경험치를 단일 표현으로 설명한다', (
   const leaderboardCommand = payloads.find((command) => command.name === '랭킹');
   const currencyInfoCommand = payloads.find((command) => command.name === '재화정보');
   const accountLinkCommand = payloads.find((command) => command.name === '계정연동');
+  const loanCommand = payloads.find((command) => command.name === '돈빌리기');
+  const loanOfferCommand = payloads.find((command) => command.name === '돈빌리기수락');
+  const loanDecisionCommand = payloads.find((command) => command.name === '돈빌리기결정');
+  const loanRepayCommand = payloads.find((command) => command.name === '돈갚기');
   const exchangeCommand = payloads.find((command) => command.name === '환전');
 
   assert.ok(profileCommand);
   assert.ok(leaderboardCommand);
   assert.ok(currencyInfoCommand);
   assert.ok(accountLinkCommand);
+  assert.ok(loanCommand);
+  assert.ok(loanOfferCommand);
+  assert.ok(loanDecisionCommand);
+  assert.ok(loanRepayCommand);
   assert.equal(exchangeCommand, undefined);
   assert.match(profileCommand.description, /레벨, 경험치, 골드, 성장 배지/);
   assert.ok(profileCommand.options.some((option) => option.name === '대상'));
+  assert.ok(loanCommand.options.some((option) => option.name === '상환방식'));
+  assert.ok(loanOfferCommand.options.some((option) => option.name === '이자방식'));
+  assert.ok(loanDecisionCommand.options.some((option) => option.name === '선택'));
+  assert.ok(loanRepayCommand.options.some((option) => option.name === '돈'));
   assert.match(leaderboardCommand.description, /레벨\/경험치 랭킹/);
   assert.match(currencyInfoCommand.description, /통합 골드|정산 기준|사용처/);
   assert.match(accountLinkCommand.description, /계정/);
@@ -149,6 +161,102 @@ test('송금 응답은 대상 유저를 원시 객체가 아니라 실제 멘션
     parse: [],
     users: ['user-2']
   });
+});
+
+test('돈빌리기 명령은 대상/금액/기간/상환방식을 대출 요청으로 전달한다', async () => {
+  const calls = [];
+  const economy = {
+    async requestUserLoan(payload) {
+      calls.push(payload);
+      return {
+        request: {
+          amount: payload.amount,
+          termMs: payload.termHours * 60 * 60 * 1000,
+          repaymentMode: payload.repaymentMode
+        }
+      };
+    }
+  };
+  const targetUser = {
+    id: 'user-2',
+    username: '대출자',
+    bot: false
+  };
+  const interaction = createInteraction('돈빌리기', {
+    targetUser,
+    integerOptions: { 돈: 500, 기간: 12 },
+    stringOptions: { 상환방식: 'installment' }
+  });
+
+  await handleEconomyCommand(interaction, economy);
+
+  assert.deepEqual(calls[0], {
+    guildId: 'guild-1',
+    borrowerUserId: 'user-1',
+    borrowerUsername: '테스터',
+    lenderUserId: 'user-2',
+    lenderUsername: '대출자',
+    amount: 500,
+    termHours: 12,
+    repaymentMode: 'installment'
+  });
+  assert.match(interaction.replies[0].content, /<@user-2>/);
+  assert.match(interaction.replies[0].content, /매번 조금씩 갚기/);
+});
+
+test('돈빌리기수락과 결정 명령은 이자 조건과 최종 선택을 처리한다', async () => {
+  const calls = [];
+  const economy = {
+    async offerUserLoan(payload) {
+      calls.push(['offer', payload]);
+      return {
+        offer: {
+          amount: 1_000,
+          totalDue: 1_100,
+          interestType: payload.interestType,
+          termMs: 3_600_000,
+          repaymentMode: 'lump_sum'
+        }
+      };
+    },
+    async decideUserLoan(payload) {
+      calls.push(['decide', payload]);
+      return {
+        accepted: true,
+        loan: {
+          principal: 1_000,
+          totalDue: 1_100,
+          dueAt: 3_600_000,
+          repaymentMode: 'lump_sum'
+        }
+      };
+    }
+  };
+  const targetUser = {
+    id: 'user-2',
+    username: '상대',
+    bot: false
+  };
+
+  await handleEconomyCommand(createInteraction('돈빌리기수락', {
+    targetUser,
+    integerOptions: { 이자: 10 },
+    stringOptions: { 이자방식: 'simple' }
+  }), economy);
+  const decisionInteraction = createInteraction('돈빌리기결정', {
+    targetUser,
+    stringOptions: { 선택: 'accept' }
+  });
+  await handleEconomyCommand(decisionInteraction, economy);
+
+  assert.equal(calls[0][0], 'offer');
+  assert.equal(calls[0][1].borrowerUserId, 'user-2');
+  assert.equal(calls[0][1].interestPercent, 10);
+  assert.equal(calls[0][1].interestType, 'simple');
+  assert.equal(calls[1][0], 'decide');
+  assert.equal(calls[1][1].lenderUserId, 'user-2');
+  assert.equal(calls[1][1].accept, true);
+  assert.match(decisionInteraction.replies[0].content, /만기 후 수익 35% 자동 상환/);
 });
 
 test('프로필 출력은 이미지 성장 배지와 10레벨 간격 다음 목표를 보여준다', async () => {
@@ -442,6 +550,9 @@ function createInteraction(commandName, options = {}) {
     options: {
       getInteger(name) {
         return options.integerOptions?.[name] ?? null;
+      },
+      getString(name) {
+        return options.stringOptions?.[name] ?? null;
       },
       getUser(name) {
         return name === '대상' ? options.targetUser ?? null : null;

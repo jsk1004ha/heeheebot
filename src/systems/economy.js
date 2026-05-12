@@ -174,6 +174,16 @@ const DEFAULT_OPTIONS = Object.freeze({
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const SWORD_PROTECTION_SCROLL_COST = 15_000;
+const SOCIAL_LOAN_AUTO_REPAYMENT_BPS = 3_500;
+const SOCIAL_LOAN_MAX_INTEREST_BPS = 10_000;
+const SOCIAL_LOAN_MIN_TERM_MS = 60 * 60 * 1000;
+const SOCIAL_LOAN_MAX_TERM_MS = 30 * DAY_MS;
+const SOCIAL_LOAN_STATUS_REQUESTED = 'requested';
+const SOCIAL_LOAN_STATUS_OFFERED = 'offered';
+const SOCIAL_LOAN_REPAYMENT_INSTALLMENT = 'installment';
+const SOCIAL_LOAN_REPAYMENT_LUMP_SUM = 'lump_sum';
+const SOCIAL_LOAN_INTEREST_SIMPLE = 'simple';
+const SOCIAL_LOAN_INTEREST_COMPOUND = 'compound';
 
 const SWORD_ACHIEVEMENTS = Object.freeze([
   swordAchievement(
@@ -451,7 +461,15 @@ export class EconomyService {
       const xpGained = this.options.dailyXpReward + streakBonusXp;
       const coinReward = getDailyCoinReward(this);
 
-      creditCurrency(profile, CURRENCY_MAIN, coinReward);
+      creditCurrencyWithSocialLoanRepayment({
+        data,
+        guildId,
+        profile,
+        currencyId: CURRENCY_MAIN,
+        amount: coinReward,
+        economy: this,
+        now
+      });
       profile.lastDailyAt = now;
       profile.lastDailyDay = today;
       profile.dailyStreak = streak;
@@ -503,7 +521,14 @@ export class EconomyService {
           : 0;
 
         if (moneyGained > 0) {
-          creditCurrency(profile, CURRENCY_MAIN, moneyGained);
+          creditCurrencyWithSocialLoanRepayment({
+            data,
+            guildId,
+            profile,
+            currencyId: CURRENCY_MAIN,
+            amount: moneyGained,
+            economy: this
+          });
         }
 
         return {
@@ -544,7 +569,14 @@ export class EconomyService {
         const levelResult = addXp(profile, xpGained, this);
 
         if (moneyGained > 0) {
-          creditCurrency(profile, CURRENCY_MAIN, moneyGained);
+          creditCurrencyWithSocialLoanRepayment({
+            data,
+            guildId,
+            profile,
+            currencyId: CURRENCY_MAIN,
+            amount: moneyGained,
+            economy: this
+          });
         }
 
         return {
@@ -587,7 +619,14 @@ export class EconomyService {
         const levelResult = addXp(profile, xpGained, this);
 
         if (moneyGained > 0) {
-          creditCurrency(profile, CURRENCY_MAIN, moneyGained);
+          creditCurrencyWithSocialLoanRepayment({
+            data,
+            guildId,
+            profile,
+            currencyId: CURRENCY_MAIN,
+            amount: moneyGained,
+            economy: this
+          });
         }
 
         return {
@@ -659,7 +698,14 @@ export class EconomyService {
 
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
-      creditCurrency(profile, CURRENCY_MAIN, moneyGained);
+      creditCurrencyWithSocialLoanRepayment({
+        data,
+        guildId,
+        profile,
+        currencyId: CURRENCY_MAIN,
+        amount: moneyGained,
+        economy: this
+      });
       const levelResult = addXp(profile, xpGained, this);
 
       return {
@@ -678,7 +724,14 @@ export class EconomyService {
 
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
-      creditCurrency(profile, CURRENCY_MAIN, moneyGained);
+      creditCurrencyWithSocialLoanRepayment({
+        data,
+        guildId,
+        profile,
+        currencyId: CURRENCY_MAIN,
+        amount: moneyGained,
+        economy: this
+      });
       const levelResult = addXp(profile, xpGained, this);
 
       return {
@@ -1005,7 +1058,14 @@ export class EconomyService {
         }
       }
 
-      creditCurrency(profile, CURRENCY_RPG, totalPrice);
+      creditCurrencyWithSocialLoanRepayment({
+        data,
+        guildId,
+        profile,
+        currencyId: CURRENCY_RPG,
+        amount: totalPrice,
+        economy: this
+      });
       profile.rpg.soldItems += normalizedQuantity;
       const derivedStats = getProfileRpgDerivedStats(profile);
       profile.rpg.hp = Math.min(profile.rpg.hp, derivedStats.maxHp);
@@ -1040,7 +1100,15 @@ export class EconomyService {
         throw new Error('이미 보상을 받은 퀘스트입니다.');
       }
 
-      creditCurrency(profile, CURRENCY_RPG, quest.rewards.coins);
+      creditCurrencyWithSocialLoanRepayment({
+        data,
+        guildId,
+        profile,
+        currencyId: CURRENCY_RPG,
+        amount: quest.rewards.coins,
+        economy: this,
+        now
+      });
       for (const [rewardItemId, count] of Object.entries(quest.rewards.items)) {
         addInventoryItem(profile.rpg.inventory, rewardItemId, count);
       }
@@ -1075,7 +1143,15 @@ export class EconomyService {
         throw new Error('이미 완료 보상을 받은 일일 의뢰입니다.');
       }
 
-      creditCurrency(profile, CURRENCY_RPG, mission.rewards.coins);
+      creditCurrencyWithSocialLoanRepayment({
+        data,
+        guildId,
+        profile,
+        currencyId: CURRENCY_RPG,
+        amount: mission.rewards.coins,
+        economy: this,
+        now
+      });
       for (const [rewardItemId, count] of Object.entries(mission.rewards.items)) {
         addInventoryItem(profile.rpg.inventory, rewardItemId, count);
       }
@@ -1110,7 +1186,15 @@ export class EconomyService {
         throw new Error('이미 받은 튜토리얼 보상입니다.');
       }
 
-      creditCurrency(profile, CURRENCY_RPG, step.rewards.coins);
+      creditCurrencyWithSocialLoanRepayment({
+        data,
+        guildId,
+        profile,
+        currencyId: CURRENCY_RPG,
+        amount: step.rewards.coins,
+        economy: this,
+        now
+      });
       for (const [rewardItemId, count] of Object.entries(step.rewards.items)) {
         addInventoryItem(profile.rpg.inventory, rewardItemId, count);
       }
@@ -2477,7 +2561,15 @@ export class EconomyService {
       const buyer = getOrCreateProfile(data, guildId, userId, username, this);
       const seller = getOrCreateProfile(data, guildId, listing.sellerId, listing.sellerUsername, this);
       debitCurrency(buyer, CURRENCY_RPG, listing.price, `골드가 부족합니다. 구매 가격: ${listing.price.toLocaleString()}골드`);
-      creditCurrency(seller, CURRENCY_RPG, listing.price);
+      creditCurrencyWithSocialLoanRepayment({
+        data,
+        guildId,
+        profile: seller,
+        currencyId: CURRENCY_RPG,
+        amount: listing.price,
+        economy: this,
+        now
+      });
 
       let acquiredGear = null;
       if (listing.kind === 'gear') {
@@ -2662,7 +2754,15 @@ export class EconomyService {
       const rewards = getRpgGearDisassembleRewards(gear);
       delete profile.rpg.gearInventory[gear.id];
       addInventoryItem(profile.rpg.inventory, 'enhancement_stone', rewards.enhancementStones);
-      creditCurrency(profile, CURRENCY_RPG, rewards.coins);
+      creditCurrencyWithSocialLoanRepayment({
+        data,
+        guildId,
+        profile,
+        currencyId: CURRENCY_RPG,
+        amount: rewards.coins,
+        economy: this,
+        now
+      });
       profile.rpg.disassembledGear += 1;
       profile.rpg.lastDisassembledGearAt = now;
 
@@ -2771,7 +2871,15 @@ export class EconomyService {
       }
 
       profile.rpg.storyChapters[normalizedChapterId] = now;
-      creditCurrency(profile, CURRENCY_RPG, chapter.rewards.coins);
+      creditCurrencyWithSocialLoanRepayment({
+        data,
+        guildId,
+        profile,
+        currencyId: CURRENCY_RPG,
+        amount: chapter.rewards.coins,
+        economy: this,
+        now
+      });
       for (const [itemId, count] of Object.entries(chapter.rewards.items)) {
         addInventoryItem(profile.rpg.inventory, itemId, count);
       }
@@ -2799,7 +2907,15 @@ export class EconomyService {
       }
 
       profile.rpg.codexClaims[normalizedMonster] = now;
-      creditCurrency(profile, CURRENCY_RPG, codex.rewards.coins);
+      creditCurrencyWithSocialLoanRepayment({
+        data,
+        guildId,
+        profile,
+        currencyId: CURRENCY_RPG,
+        amount: codex.rewards.coins,
+        economy: this,
+        now
+      });
       const levelResult = addRepeatableRpgXp(profile, codex.rewards.xp, this, now);
 
       return {
@@ -3245,7 +3361,15 @@ export class EconomyService {
         throw new Error('판매할 검이 없습니다. +1 이상 강화된 검만 판매할 수 있습니다.');
       }
 
-      creditCurrency(profile, CURRENCY_SWORD, saleValue);
+      creditCurrencyWithSocialLoanRepayment({
+        data,
+        guildId,
+        profile,
+        currencyId: CURRENCY_SWORD,
+        amount: saleValue,
+        economy: this,
+        now
+      });
       profile.sword.level = 0;
       profile.sword.soldCount += 1;
       profile.sword.saleEarnings += saleValue;
@@ -3301,7 +3425,15 @@ export class EconomyService {
 
       if (battle.winnerSide === 'challenger') {
         profile.sword.battleWins += 1;
-        creditCurrency(profile, CURRENCY_SWORD, battle.rewards.money);
+        creditCurrencyWithSocialLoanRepayment({
+          data,
+          guildId,
+          profile,
+          currencyId: CURRENCY_SWORD,
+          amount: battle.rewards.money,
+          economy: this,
+          now
+        });
         Object.assign(levelResult, addXp(profile, battle.rewards.xp, this));
         rewards.xp = battle.rewards.xp;
         rewards.money = battle.rewards.money;
@@ -3360,7 +3492,15 @@ export class EconomyService {
       opponentProfile.sword.lastBattleAt = now;
       winnerProfile.sword.battleWins += 1;
       loserProfile.sword.battleLosses += 1;
-      creditCurrency(winnerProfile, CURRENCY_SWORD, battle.rewards.money);
+      creditCurrencyWithSocialLoanRepayment({
+        data,
+        guildId,
+        profile: winnerProfile,
+        currencyId: CURRENCY_SWORD,
+        amount: battle.rewards.money,
+        economy: this,
+        now
+      });
       Object.assign(levelResult, addXp(winnerProfile, battle.rewards.xp, this));
       const refineStones = grantSwordBattleStones(winnerProfile.sword, now, battle.rewards.refineStones);
 
@@ -3432,6 +3572,240 @@ export class EconomyService {
     });
   }
 
+  async requestUserLoan({
+    guildId,
+    borrowerUserId,
+    borrowerUsername,
+    lenderUserId,
+    lenderUsername,
+    amount,
+    termHours,
+    repaymentMode,
+    now = Date.now()
+  }) {
+    const normalizedAmount = normalizePositiveInteger(amount, '대출 요청 금액');
+    const termMs = normalizeLoanTermHours(termHours);
+    const normalizedRepaymentMode = normalizeSocialLoanRepaymentMode(repaymentMode);
+    const borrowerId = normalizeRequiredId(borrowerUserId, '빌리는 유저');
+    const lenderId = normalizeRequiredId(lenderUserId, '빌려줄 유저');
+
+    if (borrowerId === lenderId) {
+      throw new Error('자기 자신에게는 돈을 빌릴 수 없습니다.');
+    }
+
+    return this.store.update((data) => {
+      const borrower = getOrCreateProfile(data, guildId, borrowerId, borrowerUsername, this, now);
+      const lender = getOrCreateProfile(data, guildId, lenderId, lenderUsername, this, now);
+      const loans = normalizeSocialLoans(borrower.socialLoans);
+      borrower.socialLoans = loans;
+      assertNoOpenLoanRequest(loans, lenderId);
+
+      const request = {
+        id: createSocialLoanId(now, borrowerId, lenderId),
+        status: SOCIAL_LOAN_STATUS_REQUESTED,
+        borrowerUserId: borrowerId,
+        borrowerUsername: borrower.username,
+        lenderUserId: lenderId,
+        lenderUsername: lender.username,
+        amount: normalizedAmount,
+        termMs,
+        repaymentMode: normalizedRepaymentMode,
+        requestedAt: normalizeStoredNonNegativeInteger(now)
+      };
+
+      loans.requests.push(request);
+
+      return {
+        request: cloneSocialLoanRequest(request),
+        borrower: cloneProfile(borrower),
+        lender: cloneProfile(lender)
+      };
+    });
+  }
+
+  async offerUserLoan({
+    guildId,
+    lenderUserId,
+    lenderUsername,
+    borrowerUserId,
+    borrowerUsername,
+    interestPercent,
+    interestType,
+    now = Date.now()
+  }) {
+    const lenderId = normalizeRequiredId(lenderUserId, '빌려줄 유저');
+    const borrowerId = normalizeRequiredId(borrowerUserId, '빌리는 유저');
+    const interestBps = normalizeSocialLoanInterestPercent(interestPercent);
+    const normalizedInterestType = normalizeSocialLoanInterestType(interestType);
+
+    if (lenderId === borrowerId) {
+      throw new Error('자기 자신에게는 대출 조건을 제시할 수 없습니다.');
+    }
+
+    return this.store.update((data) => {
+      const borrower = getOrCreateProfile(data, guildId, borrowerId, borrowerUsername, this, now);
+      const lender = getOrCreateProfile(data, guildId, lenderId, lenderUsername, this, now);
+      const loans = normalizeSocialLoans(borrower.socialLoans);
+      borrower.socialLoans = loans;
+      const request = findOpenLoanRequest(loans, lenderId, SOCIAL_LOAN_STATUS_REQUESTED);
+
+      if (!request) {
+        throw new Error('수락할 대출 요청을 찾을 수 없습니다.');
+      }
+
+      if (lender.balance < request.amount) {
+        throw new Error('대출 요청 금액보다 잔액이 부족합니다.');
+      }
+
+      request.status = SOCIAL_LOAN_STATUS_OFFERED;
+      request.lenderUsername = lender.username;
+      request.interestBps = interestBps;
+      request.interestType = normalizedInterestType;
+      request.totalDue = calculateSocialLoanTotalDue({
+        principal: request.amount,
+        termMs: request.termMs,
+        interestBps,
+        interestType: normalizedInterestType
+      });
+      request.offeredAt = normalizeStoredNonNegativeInteger(now);
+
+      return {
+        offer: cloneSocialLoanRequest(request),
+        borrower: cloneProfile(borrower),
+        lender: cloneProfile(lender)
+      };
+    });
+  }
+
+  async decideUserLoan({
+    guildId,
+    borrowerUserId,
+    borrowerUsername,
+    lenderUserId,
+    lenderUsername,
+    accept,
+    now = Date.now()
+  }) {
+    const borrowerId = normalizeRequiredId(borrowerUserId, '빌리는 유저');
+    const lenderId = normalizeRequiredId(lenderUserId, '빌려줄 유저');
+    const shouldAccept = Boolean(accept);
+
+    return this.store.update((data) => {
+      const borrower = getOrCreateProfile(data, guildId, borrowerId, borrowerUsername, this, now);
+      const lender = getOrCreateProfile(data, guildId, lenderId, lenderUsername, this, now);
+      const loans = normalizeSocialLoans(borrower.socialLoans);
+      borrower.socialLoans = loans;
+      const requestIndex = loans.requests.findIndex((request) =>
+        request.lenderUserId === lenderId && request.status === SOCIAL_LOAN_STATUS_OFFERED
+      );
+
+      if (requestIndex < 0) {
+        throw new Error('결정할 대출 조건을 찾을 수 없습니다.');
+      }
+
+      const request = loans.requests[requestIndex];
+      loans.requests.splice(requestIndex, 1);
+
+      if (!shouldAccept) {
+        return {
+          accepted: false,
+          request: cloneSocialLoanRequest(request),
+          borrower: cloneProfile(borrower),
+          lender: cloneProfile(lender)
+        };
+      }
+
+      if (lender.balance < request.amount) {
+        throw new Error('빌려줄 유저의 잔액이 부족해 대출을 실행할 수 없습니다.');
+      }
+
+      debitCurrency(lender, CURRENCY_MAIN, request.amount, '빌려줄 골드가 부족합니다.');
+      creditCurrency(borrower, CURRENCY_MAIN, request.amount);
+
+      const acceptedAt = normalizeStoredNonNegativeInteger(now);
+      const loan = {
+        id: request.id,
+        lenderUserId: lenderId,
+        lenderUsername: lender.username,
+        principal: request.amount,
+        totalDue: request.totalDue,
+        repaid: 0,
+        interestBps: request.interestBps,
+        interestType: request.interestType,
+        termMs: request.termMs,
+        dueAt: acceptedAt + request.termMs,
+        acceptedAt,
+        repaymentMode: request.repaymentMode,
+        lastRepaymentAt: 0
+      };
+      loans.loans.push(loan);
+
+      return {
+        accepted: true,
+        loan: cloneSocialLoan(loan),
+        borrower: cloneProfile(borrower),
+        lender: cloneProfile(lender)
+      };
+    });
+  }
+
+  async repayUserLoan({
+    guildId,
+    borrowerUserId,
+    borrowerUsername,
+    lenderUserId,
+    lenderUsername,
+    amount = null,
+    now = Date.now()
+  }) {
+    const borrowerId = normalizeRequiredId(borrowerUserId, '빌리는 유저');
+    const lenderId = normalizeRequiredId(lenderUserId, '빌려준 유저');
+    const requested = amount === null || amount === undefined
+      ? null
+      : normalizePositiveInteger(amount, '상환 금액');
+
+    return this.store.update((data) => {
+      const borrower = getOrCreateProfile(data, guildId, borrowerId, borrowerUsername, this, now);
+      const lender = getOrCreateProfile(data, guildId, lenderId, lenderUsername, this, now);
+      const loans = normalizeSocialLoans(borrower.socialLoans);
+      borrower.socialLoans = loans;
+      const targetLoans = loans.loans
+        .filter((loan) => loan.lenderUserId === lenderId && getSocialLoanRemaining(loan) > 0)
+        .sort(compareSocialLoansForRepayment);
+      const remaining = targetLoans.reduce((sum, loan) => sum + getSocialLoanRemaining(loan), 0);
+
+      if (remaining <= 0) {
+        throw new Error('상환할 대출이 없습니다.');
+      }
+
+      const requestedAmount = requested ?? remaining;
+      if (borrower.balance <= 0) {
+        throw new Error('상환할 골드가 부족합니다.');
+      }
+      if (requested === null && borrower.balance < remaining) {
+        throw new Error(`전액 상환에 필요한 골드가 부족합니다. 필요 금액: ${remaining.toLocaleString()}골드`);
+      }
+
+      const repaid = repaySocialLoansToLender({
+        borrower,
+        lender,
+        targetLoans,
+        amount: Math.min(requestedAmount, borrower.balance, remaining),
+        now
+      });
+
+      loans.loans = loans.loans.filter((loan) => getSocialLoanRemaining(loan) > 0);
+
+      return {
+        requested: requestedAmount,
+        repaid,
+        remaining: Math.max(0, remaining - repaid),
+        borrower: cloneProfile(borrower),
+        lender: cloneProfile(lender)
+      };
+    });
+  }
+
   async settleWager({ guildId, userId, username, bet, payout }) {
     const normalizedBet = normalizePositiveInteger(bet, '베팅액');
     const normalizedPayout = normalizeNonNegativeInteger(payout, '지급액');
@@ -3446,7 +3820,14 @@ export class EconomyService {
       });
 
       debitCurrency(profile, CURRENCY_CASINO, adjusted.bet, '골드가 부족합니다.');
-      creditCurrency(profile, CURRENCY_CASINO, adjusted.payout);
+      creditCurrencyWithSocialLoanRepayment({
+        data,
+        guildId,
+        profile,
+        currencyId: CURRENCY_CASINO,
+        amount: adjusted.payout,
+        economy: this
+      });
 
       return {
         bet: adjusted.bet,
@@ -3493,7 +3874,14 @@ export class EconomyService {
       if (extraReservedLoss > 0) {
         debitCurrency(profile, CURRENCY_CASINO, extraReservedLoss, '골드가 부족합니다.');
       }
-      creditCurrency(profile, CURRENCY_CASINO, adjusted.payout);
+      creditCurrencyWithSocialLoanRepayment({
+        data,
+        guildId,
+        profile,
+        currencyId: CURRENCY_CASINO,
+        amount: adjusted.payout,
+        economy: this
+      });
 
       return {
         bet: adjusted.bet,
@@ -3588,8 +3976,22 @@ export class EconomyService {
       const pot = normalizedBet * 2;
 
       if (!winnerUserId) {
-        creditCurrency(challengerProfile, CURRENCY_CASINO, normalizedBet);
-        creditCurrency(opponentProfile, CURRENCY_CASINO, normalizedBet);
+        creditCurrencyWithSocialLoanRepayment({
+          data,
+          guildId,
+          profile: challengerProfile,
+          currencyId: CURRENCY_CASINO,
+          amount: normalizedBet,
+          economy: this
+        });
+        creditCurrencyWithSocialLoanRepayment({
+          data,
+          guildId,
+          profile: opponentProfile,
+          currencyId: CURRENCY_CASINO,
+          amount: normalizedBet,
+          economy: this
+        });
 
         return {
           bet: normalizedBet,
@@ -3607,7 +4009,14 @@ export class EconomyService {
       const winnerProfile = winnerUserId === challenger.userId
         ? challengerProfile
         : opponentProfile;
-      creditCurrency(winnerProfile, CURRENCY_CASINO, pot);
+      creditCurrencyWithSocialLoanRepayment({
+        data,
+        guildId,
+        profile: winnerProfile,
+        currencyId: CURRENCY_CASINO,
+        amount: pot,
+        economy: this
+      });
 
       return {
         bet: normalizedBet,
@@ -3649,8 +4058,22 @@ export class EconomyService {
       const challengerProfile = getOrCreateProfile(data, guildId, challenger.userId, challenger.username, this);
       const opponentProfile = getOrCreateProfile(data, guildId, opponent.userId, opponent.username, this);
 
-      creditCurrency(challengerProfile, CURRENCY_CASINO, normalizedChallengerPayout);
-      creditCurrency(opponentProfile, CURRENCY_CASINO, normalizedOpponentPayout);
+      creditCurrencyWithSocialLoanRepayment({
+        data,
+        guildId,
+        profile: challengerProfile,
+        currencyId: CURRENCY_CASINO,
+        amount: normalizedChallengerPayout,
+        economy: this
+      });
+      creditCurrencyWithSocialLoanRepayment({
+        data,
+        guildId,
+        profile: opponentProfile,
+        currencyId: CURRENCY_CASINO,
+        amount: normalizedOpponentPayout,
+        economy: this
+      });
 
       const winnerProfile = winnerUserId === challenger.userId
         ? challengerProfile
@@ -3703,7 +4126,14 @@ export class EconomyService {
 
       for (const player of normalizedPlayers) {
         const profile = profiles.find((candidate) => candidate.userId === player.userId);
-        creditCurrency(profile, CURRENCY_CASINO, normalizedPayouts[player.key]);
+        creditCurrencyWithSocialLoanRepayment({
+          data,
+          guildId,
+          profile,
+          currencyId: CURRENCY_CASINO,
+          amount: normalizedPayouts[player.key],
+          economy: this
+        });
       }
 
       const winnerProfile = profiles.find((profile) => winnerSet.has(profile.userId)) ?? null;
@@ -3760,7 +4190,14 @@ export class EconomyService {
       const winnerProfile = winnerUserId === challenger.userId
         ? challengerProfile
         : opponentProfile;
-      creditCurrency(winnerProfile, CURRENCY_CASINO, normalizedBet * 2);
+      creditCurrencyWithSocialLoanRepayment({
+        data,
+        guildId,
+        profile: winnerProfile,
+        currencyId: CURRENCY_CASINO,
+        amount: normalizedBet * 2,
+        economy: this
+      });
 
       return {
         bet: normalizedBet,
@@ -3808,6 +4245,220 @@ function normalizeNonNegativeInteger(value, label) {
   }
 
   return normalized;
+}
+
+function normalizeRequiredId(value, label) {
+  const normalized = String(value ?? '').trim();
+  if (!normalized) throw new Error(`${label} 정보가 올바르지 않습니다.`);
+  return normalized;
+}
+
+function normalizeLoanTermHours(value) {
+  const hours = normalizePositiveInteger(value, '대출 기간');
+  const termMs = hours * 60 * 60 * 1000;
+
+  if (termMs < SOCIAL_LOAN_MIN_TERM_MS || termMs > SOCIAL_LOAN_MAX_TERM_MS) {
+    throw new Error('대출 기간은 1시간 이상 30일 이하로 정해야 합니다.');
+  }
+
+  return termMs;
+}
+
+function normalizeSocialLoanRepaymentMode(value) {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (['installment', 'partial', 'auto', '매번', '조금씩', '분할'].includes(normalized)) {
+    return SOCIAL_LOAN_REPAYMENT_INSTALLMENT;
+  }
+  if (['lump_sum', 'lump', 'once', 'all', '한번에', '일시'].includes(normalized)) {
+    return SOCIAL_LOAN_REPAYMENT_LUMP_SUM;
+  }
+  throw new Error('상환 방식은 매번 조금씩 갚기 또는 한번에 갚기 중 하나여야 합니다.');
+}
+
+function normalizeSocialLoanInterestType(value) {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (['simple', '단리'].includes(normalized)) return SOCIAL_LOAN_INTEREST_SIMPLE;
+  if (['compound', '복리'].includes(normalized)) return SOCIAL_LOAN_INTEREST_COMPOUND;
+  throw new Error('이자 방식은 단리 또는 복리 중 하나여야 합니다.');
+}
+
+function normalizeStoredSocialLoanRepaymentMode(value) {
+  try {
+    return normalizeSocialLoanRepaymentMode(value);
+  } catch {
+    return SOCIAL_LOAN_REPAYMENT_LUMP_SUM;
+  }
+}
+
+function normalizeStoredSocialLoanInterestType(value) {
+  try {
+    return normalizeSocialLoanInterestType(value);
+  } catch {
+    return SOCIAL_LOAN_INTEREST_SIMPLE;
+  }
+}
+
+function normalizeSocialLoanInterestPercent(value) {
+  const percent = normalizeNonNegativeInteger(value, '이자율');
+  const bps = percent * 100;
+  if (bps > SOCIAL_LOAN_MAX_INTEREST_BPS) {
+    throw new Error('이자율은 0% 이상 100% 이하로 정해야 합니다.');
+  }
+  return bps;
+}
+
+function calculateSocialLoanTotalDue({ principal, termMs, interestBps, interestType }) {
+  const normalizedPrincipal = normalizePositiveInteger(principal, '대출 원금');
+  const normalizedInterestBps = normalizeStoredNonNegativeInteger(interestBps);
+  if (normalizedInterestBps <= 0) return normalizedPrincipal;
+
+  const periods = Math.max(1, Math.ceil(normalizeStoredNonNegativeInteger(termMs) / DAY_MS));
+  if (interestType === SOCIAL_LOAN_INTEREST_COMPOUND) {
+    const multiplier = (1 + normalizedInterestBps / 10_000) ** periods;
+    return Math.max(normalizedPrincipal, Math.ceil(normalizedPrincipal * multiplier));
+  }
+
+  return normalizedPrincipal + Math.ceil(normalizedPrincipal * normalizedInterestBps * periods / 10_000);
+}
+
+function createSocialLoanId(now, borrowerUserId, lenderUserId) {
+  const timestamp = normalizeStoredNonNegativeInteger(now);
+  const borrower = String(borrowerUserId ?? '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 12);
+  const lender = String(lenderUserId ?? '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 12);
+  return `loan-${timestamp}-${borrower || 'borrower'}-${lender || 'lender'}`;
+}
+
+function assertNoOpenLoanRequest(loans, lenderUserId) {
+  const existing = loans.requests.find((request) =>
+    request.lenderUserId === lenderUserId
+    && [SOCIAL_LOAN_STATUS_REQUESTED, SOCIAL_LOAN_STATUS_OFFERED].includes(request.status)
+  );
+
+  if (existing) {
+    throw new Error('이미 해당 유저에게 진행 중인 대출 요청이 있습니다.');
+  }
+}
+
+function findOpenLoanRequest(loans, lenderUserId, status) {
+  return loans.requests.find((request) =>
+    request.lenderUserId === lenderUserId && request.status === status
+  ) ?? null;
+}
+
+function compareSocialLoansForRepayment(a, b) {
+  if (a.dueAt !== b.dueAt) return a.dueAt - b.dueAt;
+  return String(a.id).localeCompare(String(b.id));
+}
+
+function getSocialLoanRemaining(loan) {
+  return Math.max(0, normalizeStoredNonNegativeInteger(loan.totalDue) - normalizeStoredNonNegativeInteger(loan.repaid));
+}
+
+function repaySocialLoansToLender({ borrower, lender, targetLoans, amount, now }) {
+  let remainingBudget = normalizeStoredNonNegativeInteger(amount);
+  let repaidTotal = 0;
+
+  for (const loan of targetLoans) {
+    if (remainingBudget <= 0) break;
+    const remainingLoan = getSocialLoanRemaining(loan);
+    const payment = Math.min(remainingLoan, remainingBudget, borrower.balance);
+    if (payment <= 0) break;
+
+    debitCurrency(borrower, CURRENCY_MAIN, payment, '상환할 골드가 부족합니다.');
+    creditCurrency(lender, CURRENCY_MAIN, payment);
+    loan.repaid = normalizeStoredNonNegativeInteger(loan.repaid) + payment;
+    loan.lastRepaymentAt = normalizeStoredNonNegativeInteger(now);
+    remainingBudget -= payment;
+    repaidTotal += payment;
+  }
+
+  return repaidTotal;
+}
+
+function creditCurrencyWithSocialLoanRepayment({
+  data,
+  guildId,
+  profile,
+  currencyId,
+  amount,
+  economy,
+  now = Date.now()
+}) {
+  const gross = normalizeStoredNonNegativeInteger(amount);
+  const balanceBefore = profile.balance;
+  creditCurrency(profile, currencyId, gross);
+  const socialLoanRepayments = repayEligibleSocialLoansFromIncome({
+    data,
+    guildId,
+    borrower: profile,
+    gross,
+    economy,
+    now
+  });
+
+  return {
+    gross,
+    balanceBefore,
+    balance: profile.balance,
+    socialLoanRepayment: socialLoanRepayments.reduce((sum, entry) => sum + entry.amount, 0),
+    socialLoanRepayments,
+    bankruptcy: getStockBankruptcySummary(profile)
+  };
+}
+
+function repayEligibleSocialLoansFromIncome({ data, guildId, borrower, gross, economy, now }) {
+  if (gross <= 0) return [];
+
+  const loans = normalizeSocialLoans(borrower.socialLoans);
+  borrower.socialLoans = loans;
+  let budget = Math.min(
+    borrower.balance,
+    Math.floor(gross * SOCIAL_LOAN_AUTO_REPAYMENT_BPS / 10_000)
+  );
+  if (budget <= 0) return [];
+
+  const eligibleLoans = loans.loans
+    .filter((loan) => isSocialLoanAutoRepaymentEligible(loan, now))
+    .sort(compareSocialLoansForRepayment);
+  const repayments = [];
+
+  for (const loan of eligibleLoans) {
+    if (budget <= 0 || borrower.balance <= 0) break;
+    const remaining = getSocialLoanRemaining(loan);
+    const payment = Math.min(remaining, budget, borrower.balance);
+    if (payment <= 0) continue;
+
+    const lender = getOrCreateProfile(
+      data,
+      guildId,
+      loan.lenderUserId,
+      loan.lenderUsername,
+      economy,
+      now
+    );
+    debitCurrency(borrower, CURRENCY_MAIN, payment, '상환할 골드가 부족합니다.');
+    creditCurrency(lender, CURRENCY_MAIN, payment);
+    loan.repaid = normalizeStoredNonNegativeInteger(loan.repaid) + payment;
+    loan.lastRepaymentAt = normalizeStoredNonNegativeInteger(now);
+    budget -= payment;
+    repayments.push({
+      loanId: loan.id,
+      lenderUserId: loan.lenderUserId,
+      lenderUsername: lender.username,
+      amount: payment,
+      remaining: getSocialLoanRemaining(loan),
+      overdue: normalizeStoredNonNegativeInteger(now) >= normalizeStoredNonNegativeInteger(loan.dueAt)
+    });
+  }
+
+  loans.loans = loans.loans.filter((loan) => getSocialLoanRemaining(loan) > 0);
+  return repayments;
+}
+
+function isSocialLoanAutoRepaymentEligible(loan, now) {
+  if (getSocialLoanRemaining(loan) <= 0) return false;
+  if (loan.repaymentMode === SOCIAL_LOAN_REPAYMENT_INSTALLMENT) return true;
+  return normalizeStoredNonNegativeInteger(now) >= normalizeStoredNonNegativeInteger(loan.dueAt);
 }
 
 function normalizePlayerTableParticipants(players) {
@@ -4048,6 +4699,7 @@ function normalizeEconomyProfile(profile, userId, username, economy, now = Date.
   profile.lastFortuneXpDay = normalizeStoredNullableInteger(profile.lastFortuneXpDay);
   profile.rpg = normalizeRpgStats(profile.rpg, profile.level, now);
   profile.sword = normalizeSwordStats(profile.sword);
+  profile.socialLoans = normalizeSocialLoans(profile.socialLoans);
   profile.createdAt = normalizeStoredNonNegativeInteger(profile.createdAt) || now;
   reconcileProfileProgress(profile, economy);
 
@@ -4071,6 +4723,7 @@ function createDefaultEconomyProfile(userId, username, now = Date.now()) {
     lastFortuneXpDay: null,
     rpg: createDefaultRpgStats(),
     sword: createDefaultSwordStats(),
+    socialLoans: createDefaultSocialLoans(),
     createdAt: now
   };
 }
@@ -4126,7 +4779,111 @@ function cloneProfile(profile) {
     community: cloneProfileCommunity(profile.community),
     rpg: cloneRpgStats(profile.rpg),
     sword: cloneSwordStats(profile.sword),
+    socialLoans: cloneSocialLoans(profile.socialLoans),
     createdAt: profile.createdAt
+  };
+}
+
+function createDefaultSocialLoans() {
+  return {
+    requests: [],
+    loans: []
+  };
+}
+
+function normalizeSocialLoans(value = {}) {
+  const state = value && typeof value === 'object' ? value : {};
+  return {
+    requests: Array.isArray(state.requests)
+      ? state.requests.map(normalizeSocialLoanRequest).filter(Boolean)
+      : [],
+    loans: Array.isArray(state.loans)
+      ? state.loans.map(normalizeSocialLoan).filter(Boolean)
+      : []
+  };
+}
+
+function normalizeSocialLoanRequest(value) {
+  if (!value || typeof value !== 'object') return null;
+  const borrowerUserId = String(value.borrowerUserId ?? '').trim();
+  const lenderUserId = String(value.lenderUserId ?? '').trim();
+  const amount = normalizeStoredNonNegativeInteger(value.amount);
+  const termMs = normalizeStoredNonNegativeInteger(value.termMs);
+  if (!borrowerUserId || !lenderUserId || amount <= 0 || termMs <= 0) return null;
+
+  const status = value.status === SOCIAL_LOAN_STATUS_OFFERED
+    ? SOCIAL_LOAN_STATUS_OFFERED
+    : SOCIAL_LOAN_STATUS_REQUESTED;
+  const interestType = normalizeStoredSocialLoanInterestType(value.interestType ?? SOCIAL_LOAN_INTEREST_SIMPLE);
+  const interestBps = normalizeStoredNonNegativeInteger(value.interestBps);
+  const totalDue = normalizeStoredNonNegativeInteger(value.totalDue)
+    || calculateSocialLoanTotalDue({
+      principal: amount,
+      termMs,
+      interestBps,
+      interestType
+    });
+
+  return {
+    id: String(value.id ?? createSocialLoanId(value.requestedAt, borrowerUserId, lenderUserId)).trim(),
+    status,
+    borrowerUserId,
+    borrowerUsername: String(value.borrowerUsername ?? borrowerUserId).trim() || borrowerUserId,
+    lenderUserId,
+    lenderUsername: String(value.lenderUsername ?? lenderUserId).trim() || lenderUserId,
+    amount,
+    termMs,
+    repaymentMode: normalizeStoredSocialLoanRepaymentMode(value.repaymentMode ?? SOCIAL_LOAN_REPAYMENT_LUMP_SUM),
+    requestedAt: normalizeStoredNonNegativeInteger(value.requestedAt),
+    offeredAt: normalizeStoredNonNegativeInteger(value.offeredAt),
+    interestBps,
+    interestType,
+    totalDue
+  };
+}
+
+function normalizeSocialLoan(value) {
+  if (!value || typeof value !== 'object') return null;
+  const lenderUserId = String(value.lenderUserId ?? '').trim();
+  const principal = normalizeStoredNonNegativeInteger(value.principal);
+  const totalDue = normalizeStoredNonNegativeInteger(value.totalDue);
+  if (!lenderUserId || principal <= 0 || totalDue <= 0) return null;
+
+  return {
+    id: String(value.id ?? createSocialLoanId(value.acceptedAt, value.borrowerUserId, lenderUserId)).trim(),
+    lenderUserId,
+    lenderUsername: String(value.lenderUsername ?? lenderUserId).trim() || lenderUserId,
+    principal,
+    totalDue,
+    repaid: Math.min(totalDue, normalizeStoredNonNegativeInteger(value.repaid)),
+    interestBps: normalizeStoredNonNegativeInteger(value.interestBps),
+    interestType: normalizeStoredSocialLoanInterestType(value.interestType ?? SOCIAL_LOAN_INTEREST_SIMPLE),
+    termMs: normalizeStoredNonNegativeInteger(value.termMs),
+    dueAt: normalizeStoredNonNegativeInteger(value.dueAt),
+    acceptedAt: normalizeStoredNonNegativeInteger(value.acceptedAt),
+    repaymentMode: normalizeStoredSocialLoanRepaymentMode(value.repaymentMode ?? SOCIAL_LOAN_REPAYMENT_LUMP_SUM),
+    lastRepaymentAt: normalizeStoredNonNegativeInteger(value.lastRepaymentAt)
+  };
+}
+
+function cloneSocialLoans(value = {}) {
+  const loans = normalizeSocialLoans(value);
+  return {
+    requests: loans.requests.map(cloneSocialLoanRequest),
+    loans: loans.loans.map(cloneSocialLoan)
+  };
+}
+
+function cloneSocialLoanRequest(request) {
+  return { ...normalizeSocialLoanRequest(request) };
+}
+
+function cloneSocialLoan(loan) {
+  const normalized = normalizeSocialLoan(loan);
+  return {
+    ...normalized,
+    remaining: getSocialLoanRemaining(normalized),
+    overdue: normalizeStoredNonNegativeInteger(Date.now()) >= normalizeStoredNonNegativeInteger(normalized.dueAt)
   };
 }
 
