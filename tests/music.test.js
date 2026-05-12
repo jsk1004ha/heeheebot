@@ -13,6 +13,7 @@ import {
 import { createSqliteStore } from '../src/storage/sqlite-store.js';
 import {
   MusicService,
+  normalizeMusicConfig,
   normalizeLavalinkLoadResult,
   toLavalinkIdentifier
 } from '../src/systems/music.js';
@@ -57,12 +58,60 @@ test('기존 /랭킹 명령은 인기곡 선택지를 포함해 음악 랭킹으
 test('Lavalink loadtracks 결과와 검색 prefix를 표준화한다', () => {
   assert.equal(toLavalinkIdentifier('ditto', 'ytsearch'), 'ytsearch:ditto');
   assert.equal(toLavalinkIdentifier('https://youtu.be/example', 'ytsearch'), 'https://youtu.be/example');
+  const config = normalizeMusicConfig({});
+  assert.equal(config.panelRefreshIntervalMs, 5000);
+  assert.equal(config.lavalink.resumeTimeoutSeconds, 120);
+  assert.equal(config.lavalink.reconnectEnabled, true);
 
   const tracks = normalizeLavalinkLoadResult({ loadType: 'search', data: [SAMPLE_TRACK] });
   assert.equal(tracks.length, 1);
   assert.equal(tracks[0].title, 'Ditto - NewJeans');
   assert.equal(tracks[0].author, 'NewJeans');
   assert.equal(tracks[0].genre, 'K-Pop');
+});
+
+test('Lavalink stopped 이벤트는 큐를 임의로 다음 곡으로 넘기지 않는다', async () => {
+  const lavalink = new MockLavalink();
+  const music = new MusicService({
+    lavalink,
+    config: { lavalink: { host: 'localhost', password: 'pw' } },
+    now: createClock(1500)
+  });
+
+  await music.playQuery({
+    guild: createGuild([]),
+    textChannel: createTextChannel(),
+    voiceChannel: createVoiceChannel(),
+    requester: { id: 'user-1', username: 'Junseo' },
+    query: 'ditto'
+  });
+  await music.playQuery({
+    guild: createGuild([]),
+    textChannel: createTextChannel(),
+    voiceChannel: createVoiceChannel(),
+    requester: { id: 'user-1', username: 'Junseo' },
+    query: 'hype boy'
+  });
+
+  const before = music.getPlayerState('guild-1');
+  await music.handleLavalinkMessage({
+    op: 'event',
+    type: 'TrackEndEvent',
+    guildId: 'guild-1',
+    reason: 'stopped'
+  });
+
+  const afterStopped = music.getPlayerState('guild-1');
+  assert.equal(afterStopped.current.title, before.current.title);
+  assert.equal(afterStopped.queue.length, 1);
+
+  await music.handleLavalinkMessage({
+    op: 'event',
+    type: 'TrackEndEvent',
+    guildId: 'guild-1',
+    reason: 'finished'
+  });
+  assert.equal(music.getPlayerState('guild-1').queue.length, 0);
 });
 
 test('음악 서비스는 현재곡을 플레이리스트에 저장하고 공개 가져오기와 통계를 유지한다', async () => {

@@ -286,9 +286,9 @@ npm start
 ```
 
 `npm start`는 시작 전에 slash command를 자동으로 동기화합니다. 개발 서버에 빠르게 등록하려면 `.env`에 `DISCORD_GUILD_ID`를 넣으세요.
-음악 기능은 `MUSIC_AUTO_SETUP=true` 기본값으로 `data/music-runtime`에 Lavalink/yt-dlp 런타임을 자동 준비하고 로컬 Lavalink 노드를 실행합니다. 자동 생성되는 `application.yml`은 끊김 완화를 우선해 버퍼를 넉넉하게 잡고(`bufferDurationMs: 500`, `frameBufferDurationMs: 7000`) Opus 품질 8, resampling LOW, 필터 비활성화로 시작합니다. 단, Lavalink 실행에는 시스템에 Java 17 이상이 설치되어 있어야 합니다.
+음악 기능은 `MUSIC_AUTO_SETUP=true` 기본값으로 `data/music-runtime`에 Lavalink/yt-dlp 런타임을 자동 준비하고 로컬 Lavalink 노드를 실행합니다. 자동 생성되는 `application.yml`은 끊김 완화를 우선해 버퍼를 더 넉넉하게 잡고(`bufferDurationMs: 1000`, `frameBufferDurationMs: 10000`), GC pause 완화용 `nonAllocatingFrameBuffer`, 끊김 없는 seek용 `useSeekGhosting`, Opus 품질 10, resampling MEDIUM으로 시작합니다. 단, Lavalink 실행에는 시스템에 Java 17 이상이 설치되어 있어야 합니다.
 
-재생 중 끊김이 있으면 `/노드상태`로 CPU, 메모리, Lavalink frameStats(`deficit`, `nulled`)를 먼저 확인하세요. `deficit`/`nulled`가 늘면 소스 스트림, CPU/인코딩, 네트워크 병목을 우선 의심하면 됩니다.
+재생 중 끊김이 있으면 `/노드상태`로 CPU, 메모리, Lavalink frameStats(`deficit`, `nulled`)를 먼저 확인하세요. `deficit`/`nulled`가 늘면 소스 스트림, CPU/인코딩, 네트워크 병목을 우선 의심하면 됩니다. 봇은 Lavalink WebSocket 세션 resuming과 지수 백오프 재연결을 기본 활성화해 일시적인 노드 연결 끊김에도 큐 진행을 복구합니다. 현재곡 패널 진행바는 기본 5초마다 갱신되며, 필요하면 `MUSIC_PANEL_REFRESH_INTERVAL_MS`로 조정할 수 있습니다.
 
 ### 4) 명령어만 수동 동기화
 
@@ -316,6 +316,9 @@ npm run register
 | `LAVALINK_HOST` | 선택 | - | 외부 Lavalink 노드를 쓸 때만 지정. 비어 있으면 로컬 자동 세팅 |
 | `LAVALINK_PORT` / `LAVALINK_PASSWORD` | 선택 | `2333` / `youshallnotpass` | 로컬/외부 Lavalink 접속 설정 |
 | `LAVALINK_AUTO_START` | 선택 | `true` | 자동 세팅한 로컬 Lavalink 프로세스 실행 여부 |
+| `LAVALINK_RESUME_TIMEOUT_SECONDS` | 선택 | `120` | Lavalink WebSocket 재연결 시 세션/플레이어를 유지할 시간 |
+| `LAVALINK_BUFFER_DURATION_MS` / `LAVALINK_FRAME_BUFFER_DURATION_MS` | 선택 | `1000` / `10000` | 로컬 자동 생성 Lavalink 오디오 버퍼 크기. 값이 클수록 지연은 늘지만 끊김에 강함 |
+| `LAVALINK_OPUS_ENCODING_QUALITY` / `LAVALINK_RESAMPLING_QUALITY` | 선택 | `10` / `MEDIUM` | 로컬 자동 생성 Lavalink 인코딩/리샘플링 품질 |
 | `YTDLP_ENABLED` / `YTDLP_AUTO_DOWNLOAD` | 선택 | `true` / `true` | yt-dlp 메타데이터 fallback과 바이너리 자동 다운로드 |
 
 > `.env`는 절대 커밋하지 마세요. 예시는 `.env.example`에만 남겨둡니다.

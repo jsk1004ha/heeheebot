@@ -5,10 +5,13 @@ export const MUSIC_FEATURE_KEY = 'music';
 export const DEFAULT_SEARCH_PREFIX = 'ytsearch';
 export const DEFAULT_LAVALINK_PORT = 2333;
 export const DEFAULT_LAVALINK_PASSWORD = 'youshallnotpass';
+export const DEFAULT_LAVALINK_RESUME_TIMEOUT_SECONDS = 120;
+export const DEFAULT_LAVALINK_RECONNECT_INITIAL_DELAY_MS = 1_000;
+export const DEFAULT_LAVALINK_RECONNECT_MAX_DELAY_MS = 30_000;
 export const DEFAULT_YTDLP_TIMEOUT_MS = 12_000;
 export const MAX_PLAYLIST_TRACKS = 200;
 export const MAX_SEARCH_RESULTS = 5;
-export const DEFAULT_PANEL_REFRESH_INTERVAL_MS = 15_000;
+export const DEFAULT_PANEL_REFRESH_INTERVAL_MS = 5_000;
 
 export const MUSIC_FILTER_PRESETS = Object.freeze({
   none: Object.freeze({
@@ -52,7 +55,7 @@ export const MUSIC_FILTER_PRESETS = Object.freeze({
 });
 
 const URL_PATTERN = /^https?:\/\//i;
-const TRACK_END_REASONS_THAT_ADVANCE = new Set(['finished', 'loadFailed', 'stopped']);
+const TRACK_END_REASONS_THAT_ADVANCE = new Set(['finished', 'loadFailed']);
 
 export class LavalinkNodeClient {
   constructor(config = {}, {
@@ -87,7 +90,7 @@ export class LavalinkNodeClient {
   async connect({ userId, onMessage, onReady, onClose, onError } = {}) {
     this.ensureConfigured();
     if (!userId) throw new Error('Lavalink WebSocket 연결에는 봇 User ID가 필요합니다.');
-    if (this.socket && this.socket.readyState === this.WebSocketImpl.OPEN) return this.socket;
+    if (isSocketOpenOrConnecting(this.socket, this.WebSocketImpl)) return this.socket;
 
     this.callbacks = { onMessage, onReady, onClose, onError };
     this.connectedUserId = userId;
@@ -108,6 +111,9 @@ export class LavalinkNodeClient {
 
       if (message.op === 'ready') {
         this.sessionId = message.sessionId;
+        this.enableSessionResuming().catch((error) => {
+          this.logger.warn?.('Failed to enable Lavalink session resuming:', error);
+        });
         onReady?.(message);
       }
 
@@ -137,6 +143,16 @@ export class LavalinkNodeClient {
   async getStats() {
     this.ensureConfigured();
     return this.requestJson(new URL('/v4/stats', this.restBaseUrl), { method: 'GET' });
+  }
+
+  async updateSession(payload) {
+    this.ensureSessionReady();
+    const url = new URL(`/v4/sessions/${this.sessionId}`, this.restBaseUrl);
+    return this.requestJson(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
   }
 
   async updatePlayer(guildId, payload, { noReplace = false } = {}) {
@@ -202,6 +218,14 @@ export class LavalinkNodeClient {
     if (!this.socket) return;
     this.socket.close();
     this.socket = null;
+  }
+
+  async enableSessionResuming() {
+    if (!this.config.resumeTimeoutSeconds) return null;
+    return this.updateSession({
+      resuming: true,
+      timeout: this.config.resumeTimeoutSeconds
+    });
   }
 }
 
@@ -304,6 +328,10 @@ export class MusicService {
     this.searchSessions = new Map();
     this.latestNodeStats = null;
     this.panelRenderer = null;
+    this.nodeUserId = null;
+    this.nodeReconnectAttempts = 0;
+    this.nodeReconnectTimer = null;
+    this.closed = false;
   }
 
   setPanelRenderer(renderer) {
@@ -312,13 +340,47 @@ export class MusicService {
 
   async connectNode(userId) {
     if (!this.lavalink?.configured) return false;
-    await this.lavalink.connect({
-      userId,
-      onMessage: (message) => this.handleLavalinkMessage(message),
-      onReady: (message) => this.logger.log?.(`Lavalink connected. Session ${message.sessionId}`),
-      onClose: ({ code, reason }) => this.logger.warn?.(`Lavalink disconnected (${code}) ${reason}`.trim()),
-      onError: (error) => this.logger.warn?.('Lavalink connection error:', error)
-    });
+    this.closed = false;
+    this.nodeUserId = userId;
+    try {
+      await this.lavalink.connect({
+        userId,
+        onMessage: (message) => this.handleLavalinkMessage(message),
+        onReady: (message) => {
+          this.nodeReconnectAttempts = 0;
+          this.logger.log?.(`Lavalink connected. Session ${message.sessionId}${message.resumed ? ' (resumed)' : ''}`);
+        },
+        onClose: ({ code, reason }) => {
+          this.logger.warn?.(`Lavalink disconnected (${code}) ${reason}`.trim());
+          this.scheduleNodeReconnect();
+        },
+        onError: (error) => this.logger.warn?.('Lavalink connection error:', error)
+      });
+    } catch (error) {
+      this.scheduleNodeReconnect();
+      throw error;
+    }
+    return true;
+  }
+
+  scheduleNodeReconnect() {
+    if (this.closed || !this.nodeUserId || !this.config.lavalink.reconnectEnabled) return false;
+    if (this.nodeReconnectTimer) return false;
+
+    const delayMs = Math.min(
+      this.config.lavalink.reconnectInitialDelayMs * (2 ** this.nodeReconnectAttempts),
+      this.config.lavalink.reconnectMaxDelayMs
+    );
+    this.nodeReconnectAttempts += 1;
+
+    this.nodeReconnectTimer = setTimeout(() => {
+      this.nodeReconnectTimer = null;
+      this.connectNode(this.nodeUserId).catch((error) => {
+        this.logger.warn?.(`Lavalink 재연결 실패. ${delayMs}ms 이후 다시 시도합니다:`, error);
+        this.scheduleNodeReconnect();
+      });
+    }, delayMs);
+    this.nodeReconnectTimer.unref?.();
     return true;
   }
 
@@ -619,6 +681,14 @@ export class MusicService {
     if (message.type === 'TrackExceptionEvent' || message.type === 'TrackStuckEvent') {
       this.logger.warn?.(`Lavalink ${message.type}; advancing queue.`, message);
       await this.startNext(guildId, { ignoreRepeat: true }).catch((error) => this.logger.error?.('Failed to recover queue:', error));
+      return;
+    }
+
+    if (message.type === 'WebSocketClosedEvent') {
+      this.logger.warn?.(`Lavalink voice WebSocket closed for guild ${guildId}: code=${message.code ?? 'unknown'} reason=${message.reason ?? ''}`);
+      await this.requestVoiceStateRefresh(guildId).catch((error) => {
+        this.logger.warn?.('Failed to refresh Discord voice state after Lavalink voice close:', error);
+      });
     }
   }
 
@@ -662,6 +732,19 @@ export class MusicService {
         channelId: state.voice.channelId ?? state.voiceChannelId ?? null
       }
     });
+    return true;
+  }
+
+  async requestVoiceStateRefresh(guildId) {
+    const state = this.players.get(guildId);
+    if (!state?.guild || !state.voiceChannelId || !state.current) return false;
+    state.voice = {
+      token: null,
+      endpoint: null,
+      sessionId: null,
+      channelId: state.voiceChannelId
+    };
+    await sendGuildVoiceStateUpdate(state.guild, state.voiceChannelId);
     return true;
   }
 
@@ -926,6 +1009,11 @@ export class MusicService {
   }
 
   close() {
+    this.closed = true;
+    if (this.nodeReconnectTimer) {
+      clearTimeout(this.nodeReconnectTimer);
+      this.nodeReconnectTimer = null;
+    }
     this.lavalink?.close?.();
   }
 }
@@ -951,7 +1039,23 @@ export function normalizeLavalinkConfig(config = {}) {
     password: normalizeOptionalString(config.password ?? DEFAULT_LAVALINK_PASSWORD),
     secure: Boolean(config.secure),
     sessionId: normalizeOptionalString(config.sessionId),
-    clientName: normalizeOptionalString(config.clientName) ?? 'heeheebot/0.x'
+    clientName: normalizeOptionalString(config.clientName) ?? 'heeheebot/0.x',
+    resumeTimeoutSeconds: clampInteger(
+      config.resumeTimeoutSeconds ?? DEFAULT_LAVALINK_RESUME_TIMEOUT_SECONDS,
+      0,
+      600
+    ),
+    reconnectEnabled: parseBoolean(config.reconnectEnabled, true),
+    reconnectInitialDelayMs: clampInteger(
+      config.reconnectInitialDelayMs ?? DEFAULT_LAVALINK_RECONNECT_INITIAL_DELAY_MS,
+      250,
+      60_000
+    ),
+    reconnectMaxDelayMs: clampInteger(
+      config.reconnectMaxDelayMs ?? DEFAULT_LAVALINK_RECONNECT_MAX_DELAY_MS,
+      1_000,
+      300_000
+    )
   };
 }
 
@@ -1312,6 +1416,19 @@ function normalizeNonNegativeNumber(value) {
 
 function isUrl(value) {
   return URL_PATTERN.test(String(value ?? '').trim());
+}
+
+function isSocketOpenOrConnecting(socket, WebSocketImpl) {
+  if (!socket) return false;
+  const openState = WebSocketImpl.OPEN ?? 1;
+  const connectingState = WebSocketImpl.CONNECTING ?? 0;
+  return socket.readyState === openState || socket.readyState === connectingState;
+}
+
+function parseBoolean(value, defaultValue = false) {
+  if (value === undefined || value === null || value === '') return defaultValue;
+  if (typeof value === 'boolean') return value;
+  return !['0', 'false', 'no', 'off'].includes(String(value).trim().toLowerCase());
 }
 
 function createShortId(now, random) {

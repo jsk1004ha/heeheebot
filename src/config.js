@@ -17,13 +17,23 @@ export function loadConfig(env = process.env) {
         secure: parseBooleanEnv(env.LAVALINK_SECURE, false),
         sessionId: emptyToNull(env.LAVALINK_SESSION_ID),
         clientName: env.LAVALINK_CLIENT_NAME ?? 'heeheebot/0.10',
+        resumeTimeoutSeconds: parseIntegerEnv(env.LAVALINK_RESUME_TIMEOUT_SECONDS, 120),
+        reconnectEnabled: parseBooleanEnv(env.LAVALINK_RECONNECT_ENABLED, true),
+        reconnectInitialDelayMs: parseIntegerEnv(env.LAVALINK_RECONNECT_INITIAL_DELAY_MS, 1000),
+        reconnectMaxDelayMs: parseIntegerEnv(env.LAVALINK_RECONNECT_MAX_DELAY_MS, 30000),
         autoStart: parseBooleanEnv(env.LAVALINK_AUTO_START, true),
         jarPath: emptyToNull(env.LAVALINK_JAR_PATH),
         jarUrl: env.LAVALINK_JAR_URL,
         javaCommand: emptyToNull(env.LAVALINK_JAVA_COMMAND),
         configPath: emptyToNull(env.LAVALINK_CONFIG_PATH),
         youtubePluginVersion: emptyToNull(env.LAVALINK_YOUTUBE_PLUGIN_VERSION),
-        readyTimeoutMs: parseIntegerEnv(env.LAVALINK_READY_TIMEOUT_MS, 180000)
+        readyTimeoutMs: parseIntegerEnv(env.LAVALINK_READY_TIMEOUT_MS, 180000),
+        bufferDurationMs: parseIntegerEnv(env.LAVALINK_BUFFER_DURATION_MS, 1000),
+        frameBufferDurationMs: parseIntegerEnv(env.LAVALINK_FRAME_BUFFER_DURATION_MS, 10000),
+        opusEncodingQuality: parseIntegerEnv(env.LAVALINK_OPUS_ENCODING_QUALITY, 10),
+        resamplingQuality: env.LAVALINK_RESAMPLING_QUALITY ?? 'MEDIUM',
+        nonAllocatingFrameBuffer: parseBooleanEnv(env.LAVALINK_NON_ALLOCATING_FRAME_BUFFER, true),
+        useSeekGhosting: parseBooleanEnv(env.LAVALINK_USE_SEEK_GHOSTING, true)
       },
       ytdlp: {
         enabled: parseBooleanEnv(env.YTDLP_ENABLED, true),
@@ -34,7 +44,7 @@ export function loadConfig(env = process.env) {
       },
       defaultSearchPrefix: env.MUSIC_SEARCH_PREFIX ?? 'ytsearch',
       pinPanel: parseBooleanEnv(env.MUSIC_PIN_PANEL, false),
-      panelRefreshIntervalMs: parseIntegerEnv(env.MUSIC_PANEL_REFRESH_INTERVAL_MS, 15000)
+      panelRefreshIntervalMs: parseIntegerEnv(env.MUSIC_PANEL_REFRESH_INTERVAL_MS, 5000)
     }
   };
 }
