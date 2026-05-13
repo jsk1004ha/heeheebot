@@ -18,7 +18,7 @@ import { SEASON_POINT_SOURCES } from '../systems/seasons.js';
 import { formatSeasonAwardLine } from './seasons.js';
 import {
   formatUserMention,
-  truncateEmbedDescription
+  splitMentionSafeEmbedContent
 } from './ui.js';
 
 const MINING_CODEX_PAGE_SIZE = 12;
@@ -543,9 +543,7 @@ function createMiningMarketPayload(user, market, userId = null) {
 }
 
 function createMiningCardPayload(content, { imagePath = null, color = 0x78716c, components = [] } = {}) {
-  const [rawTitle, ...bodyLines] = String(content).split('\n');
-  const title = rawTitle.replace(/\*\*/g, '').slice(0, 256);
-  const description = truncateEmbedDescription(bodyLines.join('\n').trim() || rawTitle);
+  const { title, description } = splitMentionSafeEmbedContent(content);
   const embed = new EmbedBuilder().setColor(color).setTitle(title).setDescription(description);
   const payload = { embeds: [embed] };
   if (components.length > 0) payload.components = components;

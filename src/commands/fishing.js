@@ -20,7 +20,7 @@ import { SEASON_POINT_SOURCES } from '../systems/seasons.js';
 import {
   createAllowedMentionsForUsers,
   formatUserMention,
-  truncateEmbedDescription
+  splitMentionSafeEmbedContent
 } from './ui.js';
 import { formatSeasonAwardLine } from './seasons.js';
 
@@ -648,9 +648,7 @@ function createFishingCodexPayload(user, profile, rarity = 'all', userId = null,
 }
 
 function createFishingCardPayload(content, { imagePath = null, color = 0x38bdf8, components = [] } = {}) {
-  const [rawTitle, ...bodyLines] = String(content).split('\n');
-  const title = rawTitle.replace(/\*\*/g, '').slice(0, 256);
-  const description = truncateEmbedDescription(bodyLines.join('\n').trim() || rawTitle);
+  const { title, description } = splitMentionSafeEmbedContent(content);
   const embed = new EmbedBuilder()
     .setColor(color)
     .setTitle(title)

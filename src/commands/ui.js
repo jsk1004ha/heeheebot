@@ -69,6 +69,20 @@ export function formatUserMention(userOrId, fallback = '알 수 없는 유저') 
   return `<@${id}>`;
 }
 
+export function splitMentionSafeEmbedContent(content) {
+  const [rawTitle = '', ...bodyLines] = String(content ?? '').split('\n');
+  const titleMatch = rawTitle.match(/^(?<title>.+?)\s+—\s+(?<mention><@!?[A-Za-z0-9_-]+>)$/);
+  const titleSource = titleMatch?.groups?.title ?? rawTitle;
+  const descriptionLines = titleMatch?.groups?.mention
+    ? [titleMatch.groups.mention, ...bodyLines]
+    : bodyLines;
+
+  return {
+    title: titleSource.replace(/\*\*/g, '').slice(0, 256),
+    description: truncateEmbedDescription(descriptionLines.join('\n').trim() || rawTitle)
+  };
+}
+
 export function createAllowedMentionsForUsers(userIds) {
   return {
     parse: [],

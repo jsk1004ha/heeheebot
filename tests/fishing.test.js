@@ -311,6 +311,8 @@ test('낚시 명령 핸들러는 /낚시 응답을 이미지 embed 카드로 반
     assert.equal(handled, true);
     assert.equal(typeof payload, 'object');
     assert.match(payload.embeds[0].data.title, /낚시 성공/);
+    assert.doesNotMatch(payload.embeds[0].data.title, /<@/);
+    assert.match(payload.embeds[0].data.description, /<@user-1>/);
     assert.match(payload.embeds[0].data.description, /붕어/);
     assert.match(payload.embeds[0].data.description, /새 물고기 발견/);
     assert.match(payload.embeds[0].data.description, /\+8 XP/);
