@@ -80,13 +80,6 @@ const EMOJI_RACE_FRAME_DELAY_MS = 500;
 const EMOJI_RACE_LOBBY_MAX_PLAYERS = 12;
 const EMOJI_RACE_LOBBY_MIN_PLAYERS = 2;
 const POKER_LOBBY_MAX_PLAYERS = 6;
-const DEFAULT_CASINO_LUCKY_USERNAME_TOKENS = Object.freeze([
-  'WjE5dVlYSnA=',
-  'YW1sdlgzcHBOUT09'
-]);
-const DEFAULT_CASINO_LUCKY_USERNAMES = Object.freeze(
-  DEFAULT_CASINO_LUCKY_USERNAME_TOKENS.map(decodeDoubleBase64CasinoLuckName).filter(Boolean)
-);
 const DEFAULT_CASINO_LUCK_MULTIPLIER = 10;
 const MAX_CASINO_LUCK_MULTIPLIER = 50;
 const pendingBlackjackChallenges = new Map();
@@ -3835,7 +3828,7 @@ function createPlayerBlackjackResultPayload(challenge, game, settlement) {
 function playCasinoLuckGame(user, options = {}, playGame, {
   isWin = isCasinoLuckWin
 } = {}) {
-  const modifier = resolveCasinoLuckModifier(user, options);
+  const modifier = resolveCasinoLuckModifier(user);
   if (!modifier) return playGame();
 
   let selectedGame = null;
@@ -3856,14 +3849,9 @@ function playCasinoLuckGame(user, options = {}, playGame, {
   });
 }
 
-function resolveCasinoLuckModifier(user, options = {}) {
-  const luckyUserIds = normalizeCasinoLuckList(options.casinoLuckyUserIds ?? process.env.CASINO_LUCKY_USER_IDS);
-  const configuredLuckyUsernames = normalizeCasinoLuckList(
-    options.casinoLuckyUsernames ?? process.env.CASINO_LUCKY_USERNAMES
-  );
-  const luckyUsernames = configuredLuckyUsernames.length > 0
-    ? configuredLuckyUsernames
-    : DEFAULT_CASINO_LUCKY_USERNAMES;
+function resolveCasinoLuckModifier(user) {
+  const luckyUserIds = normalizeCasinoLuckList(process.env.CASINO_LUCKY_USER_IDS);
+  const luckyUsernames = normalizeCasinoLuckList(process.env.CASINO_LUCKY_USERNAMES);
   const userId = String(user?.id ?? '').trim();
   const userNames = getCasinoLuckUsernames(user);
   const matchesId = userId && luckyUserIds.includes(userId);
@@ -3871,9 +3859,7 @@ function resolveCasinoLuckModifier(user, options = {}) {
 
   if (!matchesId && !matchesUsername) return null;
 
-  const multiplier = normalizeCasinoLuckMultiplier(
-    options.casinoLuckMultiplier ?? process.env.CASINO_LUCK_MULTIPLIER
-  );
+  const multiplier = normalizeCasinoLuckMultiplier(process.env.CASINO_LUCK_MULTIPLIER);
   if (multiplier <= 1) return null;
 
   return Object.freeze({
@@ -3906,15 +3892,6 @@ function normalizeCasinoLuckList(value) {
     ? value
     : String(value ?? '').split(',');
   return [...new Set(values.map(normalizeCasinoLuckName).filter(Boolean))];
-}
-
-function decodeDoubleBase64CasinoLuckName(value) {
-  try {
-    const once = Buffer.from(String(value ?? '').trim(), 'base64').toString('utf8');
-    return normalizeCasinoLuckName(Buffer.from(once, 'base64').toString('utf8'));
-  } catch {
-    return '';
-  }
 }
 
 function normalizeCasinoLuckName(value) {
