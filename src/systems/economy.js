@@ -109,7 +109,8 @@ import {
   getCurrencyBalances,
   getStockBankruptcySummary,
   migrateLegacyWalletsToGold,
-  normalizeWallets
+  normalizeWallets,
+  setCurrencyBalance
 } from './currencies.js';
 import {
   getAccountLinkSummary,
@@ -3903,12 +3904,13 @@ export class EconomyService {
       });
 
       debitCurrency(profile, CURRENCY_CASINO, adjusted.bet, '골드가 부족합니다.');
-      creditCurrencyWithSocialLoanRepayment({
+      creditWagerSettlementPayout({
         data,
         guildId,
         profile,
         currencyId: CURRENCY_CASINO,
-        amount: adjusted.payout,
+        payout: adjusted.payout,
+        stakeBasis: adjusted.bet,
         economy: this
       });
 
@@ -3957,12 +3959,13 @@ export class EconomyService {
       if (extraReservedLoss > 0) {
         debitCurrency(profile, CURRENCY_CASINO, extraReservedLoss, '골드가 부족합니다.');
       }
-      creditCurrencyWithSocialLoanRepayment({
+      creditWagerSettlementPayout({
         data,
         guildId,
         profile,
         currencyId: CURRENCY_CASINO,
-        amount: adjusted.payout,
+        payout: adjusted.payout,
+        stakeBasis: adjusted.bet,
         economy: this
       });
 
@@ -4059,20 +4062,22 @@ export class EconomyService {
       const pot = normalizedBet * 2;
 
       if (!winnerUserId) {
-        creditCurrencyWithSocialLoanRepayment({
+        creditWagerSettlementPayout({
           data,
           guildId,
           profile: challengerProfile,
           currencyId: CURRENCY_CASINO,
-          amount: normalizedBet,
+          payout: normalizedBet,
+          stakeBasis: normalizedBet,
           economy: this
         });
-        creditCurrencyWithSocialLoanRepayment({
+        creditWagerSettlementPayout({
           data,
           guildId,
           profile: opponentProfile,
           currencyId: CURRENCY_CASINO,
-          amount: normalizedBet,
+          payout: normalizedBet,
+          stakeBasis: normalizedBet,
           economy: this
         });
 
@@ -4092,12 +4097,13 @@ export class EconomyService {
       const winnerProfile = winnerUserId === challenger.userId
         ? challengerProfile
         : opponentProfile;
-      creditCurrencyWithSocialLoanRepayment({
+      creditWagerSettlementPayout({
         data,
         guildId,
         profile: winnerProfile,
         currencyId: CURRENCY_CASINO,
-        amount: pot,
+        payout: pot,
+        stakeBasis: normalizedBet,
         economy: this
       });
 
@@ -4141,20 +4147,22 @@ export class EconomyService {
       const challengerProfile = getOrCreateProfile(data, guildId, challenger.userId, challenger.username, this);
       const opponentProfile = getOrCreateProfile(data, guildId, opponent.userId, opponent.username, this);
 
-      creditCurrencyWithSocialLoanRepayment({
+      creditWagerSettlementPayout({
         data,
         guildId,
         profile: challengerProfile,
         currencyId: CURRENCY_CASINO,
-        amount: normalizedChallengerPayout,
+        payout: normalizedChallengerPayout,
+        stakeBasis: normalizedBet,
         economy: this
       });
-      creditCurrencyWithSocialLoanRepayment({
+      creditWagerSettlementPayout({
         data,
         guildId,
         profile: opponentProfile,
         currencyId: CURRENCY_CASINO,
-        amount: normalizedOpponentPayout,
+        payout: normalizedOpponentPayout,
+        stakeBasis: normalizedBet,
         economy: this
       });
 
@@ -4209,12 +4217,13 @@ export class EconomyService {
 
       for (const player of normalizedPlayers) {
         const profile = profiles.find((candidate) => candidate.userId === player.userId);
-        creditCurrencyWithSocialLoanRepayment({
+        creditWagerSettlementPayout({
           data,
           guildId,
           profile,
           currencyId: CURRENCY_CASINO,
-          amount: normalizedPayouts[player.key],
+          payout: normalizedPayouts[player.key],
+          stakeBasis: normalizedBet,
           economy: this
         });
       }
@@ -4273,12 +4282,13 @@ export class EconomyService {
       const winnerProfile = winnerUserId === challenger.userId
         ? challengerProfile
         : opponentProfile;
-      creditCurrencyWithSocialLoanRepayment({
+      creditWagerSettlementPayout({
         data,
         guildId,
         profile: winnerProfile,
         currencyId: CURRENCY_CASINO,
-        amount: normalizedBet * 2,
+        payout: normalizedBet * 2,
+        stakeBasis: normalizedBet,
         economy: this
       });
 
@@ -4528,6 +4538,58 @@ function compareSocialLoanRequestsForStatus(a, b) {
 
 function getSocialLoanRemaining(loan) {
   return Math.max(0, normalizeStoredNonNegativeInteger(loan.totalDue) - normalizeStoredNonNegativeInteger(loan.repaid));
+}
+
+function creditCurrencyWithoutIncomeRepayment(profile, currencyId, amount) {
+  const normalizedAmount = normalizeStoredNonNegativeInteger(amount);
+  if (normalizedAmount <= 0) return getCurrencyBalance(profile, currencyId);
+  const current = getCurrencyBalance(profile, currencyId);
+  return setCurrencyBalance(profile, currencyId, current + normalizedAmount);
+}
+
+function creditWagerSettlementPayout({
+  data,
+  guildId,
+  profile,
+  currencyId,
+  payout,
+  stakeBasis,
+  economy,
+  now = Date.now()
+}) {
+  const normalizedPayout = normalizeStoredNonNegativeInteger(payout);
+  const normalizedStakeBasis = normalizeStoredNonNegativeInteger(stakeBasis);
+  const returnedStake = Math.min(normalizedPayout, normalizedStakeBasis);
+  const profit = Math.max(0, normalizedPayout - normalizedStakeBasis);
+  const balanceBefore = profile.balance;
+  let incomeReceipt = null;
+
+  if (returnedStake > 0) {
+    creditCurrencyWithoutIncomeRepayment(profile, currencyId, returnedStake);
+  }
+
+  if (profit > 0) {
+    incomeReceipt = creditCurrencyWithSocialLoanRepayment({
+      data,
+      guildId,
+      profile,
+      currencyId,
+      amount: profit,
+      economy,
+      now
+    });
+  }
+
+  return {
+    gross: normalizedPayout,
+    profit,
+    returnedStake,
+    balanceBefore,
+    balance: profile.balance,
+    socialLoanRepayment: incomeReceipt?.socialLoanRepayment ?? 0,
+    socialLoanRepayments: incomeReceipt?.socialLoanRepayments ?? [],
+    bankruptcy: getStockBankruptcySummary(profile)
+  };
 }
 
 function repaySocialLoansToLender({ borrower, lender, targetLoans, amount, now }) {
