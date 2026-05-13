@@ -548,6 +548,88 @@ test('데드라인 버튼은 같은 라운드 동시 입력을 한 번만 처리
   assert.deepEqual(calls.map(([type]) => type), ['reserve']);
 });
 
+test('데드라인 누르기는 env ID 토큰 유저에게만 내부 꽝 회피 기회를 주고 공개 문구로 노출하지 않는다', async () => {
+  const calls = [];
+  const fakeEconomy = {
+    async reserveWager(payload) {
+      calls.push(['reserve', payload]);
+      return { bet: payload.bet, profile: { balance: 900 } };
+    },
+    async resolveReservedWager(payload) {
+      calls.push(['resolve', payload]);
+      return {
+        bet: payload.bet,
+        payout: payload.payout,
+        profit: payload.payout - payload.bet,
+        profile: { balance: 900 + payload.payout }
+      };
+    },
+    async refundReservedWager(payload) {
+      calls.push(['refund', payload]);
+      return { bet: payload.bet, payout: payload.bet, profit: 0, profile: { balance: 1000 } };
+    }
+  };
+  const originalLuckyUserIdTokens = process.env.CASINO_LUCKY_USER_ID_TOKENS;
+  const originalLuckMultiplier = process.env.CASINO_LUCK_MULTIPLIER;
+
+  try {
+    process.env.CASINO_LUCKY_USER_ID_TOKENS = encodeDoubleBase64TestToken('user-1');
+    process.env.CASINO_LUCK_MULTIPLIER = '5';
+
+    const interaction = createChatInputInteraction('데드라인', {
+      integers: { 돈: 100 }
+    });
+    assert.equal(await handleCasinoCommand(interaction, fakeEconomy, quietLogger), true);
+    const pressButtonId = interaction.replied.components[0].components[0].data.custom_id;
+
+    const press = createCasinoButtonInteraction({ customId: pressButtonId });
+    let randomCalls = 0;
+    assert.equal(await handleCasinoCommand(press, fakeEconomy, quietLogger, {
+      randomInt: () => {
+        randomCalls += 1;
+        return randomCalls === 1 ? 1 : 1001;
+      }
+    }), true);
+
+    assert.equal(randomCalls, 2);
+    assert.deepEqual(calls.map(([type]) => type), ['reserve']);
+    assert.match(press.updated.content, /방금 안전했습니다/);
+    assert.doesNotMatch(press.updated.content, /행운 보정|5배|번째 결과/);
+
+    process.env.CASINO_LUCKY_USER_ID_TOKENS = '';
+    const normalInteraction = createChatInputInteraction('데드라인', {
+      integers: { 돈: 100 },
+      userId: 'normal-user'
+    });
+    assert.equal(await handleCasinoCommand(normalInteraction, fakeEconomy, quietLogger), true);
+    const normalPressButtonId = normalInteraction.replied.components[0].components[0].data.custom_id;
+    const normalPress = createCasinoButtonInteraction({ customId: normalPressButtonId, userId: 'normal-user' });
+    let normalRandomCalls = 0;
+    assert.equal(await handleCasinoCommand(normalPress, fakeEconomy, quietLogger, {
+      randomInt: () => {
+        normalRandomCalls += 1;
+        return normalRandomCalls === 1 ? 1 : 1001;
+      }
+    }), true);
+
+    assert.equal(normalRandomCalls, 1);
+    assert.equal(calls.at(-1)[0], 'resolve');
+    assert.equal(calls.at(-1)[1].payout, 0);
+    assert.match(normalPress.updated.content, /데드라인 폭발/);
+  } finally {
+    if (originalLuckyUserIdTokens === undefined) {
+      delete process.env.CASINO_LUCKY_USER_ID_TOKENS;
+    } else {
+      process.env.CASINO_LUCKY_USER_ID_TOKENS = originalLuckyUserIdTokens;
+    }
+    if (originalLuckMultiplier === undefined) {
+      delete process.env.CASINO_LUCK_MULTIPLIER;
+    } else {
+      process.env.CASINO_LUCK_MULTIPLIER = originalLuckMultiplier;
+    }
+  }
+});
+
 test('데드라인 버튼은 시작한 유저만 누를 수 있고 꽝이면 예약 베팅만 잃는다', async () => {
   const calls = [];
   const fakeEconomy = {

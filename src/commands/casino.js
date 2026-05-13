@@ -2605,7 +2605,7 @@ async function handleDeadlineButton(interaction, economy, logger, options = {}) 
       return true;
     }
 
-    const game = pressDeadlineRound(pending.game, {
+    const game = pressDeadlineRoundWithCasinoLuck(interaction, pending.game, {
       randomInt: options.randomInt
     });
     pending.game = game;
@@ -3823,6 +3823,26 @@ function createPlayerBlackjackResultPayload(challenge, game, settlement) {
     ]),
     components: []
   };
+}
+
+function pressDeadlineRoundWithCasinoLuck(actor, round, options = {}) {
+  const modifier = resolveCasinoLuckModifier(actor);
+  if (!modifier) {
+    return pressDeadlineRound(round, {
+      randomInt: options.randomInt
+    });
+  }
+
+  let selectedGame = null;
+  for (let attempt = 1; attempt <= modifier.multiplier; attempt += 1) {
+    const game = pressDeadlineRound(round, {
+      randomInt: options.randomInt
+    });
+    selectedGame = game;
+    if (!game.busted) return game;
+  }
+
+  return selectedGame;
 }
 
 function playCasinoLuckGame(actor, options = {}, playGame, {
