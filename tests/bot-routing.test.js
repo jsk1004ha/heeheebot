@@ -144,6 +144,24 @@ test('워들과 숫자야구는 라우터에서 처음부터 비공개 defer를 
   }), false);
 });
 
+test('돈빌리기 현황은 공개 placeholder 삭제 대신 비공개 defer를 선점한다', () => {
+  assert.equal(shouldDeferPrivatelyBeforeCommandHandling({
+    isChatInputCommand: () => true,
+    commandName: '돈빌리기',
+    options: {
+      getString: (name) => (name === '행동' ? 'status' : null)
+    }
+  }), true);
+
+  assert.equal(shouldDeferPrivatelyBeforeCommandHandling({
+    isChatInputCommand: () => true,
+    commandName: '돈빌리기',
+    options: {
+      getString: (name) => (name === '행동' ? 'request' : null)
+    }
+  }), false);
+});
+
 test('/워들 도전은 봇 라우팅에서 비공개 defer 원본을 채워 제출 처리한다', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'heeheebot-bot-wordle-'));
   const bot = createBot({

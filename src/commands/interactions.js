@@ -4,6 +4,7 @@ export const EPHEMERAL_FLAG = MessageFlags.Ephemeral;
 export const DEFAULT_INTERACTION_DEFER_AFTER_MS = 1_000;
 const GUARD_DEFER_KIND = Symbol('guardDeferKind');
 const GUARD_ORIGINAL_REPLY_FILLED = Symbol('guardOriginalReplyFilled');
+const GUARD_DEFER_REPLY_EPHEMERAL = Symbol('guardDeferReplyEphemeral');
 
 export function isUnknownInteractionError(error) {
   return Boolean(
@@ -200,6 +201,7 @@ export function guardInteractionResponse(interaction, {
       } else if (canDeferReply) {
         await originalDeferReply();
         deferKind = 'reply';
+        interaction[GUARD_DEFER_REPLY_EPHEMERAL] = false;
       } else if (canDeferUpdate) {
         await originalDeferUpdate();
         deferKind = 'update';
@@ -258,6 +260,7 @@ export function guardInteractionResponse(interaction, {
       deferredByGuard = true;
       deferKind = 'reply';
       interaction[GUARD_DEFER_KIND] = deferKind;
+      interaction[GUARD_DEFER_REPLY_EPHEMERAL] = isEphemeralInteractionPayload(args[0]);
       return result;
     };
   }
@@ -295,7 +298,9 @@ export function guardInteractionResponse(interaction, {
             return result;
           }
         }
-        if (isEphemeralInteractionPayload(followOnPayload) && originalFollowUp) {
+        if (isEphemeralInteractionPayload(followOnPayload)
+          && !interaction[GUARD_DEFER_REPLY_EPHEMERAL]
+          && originalFollowUp) {
           const result = await originalFollowUp(followOnPayload);
           repliedByGuard = true;
           await deleteOriginalDeferredReply();
@@ -539,7 +544,7 @@ function isEphemeralInteractionPayload(payload) {
 
 function shouldUseFollowUpAfterDeferredResponse(interaction, payload) {
   return interaction?.[GUARD_DEFER_KIND] === 'update'
-    || isEphemeralInteractionPayload(payload);
+    || (isEphemeralInteractionPayload(payload) && !interaction?.[GUARD_DEFER_REPLY_EPHEMERAL]);
 }
 
 async function deleteDeferredReplyIfPossible(interaction) {

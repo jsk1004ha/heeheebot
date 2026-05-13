@@ -177,6 +177,28 @@ test('safeReplyToInteraction은 deferred 초기 응답을 일반 메시지는 ed
   }]);
 });
 
+test('safeReplyToInteraction은 비공개 deferReply 원본을 editReply로 채운다', async () => {
+  const interaction = createInteraction();
+  const guard = guardInteractionResponse(interaction, {
+    deferAfterMs: 1_000,
+    logger: quietLogger
+  });
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  assert.equal(await safeReplyToInteraction(interaction, {
+    content: '비공개 현황',
+    flags: MessageFlags.Ephemeral
+  }), true);
+  guard.stop();
+
+  assert.deepEqual(interaction.calls, ['deferReply', 'editReply']);
+  assert.deepEqual(interaction.edited, {
+    content: '비공개 현황',
+    flags: MessageFlags.Ephemeral
+  });
+  assert.deepEqual(interaction.followUps, []);
+});
+
 test('safeReplyToInteraction은 deferUpdate 된 컴포넌트 응답을 followUp으로 보낸다', async () => {
   const interaction = createComponentInteraction();
   const guard = guardInteractionResponse(interaction, {
