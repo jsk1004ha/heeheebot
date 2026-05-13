@@ -60,12 +60,8 @@ import {
   playSlots
 } from '../src/systems/casino.js';
 
-const DEFAULT_CASINO_LUCK_USER_ID = decodeDoubleBase64TestToken('TXpJMU5Ea3hNVEF6T0RJd01qZ3pPVEEw');
-
-function decodeDoubleBase64TestToken(value) {
-  const once = Buffer.from(String(value ?? '').trim(), 'base64').toString('utf8');
-  return Buffer.from(once, 'base64').toString('utf8').trim();
-}
+const CONFIGURED_CASINO_LUCK_USER_ID = '123456789012345678';
+const CONFIGURED_CASINO_LUCK_USERNAME = 'env_lucky_user';
 
 test('홀짝은 99~100에서 하우스 엣지로 실패하고 성공 시 1.9배를 지급한다', () => {
   const win = playOddEven({
@@ -235,7 +231,7 @@ test('단순 도박 결과만 같은 베팅 재시도 버튼을 제공하고 카
   assert.match(otherUserButton.replied.content, /명령어를 실행한 유저만/);
 });
 
-test('카지노 행운 보정은 설정된 유저 ID에게만 내부 확률 기회를 추가하고 공개 문구로 노출하지 않는다', async () => {
+test('카지노 행운 보정은 env 유저 ID와 사용자명에게만 내부 확률 기회를 추가하고 공개 문구로 노출하지 않는다', async () => {
   const settled = [];
   const fakeEconomy = {
     async settleWager(payload) {
@@ -248,48 +244,92 @@ test('카지노 행운 보정은 설정된 유저 ID에게만 내부 확률 기�
       };
     }
   };
-  const luckyInteraction = createChatInputInteraction('홀짝', {
-    integers: { 돈: 100 },
-    strings: { 선택: 'odd' },
-    userId: DEFAULT_CASINO_LUCK_USER_ID,
-    username: '아이디매칭'
-  });
+  const originalLuckyUsernames = process.env.CASINO_LUCKY_USERNAMES;
+  const originalLuckyUserIds = process.env.CASINO_LUCKY_USER_IDS;
+  const originalLuckMultiplier = process.env.CASINO_LUCK_MULTIPLIER;
 
-  assert.equal(await handleCasinoCommand(luckyInteraction, fakeEconomy, quietLogger, {
-    randomInt: createSequenceRandom([2, 3])
-  }), true);
+  try {
+    process.env.CASINO_LUCKY_USER_IDS = CONFIGURED_CASINO_LUCK_USER_ID;
+    process.env.CASINO_LUCKY_USERNAMES = '';
+    process.env.CASINO_LUCK_MULTIPLIER = '10';
 
-  assert.equal(settled[0].payout, 190);
-  assert.doesNotMatch(luckyInteraction.replied.content, /행운 보정|5배|번째 결과/);
+    const idLuckyInteraction = createChatInputInteraction('홀짝', {
+      integers: { 돈: 100 },
+      strings: { 선택: 'odd' },
+      userId: CONFIGURED_CASINO_LUCK_USER_ID,
+      username: '아이디매칭'
+    });
 
-  const nicknameOnlyInteraction = createChatInputInteraction('홀짝', {
-    integers: { 돈: 100 },
-    strings: { 선택: 'odd' },
-    username: '아이디아님',
-    memberDisplayName: '아이디매칭'
-  });
+    assert.equal(await handleCasinoCommand(idLuckyInteraction, fakeEconomy, quietLogger, {
+      randomInt: createSequenceRandom([2, 3])
+    }), true);
 
-  assert.equal(await handleCasinoCommand(nicknameOnlyInteraction, fakeEconomy, quietLogger, {
-    casinoLuckyUserIds: [DEFAULT_CASINO_LUCK_USER_ID],
-    randomInt: createSequenceRandom([2, 3])
-  }), true);
+    assert.equal(settled[0].payout, 190);
+    assert.doesNotMatch(idLuckyInteraction.replied.content, /행운 보정|10배|번째 결과/);
 
-  assert.equal(settled[1].payout, 0);
-  assert.doesNotMatch(nicknameOnlyInteraction.replied.content, /행운 보정/);
+    const nicknameOnlyInteraction = createChatInputInteraction('홀짝', {
+      integers: { 돈: 100 },
+      strings: { 선택: 'odd' },
+      userId: 'not-lucky-user',
+      username: '아이디아님',
+      memberDisplayName: '아이디매칭'
+    });
 
-  const normalInteraction = createChatInputInteraction('홀짝', {
-    integers: { 돈: 100 },
-    strings: { 선택: 'odd' },
-    userId: 'not-lucky-user',
-    username: '다른유저'
-  });
+    assert.equal(await handleCasinoCommand(nicknameOnlyInteraction, fakeEconomy, quietLogger, {
+      randomInt: createSequenceRandom([2, 3])
+    }), true);
 
-  assert.equal(await handleCasinoCommand(normalInteraction, fakeEconomy, quietLogger, {
-    randomInt: createSequenceRandom([2, 3])
-  }), true);
+    assert.equal(settled[1].payout, 0);
+    assert.doesNotMatch(nicknameOnlyInteraction.replied.content, /행운 보정/);
 
-  assert.equal(settled[2].payout, 0);
-  assert.doesNotMatch(normalInteraction.replied.content, /행운 보정/);
+    process.env.CASINO_LUCKY_USER_IDS = '';
+    process.env.CASINO_LUCKY_USERNAMES = CONFIGURED_CASINO_LUCK_USERNAME;
+
+    const usernameLuckyInteraction = createChatInputInteraction('홀짝', {
+      integers: { 돈: 100 },
+      strings: { 선택: 'odd' },
+      userId: 'not-lucky-user',
+      username: CONFIGURED_CASINO_LUCK_USERNAME
+    });
+
+    assert.equal(await handleCasinoCommand(usernameLuckyInteraction, fakeEconomy, quietLogger, {
+      randomInt: createSequenceRandom([2, 3])
+    }), true);
+
+    assert.equal(settled[2].payout, 190);
+    assert.doesNotMatch(usernameLuckyInteraction.replied.content, /행운 보정|10배|번째 결과/);
+
+    process.env.CASINO_LUCKY_USERNAMES = '';
+    const unconfiguredInteraction = createChatInputInteraction('홀짝', {
+      integers: { 돈: 100 },
+      strings: { 선택: 'odd' },
+      userId: CONFIGURED_CASINO_LUCK_USER_ID,
+      username: CONFIGURED_CASINO_LUCK_USERNAME
+    });
+
+    assert.equal(await handleCasinoCommand(unconfiguredInteraction, fakeEconomy, quietLogger, {
+      randomInt: createSequenceRandom([2, 3])
+    }), true);
+
+    assert.equal(settled[3].payout, 0);
+    assert.doesNotMatch(unconfiguredInteraction.replied.content, /행운 보정|10배|번째 결과/);
+  } finally {
+    if (originalLuckyUsernames === undefined) {
+      delete process.env.CASINO_LUCKY_USERNAMES;
+    } else {
+      process.env.CASINO_LUCKY_USERNAMES = originalLuckyUsernames;
+    }
+    if (originalLuckyUserIds === undefined) {
+      delete process.env.CASINO_LUCKY_USER_IDS;
+    } else {
+      process.env.CASINO_LUCKY_USER_IDS = originalLuckyUserIds;
+    }
+    if (originalLuckMultiplier === undefined) {
+      delete process.env.CASINO_LUCK_MULTIPLIER;
+    } else {
+      process.env.CASINO_LUCK_MULTIPLIER = originalLuckMultiplier;
+    }
+  }
 });
 
 test('카지노 핸들러는 다른 기능 버튼을 건드리지 않는다', async () => {
@@ -2043,6 +2083,161 @@ test('수동 유저 포커 스택 정산은 예약 시작칩 안에서 부분 �
     assert.equal(settled.winner.userId, 'user-2');
     assert.equal(settled.challenger.balance, 999);
     assert.equal(settled.opponent.balance, 1001);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+const TEST_SOCIAL_LOAN_TERM_MS = 24 * 60 * 60 * 1000;
+
+function createLoanCasinoProfile({
+  userId,
+  username,
+  balance,
+  stockDebt = 0,
+  loans = null
+}) {
+  return {
+    userId,
+    username,
+    level: 1,
+    xp: 0,
+    totalXp: 0,
+    balance,
+    stockBankruptcy: {
+      debt: stockDebt,
+      paid: 0,
+      count: stockDebt > 0 ? 1 : 0,
+      lastAt: stockDebt > 0 ? 1 : 0
+    },
+    socialLoans: {
+      requests: [],
+      loans: loans ?? [{
+        id: 'loan-1',
+        lenderUserId: 'lender',
+        lenderUsername: '빌려준사람',
+        principal: 1_000,
+        totalDue: 1_000,
+        repaid: 0,
+        interestBps: 0,
+        interestPeriodMs: TEST_SOCIAL_LOAN_TERM_MS,
+        interestType: 'simple',
+        termMs: TEST_SOCIAL_LOAN_TERM_MS,
+        dueAt: TEST_SOCIAL_LOAN_TERM_MS,
+        acceptedAt: 1,
+        repaymentMode: 'installment',
+        interestAccruedPeriods: 0,
+        lastRepaymentAt: 0
+      }]
+    }
+  };
+}
+
+test('카지노 스택 반환은 순손실이면 대출과 파산채무 자동상환을 발생시키지 않는다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await fixture.store.update((data) => {
+      data.guilds['guild-1'] = {
+        users: {
+          borrower: createLoanCasinoProfile({
+            userId: 'borrower',
+            username: '빌린도박러',
+            balance: 1_000,
+            stockDebt: 1_000
+          }),
+          opponent: createLoanCasinoProfile({
+            userId: 'opponent',
+            username: '상대',
+            balance: 1_000
+          }),
+          lender: createLoanCasinoProfile({
+            userId: 'lender',
+            username: '빌려준사람',
+            balance: 5_000,
+            loans: []
+          })
+        }
+      };
+    });
+
+    await fixture.economy.reservePlayerPot({
+      guildId: 'guild-1',
+      challenger: { userId: 'borrower', username: '빌린도박러' },
+      opponent: { userId: 'opponent', username: '상대' },
+      bet: 100
+    });
+    const settled = await fixture.economy.resolveReservedPlayerStackPot({
+      guildId: 'guild-1',
+      challenger: { userId: 'borrower', username: '빌린도박러' },
+      opponent: { userId: 'opponent', username: '상대' },
+      bet: 100,
+      pot: 3,
+      winnerUserId: 'opponent',
+      challengerPayout: 99,
+      opponentPayout: 101
+    });
+    const borrower = await fixture.economy.getProfile('guild-1', 'borrower', '빌린도박러');
+    const lender = await fixture.economy.getProfile('guild-1', 'lender', '빌려준사람');
+
+    assert.equal(settled.challenger.balance, 999);
+    assert.equal(borrower.bankruptcy.debt, 1_000);
+    assert.equal(borrower.socialLoans.loans[0].repaid, 0);
+    assert.equal(lender.balance, 5_000);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('카지노 승리 자동상환은 총 지급액이 아니라 순수익에만 적용된다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await fixture.store.update((data) => {
+      data.guilds['guild-1'] = {
+        users: {
+          borrower: createLoanCasinoProfile({
+            userId: 'borrower',
+            username: '빌린도박러',
+            balance: 1_000,
+            stockDebt: 1_000
+          }),
+          opponent: createLoanCasinoProfile({
+            userId: 'opponent',
+            username: '상대',
+            balance: 1_000,
+            loans: []
+          }),
+          lender: createLoanCasinoProfile({
+            userId: 'lender',
+            username: '빌려준사람',
+            balance: 5_000,
+            loans: []
+          })
+        }
+      };
+    });
+
+    await fixture.economy.reservePlayerPot({
+      guildId: 'guild-1',
+      challenger: { userId: 'borrower', username: '빌린도박러' },
+      opponent: { userId: 'opponent', username: '상대' },
+      bet: 100
+    });
+    const won = await fixture.economy.resolveReservedPlayerPot({
+      guildId: 'guild-1',
+      challenger: { userId: 'borrower', username: '빌린도박러' },
+      opponent: { userId: 'opponent', username: '상대' },
+      bet: 100,
+      winnerUserId: 'borrower'
+    });
+    const borrower = await fixture.economy.getProfile('guild-1', 'borrower', '빌린도박러');
+    const lender = await fixture.economy.getProfile('guild-1', 'lender', '빌려준사람');
+
+    assert.equal(won.challenger.balance, 1_040);
+    assert.equal(borrower.bankruptcy.debt, 975);
+    assert.equal(borrower.socialLoans.loans[0].repaid, 35);
+    assert.equal(lender.balance, 5_035);
   } finally {
     await fixture.cleanup();
   }
