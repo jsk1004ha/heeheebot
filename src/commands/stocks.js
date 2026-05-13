@@ -1620,6 +1620,7 @@ function formatCloseLeverageWithPortfolio(user, result, portfolio) {
 
 function formatLeveragePortfolio(user, portfolio) {
   const settled = Array.isArray(portfolio.settled) ? portfolio.settled : portfolio.liquidated;
+  const settledSummary = formatLeverageSettledSummary(settled);
   const settledText = settled.length > 0
     ? `\n✅ 이번 조회에서 자동 정산: ${settled.map((entry) => `**${entry.stock.name}** ${formatLeverageSide(entry.side)} ${entry.leverage}배 ${formatSignedMoney(entry.realizedProfit)}`).join(', ')}`
     : '';
@@ -1636,11 +1637,18 @@ function formatLeveragePortfolio(user, portfolio) {
   return [
     `⚡ **${user.username}님의 레버리지 보유 현황**`,
     `골드: **${portfolio.cash.toLocaleString()}골드**`,
+    settledSummary,
     formatBankruptcyLine(portfolio.bankruptcy),
     `증거금 합계: **${portfolio.marginTotal.toLocaleString()}골드** / 부채 노출: **${portfolio.debtTotal.toLocaleString()}골드** / 명목가: **${portfolio.notionalTotal.toLocaleString()}골드** / 평가금: **${portfolio.equityTotal.toLocaleString()}골드**`,
     `미실현손익: **${formatSignedMoney(portfolio.unrealizedProfit)}** / 누적실현손익: **${formatSignedMoney(portfolio.realizedLeveragedProfit)}**`,
     positions + settledText
   ].filter(Boolean).join('\n');
+}
+
+function formatLeverageSettledSummary(settled) {
+  if (!Array.isArray(settled) || settled.length === 0) return null;
+  const realizedProfit = settled.reduce((sum, entry) => sum + Number(entry.realizedProfit ?? 0), 0);
+  return `이번 조회 정산 손익: **${formatSignedMoney(realizedProfit)}** (${settled.length}건 자동 정산)`;
 }
 
 function formatDebtRepaymentResult(user, result) {

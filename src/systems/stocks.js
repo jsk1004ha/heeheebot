@@ -1314,10 +1314,12 @@ export class StockService {
   async getLeveragePortfolio({ guildId, userId, username, now = Date.now() }) {
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);
+      const previousTradeIds = getStockTradeHistoryIdSet(guild.stocks?.users?.[userId]);
       const market = syncMarket(data, guildId, guild, now, this);
       const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
       const stockUser = getOrCreateStockUser(data, guildId, guild, userId, username, profile, now);
-      const settled = settleMaturedLeveragedPositions(profile, stockUser, market);
+      settleMaturedLeveragedPositions(profile, stockUser, market);
+      const settled = getNewLeverageSettlementEntries(stockUser, market, previousTradeIds);
       const positions = getEvaluatedLeveragedPositions(stockUser, market);
       const marginTotal = positions.reduce((sum, position) => sum + position.margin, 0);
       const notionalTotal = positions.reduce((sum, position) => sum + position.notional, 0);
@@ -1332,7 +1334,7 @@ export class StockService {
         bankruptcy: getStockBankruptcySummary(profile),
         positions,
         settled,
-        liquidated: settled.filter((entry) => entry.liquidated),
+        liquidated: settled.filter((entry) => entry.type === 'leverage_liquidation'),
         marginTotal,
         notionalTotal,
         debtTotal,
@@ -3300,6 +3302,22 @@ function compareMarketNewsEntries(a, b) {
   if ((b.at ?? 0) !== (a.at ?? 0)) return (b.at ?? 0) - (a.at ?? 0);
   if ((b.tickIndex ?? 0) !== (a.tickIndex ?? 0)) return (b.tickIndex ?? 0) - (a.tickIndex ?? 0);
   return (a.sequence ?? 0) - (b.sequence ?? 0);
+}
+
+function getStockTradeHistoryIdSet(stockUser) {
+  const history = Array.isArray(stockUser?.tradeHistory) ? stockUser.tradeHistory : [];
+  return new Set(history
+    .map((entry) => String(entry?.id ?? '').trim())
+    .filter(Boolean));
+}
+
+function getNewLeverageSettlementEntries(stockUser, market, previousTradeIds) {
+  return normalizeTradeHistory(stockUser.tradeHistory)
+    .filter((entry) =>
+      !previousTradeIds.has(entry.id) &&
+      (entry.type === 'leverage_settlement' || entry.type === 'leverage_liquidation')
+    )
+    .map((entry) => cloneTradeHistoryEntry(entry, market));
 }
 
 function recordTrade(stockUser, entry) {
