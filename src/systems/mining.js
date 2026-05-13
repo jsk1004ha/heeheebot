@@ -21,7 +21,7 @@ const MAX_MARKET_CATCH_UP_TICKS = 24;
 const ORE_PRICE_HISTORY_LIMIT = 48;
 const MIN_ORE_PRICE = 1;
 const ORE_PRICE_BANDS = Object.freeze({
-  common: Object.freeze({ min: 10, max: 50 }),
+  common: Object.freeze({ min: 1, max: 50 }),
   uncommon: Object.freeze({ min: 70, max: 250 }),
   rare: Object.freeze({ min: 350, max: 1_500 }),
   epic: Object.freeze({ min: 2_000, max: 12_000 }),
@@ -33,8 +33,8 @@ const RARITIES = Object.freeze({
   common: Object.freeze({ label: '일반', weight: 6500, powerBonus: 0, volatilityBps: 350, eventChance: 7 }),
   uncommon: Object.freeze({ label: '고급', weight: 2300, powerBonus: 2, volatilityBps: 550, eventChance: 9 }),
   rare: Object.freeze({ label: '희귀', weight: 900, powerBonus: 5, volatilityBps: 850, eventChance: 12 }),
-  epic: Object.freeze({ label: '영웅', weight: 250, powerBonus: 9, volatilityBps: 1200, eventChance: 15 }),
-  legendary: Object.freeze({ label: '전설', weight: 50, powerBonus: 15, volatilityBps: 1600, eventChance: 18 }),
+  epic: Object.freeze({ label: '영웅', weight: 220, powerBonus: 9, volatilityBps: 1200, eventChance: 15 }),
+  legendary: Object.freeze({ label: '전설', weight: 45, powerBonus: 15, volatilityBps: 1600, eventChance: 18 }),
   hidden: Object.freeze({ label: '히든', weight: 0, powerBonus: 28, volatilityBps: 2200, eventChance: 24 })
 });
 
@@ -580,8 +580,8 @@ function rollRarity(profile, randomIntFn) {
     common: Math.max(1400, RARITIES.common.weight - level * 45 - focusStep * 80),
     uncommon: RARITIES.uncommon.weight + level * 20 + focusStep * 35,
     rare: RARITIES.rare.weight + level * 17 + focusStep * 25,
-    epic: RARITIES.epic.weight + level * 11 + focusStep * 15,
-    legendary: RARITIES.legendary.weight + level * 6 + focusStep * 8,
+    epic: RARITIES.epic.weight + level * 10 + focusStep * 12,
+    legendary: RARITIES.legendary.weight + level * 5 + focusStep * 7,
     hidden: getHiddenOreWeight(profile)
   };
   const total = Object.values(weights).reduce((sum, weight) => sum + weight, 0);
@@ -598,15 +598,15 @@ function getHiddenOreWeight(profile) {
   const mines = normalizeNonNegativeInteger(profile.stats?.totalMines);
   const streak = normalizeNonNegativeInteger(profile.focus?.streak);
   if (level < 80 || mines < 500 || streak < 50) return 0;
-  return Math.min(8, 1 + Math.floor((level - 80) / 10) + Math.floor(mines / 2000) + Math.floor(streak / 100));
+  return Math.min(6, 1 + Math.floor((level - 80) / 12) + Math.floor(mines / 2500) + Math.floor(streak / 150));
 }
 
 function getEnhancementCost(level) {
-  if (level <= 10) return level * 30;
-  if (level <= 25) return level * 80;
-  if (level <= 50) return level * 180;
-  if (level <= 75) return level * 350;
-  return level * 650;
+  if (level <= 10) return level * 40;
+  if (level <= 25) return level * 100;
+  if (level <= 50) return level * 220;
+  if (level <= 75) return level * 430;
+  return level * 800;
 }
 
 function getEnhancementTable(level) {

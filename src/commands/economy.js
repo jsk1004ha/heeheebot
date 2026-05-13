@@ -112,6 +112,13 @@ export const economyCommands = [
         .setMinValue(0)
         .setMaxValue(100)
     )
+    .addIntegerOption((option) =>
+      option
+        .setName('이자기간')
+        .setDescription('이자가 붙는 주기(시간 단위 / 1~720)')
+        .setMinValue(1)
+        .setMaxValue(720)
+    )
     .addStringOption((option) =>
       option
         .setName('이자방식')
@@ -321,7 +328,7 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
         content: [
           `📨 ${formatUserMention(target, target.username)}님에게 **${formatCurrencyAmount(result.request.amount, 'main')}** 대출 요청을 보냈습니다.`,
           `기간: **${formatDuration(result.request.termMs)}** / 상환: **${formatLoanRepaymentMode(result.request.repaymentMode)}**`,
-          `대상 유저는 \`/돈빌리기 대상:${user.username} 행동:수락 이자:10 이자방식:단리\`처럼 조건을 제시할 수 있습니다.`
+          `대상 유저는 \`/돈빌리기 대상:${user.username} 행동:수락 이자:10 이자기간:24 이자방식:단리\`처럼 조건을 제시할 수 있습니다.`
         ].join('\n'),
         allowedMentions: createAllowedMentionsForUsers([target.id])
       });
@@ -339,6 +346,7 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
     try {
       const target = getRequiredUserOption(interaction, '대상', '돈을 빌리려는 유저');
       const interestPercent = getRequiredIntegerOption(interaction, '이자', '이자율');
+      const interestPeriodHours = getRequiredIntegerOption(interaction, '이자기간', '이자 기간');
       const interestType = getRequiredStringOption(interaction, '이자방식', '이자 방식');
 
       if (target.bot) {
@@ -352,6 +360,7 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
         borrowerUserId: target.id,
         borrowerUsername: target.username,
         interestPercent,
+        interestPeriodHours,
         interestType
       });
 
@@ -359,7 +368,7 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
         content: [
           `✅ ${formatUserMention(target, target.username)}님의 대출 요청에 조건을 제시했습니다.`,
           `원금: **${formatCurrencyAmount(result.offer.amount, 'main')}** → 상환 예정액: **${formatCurrencyAmount(result.offer.totalDue, 'main')}**`,
-          `이자: **${interestPercent}% ${formatLoanInterestType(result.offer.interestType)}** / 기간: **${formatDuration(result.offer.termMs)}** / 상환: **${formatLoanRepaymentMode(result.offer.repaymentMode)}**`,
+          `이자: **${interestPercent}% ${formatLoanInterestType(result.offer.interestType)}** / 이자 주기: **${formatDuration(result.offer.interestPeriodMs)}** / 기간: **${formatDuration(result.offer.termMs)}** / 상환: **${formatLoanRepaymentMode(result.offer.repaymentMode)}**`,
           `빌리는 유저가 \`/돈빌리기 대상:${user.username} 행동:결정 선택:빌리기\`를 실행해야 실제로 돈이 이동합니다.`
         ].join('\n'),
         allowedMentions: createAllowedMentionsForUsers([target.id])
@@ -393,6 +402,7 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
           ? [
               `🤝 ${formatUserMention(target, target.username)}님에게서 **${formatCurrencyAmount(result.loan.principal, 'main')}**를 빌렸습니다.`,
               `갚을 금액: **${formatCurrencyAmount(result.loan.totalDue, 'main')}** / 만기: **${formatTimestamp(result.loan.dueAt)}**`,
+              `이자: **${formatLoanInterestRate(result.loan.interestBps)} ${formatLoanInterestType(result.loan.interestType)}** / 이자 주기: **${formatDuration(result.loan.interestPeriodMs)}**`,
               `상환 방식: **${formatLoanRepaymentMode(result.loan.repaymentMode)}**${result.loan.repaymentMode === 'lump_sum' ? ' / 만기 후 수익 35% 자동 상환' : ' / 수익 35% 자동 상환'}`
             ].join('\n')
           : `🚫 ${formatUserMention(target, target.username)}님의 대출 조건을 거절했습니다.`,
@@ -850,6 +860,11 @@ function formatLoanRepaymentMode(mode) {
 
 function formatLoanInterestType(type) {
   return type === 'compound' ? '복리' : '단리';
+}
+
+function formatLoanInterestRate(interestBps) {
+  const rate = Number(interestBps ?? 0) / 100;
+  return `${Number.isInteger(rate) ? rate.toLocaleString() : rate.toLocaleString(undefined, { maximumFractionDigits: 2 })}%`;
 }
 
 function formatTimestamp(ms) {
