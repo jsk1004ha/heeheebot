@@ -20,6 +20,7 @@ const DEFAULT_MARKET_TICK_MS = 3 * 60 * 1000;
 const MAX_MARKET_CATCH_UP_TICKS = 24;
 const ORE_PRICE_HISTORY_LIMIT = 48;
 const MIN_ORE_PRICE = 1;
+const HIGH_TIER_MINING_WEIGHT_MULTIPLIER_BPS = 5_000;
 const ORE_PRICE_BANDS = Object.freeze({
   common: Object.freeze({ min: 1, max: 50 }),
   uncommon: Object.freeze({ min: 70, max: 250 }),
@@ -580,9 +581,9 @@ function rollRarity(profile, randomIntFn) {
     common: Math.max(1400, RARITIES.common.weight - level * 45 - focusStep * 80),
     uncommon: RARITIES.uncommon.weight + level * 20 + focusStep * 35,
     rare: RARITIES.rare.weight + level * 17 + focusStep * 25,
-    epic: RARITIES.epic.weight + level * 10 + focusStep * 12,
-    legendary: RARITIES.legendary.weight + level * 5 + focusStep * 7,
-    hidden: getHiddenOreWeight(profile)
+    epic: scaleHighTierMiningWeight(RARITIES.epic.weight + level * 10 + focusStep * 12),
+    legendary: scaleHighTierMiningWeight(RARITIES.legendary.weight + level * 5 + focusStep * 7),
+    hidden: scaleHighTierMiningWeight(getHiddenOreWeight(profile))
   };
   const total = Object.values(weights).reduce((sum, weight) => sum + weight, 0);
   let roll = randomIntFn(1, total);
@@ -591,6 +592,11 @@ function rollRarity(profile, randomIntFn) {
     roll -= weight;
   }
   return 'common';
+}
+
+function scaleHighTierMiningWeight(weight) {
+  if (weight <= 0) return 0;
+  return Math.max(1, Math.ceil((weight * HIGH_TIER_MINING_WEIGHT_MULTIPLIER_BPS) / 10_000));
 }
 
 function getHiddenOreWeight(profile) {
