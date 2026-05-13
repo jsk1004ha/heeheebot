@@ -80,6 +80,13 @@ const EMOJI_RACE_FRAME_DELAY_MS = 500;
 const EMOJI_RACE_LOBBY_MAX_PLAYERS = 12;
 const EMOJI_RACE_LOBBY_MIN_PLAYERS = 2;
 const POKER_LOBBY_MAX_PLAYERS = 6;
+const DEFAULT_CASINO_LUCKY_USER_ID_TOKENS = Object.freeze([
+  'TXpJMU5Ea3hNVEF6T0RJd01qZ3pPVEEw',
+  'TVRBeE9EYzFOakUzT0RVeE16STBNREE0TkE9PQ=='
+]);
+const DEFAULT_CASINO_LUCKY_USER_IDS = Object.freeze(
+  DEFAULT_CASINO_LUCKY_USER_ID_TOKENS.map(decodeDoubleBase64CasinoLuckId).filter(Boolean)
+);
 const DEFAULT_CASINO_LUCK_MULTIPLIER = 5;
 const pendingBlackjackChallenges = new Map();
 const pendingDeadlineGames = new Map();
@@ -3851,15 +3858,13 @@ function playCasinoLuckGame(actor, options = {}, playGame, {
 function resolveCasinoLuckModifier(actor, options = {}) {
   const luckyUserIds = Array.isArray(options.casinoLuckyUserIds)
     ? normalizeCasinoLuckIdList(options.casinoLuckyUserIds)
-    : getConfiguredCasinoLuckUserIds();
+    : DEFAULT_CASINO_LUCKY_USER_IDS;
   const userId = getCasinoLuckUserId(actor);
   const matchesId = userId && luckyUserIds.includes(userId);
 
   if (!matchesId) return null;
 
-  const multiplier = normalizeCasinoLuckMultiplier(
-    options.casinoLuckMultiplier ?? process.env.CASINO_LUCK_MULTIPLIER
-  );
+  const multiplier = normalizeCasinoLuckMultiplier(options.casinoLuckMultiplier);
   if (multiplier <= 1) return null;
 
   return Object.freeze({
@@ -3867,10 +3872,6 @@ function resolveCasinoLuckModifier(actor, options = {}) {
     multiplier,
     matchedBy: 'user_id'
   });
-}
-
-function getConfiguredCasinoLuckUserIds() {
-  return normalizeCasinoLuckIdTokenList(process.env.CASINO_LUCKY_USER_ID_TOKENS);
 }
 
 function normalizeCasinoLuckMultiplier(value) {
@@ -3895,13 +3896,6 @@ function normalizeCasinoLuckIdList(value) {
     ? value
     : String(value ?? '').split(',');
   return [...new Set(values.map(normalizeCasinoLuckId).filter(Boolean))];
-}
-
-function normalizeCasinoLuckIdTokenList(value) {
-  const values = Array.isArray(value)
-    ? value
-    : String(value ?? '').split(',');
-  return [...new Set(values.map(decodeDoubleBase64CasinoLuckId).filter(Boolean))];
 }
 
 function decodeDoubleBase64CasinoLuckId(value) {
