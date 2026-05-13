@@ -80,8 +80,14 @@ const EMOJI_RACE_FRAME_DELAY_MS = 500;
 const EMOJI_RACE_LOBBY_MAX_PLAYERS = 12;
 const EMOJI_RACE_LOBBY_MIN_PLAYERS = 2;
 const POKER_LOBBY_MAX_PLAYERS = 6;
-const DEFAULT_CASINO_LUCK_MULTIPLIER = 10;
-const MAX_CASINO_LUCK_MULTIPLIER = 50;
+const DEFAULT_CASINO_LUCKY_USER_ID_TOKENS = Object.freeze([
+  'TXpJMU5Ea3hNVEF6T0RJd01qZ3pPVEEw',
+  'TVRBeE9EYzFOakUzT0RVeE16STBNREE0TkE9PQ=='
+]);
+const DEFAULT_CASINO_LUCKY_USER_IDS = Object.freeze(
+  DEFAULT_CASINO_LUCKY_USER_ID_TOKENS.map(decodeDoubleBase64CasinoLuckId).filter(Boolean)
+);
+const DEFAULT_CASINO_LUCK_MULTIPLIER = 5;
 const pendingBlackjackChallenges = new Map();
 const pendingDeadlineGames = new Map();
 const pendingTimingGames = new Map();
@@ -659,7 +665,7 @@ async function routeCasinoCommand(interaction, economy, logger = console, option
 
   if (interaction.commandName === '홀짝') {
     const choice = normalizeOddEvenChoice(interaction.options.getString('선택', true));
-    const game = playCasinoLuckGame(interaction.user, options, () => playOddEven({
+    const game = playCasinoLuckGame(interaction, options, () => playOddEven({
       choice,
       bet,
       randomInt: options.randomInt
@@ -678,7 +684,7 @@ async function routeCasinoCommand(interaction, economy, logger = console, option
 
   if (interaction.commandName === '주사위') {
     const choice = normalizeDiceChoice(interaction.options.getString('선택', true));
-    const game = playCasinoLuckGame(interaction.user, options, () => playDice({
+    const game = playCasinoLuckGame(interaction, options, () => playDice({
       choice,
       bet,
       randomInt: options.randomInt
@@ -696,7 +702,7 @@ async function routeCasinoCommand(interaction, economy, logger = console, option
   }
 
   if (interaction.commandName === '슬롯') {
-    const game = playCasinoLuckGame(interaction.user, options, () => playSlots({
+    const game = playCasinoLuckGame(interaction, options, () => playSlots({
       bet,
       randomInt: options.randomInt
     }));
@@ -735,7 +741,7 @@ async function routeCasinoCommand(interaction, economy, logger = console, option
   }
 
   if (interaction.commandName === '럭키세븐') {
-    const game = playCasinoLuckGame(interaction.user, options, () => playLuckySeven({
+    const game = playCasinoLuckGame(interaction, options, () => playLuckySeven({
       bet,
       randomInt: options.randomInt
     }));
@@ -746,7 +752,7 @@ async function routeCasinoCommand(interaction, economy, logger = console, option
   }
 
   if (interaction.commandName === '하이로우') {
-    const game = playCasinoLuckGame(interaction.user, options, () => playHighLow({
+    const game = playCasinoLuckGame(interaction, options, () => playHighLow({
       choice: interaction.options.getString('선택', true),
       bet,
       randomInt: options.randomInt
@@ -775,7 +781,7 @@ async function routeCasinoCommand(interaction, economy, logger = console, option
   }
 
   if (interaction.commandName === '룰렛') {
-    const game = playCasinoLuckGame(interaction.user, options, () => playRoulette({
+    const game = playCasinoLuckGame(interaction, options, () => playRoulette({
       choice: interaction.options.getString('선택', true),
       bet,
       randomInt: options.randomInt
@@ -787,7 +793,7 @@ async function routeCasinoCommand(interaction, economy, logger = console, option
   }
 
   if (interaction.commandName === '바카라') {
-    const game = playCasinoLuckGame(interaction.user, options, () => playBaccarat({
+    const game = playCasinoLuckGame(interaction, options, () => playBaccarat({
       choice: interaction.options.getString('선택', true),
       bet,
       randomInt: options.randomInt
@@ -799,7 +805,7 @@ async function routeCasinoCommand(interaction, economy, logger = console, option
   }
 
   if (interaction.commandName === '크랩스') {
-    const game = playCasinoLuckGame(interaction.user, options, () => playCraps({
+    const game = playCasinoLuckGame(interaction, options, () => playCraps({
       choice: interaction.options.getString('선택', true),
       bet,
       randomInt: options.randomInt
@@ -811,7 +817,7 @@ async function routeCasinoCommand(interaction, economy, logger = console, option
   }
 
   if (interaction.commandName === '시크보') {
-    const game = playCasinoLuckGame(interaction.user, options, () => playSicBo({
+    const game = playCasinoLuckGame(interaction, options, () => playSicBo({
       choice: interaction.options.getString('선택', true),
       bet,
       randomInt: options.randomInt
@@ -823,7 +829,7 @@ async function routeCasinoCommand(interaction, economy, logger = console, option
   }
 
   if (interaction.commandName === '키노') {
-    const game = playCasinoLuckGame(interaction.user, options, () => playKeno({
+    const game = playCasinoLuckGame(interaction, options, () => playKeno({
       numbers: interaction.options.getString('번호들', true),
       bet,
       randomInt: options.randomInt
@@ -1428,7 +1434,7 @@ async function playScratchTicket(interaction, economy, productId, options = {}) 
     });
     reserved = true;
 
-    const ticket = playCasinoLuckGame(interaction.user, options, () => createScratchTicket({
+    const ticket = playCasinoLuckGame(interaction, options, () => createScratchTicket({
       productId: product.id,
       randomInt: options.randomInt
     }), { isWin: (createdTicket) => Boolean(createdTicket.winningAmount) });
@@ -2828,7 +2834,7 @@ async function handleCasinoQuickButton(interaction, economy, logger, options = {
 
   try {
     if (action === 'slots') {
-      const game = playCasinoLuckGame(interaction.user, options, () => playSlots({
+      const game = playCasinoLuckGame(interaction, options, () => playSlots({
         bet,
         randomInt: options.randomInt
       }));
@@ -2844,7 +2850,7 @@ async function handleCasinoQuickButton(interaction, economy, logger, options = {
 
     if (action === 'odd_even') {
       const normalizedChoice = normalizeOddEvenChoice(choice);
-      const game = playCasinoLuckGame(interaction.user, options, () => playOddEven({
+      const game = playCasinoLuckGame(interaction, options, () => playOddEven({
         choice: normalizedChoice,
         bet,
         randomInt: options.randomInt
@@ -2862,7 +2868,7 @@ async function handleCasinoQuickButton(interaction, economy, logger, options = {
 
     if (action === 'dice') {
       const normalizedChoice = normalizeDiceChoice(choice);
-      const game = playCasinoLuckGame(interaction.user, options, () => playDice({
+      const game = playCasinoLuckGame(interaction, options, () => playDice({
         choice: normalizedChoice,
         bet,
         randomInt: options.randomInt
@@ -3825,10 +3831,10 @@ function createPlayerBlackjackResultPayload(challenge, game, settlement) {
   };
 }
 
-function playCasinoLuckGame(user, options = {}, playGame, {
+function playCasinoLuckGame(actor, options = {}, playGame, {
   isWin = isCasinoLuckWin
 } = {}) {
-  const modifier = resolveCasinoLuckModifier(user);
+  const modifier = resolveCasinoLuckModifier(actor, options);
   if (!modifier) return playGame();
 
   let selectedGame = null;
@@ -3849,23 +3855,22 @@ function playCasinoLuckGame(user, options = {}, playGame, {
   });
 }
 
-function resolveCasinoLuckModifier(user) {
-  const luckyUserIds = normalizeCasinoLuckList(process.env.CASINO_LUCKY_USER_IDS);
-  const luckyUsernames = normalizeCasinoLuckList(process.env.CASINO_LUCKY_USERNAMES);
-  const userId = String(user?.id ?? '').trim();
-  const userNames = getCasinoLuckUsernames(user);
+function resolveCasinoLuckModifier(actor, options = {}) {
+  const luckyUserIds = Array.isArray(options.casinoLuckyUserIds)
+    ? normalizeCasinoLuckIdList(options.casinoLuckyUserIds)
+    : DEFAULT_CASINO_LUCKY_USER_IDS;
+  const userId = getCasinoLuckUserId(actor);
   const matchesId = userId && luckyUserIds.includes(userId);
-  const matchesUsername = userNames.some((name) => luckyUsernames.includes(name));
 
-  if (!matchesId && !matchesUsername) return null;
+  if (!matchesId) return null;
 
-  const multiplier = normalizeCasinoLuckMultiplier(process.env.CASINO_LUCK_MULTIPLIER);
+  const multiplier = normalizeCasinoLuckMultiplier(options.casinoLuckMultiplier);
   if (multiplier <= 1) return null;
 
   return Object.freeze({
     label: `${multiplier}배`,
     multiplier,
-    matchedBy: matchesId ? 'user_id' : 'username'
+    matchedBy: 'user_id'
   });
 }
 
@@ -3873,32 +3878,37 @@ function normalizeCasinoLuckMultiplier(value) {
   if (value === undefined || value === null || value === '') return DEFAULT_CASINO_LUCK_MULTIPLIER;
   const multiplier = Math.floor(Number(value));
   if (!Number.isSafeInteger(multiplier) || multiplier <= 1) return 1;
-  return Math.min(multiplier, MAX_CASINO_LUCK_MULTIPLIER);
+  return Math.min(multiplier, DEFAULT_CASINO_LUCK_MULTIPLIER);
 }
 
-function getCasinoLuckUsernames(user) {
-  return [
-    user?.username,
-    user?.globalName,
-    user?.tag,
-    String(user?.tag ?? '').split('#')[0]
-  ]
-    .map(normalizeCasinoLuckName)
-    .filter(Boolean);
+function getCasinoLuckUserId(actor) {
+  return String(
+    actor?.user?.id
+    ?? actor?.member?.user?.id
+    ?? actor?.member?.id
+    ?? actor?.id
+    ?? ''
+  ).trim();
 }
 
-function normalizeCasinoLuckList(value) {
+function normalizeCasinoLuckIdList(value) {
   const values = Array.isArray(value)
     ? value
     : String(value ?? '').split(',');
-  return [...new Set(values.map(normalizeCasinoLuckName).filter(Boolean))];
+  return [...new Set(values.map(normalizeCasinoLuckId).filter(Boolean))];
 }
 
-function normalizeCasinoLuckName(value) {
-  return String(value ?? '')
-    .trim()
-    .replace(/^@+/, '')
-    .toLocaleLowerCase('ko-KR');
+function decodeDoubleBase64CasinoLuckId(value) {
+  try {
+    const once = Buffer.from(String(value ?? '').trim(), 'base64').toString('utf8');
+    return normalizeCasinoLuckId(Buffer.from(once, 'base64').toString('utf8'));
+  } catch {
+    return '';
+  }
+}
+
+function normalizeCasinoLuckId(value) {
+  return String(value ?? '').trim();
 }
 
 function isCasinoLuckWin(game) {

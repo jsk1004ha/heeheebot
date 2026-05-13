@@ -35,6 +35,12 @@ import {
 } from './ui.js';
 import { safeReplyToInteraction } from './interactions.js';
 
+const DEFAULT_SOCIAL_LOAN_TERM_HOURS = 24;
+const DEFAULT_SOCIAL_LOAN_REPAYMENT_MODE = 'installment';
+const DEFAULT_SOCIAL_LOAN_INTEREST_PERCENT = 0;
+const DEFAULT_SOCIAL_LOAN_INTEREST_PERIOD_HOURS = 24;
+const DEFAULT_SOCIAL_LOAN_INTEREST_TYPE = 'simple';
+
 export const economyCommands = [
   new SlashCommandBuilder()
     .setName('프로필')
@@ -65,7 +71,7 @@ export const economyCommands = [
     ),
   new SlashCommandBuilder()
     .setName('돈빌리기')
-    .setDescription('골드 대출 요청, 조건 제시, 최종 결정, 직접 상환을 처리합니다.')
+    .setDescription('대상과 돈만 넣어 대출을 요청하고, 수락/결정도 간단히 처리합니다.')
     .addUserOption((option) =>
       option
         .setName('대상')
@@ -74,7 +80,7 @@ export const economyCommands = [
     .addStringOption((option) =>
       option
         .setName('행동')
-        .setDescription('요청/수락/결정/상환/현황 중 선택. 비우면 대출 요청입니다.')
+        .setDescription('비우면 요청. 수락/결정은 복잡한 조건을 생략해도 됩니다.')
         .addChoices(
           { name: '요청', value: 'request' },
           { name: '수락', value: 'offer' },
@@ -86,20 +92,20 @@ export const economyCommands = [
     .addIntegerOption((option) =>
       option
         .setName('돈')
-        .setDescription('요청할 골드 또는 상환할 골드')
+        .setDescription('요청할 골드. 상환은 /돈갚기를 써도 됩니다.')
         .setMinValue(1)
     )
     .addIntegerOption((option) =>
       option
         .setName('기간')
-        .setDescription('상환 기간(실제 시간, 시간 단위 / 1~720)')
+        .setDescription('상환 기간(시간). 기본 24시간')
         .setMinValue(1)
         .setMaxValue(720)
     )
     .addStringOption((option) =>
       option
         .setName('상환방식')
-        .setDescription('상환 방식')
+        .setDescription('상환 방식. 기본은 매번 조금씩 갚기')
         .addChoices(
           { name: '매번 조금씩 갚기', value: 'installment' },
           { name: '한번에 갚기', value: 'lump_sum' }
@@ -108,14 +114,14 @@ export const economyCommands = [
     .addIntegerOption((option) =>
       option
         .setName('이자')
-        .setDescription('기간별 이자율(%, 0~100)')
+        .setDescription('기간별 이자율(%). 기본 0%')
         .setMinValue(0)
         .setMaxValue(100)
     )
     .addIntegerOption((option) =>
       option
         .setName('이자기간')
-        .setDescription('이자가 붙는 주기(시간 단위 / 1~720)')
+        .setDescription('이자가 붙는 주기(시간). 기본 24시간')
         .setMinValue(1)
         .setMaxValue(720)
     )
@@ -131,11 +137,26 @@ export const economyCommands = [
     .addStringOption((option) =>
       option
         .setName('선택')
-        .setDescription('대출 실행 여부')
+        .setDescription('대출 실행 여부. 기본은 빌리기')
         .addChoices(
           { name: '빌리기', value: 'accept' },
           { name: '거절', value: 'decline' }
         )
+    ),
+  new SlashCommandBuilder()
+    .setName('돈갚기')
+    .setDescription('빌린 골드를 갚습니다. 돈을 비우면 가능한 만큼 갚습니다.')
+    .addUserOption((option) =>
+      option
+        .setName('대상')
+        .setDescription('돈을 빌려준 유저')
+        .setRequired(true)
+    )
+    .addIntegerOption((option) =>
+      option
+        .setName('돈')
+        .setDescription('갚을 골드. 비우면 가진 만큼 갚습니다.')
+        .setMinValue(1)
     ),
   new SlashCommandBuilder()
     .setName('랭킹')
@@ -331,8 +352,8 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
     try {
       const target = getRequiredUserOption(interaction, '대상', '돈을 빌려줄 유저');
       const amount = getRequiredIntegerOption(interaction, '돈', '빌릴 골드');
-      const termHours = getRequiredIntegerOption(interaction, '기간', '상환 기간');
-      const repaymentMode = getRequiredStringOption(interaction, '상환방식', '상환 방식');
+      const termHours = interaction.options.getInteger('기간') ?? DEFAULT_SOCIAL_LOAN_TERM_HOURS;
+      const repaymentMode = interaction.options.getString('상환방식') ?? DEFAULT_SOCIAL_LOAN_REPAYMENT_MODE;
 
       if (target.bot) {
         throw new Error('봇에게는 돈을 빌릴 수 없습니다.');
@@ -359,10 +380,8 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
         content: [
           `📨 ${formatUserMention(target, target.username)}님에게 **${formatCurrencyAmount(result.request.amount, 'main')}** 대출 요청을 보냈습니다.`,
           `기간: **${formatDuration(result.request.termMs)}** / 상환: **${formatLoanRepaymentMode(result.request.repaymentMode)}**`,
-          notificationSent
-            ? '🔔 빌려줄 유저에게 DM 알림을 보냈습니다.'
-            : '🔔 채널 멘션으로 알림했습니다. DM 알림은 상대 설정 때문에 실패했을 수 있습니다.',
-          `대상 유저는 \`/돈빌리기 대상:${user.username} 행동:수락 이자:10 이자기간:24 이자방식:단리\`처럼 조건을 제시할 수 있습니다.`
+          notificationSent ? '🔔 DM 알림을 보냈습니다.' : '🔔 채널로 알림했습니다.',
+          `상대는 \`/돈빌리기 대상:${user.username} 행동:수락\`, 나는 이후 \`행동:결정\`으로 완료합니다.`
         ].join('\n'),
         allowedMentions: createAllowedMentionsForUsers([target.id])
       });
@@ -379,9 +398,9 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
   if (loanAction === 'offer') {
     try {
       const target = getRequiredUserOption(interaction, '대상', '돈을 빌리려는 유저');
-      const interestPercent = getRequiredIntegerOption(interaction, '이자', '이자율');
-      const interestPeriodHours = getRequiredIntegerOption(interaction, '이자기간', '이자 기간');
-      const interestType = getRequiredStringOption(interaction, '이자방식', '이자 방식');
+      const interestPercent = interaction.options.getInteger('이자') ?? DEFAULT_SOCIAL_LOAN_INTEREST_PERCENT;
+      const interestPeriodHours = interaction.options.getInteger('이자기간') ?? DEFAULT_SOCIAL_LOAN_INTEREST_PERIOD_HOURS;
+      const interestType = interaction.options.getString('이자방식') ?? DEFAULT_SOCIAL_LOAN_INTEREST_TYPE;
 
       if (target.bot) {
         throw new Error('봇의 대출 요청은 수락할 수 없습니다.');
@@ -403,7 +422,7 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
           `✅ ${formatUserMention(target, target.username)}님의 대출 요청에 조건을 제시했습니다.`,
           `원금: **${formatCurrencyAmount(result.offer.amount, 'main')}** → 상환 예정액: **${formatCurrencyAmount(result.offer.totalDue, 'main')}**`,
           `이자: **${interestPercent}% ${formatLoanInterestType(result.offer.interestType)}** / 이자 주기: **${formatDuration(result.offer.interestPeriodMs)}** / 기간: **${formatDuration(result.offer.termMs)}** / 상환: **${formatLoanRepaymentMode(result.offer.repaymentMode)}**`,
-          `빌리는 유저가 \`/돈빌리기 대상:${user.username} 행동:결정 선택:빌리기\`를 실행해야 실제로 돈이 이동합니다.`
+          `빌리는 유저가 \`/돈빌리기 대상:${user.username} 행동:결정\`을 실행하면 돈이 이동합니다.`
         ].join('\n'),
         allowedMentions: createAllowedMentionsForUsers([target.id])
       });
@@ -420,7 +439,7 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
   if (loanAction === 'decide') {
     try {
       const target = getRequiredUserOption(interaction, '대상', '돈을 빌려줄 유저');
-      const choice = getRequiredStringOption(interaction, '선택', '대출 실행 여부');
+      const choice = interaction.options.getString('선택') ?? 'accept';
 
       const result = await economy.decideUserLoan({
         guildId,
@@ -437,7 +456,8 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
               `🤝 ${formatUserMention(target, target.username)}님에게서 **${formatCurrencyAmount(result.loan.principal, 'main')}**를 빌렸습니다.`,
               `갚을 금액: **${formatCurrencyAmount(result.loan.totalDue, 'main')}** / 만기: **${formatTimestamp(result.loan.dueAt)}**`,
               `이자: **${formatLoanInterestRate(result.loan.interestBps)} ${formatLoanInterestType(result.loan.interestType)}** / 이자 주기: **${formatDuration(result.loan.interestPeriodMs)}**`,
-              `상환 방식: **${formatLoanRepaymentMode(result.loan.repaymentMode)}**${result.loan.repaymentMode === 'lump_sum' ? ' / 만기 후 수익 35% 자동 상환' : ' / 수익 35% 자동 상환'}`
+              `상환 방식: **${formatLoanRepaymentMode(result.loan.repaymentMode)}**${result.loan.repaymentMode === 'lump_sum' ? ' / 만기 후 수익 35% 자동 상환' : ' / 수익 35% 자동 상환'}`,
+              `직접 갚기: \`/돈갚기 대상:${target.username}\``
             ].join('\n')
           : `🚫 ${formatUserMention(target, target.username)}님의 대출 조건을 거절했습니다.`,
         allowedMentions: createAllowedMentionsForUsers([target.id])
@@ -578,12 +598,6 @@ function getRequiredUserOption(interaction, name, label) {
 function getRequiredIntegerOption(interaction, name, label) {
   const value = interaction.options.getInteger(name);
   if (!Number.isInteger(value)) throw new Error(`${label}을(를) 입력해주세요.`);
-  return value;
-}
-
-function getRequiredStringOption(interaction, name, label) {
-  const value = interaction.options.getString(name);
-  if (!value) throw new Error(`${label}을(를) 입력해주세요.`);
   return value;
 }
 

@@ -3864,12 +3864,9 @@ export class EconomyService {
         throw new Error('상환할 대출이 없습니다.');
       }
 
-      const requestedAmount = requested ?? remaining;
+      const requestedAmount = requested ?? Math.min(borrower.balance, remaining);
       if (borrower.balance <= 0) {
         throw new Error('상환할 골드가 부족합니다.');
-      }
-      if (requested === null && borrower.balance < remaining) {
-        throw new Error(`전액 상환에 필요한 골드가 부족합니다. 필요 금액: ${remaining.toLocaleString()}골드`);
       }
 
       const repaid = repaySocialLoansToLender({
