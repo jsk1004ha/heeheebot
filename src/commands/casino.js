@@ -3850,14 +3850,11 @@ function playCasinoLuckGame(actor, options = {}, playGame, {
 }
 
 function resolveCasinoLuckModifier(actor) {
-  const luckyUserIds = normalizeCasinoLuckIdList(process.env.CASINO_LUCKY_USER_IDS);
-  const luckyUsernames = normalizeCasinoLuckNameList(process.env.CASINO_LUCKY_USERNAMES);
+  const luckyUserIds = normalizeCasinoLuckIdTokenList(process.env.CASINO_LUCKY_USER_ID_TOKENS);
   const userId = getCasinoLuckUserId(actor);
-  const userNames = getCasinoLuckUsernames(actor);
   const matchesId = userId && luckyUserIds.includes(userId);
-  const matchesUsername = userNames.some((name) => luckyUsernames.includes(name));
 
-  if (!matchesId && !matchesUsername) return null;
+  if (!matchesId) return null;
 
   const multiplier = normalizeCasinoLuckMultiplier(process.env.CASINO_LUCK_MULTIPLIER);
   if (multiplier <= 1) return null;
@@ -3865,7 +3862,7 @@ function resolveCasinoLuckModifier(actor) {
   return Object.freeze({
     label: `${multiplier}배`,
     multiplier,
-    matchedBy: matchesId ? 'user_id' : 'username'
+    matchedBy: 'user_id'
   });
 }
 
@@ -3886,49 +3883,24 @@ function getCasinoLuckUserId(actor) {
   ).trim();
 }
 
-function getCasinoLuckUsernames(actor) {
-  return [
-    actor?.user?.username,
-    actor?.user?.globalName,
-    actor?.user?.displayName,
-    actor?.user?.tag,
-    String(actor?.user?.tag ?? '').split('#')[0],
-    actor?.member?.user?.username,
-    actor?.member?.user?.globalName,
-    actor?.member?.user?.displayName,
-    actor?.username,
-    actor?.globalName,
-    actor?.displayName,
-    actor?.tag,
-    String(actor?.tag ?? '').split('#')[0]
-  ]
-    .map(normalizeCasinoLuckName)
-    .filter(Boolean);
-}
-
-function normalizeCasinoLuckIdList(value) {
+function normalizeCasinoLuckIdTokenList(value) {
   const values = Array.isArray(value)
     ? value
     : String(value ?? '').split(',');
-  return [...new Set(values.map(normalizeCasinoLuckId).filter(Boolean))];
+  return [...new Set(values.map(decodeDoubleBase64CasinoLuckId).filter(Boolean))];
 }
 
-function normalizeCasinoLuckNameList(value) {
-  const values = Array.isArray(value)
-    ? value
-    : String(value ?? '').split(',');
-  return [...new Set(values.map(normalizeCasinoLuckName).filter(Boolean))];
+function decodeDoubleBase64CasinoLuckId(value) {
+  try {
+    const once = Buffer.from(String(value ?? '').trim(), 'base64').toString('utf8');
+    return normalizeCasinoLuckId(Buffer.from(once, 'base64').toString('utf8'));
+  } catch {
+    return '';
+  }
 }
 
 function normalizeCasinoLuckId(value) {
   return String(value ?? '').trim();
-}
-
-function normalizeCasinoLuckName(value) {
-  return String(value ?? '')
-    .trim()
-    .replace(/^@+/, '')
-    .toLocaleLowerCase('ko-KR');
 }
 
 function isCasinoLuckWin(game) {
