@@ -11,6 +11,8 @@ import {
 } from './accounts.js';
 
 const MAX_PICKAXE_LEVEL = 100;
+const MIN_LEGENDARY_PICKAXE_LEVEL = 40;
+const MIN_HIDDEN_PICKAXE_LEVEL = 80;
 const ACTIVE_MINE_COOLDOWN_MS = 3_000;
 const ACTIVE_CHAIN_WINDOW_MS = 2 * 60 * 1000;
 const MAX_IDLE_REWARD_MS = 12 * 60 * 60 * 1000;
@@ -21,6 +23,14 @@ const MAX_MARKET_CATCH_UP_TICKS = 24;
 const ORE_PRICE_HISTORY_LIMIT = 48;
 const MIN_ORE_PRICE = 1;
 const HIGH_TIER_MINING_WEIGHT_MULTIPLIER_BPS = 5_000;
+const ORE_DISCOVERY_XP_MULTIPLIER_BPS = Object.freeze({
+  common: 1_000,
+  uncommon: 1_000,
+  rare: 750,
+  epic: 500,
+  legendary: 200,
+  hidden: 50
+});
 const ORE_PRICE_BANDS = Object.freeze({
   common: Object.freeze({ min: 1, max: 50 }),
   uncommon: Object.freeze({ min: 70, max: 250 }),
@@ -419,7 +429,11 @@ export function getMiningRarityLabel(rarity) {
 
 export function getOreDiscoveryXp(oreOrId) {
   const item = typeof oreOrId === 'string' ? getOreConfig(oreOrId) : oreOrId;
-  return normalizeNonNegativeInteger(item?.value);
+  const value = normalizeNonNegativeInteger(item?.value);
+  if (value <= 0) return 0;
+  const multiplierBps = ORE_DISCOVERY_XP_MULTIPLIER_BPS[item?.rarity] ?? 0;
+  if (multiplierBps <= 0) return 0;
+  return Math.max(1, Math.floor((value * multiplierBps) / 10_000));
 }
 
 export function getMaxMiningIdleRewardMs() {
@@ -582,7 +596,9 @@ function rollRarity(profile, randomIntFn) {
     uncommon: RARITIES.uncommon.weight + level * 20 + focusStep * 35,
     rare: RARITIES.rare.weight + level * 17 + focusStep * 25,
     epic: scaleHighTierMiningWeight(RARITIES.epic.weight + level * 10 + focusStep * 12),
-    legendary: scaleHighTierMiningWeight(RARITIES.legendary.weight + level * 5 + focusStep * 7),
+    legendary: level >= MIN_LEGENDARY_PICKAXE_LEVEL
+      ? scaleHighTierMiningWeight(RARITIES.legendary.weight + level * 5 + focusStep * 7)
+      : 0,
     hidden: scaleHighTierMiningWeight(getHiddenOreWeight(profile))
   };
   const total = Object.values(weights).reduce((sum, weight) => sum + weight, 0);
@@ -603,8 +619,8 @@ function getHiddenOreWeight(profile) {
   const level = clampInteger(profile.pickaxe.level, 1, MAX_PICKAXE_LEVEL);
   const mines = normalizeNonNegativeInteger(profile.stats?.totalMines);
   const streak = normalizeNonNegativeInteger(profile.focus?.streak);
-  if (level < 80 || mines < 500 || streak < 50) return 0;
-  return Math.min(6, 1 + Math.floor((level - 80) / 12) + Math.floor(mines / 2500) + Math.floor(streak / 150));
+  if (level < MIN_HIDDEN_PICKAXE_LEVEL || mines < 500 || streak < 50) return 0;
+  return Math.min(6, 1 + Math.floor((level - MIN_HIDDEN_PICKAXE_LEVEL) / 12) + Math.floor(mines / 2500) + Math.floor(streak / 150));
 }
 
 function getEnhancementCost(level) {
