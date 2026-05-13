@@ -308,7 +308,7 @@ export const stockCommands = [
         .addIntegerOption((option) =>
           option
             .setName('배율')
-            .setDescription('레버리지 배율. 10~29턴은 1~10배, 30턴 이상은 1~100배')
+            .setDescription('레버리지 배율. 2~29턴은 1~10배, 30턴 이상은 1~100배')
             .setMinValue(1)
             .setMaxValue(100)
             .setRequired(true)
@@ -316,8 +316,8 @@ export const stockCommands = [
         .addIntegerOption((option) =>
           option
             .setName('기간')
-            .setDescription('자동 정산까지 기다릴 시장 턴 수 (10~100턴)')
-            .setMinValue(10)
+            .setDescription('자동 정산까지 기다릴 시장 턴 수 (2~100턴)')
+            .setMinValue(2)
             .setMaxValue(100)
             .setRequired(true)
         )
