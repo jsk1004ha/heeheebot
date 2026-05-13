@@ -4065,7 +4065,7 @@ function settleLeveragedPosition(profile, stockUser, position, evaluated, {
   const costs = applySettlementCosts(grossPayout, settlementCosts);
   const payout = costs.payout;
   const realizedProfit = payout - position.margin;
-  const bankruptcyDebtAdded = evaluated.liquidated ? calculateLeverageBankruptcyDebt(position) : 0;
+  const bankruptcyDebtAdded = evaluated.liquidated ? calculateLeverageBankruptcyDebt(position, evaluated) : 0;
   const bankruptcyAfterDebt = bankruptcyDebtAdded > 0
     ? addStockBankruptcyDebt(profile, bankruptcyDebtAdded, at)
     : getStockBankruptcySummary(profile);
@@ -4145,18 +4145,10 @@ function isEarlyClose(position, evaluated) {
   return hasLeveragedPositionExpiry(position) && !evaluated.expired;
 }
 
-function calculateLeverageBankruptcyDebt(position) {
+function calculateLeverageBankruptcyDebt(position, evaluated = {}) {
   const margin = normalizeNonNegativeInteger(position?.margin);
   if (margin <= 0) return 0;
-  return Math.floor(margin * getLeverageBankruptcyPenaltyBps(position?.leverage) / 10_000);
-}
-
-function getLeverageBankruptcyPenaltyBps(leverage) {
-  const safeLeverage = normalizeLeverage(leverage);
-  if (safeLeverage <= 10) return 500;
-  if (safeLeverage <= 30) return 1_000;
-  if (safeLeverage <= 70) return 2_000;
-  return 3_500;
+  return normalizeNonNegativeInteger(evaluated.bankruptcyShortfall);
 }
 
 function evaluateLeveragedPosition(position, quote, options = {}) {
@@ -4170,6 +4162,8 @@ function evaluateLeveragedPosition(position, quote, options = {}) {
   const directionalChangeBps = position.side === 'short' ? -priceChangeBps : priceChangeBps;
   const leveragedChangeBps = shouldSettleByPrice ? directionalChangeBps * position.leverage : 0;
   const rawProfit = Math.trunc(position.margin * leveragedChangeBps / 10_000);
+  const uncappedEquity = shouldSettleByPrice ? position.margin + rawProfit : position.margin;
+  const bankruptcyShortfall = Math.max(0, -uncappedEquity);
   const unrealizedProfit = shouldSettleByPrice ? Math.max(-position.margin, rawProfit) : 0;
   const equity = Math.max(0, position.margin + unrealizedProfit);
   const liquidated = shouldSettleByPrice && equity <= 0;
@@ -4187,6 +4181,7 @@ function evaluateLeveragedPosition(position, quote, options = {}) {
     leveragedChangeBps,
     returnPercent: Math.round((leveragedChangeBps / 100) * 100) / 100,
     unrealizedProfit,
+    bankruptcyShortfall,
     equity,
     expired,
     remainingTurns: getLeveragedPositionRemainingTurns(position, currentTick),
