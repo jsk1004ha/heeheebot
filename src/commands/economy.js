@@ -69,18 +69,18 @@ export const economyCommands = [
     .addUserOption((option) =>
       option
         .setName('대상')
-        .setDescription('대출 상대 유저')
-        .setRequired(true)
+        .setDescription('대출 상대 유저. 현황 조회는 비워두면 전체를 봅니다.')
     )
     .addStringOption((option) =>
       option
         .setName('행동')
-        .setDescription('요청/수락/결정/상환 중 선택. 비우면 대출 요청입니다.')
+        .setDescription('요청/수락/결정/상환/현황 중 선택. 비우면 대출 요청입니다.')
         .addChoices(
           { name: '요청', value: 'request' },
           { name: '수락', value: 'offer' },
           { name: '결정', value: 'decide' },
-          { name: '상환', value: 'repay' }
+          { name: '상환', value: 'repay' },
+          { name: '현황', value: 'status' }
         )
     )
     .addIntegerOption((option) =>
@@ -302,6 +302,31 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
     return true;
   }
 
+  if (loanAction === 'status') {
+    try {
+      const target = interaction.options.getUser('대상');
+      const status = await economy.getUserLoanStatus({
+        guildId,
+        userId: user.id,
+        username: user.username,
+        targetUserId: target?.id,
+        targetUsername: target?.username
+      });
+
+      await safeReplyToInteraction(interaction, {
+        content: formatUserLoanStatus(status, user),
+        flags: MessageFlags.Ephemeral
+      });
+    } catch (error) {
+      await safeReplyToInteraction(interaction, {
+        content: `대출 현황 조회 실패: ${error.message}`,
+        flags: MessageFlags.Ephemeral
+      });
+    }
+
+    return true;
+  }
+
   if (loanAction === 'request') {
     try {
       const target = getRequiredUserOption(interaction, '대상', '돈을 빌려줄 유저');
@@ -323,11 +348,20 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
         termHours,
         repaymentMode
       });
+      const notificationSent = await sendLoanRequestNotification({
+        interaction,
+        target,
+        requester: user,
+        request: result.request
+      });
 
       await safeReplyToInteraction(interaction, {
         content: [
           `📨 ${formatUserMention(target, target.username)}님에게 **${formatCurrencyAmount(result.request.amount, 'main')}** 대출 요청을 보냈습니다.`,
           `기간: **${formatDuration(result.request.termMs)}** / 상환: **${formatLoanRepaymentMode(result.request.repaymentMode)}**`,
+          notificationSent
+            ? '🔔 빌려줄 유저에게 DM 알림을 보냈습니다.'
+            : '🔔 채널 멘션으로 알림했습니다. DM 알림은 상대 설정 때문에 실패했을 수 있습니다.',
           `대상 유저는 \`/돈빌리기 대상:${user.username} 행동:수락 이자:10 이자기간:24 이자방식:단리\`처럼 조건을 제시할 수 있습니다.`
         ].join('\n'),
         allowedMentions: createAllowedMentionsForUsers([target.id])
@@ -852,6 +886,104 @@ function formatSocialLoanSummary(profile) {
   ].filter(Boolean).join(' / ');
 }
 
+function formatUserLoanStatus(status, user) {
+  const targetLabel = status.target
+    ? ` / 대상: ${formatLoanPartyName(status.target.username, status.target.userId)}`
+    : '';
+  const lines = [
+    `💳 **돈빌리기 현황 — ${user.username}${targetLabel}**`,
+    formatLoanStatusSection('내가 빌린 진행 중 대출', status.borrowedLoans, formatBorrowedLoanStatusLine),
+    formatLoanStatusSection('내가 보낸 대출 요청/제안', status.outgoingRequests, formatOutgoingLoanRequestStatusLine),
+    formatLoanStatusSection('내가 빌려준 진행 중 대출', status.lentLoans, formatLentLoanStatusLine),
+    formatLoanStatusSection('나에게 온 대출 요청/제안', status.incomingRequests, formatIncomingLoanRequestStatusLine)
+  ];
+  const content = lines.join('\n\n');
+  if (content.length <= 1900) return content;
+  return `${content.slice(0, 1850)}\n…일부 항목은 길이 제한으로 생략됐습니다.`;
+}
+
+function formatLoanStatusSection(title, items = [], formatter) {
+  const safeItems = Array.isArray(items) ? items : [];
+  if (safeItems.length === 0) return `**${title}**\n없음`;
+
+  const shown = safeItems.slice(0, 5).map((item, index) => `${index + 1}. ${formatter(item)}`);
+  const hiddenCount = safeItems.length - shown.length;
+  if (hiddenCount > 0) shown.push(`외 ${hiddenCount.toLocaleString()}건`);
+
+  return `**${title}**\n${shown.join('\n')}`;
+}
+
+function formatBorrowedLoanStatusLine(loan) {
+  return [
+    `상대: ${formatLoanPartyName(loan.lenderUsername, loan.lenderUserId)}`,
+    `원금 ${formatCurrencyAmount(loan.principal, 'main')}`,
+    `남은 금액 ${formatCurrencyAmount(loan.remaining, 'main')} / 총 상환 ${formatCurrencyAmount(loan.totalDue, 'main')}`,
+    formatLoanTerms(loan),
+    `만기 ${formatTimestamp(loan.dueAt)} (${loan.overdue ? '연체' : '진행중'})`
+  ].join(' / ');
+}
+
+function formatLentLoanStatusLine(loan) {
+  return [
+    `빌린 유저: ${formatLoanPartyName(loan.borrowerUsername, loan.borrowerUserId)}`,
+    `원금 ${formatCurrencyAmount(loan.principal, 'main')}`,
+    `남은 금액 ${formatCurrencyAmount(loan.remaining, 'main')} / 총 상환 ${formatCurrencyAmount(loan.totalDue, 'main')}`,
+    formatLoanTerms(loan),
+    `만기 ${formatTimestamp(loan.dueAt)} (${loan.overdue ? '연체' : '진행중'})`
+  ].join(' / ');
+}
+
+function formatOutgoingLoanRequestStatusLine(request) {
+  const state = request.status === 'offered' ? '내 결정 필요' : '상대 조건 대기';
+  return formatLoanRequestStatusLine({
+    request,
+    partyLabel: '상대',
+    partyUsername: request.lenderUsername,
+    partyUserId: request.lenderUserId,
+    state
+  });
+}
+
+function formatIncomingLoanRequestStatusLine(request) {
+  const state = request.status === 'offered' ? '상대 결정 대기' : '내 조건 제시 필요';
+  return formatLoanRequestStatusLine({
+    request,
+    partyLabel: '요청 유저',
+    partyUsername: request.borrowerUsername,
+    partyUserId: request.borrowerUserId,
+    state
+  });
+}
+
+function formatLoanRequestStatusLine({
+  request,
+  partyLabel,
+  partyUsername,
+  partyUserId,
+  state
+}) {
+  return [
+    `${partyLabel}: ${formatLoanPartyName(partyUsername, partyUserId)}`,
+    `상태: ${state}`,
+    `요청 ${formatCurrencyAmount(request.amount, 'main')}`,
+    request.totalDue > request.amount ? `상환 예정 ${formatCurrencyAmount(request.totalDue, 'main')}` : null,
+    `기간 ${formatDuration(request.termMs)}`,
+    request.status === 'offered' ? formatLoanTerms(request) : null,
+    `상환 ${formatLoanRepaymentMode(request.repaymentMode)}`
+  ].filter(Boolean).join(' / ');
+}
+
+function formatLoanTerms(value) {
+  return [
+    `이자 ${formatLoanInterestRate(value.interestBps)} ${formatLoanInterestType(value.interestType)}`,
+    `이자 주기 ${formatDuration(value.interestPeriodMs)}`
+  ].join(' / ');
+}
+
+function formatLoanPartyName(username, userId) {
+  return String(username ?? userId ?? '알 수 없는 유저').trim() || '알 수 없는 유저';
+}
+
 function formatLoanRepaymentMode(mode) {
   return mode === 'installment'
     ? '매번 조금씩 갚기'
@@ -865,6 +997,25 @@ function formatLoanInterestType(type) {
 function formatLoanInterestRate(interestBps) {
   const rate = Number(interestBps ?? 0) / 100;
   return `${Number.isInteger(rate) ? rate.toLocaleString() : rate.toLocaleString(undefined, { maximumFractionDigits: 2 })}%`;
+}
+
+async function sendLoanRequestNotification({ interaction, target, requester, request }) {
+  if (!target || typeof target.send !== 'function') return false;
+
+  try {
+    await target.send({
+      content: [
+        `📨 **${requester.username}**님이 ${interaction.guild?.name ?? '서버'}에서 돈을 빌려달라고 요청했습니다.`,
+        `요청 금액: **${formatCurrencyAmount(request.amount, 'main')}**`,
+        `상환 기간: **${formatDuration(request.termMs)}** / 상환 방식: **${formatLoanRepaymentMode(request.repaymentMode)}**`,
+        `수락하려면 서버에서 \`/돈빌리기 대상:${requester.username} 행동:수락 이자:10 이자기간:24 이자방식:단리\`처럼 이자 조건을 정해 주세요.`
+      ].join('\n'),
+      allowedMentions: createAllowedMentionsForUsers([requester.id])
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function formatTimestamp(ms) {

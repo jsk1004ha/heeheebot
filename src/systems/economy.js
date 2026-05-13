@@ -302,6 +302,86 @@ export class EconomyService {
     });
   }
 
+  async getUserLoanStatus({
+    guildId,
+    userId,
+    username = 'Unknown',
+    targetUserId = null,
+    targetUsername = null,
+    now = Date.now()
+  }) {
+    const normalizedUserId = normalizeRequiredId(userId, '유저');
+    const normalizedTargetUserId = String(targetUserId ?? '').trim();
+
+    return this.store.update((data) => {
+      const profile = getOrCreateProfile(data, guildId, normalizedUserId, username, this, now);
+      const loans = normalizeSocialLoans(profile.socialLoans);
+      profile.socialLoans = loans;
+      accrueSocialLoansInterest(loans, now);
+      const targetProfile = normalizedTargetUserId
+        ? getExistingMutableProfileForGuild(data, guildId, normalizedTargetUserId, this, now)
+        : null;
+
+      const outgoingRequests = loans.requests
+        .filter((request) => !normalizedTargetUserId || request.lenderUserId === normalizedTargetUserId)
+        .map(cloneSocialLoanRequest)
+        .sort(compareSocialLoanRequestsForStatus);
+      const borrowedLoans = loans.loans
+        .filter((loan) => !normalizedTargetUserId || loan.lenderUserId === normalizedTargetUserId)
+        .map(cloneSocialLoan)
+        .sort(compareSocialLoansForStatus);
+      const incomingRequests = [];
+      const lentLoans = [];
+      const candidateUserIds = new Set(getAccountUserIdsForGuild(data, guildId));
+      if (normalizedTargetUserId) candidateUserIds.add(normalizedTargetUserId);
+
+      for (const borrowerUserId of candidateUserIds) {
+        if (borrowerUserId === normalizedUserId) continue;
+        if (normalizedTargetUserId && borrowerUserId !== normalizedTargetUserId) continue;
+
+        const borrower = getExistingMutableProfileForGuild(data, guildId, borrowerUserId, this, now);
+        if (!borrower) continue;
+
+        const borrowerLoans = normalizeSocialLoans(borrower.socialLoans);
+        borrower.socialLoans = borrowerLoans;
+        accrueSocialLoansInterest(borrowerLoans, now);
+        for (const request of borrowerLoans.requests) {
+          if (request.lenderUserId !== normalizedUserId) continue;
+          incomingRequests.push({
+            ...cloneSocialLoanRequest(request),
+            borrowerUserId: borrower.userId,
+            borrowerUsername: borrower.username
+          });
+        }
+        for (const loan of borrowerLoans.loans) {
+          if (loan.lenderUserId !== normalizedUserId) continue;
+          lentLoans.push({
+            ...cloneSocialLoan(loan),
+            borrowerUserId: borrower.userId,
+            borrowerUsername: borrower.username
+          });
+        }
+      }
+
+      incomingRequests.sort(compareSocialLoanRequestsForStatus);
+      lentLoans.sort(compareSocialLoansForStatus);
+
+      return {
+        profile: cloneProfile(profile),
+        target: normalizedTargetUserId
+          ? {
+              userId: normalizedTargetUserId,
+              username: targetProfile?.username ?? targetUsername ?? normalizedTargetUserId
+            }
+          : null,
+        outgoingRequests,
+        borrowedLoans,
+        incomingRequests,
+        lentLoans
+      };
+    });
+  }
+
   async getAccountLinkSummary({ guildId, userId, username = 'Unknown' }) {
     const data = await this.store.load();
     return getAccountLinkSummary(data, { guildId, userId, username });
@@ -3774,6 +3854,7 @@ export class EconomyService {
       const lender = getOrCreateProfile(data, guildId, lenderId, lenderUsername, this, now);
       const loans = normalizeSocialLoans(borrower.socialLoans);
       borrower.socialLoans = loans;
+      accrueSocialLoansInterest(loans, now);
       const targetLoans = loans.loans
         .filter((loan) => loan.lenderUserId === lenderId && getSocialLoanRemaining(loan) > 0)
         .sort(compareSocialLoansForRepayment);
@@ -4331,14 +4412,22 @@ function normalizeStoredSocialLoanInterestPeriodMs(value) {
   return DAY_MS;
 }
 
-function calculateSocialLoanTotalDue({ principal, termMs, interestBps, interestPeriodMs, interestType }) {
+function calculateSocialLoanTotalDue({
+  principal,
+  termMs,
+  interestBps,
+  interestPeriodMs,
+  interestType,
+  extraPeriods = 0
+}) {
   const normalizedPrincipal = normalizePositiveInteger(principal, '대출 원금');
   const normalizedInterestBps = normalizeStoredNonNegativeInteger(interestBps);
   if (normalizedInterestBps <= 0) return normalizedPrincipal;
 
   const normalizedTermMs = normalizeStoredNonNegativeInteger(termMs);
   const normalizedInterestPeriodMs = normalizeStoredSocialLoanInterestPeriodMs(interestPeriodMs);
-  const periods = Math.max(1, Math.ceil(normalizedTermMs / normalizedInterestPeriodMs));
+  const periods = Math.max(1, Math.ceil(normalizedTermMs / normalizedInterestPeriodMs))
+    + normalizeStoredNonNegativeInteger(extraPeriods);
   if (interestType === SOCIAL_LOAN_INTEREST_COMPOUND) {
     const multiplier = (1 + normalizedInterestBps / 10_000) ** periods;
     const compounded = normalizedPrincipal * multiplier;
@@ -4349,6 +4438,50 @@ function calculateSocialLoanTotalDue({ principal, termMs, interestBps, interestP
   }
 
   return normalizedPrincipal + Math.ceil(normalizedPrincipal * normalizedInterestBps * periods / 10_000);
+}
+
+function accrueSocialLoansInterest(loans, now = Date.now()) {
+  if (!loans || !Array.isArray(loans.loans)) return loans;
+  for (const loan of loans.loans) {
+    accrueSocialLoanInterest(loan, now);
+  }
+  return loans;
+}
+
+function accrueSocialLoanInterest(loan, now = Date.now()) {
+  if (!loan || typeof loan !== 'object') return loan;
+  const principal = normalizeStoredNonNegativeInteger(loan.principal);
+  if (principal <= 0) return loan;
+
+  const accruedTotalDue = calculateSocialLoanAccruedTotalDue(loan, now);
+  if (accruedTotalDue > normalizeStoredNonNegativeInteger(loan.totalDue)) {
+    loan.totalDue = accruedTotalDue;
+  }
+  return loan;
+}
+
+function calculateSocialLoanAccruedTotalDue(loan, now = Date.now()) {
+  const principal = normalizeStoredNonNegativeInteger(loan.principal);
+  if (principal <= 0) return 0;
+
+  return calculateSocialLoanTotalDue({
+    principal,
+    termMs: loan.termMs,
+    interestBps: loan.interestBps,
+    interestPeriodMs: loan.interestPeriodMs,
+    interestType: normalizeStoredSocialLoanInterestType(loan.interestType ?? SOCIAL_LOAN_INTEREST_SIMPLE),
+    extraPeriods: getSocialLoanOverdueInterestPeriods(loan, now)
+  });
+}
+
+function getSocialLoanOverdueInterestPeriods(loan, now = Date.now()) {
+  const normalizedNow = normalizeStoredNonNegativeInteger(now);
+  const dueAt = normalizeStoredNonNegativeInteger(loan?.dueAt)
+    || normalizeStoredNonNegativeInteger(loan?.acceptedAt) + normalizeStoredNonNegativeInteger(loan?.termMs);
+  if (dueAt <= 0 || normalizedNow <= dueAt) return 0;
+
+  const interestPeriodMs = normalizeStoredSocialLoanInterestPeriodMs(loan?.interestPeriodMs);
+  return Math.floor((normalizedNow - dueAt) / interestPeriodMs);
 }
 
 function createSocialLoanId(now, borrowerUserId, lenderUserId) {
@@ -4377,6 +4510,22 @@ function findOpenLoanRequest(loans, lenderUserId, status) {
 
 function compareSocialLoansForRepayment(a, b) {
   if (a.dueAt !== b.dueAt) return a.dueAt - b.dueAt;
+  return String(a.id).localeCompare(String(b.id));
+}
+
+function compareSocialLoansForStatus(a, b) {
+  const dueDelta = normalizeStoredNonNegativeInteger(a.dueAt) - normalizeStoredNonNegativeInteger(b.dueAt);
+  if (dueDelta !== 0) return dueDelta;
+  const acceptedDelta = normalizeStoredNonNegativeInteger(a.acceptedAt) - normalizeStoredNonNegativeInteger(b.acceptedAt);
+  if (acceptedDelta !== 0) return acceptedDelta;
+  return String(a.id).localeCompare(String(b.id));
+}
+
+function compareSocialLoanRequestsForStatus(a, b) {
+  const offeredDelta = normalizeStoredNonNegativeInteger(b.offeredAt) - normalizeStoredNonNegativeInteger(a.offeredAt);
+  if (offeredDelta !== 0) return offeredDelta;
+  const requestedDelta = normalizeStoredNonNegativeInteger(b.requestedAt) - normalizeStoredNonNegativeInteger(a.requestedAt);
+  if (requestedDelta !== 0) return requestedDelta;
   return String(a.id).localeCompare(String(b.id));
 }
 
@@ -4441,6 +4590,7 @@ function repayEligibleSocialLoansFromIncome({ data, guildId, borrower, gross, ec
 
   const loans = normalizeSocialLoans(borrower.socialLoans);
   borrower.socialLoans = loans;
+  accrueSocialLoansInterest(loans, now);
   let budget = Math.min(
     borrower.balance,
     Math.floor(gross * SOCIAL_LOAN_AUTO_REPAYMENT_BPS / 10_000)
@@ -4786,6 +4936,33 @@ function getOptionalMutableProfileForGuild(data, guildId, userId, economy) {
     if (isAccountSelectionRequiredError(error)) return null;
     throw error;
   }
+}
+
+function getExistingMutableProfileForGuild(data, guildId, userId, economy, now = Date.now()) {
+  const normalizedUserId = String(userId ?? '').trim();
+  if (!normalizedUserId) return null;
+
+  const accountProfile = data?.accounts?.users?.[normalizedUserId];
+  if (accountProfile) {
+    return normalizeEconomyProfile(
+      accountProfile,
+      normalizedUserId,
+      getLinkedAccountUsername(data, normalizedUserId),
+      economy,
+      now
+    );
+  }
+
+  const legacyProfile = data?.guilds?.[guildId]?.users?.[normalizedUserId];
+  if (!legacyProfile) return null;
+
+  return normalizeEconomyProfile(
+    legacyProfile,
+    normalizedUserId,
+    legacyProfile.username ?? getLinkedAccountUsername(data, normalizedUserId),
+    economy,
+    now
+  );
 }
 
 function cloneProfile(profile) {

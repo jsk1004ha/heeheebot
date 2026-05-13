@@ -675,7 +675,7 @@ test('유저 대출은 조건 제시와 최종 수락 후 만기 뒤 수익 35%�
       borrowerUserId: 'borrower',
       borrowerUsername: '빌리는사람',
       interestPercent: 10,
-      interestPeriodHours: 1,
+      interestPeriodHours: 24,
       interestType: 'simple',
       now: 2_000
     });
@@ -690,7 +690,7 @@ test('유저 대출은 조건 제시와 최종 수락 후 만기 뒤 수익 35%�
     });
 
     assert.equal(request.request.repaymentMode, 'lump_sum');
-    assert.equal(offer.offer.interestPeriodMs, 3_600_000);
+    assert.equal(offer.offer.interestPeriodMs, 24 * 60 * 60 * 1000);
     assert.equal(offer.offer.totalDue, 1_100);
     assert.equal(accepted.borrower.balance, 1_000);
     assert.equal(accepted.lender.balance, 4_000);
@@ -823,6 +823,232 @@ test('유저 대출은 빌려주는 사람이 정한 이자 기간마다 단리�
     assert.equal(simpleOffer.offer.totalDue, 1_300);
     assert.equal(compoundOffer.offer.interestPeriodMs, 2 * 60 * 60 * 1000);
     assert.equal(compoundOffer.offer.totalDue, 1_331);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('유저 대출 현황은 빌린 대출과 빌려준 대출을 함께 조회한다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await fixture.store.update((data) => {
+      data.guilds['guild-1'] = {
+        users: {
+          borrower: {
+            userId: 'borrower',
+            username: '빌리는사람',
+            level: 1,
+            xp: 0,
+            totalXp: 0,
+            balance: 0
+          },
+          lender: {
+            userId: 'lender',
+            username: '빌려준사람',
+            level: 1,
+            xp: 0,
+            totalXp: 0,
+            balance: 5_000
+          }
+        }
+      };
+    });
+
+    await fixture.economy.requestUserLoan({
+      guildId: 'guild-1',
+      borrowerUserId: 'borrower',
+      borrowerUsername: '빌리는사람',
+      lenderUserId: 'lender',
+      lenderUsername: '빌려준사람',
+      amount: 1_000,
+      termHours: 6,
+      repaymentMode: 'lump_sum',
+      now: 1_000
+    });
+    const beforeAccept = await fixture.economy.getUserLoanStatus({
+      guildId: 'guild-1',
+      userId: 'lender',
+      username: '빌려준사람',
+      now: 1_500
+    });
+    assert.equal(beforeAccept.incomingRequests.length, 1);
+    assert.equal(beforeAccept.incomingRequests[0].borrowerUserId, 'borrower');
+    assert.equal(beforeAccept.incomingRequests[0].status, 'requested');
+
+    await fixture.economy.offerUserLoan({
+      guildId: 'guild-1',
+      lenderUserId: 'lender',
+      lenderUsername: '빌려준사람',
+      borrowerUserId: 'borrower',
+      borrowerUsername: '빌리는사람',
+      interestPercent: 10,
+      interestPeriodHours: 2,
+      interestType: 'compound',
+      now: 2_000
+    });
+    await fixture.economy.decideUserLoan({
+      guildId: 'guild-1',
+      borrowerUserId: 'borrower',
+      borrowerUsername: '빌리는사람',
+      lenderUserId: 'lender',
+      lenderUsername: '빌려준사람',
+      accept: true,
+      now: 3_000
+    });
+
+    const lenderStatus = await fixture.economy.getUserLoanStatus({
+      guildId: 'guild-1',
+      userId: 'lender',
+      username: '빌려준사람',
+      now: 4_000
+    });
+    const borrowerStatus = await fixture.economy.getUserLoanStatus({
+      guildId: 'guild-1',
+      userId: 'borrower',
+      username: '빌리는사람',
+      targetUserId: 'lender',
+      targetUsername: '빌려준사람',
+      now: 4_000
+    });
+
+    assert.equal(lenderStatus.incomingRequests.length, 0);
+    assert.equal(lenderStatus.lentLoans.length, 1);
+    assert.equal(lenderStatus.lentLoans[0].borrowerUserId, 'borrower');
+    assert.equal(lenderStatus.lentLoans[0].remaining, 1_331);
+    assert.equal(borrowerStatus.borrowedLoans.length, 1);
+    assert.equal(borrowerStatus.borrowedLoans[0].lenderUserId, 'lender');
+    assert.equal(borrowerStatus.borrowedLoans[0].interestPeriodMs, 2 * 60 * 60 * 1000);
+    assert.equal(borrowerStatus.target.userId, 'lender');
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('유저 대출은 만기 후에도 이자 기간이 지나면 추가 이자가 붙는다', async () => {
+  const fixture = await createFixture();
+  const hour = 60 * 60 * 1000;
+
+  try {
+    await fixture.store.update((data) => {
+      data.guilds['guild-1'] = {
+        users: {
+          borrower: {
+            userId: 'borrower',
+            username: '빌리는사람',
+            level: 1,
+            xp: 0,
+            totalXp: 0,
+            balance: 0
+          },
+          simpleLender: {
+            userId: 'simpleLender',
+            username: '단리대출자',
+            level: 1,
+            xp: 0,
+            totalXp: 0,
+            balance: 5_000
+          },
+          compoundLender: {
+            userId: 'compoundLender',
+            username: '복리대출자',
+            level: 1,
+            xp: 0,
+            totalXp: 0,
+            balance: 5_000
+          }
+        }
+      };
+    });
+
+    await fixture.economy.requestUserLoan({
+      guildId: 'guild-1',
+      borrowerUserId: 'borrower',
+      borrowerUsername: '빌리는사람',
+      lenderUserId: 'simpleLender',
+      lenderUsername: '단리대출자',
+      amount: 1_000,
+      termHours: 2,
+      repaymentMode: 'lump_sum',
+      now: 1_000
+    });
+    await fixture.economy.offerUserLoan({
+      guildId: 'guild-1',
+      lenderUserId: 'simpleLender',
+      lenderUsername: '단리대출자',
+      borrowerUserId: 'borrower',
+      borrowerUsername: '빌리는사람',
+      interestPercent: 10,
+      interestPeriodHours: 1,
+      interestType: 'simple',
+      now: 2_000
+    });
+    await fixture.economy.decideUserLoan({
+      guildId: 'guild-1',
+      borrowerUserId: 'borrower',
+      borrowerUsername: '빌리는사람',
+      lenderUserId: 'simpleLender',
+      lenderUsername: '단리대출자',
+      accept: true,
+      now: 3_000
+    });
+
+    await fixture.economy.requestUserLoan({
+      guildId: 'guild-1',
+      borrowerUserId: 'borrower',
+      borrowerUsername: '빌리는사람',
+      lenderUserId: 'compoundLender',
+      lenderUsername: '복리대출자',
+      amount: 1_000,
+      termHours: 2,
+      repaymentMode: 'lump_sum',
+      now: 4_000
+    });
+    await fixture.economy.offerUserLoan({
+      guildId: 'guild-1',
+      lenderUserId: 'compoundLender',
+      lenderUsername: '복리대출자',
+      borrowerUserId: 'borrower',
+      borrowerUsername: '빌리는사람',
+      interestPercent: 10,
+      interestPeriodHours: 1,
+      interestType: 'compound',
+      now: 5_000
+    });
+    await fixture.economy.decideUserLoan({
+      guildId: 'guild-1',
+      borrowerUserId: 'borrower',
+      borrowerUsername: '빌리는사람',
+      lenderUserId: 'compoundLender',
+      lenderUsername: '복리대출자',
+      accept: true,
+      now: 6_000
+    });
+
+    const simpleDueAt = 3_000 + 2 * hour;
+    const compoundDueAt = 6_000 + 2 * hour;
+    const beforeExtra = await fixture.economy.getUserLoanStatus({
+      guildId: 'guild-1',
+      userId: 'borrower',
+      username: '빌리는사람',
+      targetUserId: 'simpleLender',
+      targetUsername: '단리대출자',
+      now: simpleDueAt + hour - 1
+    });
+    const afterExtra = await fixture.economy.getUserLoanStatus({
+      guildId: 'guild-1',
+      userId: 'borrower',
+      username: '빌리는사람',
+      now: compoundDueAt + hour
+    });
+    const simpleLoan = afterExtra.borrowedLoans.find((loan) => loan.lenderUserId === 'simpleLender');
+    const compoundLoan = afterExtra.borrowedLoans.find((loan) => loan.lenderUserId === 'compoundLender');
+
+    assert.equal(beforeExtra.borrowedLoans[0].totalDue, 1_200);
+    assert.equal(simpleLoan.totalDue, 1_300);
+    assert.equal(simpleLoan.remaining, 1_300);
+    assert.equal(compoundLoan.totalDue, 1_331);
+    assert.equal(compoundLoan.remaining, 1_331);
   } finally {
     await fixture.cleanup();
   }
