@@ -60,6 +60,9 @@ import {
   playSlots
 } from '../src/systems/casino.js';
 
+const CONFIGURED_CASINO_LUCK_USERNAME = decodeDoubleBase64TestToken('YW1sdlgzcHBOUT09');
+const DEFAULT_CASINO_LUCK_USERNAME = decodeDoubleBase64TestToken('WjE5dVlYSnA=');
+
 test('홀짝은 99~100에서 하우스 엣지로 실패하고 성공 시 1.9배를 지급한다', () => {
   const win = playOddEven({
     choice: '홀',
@@ -226,6 +229,74 @@ test('단순 도박 결과만 같은 베팅 재시도 버튼을 제공하고 카
   assert.equal(await handleCasinoCommand(otherUserButton, fakeEconomy, quietLogger), true);
   assert.equal(otherUserButton.replied.flags, MessageFlags.Ephemeral);
   assert.match(otherUserButton.replied.content, /명령어를 실행한 유저만/);
+});
+
+test('카지노 행운 보정은 설정된 사용자명에게만 내부 확률 기회를 추가하고 공개 문구로 노출하지 않는다', async () => {
+  const settled = [];
+  const fakeEconomy = {
+    async settleWager(payload) {
+      settled.push(payload);
+      return {
+        bet: payload.bet,
+        payout: payload.payout,
+        profit: payload.payout - payload.bet,
+        profile: { balance: 10_000 + payload.payout - payload.bet }
+      };
+    }
+  };
+  const luckyInteraction = createChatInputInteraction('홀짝', {
+    integers: { 돈: 100 },
+    strings: { 선택: 'odd' },
+    username: CONFIGURED_CASINO_LUCK_USERNAME
+  });
+
+  assert.equal(await handleCasinoCommand(luckyInteraction, fakeEconomy, quietLogger, {
+    casinoLuckyUsernames: [CONFIGURED_CASINO_LUCK_USERNAME],
+    casinoLuckMultiplier: 10,
+    randomInt: createSequenceRandom([2, 3])
+  }), true);
+
+  assert.equal(settled[0].payout, 190);
+  assert.doesNotMatch(luckyInteraction.replied.content, /행운 보정|10배|번째 결과/);
+
+  const normalInteraction = createChatInputInteraction('홀짝', {
+    integers: { 돈: 100 },
+    strings: { 선택: 'odd' },
+    username: '다른유저'
+  });
+
+  assert.equal(await handleCasinoCommand(normalInteraction, fakeEconomy, quietLogger, {
+    casinoLuckyUsernames: [CONFIGURED_CASINO_LUCK_USERNAME],
+    casinoLuckMultiplier: 10,
+    randomInt: createSequenceRandom([2, 3])
+  }), true);
+
+  assert.equal(settled[1].payout, 0);
+  assert.doesNotMatch(normalInteraction.replied.content, /행운 보정/);
+
+  const originalLuckyUsernames = process.env.CASINO_LUCKY_USERNAMES;
+  try {
+    delete process.env.CASINO_LUCKY_USERNAMES;
+    const defaultLuckyInteraction = createChatInputInteraction('홀짝', {
+      integers: { 돈: 100 },
+      strings: { 선택: 'odd' },
+      username: DEFAULT_CASINO_LUCK_USERNAME
+    });
+
+    assert.equal(await handleCasinoCommand(defaultLuckyInteraction, fakeEconomy, quietLogger, {
+      casinoLuckMultiplier: 10,
+      randomInt: createSequenceRandom([2, 3])
+    }), true);
+
+    assert.equal(settled[2].payout, 190);
+    assert.doesNotMatch(defaultLuckyInteraction.replied.content, /행운 보정|10배|번째 결과/);
+  } finally {
+    if (originalLuckyUsernames === undefined) {
+      delete process.env.CASINO_LUCKY_USERNAMES;
+    } else {
+      process.env.CASINO_LUCKY_USERNAMES = originalLuckyUsernames;
+    }
+  }
 });
 
 test('카지노 핸들러는 다른 기능 버튼을 건드리지 않는다', async () => {
@@ -2056,15 +2127,20 @@ function createSequenceRandom(values) {
   return () => values[index++ % values.length];
 }
 
+function decodeDoubleBase64TestToken(value) {
+  const once = Buffer.from(String(value), 'base64').toString('utf8');
+  return Buffer.from(once, 'base64').toString('utf8');
+}
+
 function createChatInputInteraction(commandName, options = {}) {
-  const { integers = {}, strings = {}, targetUser = null, targetUsers = null } = options;
+  const { integers = {}, strings = {}, targetUser = null, targetUsers = null, username = '도박러' } = options;
 
   return {
     commandName,
     guildId: 'guild-1',
     user: {
       id: 'user-1',
-      username: '도박러',
+      username,
       toString: () => '<@user-1>'
     },
     options: {

@@ -249,6 +249,29 @@ test('/숫자야구 도전 실패 응답은 경험치만 지급하고 다음 판
   }
 });
 
+test('/숫자야구 도전 진행 응답은 위치나 제출 숫자 대신 스트라이크/볼 개수만 보여준다', async () => {
+  const fixture = await createFixture({
+    secrets: ['1234']
+  });
+
+  try {
+    const interaction = createInteraction('도전', {
+      stringOptions: { 숫자: '5678' }
+    });
+
+    await handleNumberBaseballCommand(interaction, fixture.numberBaseball, fixture.economy);
+
+    const content = interaction.replies[0].content;
+    assert.match(content, /결과: \*\*0스트라이크 0볼\*\*/);
+    assert.match(content, /01\. 0스트라이크 0볼/);
+    assert.doesNotMatch(content, /5678/);
+    assert.doesNotMatch(content, /->/);
+    assert.doesNotMatch(content, /\b[0-4]S [0-4]B\b/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 test('/숫자야구 상태는 공개 placeholder 없이 비공개 defer 원본을 채운다', async () => {
   const fixture = await createFixture();
 

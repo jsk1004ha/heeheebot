@@ -9,11 +9,14 @@ import {
   getRpgAdvancedClassOptions,
   getRpgBossConfig,
   getRpgBossOptions,
+  getRpgClassAssetId,
+  getRpgFirstJobOptions,
   getRpgDungeonConfig,
   getRpgDungeonOptions,
   getRpgMonsterAssetId,
   getRpgRaidConfig,
-  getRpgRaidOptions
+  getRpgRaidOptions,
+  getRpgStartClassOptions
 } from '../src/systems/rpg.js';
 import {
   formatRpgAssetLine,
@@ -156,6 +159,7 @@ test('RPG 런타임 배경은 저해상도 감사용 맵이 아니라 forge 전�
     const filePath = getRpgAssetFilePath(assetId);
 
     assert.ok(asset, `${scope} background asset missing: ${assetId}`);
+    assert.match(assetId, /^map_runtime_/, `${scope} should use runtime forge background, not legacy map: ${assetId}`);
     assert.equal(asset.category, 'map', `${scope} background should be a map`);
     assert.ok(generated, `${scope} generated manifest missing: ${assetId}`);
     assert.equal(generated.generatedWith, 'agent-sprite-forge:$generate2dmap', `${scope} should use forge map output`);
@@ -163,6 +167,36 @@ test('RPG 런타임 배경은 저해상도 감사용 맵이 아니라 forge 전�
     assert.ok(statSync(filePath).size > 100_000, `${scope} uses low-detail placeholder background: ${assetId}`);
     assert.equal(seen.has(assetId), false, `${scope} reuses background ${assetId} already used by ${seen.get(assetId)}`);
     seen.set(assetId, scope);
+  }
+});
+
+test('RPG 기본 직업 이미지는 성별마다 forge 런타임 에셋을 사용한다', () => {
+  const classOptions = [
+    ...getRpgStartClassOptions(),
+    ...getRpgFirstJobOptions()
+  ];
+
+  for (const { value } of classOptions) {
+    for (const gender of ['male', 'female']) {
+      const scope = `${value}:${gender}`;
+      const assetId = getRpgClassAssetId(value, gender);
+      const asset = getRpgAssetById(assetId);
+      const generated = getRpgGeneratedAssetById(assetId);
+      const filePath = getRpgAssetFilePath(assetId);
+
+      assert.ok(asset, `${scope} class asset missing: ${assetId}`);
+      assert.equal(asset.category, 'hero', `${scope} should use a hero asset`);
+      assert.ok(generated, `${scope} generated manifest missing: ${assetId}`);
+      assert.equal(generated.generatedWith, 'agent-sprite-forge:$generate2dsprite', `${scope} should use forge sprite output`);
+      assert.ok(filePath, `${scope} runtime file missing: ${assetId}`);
+      const extension = extname(filePath);
+      assert.ok(['.gif', '.png'].includes(extension), `${scope} hero runtime extension`);
+      if (extension === '.png') {
+        assert.deepEqual(readPngSize(filePath), [512, 512], `${scope} hero asset size`);
+      } else {
+        assert.ok(statSync(filePath).size > 10_000, `${scope} hero runtime file should not be an empty placeholder`);
+      }
+    }
   }
 });
 

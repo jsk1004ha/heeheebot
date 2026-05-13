@@ -143,7 +143,7 @@ export function formatNumberBaseballGuessResult(result, reward = null) {
   const remaining = getRemainingAttempts(result.session, result.maxAttempts);
   return [
     formatNumberBaseballHeader(result),
-    `${startText} **${result.attempt.number}** → **${formatAttemptScore(result.attempt)}**`,
+    `${startText} 결과: **${formatAttemptScore(result.attempt)}**`,
     `남은 시도: **${remaining}회**`,
     '',
     formatNumberBaseballBoard(result.session),
@@ -210,14 +210,13 @@ function formatNumberBaseballBoard(session) {
 
   return [
     '```',
-    ...session.guesses.map((attempt, index) => `${String(index + 1).padStart(2, '0')}. ${attempt.number} -> ${formatAttemptScore(attempt)}`),
+    ...session.guesses.map((attempt, index) => `${String(index + 1).padStart(2, '0')}. ${formatAttemptScore(attempt)}`),
     '```'
   ].join('\n');
 }
 
 function formatAttemptScore(attempt) {
-  if (attempt.strikes === 0 && attempt.balls === 0) return 'OUT';
-  return `${attempt.strikes}S ${attempt.balls}B`;
+  return `${attempt.strikes}스트라이크 ${attempt.balls}볼`;
 }
 
 function formatAnswer(session) {
@@ -225,7 +224,7 @@ function formatAnswer(session) {
 }
 
 function formatRuleNote(digitCount) {
-  return `룰: 위치와 숫자가 모두 맞으면 S, 숫자만 맞으면 B입니다. 예시는 서로 다른 ${digitCount}자리 숫자 \`0123\`처럼 입력하세요.`;
+  return `룰: 결과는 스트라이크/볼 개수만 보여줍니다. 서로 다른 ${digitCount}자리 숫자 \`0123\`처럼 입력하세요.`;
 }
 
 function formatPrivacyNote() {

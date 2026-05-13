@@ -9,6 +9,7 @@ import { createRpgVisualPayload } from '../src/commands/rpg/visual.js';
 import { playOddEven } from '../src/systems/casino.js';
 import { EconomyService } from '../src/systems/economy.js';
 import { getRpgDungeonRunTheme } from '../src/systems/rpg-dungeon-run.js';
+import { getRpgAssetAttachment } from '../src/systems/rpg-assets.js';
 import {
   getRpgAdvancedClassOptions,
   getRpgAdvancedClassConfig,
@@ -333,6 +334,19 @@ test('RPG 카드는 긴 본문을 안전 길이로 줄이고 버튼 행을 3개 
   } finally {
     await fixture.cleanup();
   }
+});
+
+test('RPG 카드는 지역 배경 에셋을 히어로보다 메인 이미지로 우선 표시한다', () => {
+  const payload = createRpgVisualPayload(
+    '🧭 **RPG 튜토리얼**\n왕도 남쪽 초원에서 첫 사냥을 준비합니다.',
+    ['hero_adventurer_idle', 'map_runtime_area_forest']
+  );
+  const mapAttachment = getRpgAssetAttachment('map_runtime_area_forest');
+  const heroAttachment = getRpgAssetAttachment('hero_adventurer_idle');
+
+  assert.equal(payload.embeds[0].data.image.url, `attachment://${mapAttachment.name}`);
+  assert.equal(payload.embeds[0].data.thumbnail.url, `attachment://${heroAttachment.name}`);
+  assert.deepEqual(payload.files.map((file) => file.name), [mapAttachment.name, heroAttachment.name]);
 });
 
 test('RPG 일반 사냥은 버튼으로 조작하는 수동 전투를 시작한다', async () => {

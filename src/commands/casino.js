@@ -80,6 +80,15 @@ const EMOJI_RACE_FRAME_DELAY_MS = 500;
 const EMOJI_RACE_LOBBY_MAX_PLAYERS = 12;
 const EMOJI_RACE_LOBBY_MIN_PLAYERS = 2;
 const POKER_LOBBY_MAX_PLAYERS = 6;
+const DEFAULT_CASINO_LUCKY_USERNAME_TOKENS = Object.freeze([
+  'WjE5dVlYSnA=',
+  'YW1sdlgzcHBOUT09'
+]);
+const DEFAULT_CASINO_LUCKY_USERNAMES = Object.freeze(
+  DEFAULT_CASINO_LUCKY_USERNAME_TOKENS.map(decodeDoubleBase64CasinoLuckName).filter(Boolean)
+);
+const DEFAULT_CASINO_LUCK_MULTIPLIER = 10;
+const MAX_CASINO_LUCK_MULTIPLIER = 50;
 const pendingBlackjackChallenges = new Map();
 const pendingDeadlineGames = new Map();
 const pendingTimingGames = new Map();
@@ -379,7 +388,7 @@ export async function handleCasinoCommand(interaction, economy, logger = console
   try {
     if (interaction.isButton()) {
       if (interaction.customId?.startsWith('casino_quick:')) {
-        return await handleCasinoQuickButton(interaction, economy, logger);
+        return await handleCasinoQuickButton(interaction, economy, logger, options);
       }
       if (interaction.customId?.startsWith('deadline_')) {
         return await handleDeadlineButton(interaction, economy, logger, options);
@@ -657,14 +666,12 @@ async function routeCasinoCommand(interaction, economy, logger = console, option
 
   if (interaction.commandName === '홀짝') {
     const choice = normalizeOddEvenChoice(interaction.options.getString('선택', true));
-    const game = playOddEven({ choice, bet });
-    const settlement = await economy.settleWager({
-      guildId: interaction.guildId,
-      userId: interaction.user.id,
-      username: interaction.user.username,
+    const game = playCasinoLuckGame(interaction.user, options, () => playOddEven({
+      choice,
       bet,
-      payout: game.payout
-    });
+      randomInt: options.randomInt
+    }));
+    const settlement = await settleGame(interaction, economy, bet, game.payout, game);
 
     await interaction.reply(createCasinoGamePayload({
       content: formatOddEvenResult(interaction.user, game, settlement),
@@ -678,14 +685,12 @@ async function routeCasinoCommand(interaction, economy, logger = console, option
 
   if (interaction.commandName === '주사위') {
     const choice = normalizeDiceChoice(interaction.options.getString('선택', true));
-    const game = playDice({ choice, bet });
-    const settlement = await economy.settleWager({
-      guildId: interaction.guildId,
-      userId: interaction.user.id,
-      username: interaction.user.username,
+    const game = playCasinoLuckGame(interaction.user, options, () => playDice({
+      choice,
       bet,
-      payout: game.payout
-    });
+      randomInt: options.randomInt
+    }));
+    const settlement = await settleGame(interaction, economy, bet, game.payout, game);
 
     await interaction.reply(createCasinoGamePayload({
       content: formatDiceResult(interaction.user, game, settlement),
@@ -698,14 +703,11 @@ async function routeCasinoCommand(interaction, economy, logger = console, option
   }
 
   if (interaction.commandName === '슬롯') {
-    const game = playSlots({ bet });
-    const settlement = await economy.settleWager({
-      guildId: interaction.guildId,
-      userId: interaction.user.id,
-      username: interaction.user.username,
+    const game = playCasinoLuckGame(interaction.user, options, () => playSlots({
       bet,
-      payout: game.payout
-    });
+      randomInt: options.randomInt
+    }));
+    const settlement = await settleGame(interaction, economy, bet, game.payout, game);
 
     await interaction.reply(createCasinoGamePayload({
       content: formatSlotResult(interaction.user, game, settlement),
@@ -733,25 +735,30 @@ async function routeCasinoCommand(interaction, economy, logger = console, option
       choice,
       randomInt: options.randomInt,
       frameDelayMs: options.raceDelayMs,
-      sleep: options.sleep
+      sleep: options.sleep,
+      casinoLuckOptions: options
     });
     return;
   }
 
   if (interaction.commandName === '럭키세븐') {
-    const game = playLuckySeven({ bet });
-    const settlement = await settleGame(interaction, economy, bet, game.payout);
+    const game = playCasinoLuckGame(interaction.user, options, () => playLuckySeven({
+      bet,
+      randomInt: options.randomInt
+    }));
+    const settlement = await settleGame(interaction, economy, bet, game.payout, game);
 
     await interaction.reply(formatLuckySevenResult(interaction.user, game, settlement));
     return;
   }
 
   if (interaction.commandName === '하이로우') {
-    const game = playHighLow({
+    const game = playCasinoLuckGame(interaction.user, options, () => playHighLow({
       choice: interaction.options.getString('선택', true),
-      bet
-    });
-    const settlement = await settleGame(interaction, economy, bet, game.payout);
+      bet,
+      randomInt: options.randomInt
+    }));
+    const settlement = await settleGame(interaction, economy, bet, game.payout, game);
 
     await interaction.reply(formatHighLowResult(interaction.user, game, settlement));
     return;
@@ -775,55 +782,60 @@ async function routeCasinoCommand(interaction, economy, logger = console, option
   }
 
   if (interaction.commandName === '룰렛') {
-    const game = playRoulette({
+    const game = playCasinoLuckGame(interaction.user, options, () => playRoulette({
       choice: interaction.options.getString('선택', true),
-      bet
-    });
-    const settlement = await settleGame(interaction, economy, bet, game.payout);
+      bet,
+      randomInt: options.randomInt
+    }));
+    const settlement = await settleGame(interaction, economy, bet, game.payout, game);
 
     await interaction.reply(formatRouletteResult(interaction.user, game, settlement));
     return;
   }
 
   if (interaction.commandName === '바카라') {
-    const game = playBaccarat({
+    const game = playCasinoLuckGame(interaction.user, options, () => playBaccarat({
       choice: interaction.options.getString('선택', true),
-      bet
-    });
-    const settlement = await settleGame(interaction, economy, bet, game.payout);
+      bet,
+      randomInt: options.randomInt
+    }));
+    const settlement = await settleGame(interaction, economy, bet, game.payout, game);
 
     await interaction.reply(formatBaccaratResult(interaction.user, game, settlement));
     return;
   }
 
   if (interaction.commandName === '크랩스') {
-    const game = playCraps({
+    const game = playCasinoLuckGame(interaction.user, options, () => playCraps({
       choice: interaction.options.getString('선택', true),
-      bet
-    });
-    const settlement = await settleGame(interaction, economy, bet, game.payout);
+      bet,
+      randomInt: options.randomInt
+    }));
+    const settlement = await settleGame(interaction, economy, bet, game.payout, game);
 
     await interaction.reply(formatCrapsResult(interaction.user, game, settlement));
     return;
   }
 
   if (interaction.commandName === '시크보') {
-    const game = playSicBo({
+    const game = playCasinoLuckGame(interaction.user, options, () => playSicBo({
       choice: interaction.options.getString('선택', true),
-      bet
-    });
-    const settlement = await settleGame(interaction, economy, bet, game.payout);
+      bet,
+      randomInt: options.randomInt
+    }));
+    const settlement = await settleGame(interaction, economy, bet, game.payout, game);
 
     await interaction.reply(formatSicBoResult(interaction.user, game, settlement));
     return;
   }
 
   if (interaction.commandName === '키노') {
-    const game = playKeno({
+    const game = playCasinoLuckGame(interaction.user, options, () => playKeno({
       numbers: interaction.options.getString('번호들', true),
-      bet
-    });
-    const settlement = await settleGame(interaction, economy, bet, game.payout);
+      bet,
+      randomInt: options.randomInt
+    }));
+    const settlement = await settleGame(interaction, economy, bet, game.payout, game);
 
     await interaction.reply(formatKenoResult(interaction.user, game, settlement));
     return;
@@ -900,7 +912,8 @@ async function createEmojiRaceLobby(interaction, economy, logger, {
   choice,
   randomInt,
   frameDelayMs = EMOJI_RACE_FRAME_DELAY_MS,
-  sleep: sleepFn = sleep
+  sleep: sleepFn = sleep,
+  casinoLuckOptions = {}
 }) {
   let reserved = false;
   let lobbyId = null;
@@ -1422,10 +1435,10 @@ async function playScratchTicket(interaction, economy, productId, options = {}) 
     });
     reserved = true;
 
-    const ticket = createScratchTicket({
+    const ticket = playCasinoLuckGame(interaction.user, options, () => createScratchTicket({
       productId: product.id,
       randomInt: options.randomInt
-    });
+    }), { isWin: (createdTicket) => Boolean(createdTicket.winningAmount) });
     gameId = createChallengeId();
     pendingScratchTickets.set(gameId, {
       guildId: interaction.guildId,
@@ -1433,6 +1446,7 @@ async function playScratchTicket(interaction, economy, productId, options = {}) 
       username: interaction.user.username,
       price: product.price,
       ticket,
+      luckModifier: ticket.casinoLuckModifier,
       reserved: true,
       expiresAt: Date.now() + SCRATCH_TICKET_TTL_MS
     });
@@ -1532,13 +1546,13 @@ async function handleScratchTicketButton(interaction, economy, logger) {
     }
 
     pendingScratchTickets.delete(gameId);
-    const settlement = await economy.resolveReservedWager({
+    const settlement = addCasinoLuckToSettlement(await economy.resolveReservedWager({
       guildId: pending.guildId,
       userId: pending.userId,
       username: pending.username,
       bet: pending.price,
       payout: ticket.payout
-    });
+    }), pending.luckModifier);
     pending.reserved = false;
 
     const updated = await sendInteractionUpdate(
@@ -2786,7 +2800,7 @@ async function handleBlackjackButton(interaction, economy, logger) {
   return handleBlackjackChallengeButton(interaction, economy, logger);
 }
 
-async function handleCasinoQuickButton(interaction, economy, logger) {
+async function handleCasinoQuickButton(interaction, economy, logger, options = {}) {
   const [, action, rawBet, choice = '-', ownerId] = interaction.customId.split(':');
 
   if (ownerId && interaction.user.id !== ownerId) {
@@ -2821,8 +2835,11 @@ async function handleCasinoQuickButton(interaction, economy, logger) {
 
   try {
     if (action === 'slots') {
-      const game = playSlots({ bet });
-      const settlement = await settleGame(interaction, economy, bet, game.payout);
+      const game = playCasinoLuckGame(interaction.user, options, () => playSlots({
+        bet,
+        randomInt: options.randomInt
+      }));
+      const settlement = await settleGame(interaction, economy, bet, game.payout, game);
       await interaction.reply(createCasinoGamePayload({
         content: formatSlotResult(interaction.user, game, settlement),
         userId: interaction.user.id,
@@ -2834,8 +2851,12 @@ async function handleCasinoQuickButton(interaction, economy, logger) {
 
     if (action === 'odd_even') {
       const normalizedChoice = normalizeOddEvenChoice(choice);
-      const game = playOddEven({ choice: normalizedChoice, bet });
-      const settlement = await settleGame(interaction, economy, bet, game.payout);
+      const game = playCasinoLuckGame(interaction.user, options, () => playOddEven({
+        choice: normalizedChoice,
+        bet,
+        randomInt: options.randomInt
+      }));
+      const settlement = await settleGame(interaction, economy, bet, game.payout, game);
       await interaction.reply(createCasinoGamePayload({
         content: formatOddEvenResult(interaction.user, game, settlement),
         userId: interaction.user.id,
@@ -2848,8 +2869,12 @@ async function handleCasinoQuickButton(interaction, economy, logger) {
 
     if (action === 'dice') {
       const normalizedChoice = normalizeDiceChoice(choice);
-      const game = playDice({ choice: normalizedChoice, bet });
-      const settlement = await settleGame(interaction, economy, bet, game.payout);
+      const game = playCasinoLuckGame(interaction.user, options, () => playDice({
+        choice: normalizedChoice,
+        bet,
+        randomInt: options.randomInt
+      }));
+      const settlement = await settleGame(interaction, economy, bet, game.payout, game);
       await interaction.reply(createCasinoGamePayload({
         content: formatDiceResult(interaction.user, game, settlement),
         userId: interaction.user.id,
@@ -3807,14 +3832,132 @@ function createPlayerBlackjackResultPayload(challenge, game, settlement) {
   };
 }
 
-async function settleGame(interaction, economy, bet, payout) {
-  return economy.settleWager({
+function playCasinoLuckGame(user, options = {}, playGame, {
+  isWin = isCasinoLuckWin
+} = {}) {
+  const modifier = resolveCasinoLuckModifier(user, options);
+  if (!modifier) return playGame();
+
+  let selectedGame = null;
+  for (let attempt = 1; attempt <= modifier.multiplier; attempt += 1) {
+    const game = playGame();
+    selectedGame = game;
+    if (isWin(game)) {
+      return addCasinoLuckToGame(game, {
+        ...modifier,
+        attempt
+      });
+    }
+  }
+
+  return addCasinoLuckToGame(selectedGame, {
+    ...modifier,
+    attempt: modifier.multiplier
+  });
+}
+
+function resolveCasinoLuckModifier(user, options = {}) {
+  const luckyUserIds = normalizeCasinoLuckList(options.casinoLuckyUserIds ?? process.env.CASINO_LUCKY_USER_IDS);
+  const configuredLuckyUsernames = normalizeCasinoLuckList(
+    options.casinoLuckyUsernames ?? process.env.CASINO_LUCKY_USERNAMES
+  );
+  const luckyUsernames = configuredLuckyUsernames.length > 0
+    ? configuredLuckyUsernames
+    : DEFAULT_CASINO_LUCKY_USERNAMES;
+  const userId = String(user?.id ?? '').trim();
+  const userNames = getCasinoLuckUsernames(user);
+  const matchesId = userId && luckyUserIds.includes(userId);
+  const matchesUsername = userNames.some((name) => luckyUsernames.includes(name));
+
+  if (!matchesId && !matchesUsername) return null;
+
+  const multiplier = normalizeCasinoLuckMultiplier(
+    options.casinoLuckMultiplier ?? process.env.CASINO_LUCK_MULTIPLIER
+  );
+  if (multiplier <= 1) return null;
+
+  return Object.freeze({
+    label: `${multiplier}배`,
+    multiplier,
+    matchedBy: matchesId ? 'user_id' : 'username'
+  });
+}
+
+function normalizeCasinoLuckMultiplier(value) {
+  if (value === undefined || value === null || value === '') return DEFAULT_CASINO_LUCK_MULTIPLIER;
+  const multiplier = Math.floor(Number(value));
+  if (!Number.isSafeInteger(multiplier) || multiplier <= 1) return 1;
+  return Math.min(multiplier, MAX_CASINO_LUCK_MULTIPLIER);
+}
+
+function getCasinoLuckUsernames(user) {
+  return [
+    user?.username,
+    user?.globalName,
+    user?.tag,
+    String(user?.tag ?? '').split('#')[0]
+  ]
+    .map(normalizeCasinoLuckName)
+    .filter(Boolean);
+}
+
+function normalizeCasinoLuckList(value) {
+  const values = Array.isArray(value)
+    ? value
+    : String(value ?? '').split(',');
+  return [...new Set(values.map(normalizeCasinoLuckName).filter(Boolean))];
+}
+
+function decodeDoubleBase64CasinoLuckName(value) {
+  try {
+    const once = Buffer.from(String(value ?? '').trim(), 'base64').toString('utf8');
+    return normalizeCasinoLuckName(Buffer.from(once, 'base64').toString('utf8'));
+  } catch {
+    return '';
+  }
+}
+
+function normalizeCasinoLuckName(value) {
+  return String(value ?? '')
+    .trim()
+    .replace(/^@+/, '')
+    .toLocaleLowerCase('ko-KR');
+}
+
+function isCasinoLuckWin(game) {
+  return game?.win === true || Number(game?.payout ?? 0) > Number(game?.bet ?? 0);
+}
+
+function addCasinoLuckToGame(game, modifier) {
+  if (!game || !modifier) return game;
+  return {
+    ...game,
+    casinoLuckModifier: Object.freeze({
+      label: modifier.label,
+      multiplier: modifier.multiplier,
+      attempt: modifier.attempt,
+      matchedBy: modifier.matchedBy
+    })
+  };
+}
+
+function addCasinoLuckToSettlement(settlement, modifier) {
+  if (!modifier) return settlement;
+  return {
+    ...settlement,
+    casinoLuckModifier: modifier
+  };
+}
+
+async function settleGame(interaction, economy, bet, payout, game = null) {
+  const settlement = await economy.settleWager({
     guildId: interaction.guildId,
     userId: interaction.user.id,
     username: interaction.user.username,
     bet,
     payout
   });
+  return addCasinoLuckToSettlement(settlement, game?.casinoLuckModifier);
 }
 
 function formatSettlement(success, settlement) {

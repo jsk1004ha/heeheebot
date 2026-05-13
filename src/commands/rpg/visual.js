@@ -10,9 +10,7 @@ export function createRpgVisualPayload(content, assetIds = [], extraPayload = {}
     allowedMentions = null,
     ...cleanExtraPayload
   } = extraPayload ?? {};
-  const files = assetIds
-    .filter(Boolean)
-    .filter((assetId, index, values) => values.indexOf(assetId) === index)
+  const files = orderRpgVisualAssetIds(assetIds)
     .map((assetId) => getRpgAssetAttachment(assetId))
     .filter(Boolean)
     // Embed cards can display one main image plus one thumbnail; extra files show as loose image dumps.
@@ -29,6 +27,20 @@ export function createRpgVisualPayload(content, assetIds = [], extraPayload = {}
       allowedMentions
     })
   });
+}
+
+function orderRpgVisualAssetIds(assetIds = []) {
+  return [...new Set((Array.isArray(assetIds) ? assetIds : [assetIds]).filter(Boolean))]
+    .map((assetId, index) => ({ assetId, index }))
+    .sort((left, right) => (
+      getRpgVisualAssetPriority(left.assetId) - getRpgVisualAssetPriority(right.assetId)
+      || left.index - right.index
+    ))
+    .map(({ assetId }) => assetId);
+}
+
+function getRpgVisualAssetPriority(assetId) {
+  return String(assetId).startsWith('map_') ? 0 : 1;
 }
 
 function addMentionNotificationPayload(extraPayload, {
