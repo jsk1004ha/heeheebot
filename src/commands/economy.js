@@ -37,9 +37,12 @@ import { safeReplyToInteraction } from './interactions.js';
 
 const DEFAULT_SOCIAL_LOAN_TERM_HOURS = 24;
 const DEFAULT_SOCIAL_LOAN_REPAYMENT_MODE = 'installment';
-const DEFAULT_SOCIAL_LOAN_INTEREST_PERCENT = 0;
-const DEFAULT_SOCIAL_LOAN_INTEREST_PERIOD_HOURS = 24;
-const DEFAULT_SOCIAL_LOAN_INTEREST_TYPE = 'simple';
+const DEFAULT_SOCIAL_LOAN_INTEREST_PERCENT = 5;
+const DEFAULT_SOCIAL_LOAN_INTEREST_PERIOD_HOURS = 3;
+const DEFAULT_SOCIAL_LOAN_INTEREST_TYPE = 'compound';
+const SOCIAL_LOAN_INTEREST_PERCENT_CHOICES = Object.freeze([3, 5, 10, 15, 20]);
+const SOCIAL_LOAN_TERM_HOUR_CHOICES = Object.freeze([24, 48, 72]);
+const SOCIAL_LOAN_INTEREST_PERIOD_HOUR_CHOICES = Object.freeze([1, 2, 3]);
 
 export const economyCommands = [
   new SlashCommandBuilder()
@@ -71,77 +74,55 @@ export const economyCommands = [
     ),
   new SlashCommandBuilder()
     .setName('돈빌리기')
-    .setDescription('대상과 돈만 넣어 대출을 요청하고, 수락/결정도 간단히 처리합니다.')
+    .setDescription('상대에게 골드 대출을 요청합니다. 승인되면 돈이 이동합니다.')
     .addUserOption((option) =>
       option
         .setName('대상')
-        .setDescription('대출 상대 유저. 현황 조회는 비워두면 전체를 봅니다.')
-    )
-    .addStringOption((option) =>
-      option
-        .setName('행동')
-        .setDescription('비우면 요청. 수락/결정은 복잡한 조건을 생략해도 됩니다.')
-        .addChoices(
-          { name: '요청', value: 'request' },
-          { name: '수락', value: 'offer' },
-          { name: '결정', value: 'decide' },
-          { name: '상환', value: 'repay' },
-          { name: '현황', value: 'status' }
-        )
+        .setDescription('돈을 빌려줄 유저')
+        .setRequired(true)
     )
     .addIntegerOption((option) =>
       option
         .setName('돈')
-        .setDescription('요청할 골드. 상환은 /돈갚기를 써도 됩니다.')
+        .setDescription('빌릴 골드')
         .setMinValue(1)
-    )
-    .addIntegerOption((option) =>
-      option
-        .setName('기간')
-        .setDescription('상환 기간(시간). 기본 24시간')
-        .setMinValue(1)
-        .setMaxValue(720)
-    )
-    .addStringOption((option) =>
-      option
-        .setName('상환방식')
-        .setDescription('상환 방식. 기본은 매번 조금씩 갚기')
-        .addChoices(
-          { name: '매번 조금씩 갚기', value: 'installment' },
-          { name: '한번에 갚기', value: 'lump_sum' }
-        )
+        .setRequired(true)
     )
     .addIntegerOption((option) =>
       option
         .setName('이자')
-        .setDescription('기간별 이자율(%). 기본 0%')
-        .setMinValue(0)
-        .setMaxValue(100)
+        .setDescription('이자율(%). 기본 5%, 복리 고정')
+        .addChoices(...SOCIAL_LOAN_INTEREST_PERCENT_CHOICES.map((value) => ({
+          name: `${value}%`,
+          value
+        })))
     )
     .addIntegerOption((option) =>
       option
-        .setName('이자기간')
-        .setDescription('이자가 붙는 주기(시간). 기본 24시간')
-        .setMinValue(1)
-        .setMaxValue(720)
+        .setName('기간')
+        .setDescription('상환 기간. 기본 24시간')
+        .addChoices(...SOCIAL_LOAN_TERM_HOUR_CHOICES.map((value) => ({
+          name: `${value}시간`,
+          value
+        })))
     )
-    .addStringOption((option) =>
+    .addIntegerOption((option) =>
       option
-        .setName('이자방식')
-        .setDescription('단리 또는 복리')
-        .addChoices(
-          { name: '단리', value: 'simple' },
-          { name: '복리', value: 'compound' }
-        )
-    )
-    .addStringOption((option) =>
+        .setName('이자주기')
+        .setDescription('이자가 붙는 주기. 기본 3시간')
+        .addChoices(...SOCIAL_LOAN_INTEREST_PERIOD_HOUR_CHOICES.map((value) => ({
+          name: `${value}시간`,
+          value
+        })))
+    ),
+  new SlashCommandBuilder()
+    .setName('돈빌려주기')
+    .setDescription('나에게 온 대출 요청을 승인하고 골드를 빌려줍니다.')
+    .addUserOption((option) =>
       option
-        .setName('선택')
-        .setDescription('대출 실행 여부. 기본은 빌리기')
-        .addChoices(
-          { name: '빌리기', value: 'accept' },
-          { name: '거절', value: 'decline' }
-        )
+        .setName('대상')
+        .setDescription('돈을 빌려달라고 요청한 유저')
+        .setRequired(true)
     ),
   new SlashCommandBuilder()
     .setName('돈갚기')
@@ -353,7 +334,10 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
       const target = getRequiredUserOption(interaction, '대상', '돈을 빌려줄 유저');
       const amount = getRequiredIntegerOption(interaction, '돈', '빌릴 골드');
       const termHours = interaction.options.getInteger('기간') ?? DEFAULT_SOCIAL_LOAN_TERM_HOURS;
-      const repaymentMode = interaction.options.getString('상환방식') ?? DEFAULT_SOCIAL_LOAN_REPAYMENT_MODE;
+      const interestPercent = interaction.options.getInteger('이자') ?? DEFAULT_SOCIAL_LOAN_INTEREST_PERCENT;
+      const interestPeriodHours = interaction.options.getInteger('이자주기') ?? DEFAULT_SOCIAL_LOAN_INTEREST_PERIOD_HOURS;
+      const repaymentMode = DEFAULT_SOCIAL_LOAN_REPAYMENT_MODE;
+      const interestType = DEFAULT_SOCIAL_LOAN_INTEREST_TYPE;
 
       if (target.bot) {
         throw new Error('봇에게는 돈을 빌릴 수 없습니다.');
@@ -367,7 +351,10 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
         lenderUsername: target.username,
         amount,
         termHours,
-        repaymentMode
+        repaymentMode,
+        interestPercent,
+        interestPeriodHours,
+        interestType
       });
       const notificationSent = await sendLoanRequestNotification({
         interaction,
@@ -379,15 +366,51 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
       await safeReplyToInteraction(interaction, {
         content: [
           `📨 ${formatUserMention(target, target.username)}님에게 **${formatCurrencyAmount(result.request.amount, 'main')}** 대출 요청을 보냈습니다.`,
-          `기간: **${formatDuration(result.request.termMs)}** / 상환: **${formatLoanRepaymentMode(result.request.repaymentMode)}**`,
+          `조건: **${formatLoanInterestRate(result.request.interestBps)} ${formatLoanInterestType(result.request.interestType)}** / 기간: **${formatDuration(result.request.termMs)}** / 이자 주기: **${formatDuration(result.request.interestPeriodMs)}**`,
+          `현재 예상 상환액: **${formatCurrencyAmount(result.request.totalDue, 'main')}**`,
           notificationSent ? '🔔 DM 알림을 보냈습니다.' : '🔔 채널로 알림했습니다.',
-          `상대는 \`/돈빌리기 대상:${user.username} 행동:수락\`, 나는 이후 \`행동:결정\`으로 완료합니다.`
+          `상대가 \`/돈빌려주기 대상:${user.username}\`을 실행하면 돈이 이동합니다.`
         ].join('\n'),
         allowedMentions: createAllowedMentionsForUsers([target.id])
       });
     } catch (error) {
       await safeReplyToInteraction(interaction, {
         content: `대출 요청 실패: ${error.message}`,
+        flags: MessageFlags.Ephemeral
+      });
+    }
+
+    return true;
+  }
+
+  if (loanAction === 'accept-request') {
+    try {
+      const target = getRequiredUserOption(interaction, '대상', '돈을 빌리려는 유저');
+
+      if (target.bot) {
+        throw new Error('봇의 대출 요청은 수락할 수 없습니다.');
+      }
+
+      const result = await economy.acceptUserLoanRequest({
+        guildId,
+        lenderUserId: user.id,
+        lenderUsername: user.username,
+        borrowerUserId: target.id,
+        borrowerUsername: target.username
+      });
+
+      await safeReplyToInteraction(interaction, {
+        content: [
+          `🤝 ${formatUserMention(target, target.username)}님에게 **${formatCurrencyAmount(result.loan.principal, 'main')}**를 빌려줬습니다.`,
+          `현재 갚을 금액: **${formatCurrencyAmount(result.loan.totalDue, 'main')}** / 만기: **${formatTimestamp(result.loan.dueAt)}**`,
+          `이자: **${formatLoanInterestRate(result.loan.interestBps)} ${formatLoanInterestType(result.loan.interestType)}** / 이자 주기: **${formatDuration(result.loan.interestPeriodMs)}**`,
+          `상대가 직접 갚기: \`/돈갚기 대상:${user.username}\``
+        ].join('\n'),
+        allowedMentions: createAllowedMentionsForUsers([target.id])
+      });
+    } catch (error) {
+      await safeReplyToInteraction(interaction, {
+        content: `돈빌려주기 실패: ${error.message}`,
         flags: MessageFlags.Ephemeral
       });
     }
@@ -584,9 +607,10 @@ export async function replyWithAccountLinkSelectionIfNeeded(interaction, economy
 function getLoanAction(interaction) {
   if (interaction.commandName === '돈빌리기수락') return 'offer';
   if (interaction.commandName === '돈빌리기결정') return 'decide';
+  if (interaction.commandName === '돈빌려주기') return 'accept-request';
   if (interaction.commandName === '돈갚기') return 'repay';
   if (interaction.commandName !== '돈빌리기') return null;
-  return interaction.options.getString?.('행동') ?? 'request';
+  return 'request';
 }
 
 function getRequiredUserOption(interaction, name, label) {
@@ -1021,8 +1045,8 @@ async function sendLoanRequestNotification({ interaction, target, requester, req
       content: [
         `📨 **${requester.username}**님이 ${interaction.guild?.name ?? '서버'}에서 돈을 빌려달라고 요청했습니다.`,
         `요청 금액: **${formatCurrencyAmount(request.amount, 'main')}**`,
-        `상환 기간: **${formatDuration(request.termMs)}** / 상환 방식: **${formatLoanRepaymentMode(request.repaymentMode)}**`,
-        `수락하려면 서버에서 \`/돈빌리기 대상:${requester.username} 행동:수락 이자:10 이자기간:24 이자방식:단리\`처럼 이자 조건을 정해 주세요.`
+        `조건: **${formatLoanInterestRate(request.interestBps)} ${formatLoanInterestType(request.interestType)}** / 기간: **${formatDuration(request.termMs)}** / 이자 주기: **${formatDuration(request.interestPeriodMs)}**`,
+        `승인하려면 서버에서 \`/돈빌려주기 대상:${requester.username}\`을 실행해 주세요.`
       ].join('\n'),
       allowedMentions: createAllowedMentionsForUsers([requester.id])
     });

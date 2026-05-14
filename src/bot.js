@@ -424,8 +424,7 @@ export function shouldDeferBeforeCommandHandling(interaction) {
 export function shouldDeferPrivatelyBeforeCommandHandling(interaction) {
   return Boolean(
     interaction?.isChatInputCommand?.()
-      && (PRIVATE_INITIAL_RESPONSE_COMMANDS.has(interaction.commandName)
-        || isLoanStatusInteraction(interaction))
+      && PRIVATE_INITIAL_RESPONSE_COMMANDS.has(interaction.commandName)
   );
 }
 
@@ -446,16 +445,6 @@ function shouldKeepInitialChatInputResponseOpen(interaction) {
 
   try {
     return interaction.options?.getSubcommand?.() === '손패';
-  } catch {
-    return false;
-  }
-}
-
-function isLoanStatusInteraction(interaction) {
-  if (interaction?.commandName !== '돈빌리기') return false;
-
-  try {
-    return interaction.options?.getString?.('행동') === 'status';
   } catch {
     return false;
   }

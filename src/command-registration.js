@@ -41,7 +41,7 @@ export function getApplicationCommandPayloads() {
     ...getTodayCommandPayloads(),
     ...getPollCommandPayloads(),
     // Discord allows at most 100 guild/global application commands.
-    // Keep the Lavalink diagnostic slash command out of public registration
+    // Keep low-frequency diagnostic/automation views out of public registration
     // so user-facing economy aliases can stay simple.
     ...getMusicCommandPayloads().filter((command) => command.name !== '노드상태'),
     ...getUnoCommandPayloads(),
@@ -53,7 +53,7 @@ export function getApplicationCommandPayloads() {
     ...getMafiaCommandPayloads(),
     ...getWordleCommandPayloads(),
     ...getNumberBaseballCommandPayloads(),
-    ...getMealCommandPayloads(),
+    ...getMealCommandPayloads().filter((command) => command.name !== '자동급식'),
     ...getTimetableCommandPayloads(),
     ...getSeasonCommandPayloads(),
     ...getStockCommandPayloads(),

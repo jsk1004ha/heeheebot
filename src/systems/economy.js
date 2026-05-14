@@ -188,6 +188,9 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const SWORD_PROTECTION_SCROLL_COST = 15_000;
 const SOCIAL_LOAN_AUTO_REPAYMENT_BPS = 3_500;
 const SOCIAL_LOAN_LENDER_EXPOSURE_DENOMINATOR = 1_000n;
+const DEFAULT_SOCIAL_LOAN_INTEREST_PERCENT = 5;
+const DEFAULT_SOCIAL_LOAN_INTEREST_PERIOD_HOURS = 3;
+const DEFAULT_SOCIAL_LOAN_INTEREST_TYPE = 'compound';
 const SOCIAL_LOAN_MAX_INTEREST_BPS = 10_000;
 const SOCIAL_LOAN_MIN_TERM_MS = 60 * 60 * 1000;
 const SOCIAL_LOAN_MAX_TERM_MS = 30 * DAY_MS;
@@ -3670,11 +3673,17 @@ export class EconomyService {
     amount,
     termHours,
     repaymentMode,
+    interestPercent = DEFAULT_SOCIAL_LOAN_INTEREST_PERCENT,
+    interestPeriodHours = DEFAULT_SOCIAL_LOAN_INTEREST_PERIOD_HOURS,
+    interestType = DEFAULT_SOCIAL_LOAN_INTEREST_TYPE,
     now = Date.now()
   }) {
     const normalizedAmount = normalizePositiveMoneyValue(amount, '대출 요청 금액');
     const termMs = normalizeLoanTermHours(termHours);
     const normalizedRepaymentMode = normalizeSocialLoanRepaymentMode(repaymentMode);
+    const interestBps = normalizeSocialLoanInterestPercent(interestPercent);
+    const interestPeriodMs = normalizeSocialLoanInterestPeriodHours(interestPeriodHours);
+    const normalizedInterestType = normalizeSocialLoanInterestType(interestType);
     const borrowerId = normalizeRequiredId(borrowerUserId, '빌리는 유저');
     const lenderId = normalizeRequiredId(lenderUserId, '빌려줄 유저');
 
@@ -3706,7 +3715,17 @@ export class EconomyService {
         amount: normalizedAmount,
         termMs,
         repaymentMode: normalizedRepaymentMode,
-        requestedAt: normalizeStoredNonNegativeInteger(now)
+        requestedAt: normalizeStoredNonNegativeInteger(now),
+        interestBps,
+        interestPeriodMs,
+        interestType: normalizedInterestType,
+        totalDue: calculateSocialLoanTotalDue({
+          principal: normalizedAmount,
+          termMs,
+          interestBps,
+          interestPeriodMs,
+          interestType: normalizedInterestType
+        })
       };
 
       loans.requests.push(request);
@@ -3725,9 +3744,9 @@ export class EconomyService {
     lenderUsername,
     borrowerUserId,
     borrowerUsername,
-    interestPercent,
-    interestPeriodHours,
-    interestType,
+    interestPercent = DEFAULT_SOCIAL_LOAN_INTEREST_PERCENT,
+    interestPeriodHours = DEFAULT_SOCIAL_LOAN_INTEREST_PERIOD_HOURS,
+    interestType = DEFAULT_SOCIAL_LOAN_INTEREST_TYPE,
     now = Date.now()
   }) {
     const lenderId = normalizeRequiredId(lenderUserId, '빌려줄 유저');
@@ -3844,7 +3863,7 @@ export class EconomyService {
         lenderUserId: lenderId,
         lenderUsername: lender.username,
         principal: request.amount,
-        totalDue: request.totalDue,
+        totalDue: request.amount,
         repaid: 0,
         interestBps: request.interestBps,
         interestPeriodMs: request.interestPeriodMs,
@@ -3917,6 +3936,79 @@ export class EconomyService {
         remaining: compareMoney(remaining, repaid) > 0
           ? toCompatibleMoneyValue(subtractMoney(remaining, repaid))
           : 0,
+        borrower: cloneProfile(borrower),
+        lender: cloneProfile(lender)
+      };
+    });
+  }
+
+  async acceptUserLoanRequest({
+    guildId,
+    lenderUserId,
+    lenderUsername,
+    borrowerUserId,
+    borrowerUsername,
+    now = Date.now()
+  }) {
+    const lenderId = normalizeRequiredId(lenderUserId, '빌려줄 유저');
+    const borrowerId = normalizeRequiredId(borrowerUserId, '빌리는 유저');
+
+    if (lenderId === borrowerId) {
+      throw new Error('자기 자신에게는 돈을 빌려줄 수 없습니다.');
+    }
+
+    return this.store.update((data) => {
+      const borrower = getOrCreateProfile(data, guildId, borrowerId, borrowerUsername, this, now);
+      const lender = getOrCreateProfile(data, guildId, lenderId, lenderUsername, this, now);
+      const loans = normalizeSocialLoans(borrower.socialLoans);
+      borrower.socialLoans = loans;
+      const requestIndex = loans.requests.findIndex((request) =>
+        request.lenderUserId === lenderId && request.status === SOCIAL_LOAN_STATUS_REQUESTED
+      );
+
+      if (requestIndex < 0) {
+        throw new Error('승인할 대출 요청을 찾을 수 없습니다.');
+      }
+
+      const request = loans.requests[requestIndex];
+      assertSocialLoanLenderExposureLimit({
+        data,
+        guildId,
+        lenderId,
+        lender,
+        amount: request.amount
+      });
+
+      if (compareMoney(lender.balance, request.amount) < 0) {
+        throw new Error('빌려줄 유저의 잔액이 부족해 대출을 실행할 수 없습니다.');
+      }
+
+      loans.requests.splice(requestIndex, 1);
+      debitCurrency(lender, CURRENCY_MAIN, request.amount, '빌려줄 골드가 부족합니다.');
+      creditCurrency(borrower, CURRENCY_MAIN, request.amount);
+
+      const acceptedAt = normalizeStoredNonNegativeInteger(now);
+      const loan = {
+        id: request.id,
+        lenderUserId: lenderId,
+        lenderUsername: lender.username,
+        principal: request.amount,
+        totalDue: request.amount,
+        repaid: 0,
+        interestBps: request.interestBps,
+        interestPeriodMs: request.interestPeriodMs,
+        interestType: request.interestType,
+        termMs: request.termMs,
+        dueAt: acceptedAt + request.termMs,
+        acceptedAt,
+        repaymentMode: request.repaymentMode,
+        lastRepaymentAt: 0
+      };
+      loans.loans.push(loan);
+
+      return {
+        accepted: true,
+        loan: cloneSocialLoan(loan),
         borrower: cloneProfile(borrower),
         lender: cloneProfile(lender)
       };
@@ -4521,15 +4613,37 @@ function calculateSocialLoanTotalDue({
   const normalizedInterestPeriodMs = normalizeStoredSocialLoanInterestPeriodMs(interestPeriodMs);
   const periods = Math.max(1, Math.ceil(normalizedTermMs / normalizedInterestPeriodMs))
     + normalizeStoredNonNegativeInteger(extraPeriods);
+  return toCompatibleMoneyValue(calculateSocialLoanDueForPeriods({
+    principal: normalizedPrincipal,
+    periods,
+    interestBps: normalizedInterestBps,
+    interestType
+  }));
+}
+
+function calculateSocialLoanDueForPeriods({
+  principal,
+  periods,
+  interestBps,
+  interestType
+}) {
+  const normalizedPrincipal = toMoney(principal, '대출 원금');
+  const normalizedPeriods = normalizeStoredNonNegativeInteger(periods);
+  const normalizedInterestBps = normalizeStoredNonNegativeInteger(interestBps);
+  if (normalizedInterestBps <= 0 || normalizedPeriods <= 0) return normalizedPrincipal;
+
   if (interestType === SOCIAL_LOAN_INTEREST_COMPOUND) {
-    const numerator = powBigInt(BigInt(10_000 + normalizedInterestBps), periods);
-    const denominator = powBigInt(10_000n, periods);
+    const numerator = powBigInt(BigInt(10_000 + normalizedInterestBps), normalizedPeriods);
+    const denominator = powBigInt(10_000n, normalizedPeriods);
     const compounded = divideBigIntCeil(normalizedPrincipal * numerator, denominator);
-    return toCompatibleMoneyValue(compounded > normalizedPrincipal ? compounded : normalizedPrincipal);
+    return compounded > normalizedPrincipal ? compounded : normalizedPrincipal;
   }
 
-  const interest = divideBigIntCeil(normalizedPrincipal * BigInt(normalizedInterestBps) * BigInt(periods), 10_000n);
-  return toCompatibleMoneyValue(normalizedPrincipal + interest);
+  const interest = divideBigIntCeil(
+    normalizedPrincipal * BigInt(normalizedInterestBps) * BigInt(normalizedPeriods),
+    10_000n
+  );
+  return normalizedPrincipal + interest;
 }
 
 function accrueSocialLoansInterest(loans, now = Date.now()) {
@@ -4556,24 +4670,21 @@ function calculateSocialLoanAccruedTotalDue(loan, now = Date.now()) {
   const principal = normalizeStoredMoneyAmount(loan.principal);
   if (!isPositiveMoney(principal)) return 0;
 
-  return calculateSocialLoanTotalDue({
+  return toCompatibleMoneyValue(calculateSocialLoanDueForPeriods({
     principal,
-    termMs: loan.termMs,
+    periods: getSocialLoanElapsedInterestPeriods(loan, now),
     interestBps: loan.interestBps,
-    interestPeriodMs: loan.interestPeriodMs,
-    interestType: normalizeStoredSocialLoanInterestType(loan.interestType ?? SOCIAL_LOAN_INTEREST_SIMPLE),
-    extraPeriods: getSocialLoanOverdueInterestPeriods(loan, now)
-  });
+    interestType: normalizeStoredSocialLoanInterestType(loan.interestType ?? SOCIAL_LOAN_INTEREST_SIMPLE)
+  }));
 }
 
-function getSocialLoanOverdueInterestPeriods(loan, now = Date.now()) {
+function getSocialLoanElapsedInterestPeriods(loan, now = Date.now()) {
   const normalizedNow = normalizeStoredNonNegativeInteger(now);
-  const dueAt = normalizeStoredNonNegativeInteger(loan?.dueAt)
-    || normalizeStoredNonNegativeInteger(loan?.acceptedAt) + normalizeStoredNonNegativeInteger(loan?.termMs);
-  if (dueAt <= 0 || normalizedNow <= dueAt) return 0;
+  const acceptedAt = normalizeStoredNonNegativeInteger(loan?.acceptedAt);
+  if (acceptedAt <= 0 || normalizedNow <= acceptedAt) return 0;
 
   const interestPeriodMs = normalizeStoredSocialLoanInterestPeriodMs(loan?.interestPeriodMs);
-  return Math.floor((normalizedNow - dueAt) / interestPeriodMs);
+  return Math.floor((normalizedNow - acceptedAt) / interestPeriodMs);
 }
 
 function createSocialLoanId(now, borrowerUserId, lenderUserId) {
