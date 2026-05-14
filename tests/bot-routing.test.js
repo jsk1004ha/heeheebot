@@ -144,21 +144,10 @@ test('워들과 숫자야구는 라우터에서 처음부터 비공개 defer를 
   }), false);
 });
 
-test('돈빌리기 현황은 공개 placeholder 삭제 대신 비공개 defer를 선점한다', () => {
+test('돈빌리기는 단순 요청 명령이라 비공개 defer를 선점하지 않는다', () => {
   assert.equal(shouldDeferPrivatelyBeforeCommandHandling({
     isChatInputCommand: () => true,
-    commandName: '돈빌리기',
-    options: {
-      getString: (name) => (name === '행동' ? 'status' : null)
-    }
-  }), true);
-
-  assert.equal(shouldDeferPrivatelyBeforeCommandHandling({
-    isChatInputCommand: () => true,
-    commandName: '돈빌리기',
-    options: {
-      getString: (name) => (name === '행동' ? 'request' : null)
-    }
+    commandName: '돈빌리기'
   }), false);
 });
 
