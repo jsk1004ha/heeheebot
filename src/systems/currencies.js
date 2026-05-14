@@ -1,3 +1,17 @@
+import {
+  addMoney,
+  compareMoney,
+  formatMoney,
+  isPositiveMoney,
+  minMoney,
+  multiplyMoneyFloor,
+  normalizeStoredMoney,
+  subtractMoney,
+  toCompatibleMoneyValue,
+  toMoney,
+  toMoneyString
+} from './money.js';
+
 export const CURRENCY_MAIN = 'main';
 export const CURRENCY_CASINO = 'casino';
 export const CURRENCY_RPG = 'rpg';
@@ -147,7 +161,7 @@ export function migrateLegacyWalletsToGold(profile, { now = Date.now() } = {}) {
     };
   }
 
-  profile.balance = normalizeNonNegativeInteger(profile.balance) + convertedGold;
+  profile.balance = toCompatibleMoneyValue(addMoney(normalizeStoredMoney(profile.balance), convertedGold));
   profile.wallets = createDefaultWallets();
   profile.currencyMigration = {
     ...profile.currencyMigration,
@@ -162,7 +176,7 @@ export function migrateLegacyWalletsToGold(profile, { now = Date.now() } = {}) {
 }
 
 export function convertLegacyCurrencyAmountToGold(currencyId, amount) {
-  const normalizedAmount = normalizeNonNegativeInteger(amount);
+  const normalizedAmount = normalizeMoneyValue(amount);
   if (currencyId === CURRENCY_MAIN) return normalizedAmount;
 
   const legacy = LEGACY_WALLET_CONFIGS[currencyId];
@@ -170,17 +184,22 @@ export function convertLegacyCurrencyAmountToGold(currencyId, amount) {
     throw new Error('알 수 없는 기존 재화입니다.');
   }
 
-  return Math.floor(normalizedAmount * legacy.goldValueBps / 10_000);
+  return toCompatibleMoneyValue(multiplyMoneyFloor(normalizedAmount, BigInt(legacy.goldValueBps), 10_000n));
 }
 
 export function getCurrencyBalance(profile, currencyId) {
   normalizeCurrencyId(currencyId);
-  return normalizeNonNegativeInteger(profile.balance);
+  return normalizeMoneyValue(profile.balance);
+}
+
+export function getCurrencyBalanceMoney(profile, currencyId) {
+  normalizeCurrencyId(currencyId);
+  return toMoney(normalizeStoredMoney(profile.balance));
 }
 
 export function setCurrencyBalance(profile, currencyId, amount) {
   normalizeCurrencyId(currencyId);
-  const normalizedAmount = normalizeNonNegativeInteger(amount);
+  const normalizedAmount = normalizeMoneyValue(amount);
   profile.balance = normalizedAmount;
   profile.wallets = normalizeWallets(profile.wallets);
   return profile.balance;
@@ -192,10 +211,10 @@ export function creditCurrency(profile, currencyId, amount) {
 
 export function creditCurrencyWithReceipt(profile, currencyId, amount) {
   normalizeCurrencyId(currencyId);
-  const normalizedAmount = normalizeNonNegativeInteger(amount);
+  const normalizedAmount = normalizeMoneyValue(amount);
   const repayment = applyStockBankruptcyRepayment(profile, normalizedAmount);
-  const current = getCurrencyBalance(profile, CURRENCY_MAIN);
-  const balance = setCurrencyBalance(profile, CURRENCY_MAIN, current + repayment.net);
+  const current = getCurrencyBalanceMoney(profile, CURRENCY_MAIN);
+  const balance = setCurrencyBalance(profile, CURRENCY_MAIN, current + toMoney(repayment.net));
   return {
     gross: normalizedAmount,
     net: repayment.net,
@@ -207,8 +226,8 @@ export function creditCurrencyWithReceipt(profile, currencyId, amount) {
 
 export function debitCurrency(profile, currencyId, amount, errorMessage = null) {
   normalizeCurrencyId(currencyId);
-  const normalizedAmount = normalizePositiveInteger(amount, '금액');
-  const current = getCurrencyBalance(profile, CURRENCY_MAIN);
+  const normalizedAmount = normalizePositiveMoney(amount, '금액');
+  const current = getCurrencyBalanceMoney(profile, CURRENCY_MAIN);
   if (current < normalizedAmount) {
     throw new Error(errorMessage ?? `골드가 부족합니다. 필요 금액: ${formatCurrencyAmount(normalizedAmount, CURRENCY_MAIN)}`);
   }
@@ -217,7 +236,7 @@ export function debitCurrency(profile, currencyId, amount, errorMessage = null) 
 }
 
 export function exchangeCurrency(profile, { fromCurrency, toCurrency, amount }) {
-  const normalizedAmount = normalizePositiveInteger(amount, '환전 금액');
+  const normalizedAmount = normalizeMoneyValue(normalizePositiveMoney(amount, '환전 금액'));
   const from = getCurrencyConfig(fromCurrency);
   const to = getCurrencyConfig(toCurrency);
 
@@ -250,7 +269,7 @@ export function getCurrencyBalances(profile) {
 
 export function formatCurrencyAmount(amount, currencyId) {
   normalizeCurrencyId(currencyId);
-  return `${normalizeNonNegativeInteger(amount).toLocaleString()}골드`;
+  return `${formatMoney(amount)}골드`;
 }
 
 export function getStockBankruptcySummary(profile) {
@@ -261,23 +280,23 @@ export function getStockBankruptcySummary(profile) {
     count: state.count,
     lastAt: state.lastAt,
     repaymentBps: STOCK_BANKRUPTCY_REPAYMENT_BPS,
-    blocked: state.debt > 0
+    blocked: isPositiveMoney(state.debt)
   };
 }
 
 export function addStockBankruptcyDebt(profile, amount, now = Date.now()) {
-  const debtAdded = normalizeNonNegativeInteger(amount);
+  const debtAdded = normalizeMoneyValue(amount);
   const state = ensureStockBankruptcyState(profile);
-  if (debtAdded <= 0) return getStockBankruptcySummary(profile);
+  if (!isPositiveMoney(debtAdded)) return getStockBankruptcySummary(profile);
 
-  state.debt += debtAdded;
+  state.debt = toCompatibleMoneyValue(addMoney(state.debt, debtAdded));
   state.count += 1;
   state.lastAt = normalizeNonNegativeInteger(now);
   return getStockBankruptcySummary(profile);
 }
 
 export function hasStockBankruptcyDebt(profile) {
-  return getStockBankruptcySummary(profile).debt > 0;
+  return isPositiveMoney(getStockBankruptcySummary(profile).debt);
 }
 
 export function repayStockBankruptcyDebt(profile, amount = null) {
@@ -286,13 +305,13 @@ export function repayStockBankruptcyDebt(profile, amount = null) {
   const balanceBefore = getCurrencyBalance(profile, CURRENCY_MAIN);
   const requested = amount === null || amount === undefined
     ? debtBefore
-    : normalizePositiveInteger(amount, '상환 금액');
-  const repaid = Math.min(debtBefore, balanceBefore, requested);
+    : normalizeMoneyValue(normalizePositiveMoney(amount, '상환 금액'));
+  const repaid = toCompatibleMoneyValue(minMoney(debtBefore, balanceBefore, requested));
 
-  if (repaid > 0) {
-    state.debt -= repaid;
-    state.paid += repaid;
-    setCurrencyBalance(profile, CURRENCY_MAIN, balanceBefore - repaid);
+  if (isPositiveMoney(repaid)) {
+    state.debt = toCompatibleMoneyValue(subtractMoney(state.debt, repaid));
+    state.paid = toCompatibleMoneyValue(addMoney(state.paid, repaid));
+    setCurrencyBalance(profile, CURRENCY_MAIN, subtractMoney(balanceBefore, repaid));
   }
 
   return {
@@ -333,22 +352,22 @@ function normalizeCurrencyMigration(value = {}) {
 }
 
 function applyStockBankruptcyRepayment(profile, grossIncome) {
-  const gross = normalizeNonNegativeInteger(grossIncome);
-  if (gross <= 0) return { gross, repayment: 0, net: 0 };
+  const gross = normalizeMoneyValue(grossIncome);
+  if (!isPositiveMoney(gross)) return { gross, repayment: 0, net: 0 };
 
   const state = ensureStockBankruptcyState(profile);
-  if (state.debt <= 0) return { gross, repayment: 0, net: gross };
+  if (!isPositiveMoney(state.debt)) return { gross, repayment: 0, net: gross };
 
-  const repayment = Math.min(
+  const repayment = toCompatibleMoneyValue(minMoney(
     state.debt,
     gross,
-    Math.floor(gross * STOCK_BANKRUPTCY_REPAYMENT_BPS / 10_000)
-  );
-  if (repayment <= 0) return { gross, repayment: 0, net: gross };
+    multiplyMoneyFloor(gross, BigInt(STOCK_BANKRUPTCY_REPAYMENT_BPS), 10_000n)
+  ));
+  if (!isPositiveMoney(repayment)) return { gross, repayment: 0, net: gross };
 
-  state.debt -= repayment;
-  state.paid += repayment;
-  return { gross, repayment, net: gross - repayment };
+  state.debt = toCompatibleMoneyValue(subtractMoney(state.debt, repayment));
+  state.paid = toCompatibleMoneyValue(addMoney(state.paid, repayment));
+  return { gross, repayment, net: toCompatibleMoneyValue(subtractMoney(gross, repayment)) };
 }
 
 function ensureStockBankruptcyState(profile) {
@@ -359,11 +378,23 @@ function ensureStockBankruptcyState(profile) {
 function normalizeStockBankruptcyState(value = {}) {
   const state = value && typeof value === 'object' ? value : {};
   return {
-    debt: normalizeNonNegativeInteger(state.debt ?? state.bankruptcyDebt),
-    paid: normalizeNonNegativeInteger(state.paid ?? state.bankruptcyDebtPaid),
+    debt: normalizeMoneyValue(state.debt ?? state.bankruptcyDebt),
+    paid: normalizeMoneyValue(state.paid ?? state.bankruptcyDebtPaid),
     count: normalizeNonNegativeInteger(state.count ?? state.bankruptcyCount),
     lastAt: normalizeNonNegativeInteger(state.lastAt ?? state.lastBankruptcyAt)
   };
+}
+
+function normalizeMoneyValue(value) {
+  return toCompatibleMoneyValue(normalizeStoredMoney(value));
+}
+
+function normalizePositiveMoney(value, label) {
+  const money = toMoney(value, label);
+  if (compareMoney(money, 0) <= 0) {
+    throw new Error(`${label}은(는) 1 이상의 정수여야 합니다.`);
+  }
+  return money;
 }
 
 function normalizeNonNegativeInteger(value) {

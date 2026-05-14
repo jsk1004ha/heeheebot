@@ -1,11 +1,16 @@
 import {
   CURRENCY_MAIN,
   creditCurrency,
+  debitCurrency,
   getStockBankruptcySummary,
   migrateLegacyWalletsToGold,
   normalizeWallets
 } from './currencies.js';
 import { getOrCreateLinkedAccountProfile } from './accounts.js';
+import {
+  normalizeStoredMoney,
+  toCompatibleMoneyValue
+} from './money.js';
 import * as achievements from './achievements.js';
 import { SEASON_REWARDS } from './seasons.js';
 
@@ -1130,7 +1135,7 @@ function getOrCreateProfile(data, guildId, userId, username, now) {
   profile.level = normalizeStoredPositiveInteger(profile.level, 1);
   profile.xp = normalizeStoredNonNegativeInteger(profile.xp);
   profile.totalXp = normalizeStoredNonNegativeInteger(profile.totalXp);
-  profile.balance = normalizeStoredNonNegativeInteger(profile.balance);
+  profile.balance = normalizeCommunityGold(profile.balance);
   migrateLegacyWalletsToGold(profile, { now });
   profile.wallets = normalizeWallets(profile.wallets);
   profile.lastMessageRewardAt = normalizeStoredNonNegativeInteger(profile.lastMessageRewardAt);
@@ -1807,10 +1812,11 @@ function normalizeStringArray(value) {
 
 function debitBalance(profile, amount) {
   const normalizedAmount = normalizeBoundedInteger(amount, '금액', 1, Number.MAX_SAFE_INTEGER);
-  if (profile.balance < normalizedAmount) {
-    throw new Error(`골드가 부족합니다. 필요 금액: ${normalizedAmount.toLocaleString()}골드`);
-  }
-  profile.balance -= normalizedAmount;
+  debitCurrency(profile, CURRENCY_MAIN, normalizedAmount, `골드가 부족합니다. 필요 금액: ${normalizedAmount.toLocaleString()}골드`);
+}
+
+function normalizeCommunityGold(value) {
+  return toCompatibleMoneyValue(normalizeStoredMoney(value));
 }
 
 function addXp(profile, xp) {

@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { toSafeProjectionNumber } from '../systems/money.js';
 
 const DEFAULT_DATA = Object.freeze({
   guilds: {}
@@ -1260,7 +1261,7 @@ function createAccountProfileProjection(userId, profile) {
     level: normalizeProjectionInteger(safeProfile.level, 1),
     xp: normalizeProjectionInteger(safeProfile.xp, 0),
     totalXp: normalizeProjectionInteger(safeProfile.totalXp, 0),
-    balance: normalizeProjectionInteger(safeProfile.balance, 0),
+    balance: normalizeProjectionMoney(safeProfile.balance, 0),
     createdAt: normalizeProjectionInteger(safeProfile.createdAt, 0),
     lastMessageRewardAt: normalizeProjectionInteger(safeProfile.lastMessageRewardAt, 0),
     lastDailyAt: normalizeProjectionInteger(safeProfile.lastDailyAt, 0),
@@ -1523,6 +1524,14 @@ function assertPlainObject(value, label) {
 function normalizeProjectionInteger(value, fallback = 0) {
   const number = Number(value);
   return Number.isSafeInteger(number) && number >= 0 ? number : fallback;
+}
+
+function normalizeProjectionMoney(value, fallback = 0) {
+  try {
+    return toSafeProjectionNumber(value);
+  } catch {
+    return fallback;
+  }
 }
 
 function normalizeProjectionNullableInteger(value) {
