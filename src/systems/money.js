@@ -1,4 +1,12 @@
 const MONEY_PATTERN = /^\d+$/;
+const KOREAN_MONEY_UNITS = Object.freeze(new Map([
+  ['만', 10_000n],
+  ['억', 100_000_000n],
+  ['조', 1_000_000_000_000n],
+  ['경', 10_000_000_000_000_000n]
+]));
+const KOREAN_MONEY_UNIT_PATTERN = /[만억조경]/u;
+const KOREAN_MONEY_CHUNK_PATTERN = /(\d+)([만억조경]?)/gu;
 
 export function toMoney(value, label = '금액') {
   if (typeof value === 'bigint') {
@@ -14,14 +22,10 @@ export function toMoney(value, label = '금액') {
   }
 
   if (typeof value === 'string') {
-    const text = value.trim();
-    if (!MONEY_PATTERN.test(text)) {
-      throw new Error(`${label}은 0 이상의 정수여야 합니다.`);
-    }
-    return BigInt(text);
+    return parseMoneyString(value, label);
   }
 
-  throw new Error(`${label}은 0 이상의 정수여야 합니다.`);
+  throw createMoneyError(label);
 }
 
 export function normalizeStoredMoney(value, fallback = 0) {
@@ -105,4 +109,44 @@ function toPositiveBigInt(value, label) {
   const normalized = toMoney(value, label);
   if (normalized <= 0n) throw new Error(`${label}은 1 이상의 정수여야 합니다.`);
   return normalized;
+}
+
+function parseMoneyString(value, label) {
+  const normalized = value.trim().replace(/[,\s]/gu, '');
+
+  if (MONEY_PATTERN.test(normalized)) {
+    return BigInt(normalized);
+  }
+
+  if (!KOREAN_MONEY_UNIT_PATTERN.test(normalized)) {
+    throw createMoneyError(label);
+  }
+
+  let index = 0;
+  let total = 0n;
+
+  for (const match of normalized.matchAll(KOREAN_MONEY_CHUNK_PATTERN)) {
+    if (match.index !== index) {
+      throw createMoneyError(label);
+    }
+
+    const [, digits, unit] = match;
+    const multiplier = unit ? KOREAN_MONEY_UNITS.get(unit) : 1n;
+    if (!multiplier) {
+      throw createMoneyError(label);
+    }
+
+    total += BigInt(digits) * multiplier;
+    index += match[0].length;
+  }
+
+  if (index !== normalized.length) {
+    throw createMoneyError(label);
+  }
+
+  return total;
+}
+
+function createMoneyError(label) {
+  return new Error(`${label}은 0 이상의 정수여야 합니다.`);
 }

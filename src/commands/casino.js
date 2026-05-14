@@ -76,8 +76,13 @@ import {
   addMoney,
   compareMoney,
   formatMoney,
-  toCompatibleMoneyValue
+  toCompatibleMoneyValue,
+  toMoney
 } from '../systems/money.js';
+import {
+  configureMoneyStringOption,
+  getMoneyInputOption
+} from './money-input.js';
 
 const CHALLENGE_TTL_MS = 60_000;
 const SCRATCH_TICKET_TTL_MS = 5 * 60_000;
@@ -107,13 +112,11 @@ export const casinoCommands = [
   new SlashCommandBuilder()
     .setName('홀짝')
     .setDescription('홀/짝을 맞히면 약 1.9배를 받습니다.')
-    .addIntegerOption((option) =>
-      option
-        .setName('돈')
-        .setDescription('베팅할 골드')
-        .setMinValue(1)
-        .setRequired(true)
-    )
+    .addStringOption(configureMoneyStringOption({
+      name: '돈',
+      description: '베팅할 골드',
+      required: true
+    }))
     .addStringOption((option) =>
       option
         .setName('선택')
@@ -127,13 +130,11 @@ export const casinoCommands = [
   new SlashCommandBuilder()
     .setName('주사위')
     .setDescription('주사위가 높음(4~6)/낮음(1~3)인지 맞히면 약 1.9배를 받습니다.')
-    .addIntegerOption((option) =>
-      option
-        .setName('돈')
-        .setDescription('베팅할 골드')
-        .setMinValue(1)
-        .setRequired(true)
-    )
+    .addStringOption(configureMoneyStringOption({
+      name: '돈',
+      description: '베팅할 골드',
+      required: true
+    }))
     .addStringOption((option) =>
       option
         .setName('선택')
@@ -147,43 +148,35 @@ export const casinoCommands = [
   new SlashCommandBuilder()
     .setName('슬롯')
     .setDescription('슬롯을 돌립니다. 낮은 확률로 3~20배를 받습니다.')
-    .addIntegerOption((option) =>
-      option
-        .setName('돈')
-        .setDescription('베팅할 골드')
-        .setMinValue(1)
-        .setRequired(true)
-    ),
+    .addStringOption(configureMoneyStringOption({
+      name: '돈',
+      description: '베팅할 골드',
+      required: true
+    })),
   new SlashCommandBuilder()
     .setName('데드라인')
     .setDescription('누를수록 보상과 꽝 확률이 함께 커지는 버튼 게임입니다.')
-    .addIntegerOption((option) =>
-      option
-        .setName('돈')
-        .setDescription(`베팅할 골드 (최소 ${DEADLINE_MIN_BET.toLocaleString()}골드)`)
-        .setMinValue(DEADLINE_MIN_BET)
-        .setRequired(true)
-    ),
+    .addStringOption(configureMoneyStringOption({
+      name: '돈',
+      description: `베팅할 골드 (최소 ${DEADLINE_MIN_BET.toLocaleString()}골드)`,
+      required: true
+    })),
   new SlashCommandBuilder()
     .setName('타이밍')
     .setDescription('랜덤 목표 초에 최대한 정확히 버튼을 눌러 골드 배율을 노립니다.')
-    .addIntegerOption((option) =>
-      option
-        .setName('돈')
-        .setDescription('베팅할 골드')
-        .setMinValue(1)
-        .setRequired(true)
-    ),
+    .addStringOption(configureMoneyStringOption({
+      name: '돈',
+      description: '베팅할 골드',
+      required: true
+    })),
   new SlashCommandBuilder()
     .setName('이모지경마')
     .setDescription('여러 유저가 같은 판에 베팅하고 1등 동물 적중자끼리 배당풀을 나눕니다.')
-    .addIntegerOption((option) =>
-      option
-        .setName('돈')
-        .setDescription('베팅할 골드')
-        .setMinValue(1)
-        .setRequired(true)
-    )
+    .addStringOption(configureMoneyStringOption({
+      name: '돈',
+      description: '베팅할 골드',
+      required: true
+    }))
     .addStringOption((option) =>
       option
         .setName('선택')
@@ -198,23 +191,19 @@ export const casinoCommands = [
   new SlashCommandBuilder()
     .setName('럭키세븐')
     .setDescription('주사위 2개의 합이 7이면 5.5배를 받습니다.')
-    .addIntegerOption((option) =>
-      option
-        .setName('돈')
-        .setDescription('베팅할 골드')
-        .setMinValue(1)
-        .setRequired(true)
-    ),
+    .addStringOption(configureMoneyStringOption({
+      name: '돈',
+      description: '베팅할 골드',
+      required: true
+    })),
   new SlashCommandBuilder()
     .setName('하이로우')
     .setDescription('두 번째 카드가 첫 카드보다 높을지 낮을지 맞힙니다. 같은 숫자는 환불됩니다.')
-    .addIntegerOption((option) =>
-      option
-        .setName('돈')
-        .setDescription('베팅할 골드')
-        .setMinValue(1)
-        .setRequired(true)
-    )
+    .addStringOption(configureMoneyStringOption({
+      name: '돈',
+      description: '베팅할 골드',
+      required: true
+    }))
     .addStringOption((option) =>
       option
         .setName('선택')
@@ -228,13 +217,11 @@ export const casinoCommands = [
   new SlashCommandBuilder()
     .setName('블랙잭')
     .setDescription('AI 또는 다른 유저와 수동 블랙잭을 합니다.')
-    .addIntegerOption((option) =>
-      option
-        .setName('돈')
-        .setDescription('베팅할 골드')
-        .setMinValue(1)
-        .setRequired(true)
-    )
+    .addStringOption(configureMoneyStringOption({
+      name: '돈',
+      description: '베팅할 골드',
+      required: true
+    }))
     .addUserOption((option) =>
       option
         .setName('상대')
@@ -243,23 +230,19 @@ export const casinoCommands = [
   new SlashCommandBuilder()
     .setName('포커')
     .setDescription('참가 버튼으로 들어오는 텍사스 홀덤 포커방을 만듭니다.')
-    .addIntegerOption((option) =>
-      option
-        .setName('시작칩')
-        .setDescription('포커방 시작 스택으로 사용할 칩. 시작하면 같은 수의 골드가 칩으로 바뀝니다.')
-        .setMinValue(1)
-        .setRequired(true)
-    ),
+    .addStringOption(configureMoneyStringOption({
+      name: '시작칩',
+      description: '포커방 시작 스택으로 사용할 칩. 시작하면 같은 수의 골드가 칩으로 바뀝니다.',
+      required: true
+    })),
   new SlashCommandBuilder()
     .setName('룰렛')
     .setDescription('룰렛 휠에서 색상/홀짝/구간/0에 베팅합니다.')
-    .addIntegerOption((option) =>
-      option
-        .setName('돈')
-        .setDescription('베팅할 골드')
-        .setMinValue(1)
-        .setRequired(true)
-    )
+    .addStringOption(configureMoneyStringOption({
+      name: '돈',
+      description: '베팅할 골드',
+      required: true
+    }))
     .addStringOption((option) =>
       option
         .setName('선택')
@@ -278,13 +261,11 @@ export const casinoCommands = [
   new SlashCommandBuilder()
     .setName('바카라')
     .setDescription('플레이어/뱅커/타이에 베팅합니다.')
-    .addIntegerOption((option) =>
-      option
-        .setName('돈')
-        .setDescription('베팅할 골드')
-        .setMinValue(1)
-        .setRequired(true)
-    )
+    .addStringOption(configureMoneyStringOption({
+      name: '돈',
+      description: '베팅할 골드',
+      required: true
+    }))
     .addStringOption((option) =>
       option
         .setName('선택')
@@ -299,13 +280,11 @@ export const casinoCommands = [
   new SlashCommandBuilder()
     .setName('크랩스')
     .setDescription('패스/돈패스 라인에 베팅합니다.')
-    .addIntegerOption((option) =>
-      option
-        .setName('돈')
-        .setDescription('베팅할 골드')
-        .setMinValue(1)
-        .setRequired(true)
-    )
+    .addStringOption(configureMoneyStringOption({
+      name: '돈',
+      description: '베팅할 골드',
+      required: true
+    }))
     .addStringOption((option) =>
       option
         .setName('선택')
@@ -319,13 +298,11 @@ export const casinoCommands = [
   new SlashCommandBuilder()
     .setName('시크보')
     .setDescription('세 주사위 합계의 작음/큼/트리플에 베팅합니다.')
-    .addIntegerOption((option) =>
-      option
-        .setName('돈')
-        .setDescription('베팅할 골드')
-        .setMinValue(1)
-        .setRequired(true)
-    )
+    .addStringOption(configureMoneyStringOption({
+      name: '돈',
+      description: '베팅할 골드',
+      required: true
+    }))
     .addStringOption((option) =>
       option
         .setName('선택')
@@ -340,13 +317,11 @@ export const casinoCommands = [
   new SlashCommandBuilder()
     .setName('키노')
     .setDescription('1~80 중 번호 1~5개를 고르고 10개 추첨 결과를 맞힙니다.')
-    .addIntegerOption((option) =>
-      option
-        .setName('돈')
-        .setDescription('베팅할 골드')
-        .setMinValue(1)
-        .setRequired(true)
-    )
+    .addStringOption(configureMoneyStringOption({
+      name: '돈',
+      description: '베팅할 골드',
+      required: true
+    }))
     .addStringOption((option) =>
       option
         .setName('번호들')
@@ -568,25 +543,25 @@ function getNextPendingCasinoExpiry() {
 
 function getCasinoBetOption(interaction) {
   if (interaction.commandName !== '포커') {
-    return normalizeCasinoBetInput(interaction.options.getInteger('돈', true), '베팅액');
+    return normalizeCasinoBetInput(getMoneyInputOption(interaction, '돈', {
+      required: true,
+      label: '베팅액'
+    }), '베팅액');
   }
 
-  const chips = interaction.options.getInteger('시작칩');
-
-  if (chips === null || chips === undefined) {
-    throw new Error('포커 시작칩을 입력해주세요.');
-  }
-
-  return normalizeCasinoBetInput(chips, '포커 시작칩');
+  return normalizeCasinoBetInput(getMoneyInputOption(interaction, '시작칩', {
+    required: true,
+    label: '포커 시작칩'
+  }), '포커 시작칩');
 }
 
 function normalizeCasinoBetInput(value, label = '베팅액') {
-  const normalized = Number(value);
+  const amount = toMoney(value, label);
 
-  if (!Number.isSafeInteger(normalized) || normalized <= 0) {
+  if (amount <= 0n) {
     throw new Error(`${label}은 1 이상의 정수여야 합니다.`);
   }
-  return normalized;
+  return toCompatibleMoneyValue(amount);
 }
 
 async function refundReservedCasinoWager(economy, logger, pending) {

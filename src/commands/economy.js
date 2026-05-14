@@ -34,6 +34,10 @@ import {
   formatUserMention
 } from './ui.js';
 import { safeReplyToInteraction } from './interactions.js';
+import {
+  configureMoneyStringOption,
+  getMoneyInputOption
+} from './money-input.js';
 
 const DEFAULT_SOCIAL_LOAN_TERM_HOURS = 24;
 const DEFAULT_SOCIAL_LOAN_REPAYMENT_MODE = 'installment';
@@ -69,13 +73,11 @@ export const economyCommands = [
         .setDescription('골드를 받을 유저')
         .setRequired(true)
     )
-    .addIntegerOption((option) =>
-      option
-        .setName('금액')
-        .setDescription('송금할 골드 금액')
-        .setMinValue(1)
-        .setRequired(true)
-    ),
+    .addStringOption(configureMoneyStringOption({
+      name: '금액',
+      description: '송금할 골드 금액',
+      required: true
+    })),
   new SlashCommandBuilder()
     .setName('돈빌리기')
     .setDescription('상대에게 골드 대출을 요청합니다. 승인되면 돈이 이동합니다.')
@@ -85,13 +87,11 @@ export const economyCommands = [
         .setDescription('돈을 빌려줄 유저')
         .setRequired(true)
     )
-    .addIntegerOption((option) =>
-      option
-        .setName('돈')
-        .setDescription('빌릴 골드')
-        .setMinValue(1)
-        .setRequired(true)
-    )
+    .addStringOption(configureMoneyStringOption({
+      name: '돈',
+      description: '빌릴 골드',
+      required: true
+    }))
     .addIntegerOption((option) =>
       option
         .setName('이자')
@@ -143,12 +143,10 @@ export const economyCommands = [
         .setDescription('돈을 빌려준 유저')
         .setRequired(true)
     )
-    .addIntegerOption((option) =>
-      option
-        .setName('돈')
-        .setDescription('갚을 골드. 비우면 가진 만큼 갚습니다.')
-        .setMinValue(1)
-    ),
+    .addStringOption(configureMoneyStringOption({
+      name: '돈',
+      description: '갚을 골드. 비우면 가진 만큼 갚습니다.'
+    })),
   new SlashCommandBuilder()
     .setName('랭킹')
     .setDescription('이 서버의 레벨/경험치 랭킹 또는 음악 인기곡 랭킹을 확인합니다.')
@@ -280,7 +278,10 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
 
   if (interaction.commandName === '송금') {
     const target = interaction.options.getUser('대상', true);
-    const amount = interaction.options.getInteger('금액', true);
+    const amount = getMoneyInputOption(interaction, '금액', {
+      required: true,
+      label: '송금액'
+    });
 
     if (target.bot) {
       await interaction.reply({
@@ -342,7 +343,10 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
   if (loanAction === 'request') {
     try {
       const target = getRequiredUserOption(interaction, '대상', '돈을 빌려줄 유저');
-      const amount = getRequiredIntegerOption(interaction, '돈', '빌릴 골드');
+      const amount = getMoneyInputOption(interaction, '돈', {
+        required: true,
+        label: '빌릴 골드'
+      });
       const termHours = interaction.options.getInteger('기간') ?? DEFAULT_SOCIAL_LOAN_TERM_HOURS;
       const interestPercent = interaction.options.getInteger('이자') ?? DEFAULT_SOCIAL_LOAN_INTEREST_PERCENT;
       const interestPeriodHours = interaction.options.getInteger('이자주기') ?? DEFAULT_SOCIAL_LOAN_INTEREST_PERIOD_HOURS;
@@ -508,7 +512,9 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
   if (loanAction === 'repay') {
     try {
       const target = getRequiredUserOption(interaction, '대상', '돈을 빌려준 유저');
-      const amount = interaction.options.getInteger('돈');
+      const amount = getMoneyInputOption(interaction, '돈', {
+        label: '상환 금액'
+      });
 
       const result = await economy.repayUserLoan({
         guildId,

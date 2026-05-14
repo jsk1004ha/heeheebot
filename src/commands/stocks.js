@@ -12,6 +12,10 @@ import {
   safeAutocompleteRespond,
   toInteractionPayload
 } from './interactions.js';
+import {
+  configureMoneyStringOption,
+  getMoneyInputOption
+} from './money-input.js';
 import { createPagedButtonRow, formatUserMention } from './ui.js';
 import { formatSeasonAwardLine } from './seasons.js';
 
@@ -321,13 +325,11 @@ export const stockCommands = [
             .setMaxValue(100)
             .setRequired(true)
         )
-        .addIntegerOption((option) =>
-          option
-            .setName('증거금')
-            .setDescription('포지션에 넣을 골드')
-            .setMinValue(1)
-            .setRequired(true)
-        )
+        .addStringOption(configureMoneyStringOption({
+          name: '증거금',
+          description: '포지션에 넣을 골드',
+          required: true
+        }))
     )
     .addSubcommand((subcommand) =>
       subcommand
@@ -355,12 +357,10 @@ export const stockCommands = [
       subcommand
         .setName('채무상환')
         .setDescription('내 골드로 레버리지 파산채무를 직접 상환합니다.')
-        .addIntegerOption((option) =>
-          option
-            .setName('금액')
-            .setDescription('상환할 골드. 비우면 가능한 만큼 전액 상환')
-            .setMinValue(1)
-        )
+        .addStringOption(configureMoneyStringOption({
+          name: '금액',
+          description: '상환할 골드. 비우면 가능한 만큼 전액 상환'
+        }))
     )
     .addSubcommand((subcommand) =>
       subcommand
@@ -726,7 +726,10 @@ async function routeStockCommand(interaction, stocks, services = {}) {
       side: interaction.options.getString('방향', true),
       leverage: interaction.options.getInteger('배율', true),
       durationTurns: interaction.options.getInteger('기간', true),
-      margin: interaction.options.getInteger('증거금', true)
+      margin: getMoneyInputOption(interaction, '증거금', {
+        required: true,
+        label: '증거금'
+      })
     });
     await replyStockContent(interaction, formatOpenLeverageResult(user, result), {
       components: createLeveragePositionRows(user.id, [result.position], {
@@ -783,7 +786,9 @@ async function routeStockCommand(interaction, stocks, services = {}) {
       guildId,
       userId: user.id,
       username: user.username,
-      amount: interaction.options.getInteger('금액')
+      amount: getMoneyInputOption(interaction, '금액', {
+        label: '상환 금액'
+      })
     });
     await replyStockContent(interaction, formatDebtRepaymentResult(user, result), {
       components: createStockQuickRows(user.id)

@@ -169,9 +169,11 @@ test('카지노 명령 payload는 다양한 게임을 등록한다', () => {
     .flatMap((command) => command.options ?? [])
     .filter((option) => option.name === '돈' || option.name === '시작칩');
 
-  assert.equal(deadlineBetOption.min_value, DEADLINE_MIN_BET);
+  assert.equal(deadlineBetOption.type, 3);
+  assert.match(deadlineBetOption.description, new RegExp(DEADLINE_MIN_BET.toLocaleString()));
   assert.ok(betOptions.length > 0);
   assert.ok(betOptions.every((option) => option.max_value === undefined));
+  assert.ok(betOptions.every((option) => option.type === 3));
   assert.equal(pokerOpponentOption, undefined);
   assert.equal(pokerPlayersOption, undefined);
   assert.deepEqual(pokerCommand.options.map((option) => option.name), ['시작칩']);
@@ -243,6 +245,31 @@ test('단순 도박 결과만 같은 베팅 재시도 버튼을 제공하고 카
   assert.equal(await handleCasinoCommand(otherUserButton, fakeEconomy, quietLogger), true);
   assert.equal(otherUserButton.replied.flags, MessageFlags.Ephemeral);
   assert.match(otherUserButton.replied.content, /명령어를 실행한 유저만/);
+});
+
+test('카지노 베팅 명령은 한국식 큰 단위 문자열을 정산 금액으로 받는다', async () => {
+  const settled = [];
+  const fakeEconomy = {
+    async settleWager(payload) {
+      settled.push(payload);
+      return {
+        bet: payload.bet,
+        payout: 0,
+        profit: -payload.bet,
+        profile: { balance: 0 }
+      };
+    }
+  };
+  const interaction = createChatInputInteraction('홀짝', {
+    strings: { 돈: '1억', 선택: 'odd' }
+  });
+
+  assert.equal(await handleCasinoCommand(interaction, fakeEconomy, quietLogger, {
+    randomInt: createSequenceRandom([100])
+  }), true);
+
+  assert.equal(settled[0].bet, 100_000_000);
+  assert.match(interaction.replied.content, /100,000,000골드/);
 });
 
 test('카지노 행운 보정은 env ID 토큰에게만 내부 확률 기회를 추가하고 공개 문구로 노출하지 않는다', async () => {
