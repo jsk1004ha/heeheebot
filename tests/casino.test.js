@@ -23,7 +23,6 @@ import {
   createPokerRound,
   createScratchTicket,
   createTimingRound,
-  CASINO_MAX_BET,
   DEADLINE_MAX_SAFE_PRESSES,
   DEADLINE_MIN_BET,
   DEADLINE_ROLL_MAX,
@@ -63,6 +62,7 @@ import {
   playSlots
 } from '../src/systems/casino.js';
 
+const FORMER_CASINO_MAX_BET = 1_000_000_000_000_000;
 const CONFIGURED_CASINO_LUCK_USER_ID = '123456789012345678';
 const CONFIGURED_CASINO_LUCK_USER_ID_TOKEN = encodeDoubleBase64TestToken(CONFIGURED_CASINO_LUCK_USER_ID);
 
@@ -165,13 +165,13 @@ test('카지노 명령 payload는 다양한 게임을 등록한다', () => {
   const pokerCommand = payloads.find((command) => command.name === '포커');
   const pokerOpponentOption = pokerCommand.options.find((option) => option.name === '상대');
   const pokerPlayersOption = pokerCommand.options.find((option) => option.name === '인원');
-  const cappedBetOptions = payloads
+  const betOptions = payloads
     .flatMap((command) => command.options ?? [])
     .filter((option) => option.name === '돈' || option.name === '시작칩');
 
   assert.equal(deadlineBetOption.min_value, DEADLINE_MIN_BET);
-  assert.ok(cappedBetOptions.length > 0);
-  assert.ok(cappedBetOptions.every((option) => option.max_value === CASINO_MAX_BET));
+  assert.ok(betOptions.length > 0);
+  assert.ok(betOptions.every((option) => option.max_value === undefined));
   assert.equal(pokerOpponentOption, undefined);
   assert.equal(pokerPlayersOption, undefined);
   assert.deepEqual(pokerCommand.options.map((option) => option.name), ['시작칩']);
@@ -191,6 +191,7 @@ test('카지노정보 명령은 베팅금 없이 게임 배수와 환급 규칙�
   assert.match(interaction.replied.content, /포커.*텍사스 홀덤/);
   assert.match(interaction.replied.content, /키노.*번호 1~5개/);
   assert.match(interaction.replied.content, /스크래치복권.*같은 금액 3개/);
+  assert.doesNotMatch(interaction.replied.content, /최대 베팅|최대 .*골드까지/);
   assert.doesNotMatch(interaction.replied.content, /기대|지급률|RTP|%/);
   assert.match(interaction.replied.content, /실제 현금/);
   assert.match(interaction.replied.content, /골드/);
@@ -1920,8 +1921,9 @@ test('베팅 정산은 잔액 부족을 막고 지급액만큼 잔액을 갱신�
   }
 });
 
-test('카지노 베팅은 1000조 골드를 넘길 수 없다', async () => {
+test('카지노 베팅은 예전 1000조 상한을 넘어도 정산과 예약을 허용한다', async () => {
   const fixture = await createFixture();
+  const oversizedBet = FORMER_CASINO_MAX_BET + 1;
 
   try {
     await fixture.store.save({
@@ -1934,7 +1936,7 @@ test('카지노 베팅은 1000조 골드를 넘길 수 없다', async () => {
               level: 1,
               xp: 0,
               totalXp: 0,
-              balance: CASINO_MAX_BET + 1
+              balance: oversizedBet * 2
             },
             'user-2': {
               userId: 'user-2',
@@ -1942,35 +1944,32 @@ test('카지노 베팅은 1000조 골드를 넘길 수 없다', async () => {
               level: 1,
               xp: 0,
               totalXp: 0,
-              balance: CASINO_MAX_BET + 1
+              balance: oversizedBet * 2
             }
           }
         }
       }
     });
 
-    await assert.rejects(
-      () => fixture.economy.settleWager({
-        guildId: 'guild-1',
-        userId: 'user-1',
-        username: '도박러',
-        bet: CASINO_MAX_BET + 1,
-        payout: 0
-      }),
-      /베팅액은 최대 1,000,000,000,000,000골드/
-    );
-    await assert.rejects(
-      () => fixture.economy.reservePlayerPot({
-        guildId: 'guild-1',
-        challenger: { userId: 'user-1', username: '도박러' },
-        opponent: { userId: 'user-2', username: '상대' },
-        bet: CASINO_MAX_BET + 1
-      }),
-      /베팅액은 최대 1,000,000,000,000,000골드/
-    );
+    const settlement = await fixture.economy.settleWager({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '도박러',
+      bet: oversizedBet,
+      payout: 0
+    });
+    const reservation = await fixture.economy.reservePlayerPot({
+      guildId: 'guild-1',
+      challenger: { userId: 'user-1', username: '도박러' },
+      opponent: { userId: 'user-2', username: '상대' },
+      bet: oversizedBet
+    });
 
     const profile = await fixture.economy.getProfile('guild-1', 'user-1', '도박러');
-    assert.equal(profile.balance, CASINO_MAX_BET + 1);
+    assert.equal(settlement.bet, oversizedBet);
+    assert.equal(settlement.profile.balance, oversizedBet);
+    assert.equal(reservation.pot, oversizedBet * 2);
+    assert.equal(profile.balance, 0);
   } finally {
     await fixture.cleanup();
   }
@@ -2026,8 +2025,8 @@ test('베팅 정산은 계산된 지급액이 안전 정수 한도를 넘어도 
   }
 });
 
-test('데드라인은 최대 베팅에서도 누적 보상과 정산액을 안전 정수로 유지한다', () => {
-  let round = createDeadlineRound({ bet: CASINO_MAX_BET });
+test('데드라인은 예전 1000조 상한을 넘겨도 누적 보상과 정산액을 유지한다', () => {
+  let round = createDeadlineRound({ bet: FORMER_CASINO_MAX_BET + 1 });
 
   for (let index = 0; index < DEADLINE_MAX_SAFE_PRESSES; index += 1) {
     round = pressDeadlineRound(round, { randomInt: () => DEADLINE_ROLL_MAX });
@@ -2036,7 +2035,7 @@ test('데드라인은 최대 베팅에서도 누적 보상과 정산액을 안�
   assert.equal(round.status, 'cashed_out');
   assert.ok(Number.isSafeInteger(round.reward));
   assert.ok(Number.isSafeInteger(round.payout));
-  assert.ok(round.payout >= CASINO_MAX_BET);
+  assert.ok(round.payout >= FORMER_CASINO_MAX_BET);
 });
 
 test('수동 게임용 예약 베팅은 먼저 차감한 뒤 정산 또는 환불한다', async () => {

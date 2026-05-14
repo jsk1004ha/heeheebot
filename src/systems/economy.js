@@ -120,7 +120,6 @@ import {
   isAccountSelectionRequiredError,
   resolveLinkedAccountSelection
 } from './accounts.js';
-import { CASINO_MAX_BET } from './casino.js';
 import {
   addMoney,
   compareMoney,
@@ -4347,10 +4346,6 @@ function normalizePositiveInteger(value, label) {
 
 function normalizeCasinoBet(value, label) {
   const normalized = normalizePositiveMoneyValue(value, label);
-
-  if (compareMoney(normalized, CASINO_MAX_BET) > 0) {
-    throw new Error(`${label}은 최대 ${CASINO_MAX_BET.toLocaleString()}골드까지 가능합니다.`);
-  }
 
   return normalized;
 }

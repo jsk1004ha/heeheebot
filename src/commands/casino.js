@@ -19,7 +19,6 @@ import {
   createScratchTicket,
   createTimingRound,
   DEADLINE_MAX_SAFE_PRESSES,
-  CASINO_MAX_BET,
   DEADLINE_MIN_BET,
   DEADLINE_ROLL_MAX,
   TIMING_PAYOUT_TIERS,
@@ -113,7 +112,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     )
     .addStringOption((option) =>
@@ -134,7 +132,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     )
     .addStringOption((option) =>
@@ -155,7 +152,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     ),
   new SlashCommandBuilder()
@@ -166,7 +162,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription(`베팅할 골드 (최소 ${DEADLINE_MIN_BET.toLocaleString()}골드)`)
         .setMinValue(DEADLINE_MIN_BET)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     ),
   new SlashCommandBuilder()
@@ -177,7 +172,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     ),
   new SlashCommandBuilder()
@@ -188,7 +182,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     )
     .addStringOption((option) =>
@@ -210,7 +203,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     ),
   new SlashCommandBuilder()
@@ -221,7 +213,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     )
     .addStringOption((option) =>
@@ -242,7 +233,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     )
     .addUserOption((option) =>
@@ -258,7 +248,6 @@ export const casinoCommands = [
         .setName('시작칩')
         .setDescription('포커방 시작 스택으로 사용할 칩. 시작하면 같은 수의 골드가 칩으로 바뀝니다.')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     ),
   new SlashCommandBuilder()
@@ -269,7 +258,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     )
     .addStringOption((option) =>
@@ -295,7 +283,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     )
     .addStringOption((option) =>
@@ -317,7 +304,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     )
     .addStringOption((option) =>
@@ -338,7 +324,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     )
     .addStringOption((option) =>
@@ -360,7 +345,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     )
     .addStringOption((option) =>
@@ -602,10 +586,6 @@ function normalizeCasinoBetInput(value, label = '베팅액') {
   if (!Number.isSafeInteger(normalized) || normalized <= 0) {
     throw new Error(`${label}은 1 이상의 정수여야 합니다.`);
   }
-  if (normalized > CASINO_MAX_BET) {
-    throw new Error(`${label}은 최대 ${CASINO_MAX_BET.toLocaleString()}골드까지 가능합니다.`);
-  }
-
   return normalized;
 }
 
@@ -875,7 +855,6 @@ function formatCasinoInfo() {
     '🎰 **카지노 게임 정보**',
     '모든 게임은 봇 내부 골드만 사용하며 실제 현금 결제/현금 환전 기능은 없습니다.',
     '골드는 모든 컨텐츠가 공유하는 단일 잔액입니다.',
-    `최대 베팅/시작칩은 **${CASINO_MAX_BET.toLocaleString()}골드**입니다.`,
     '',
     '- `/홀짝`: 홀/짝 적중 시 1.9배, 99~100은 하우스 승리',
     '- `/주사위`: 높음(4~6) 또는 낮음(1~3) 적중 시 1.9배',
