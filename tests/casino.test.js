@@ -23,6 +23,7 @@ import {
   createPokerRound,
   createScratchTicket,
   createTimingRound,
+  CASINO_MAX_BET,
   DEADLINE_MIN_BET,
   formatEmojiRaceTrack,
   formatScratchPrizeShort,
@@ -162,8 +163,13 @@ test('카지노 명령 payload는 다양한 게임을 등록한다', () => {
   const pokerCommand = payloads.find((command) => command.name === '포커');
   const pokerOpponentOption = pokerCommand.options.find((option) => option.name === '상대');
   const pokerPlayersOption = pokerCommand.options.find((option) => option.name === '인원');
+  const cappedBetOptions = payloads
+    .flatMap((command) => command.options ?? [])
+    .filter((option) => option.name === '돈' || option.name === '시작칩');
 
   assert.equal(deadlineBetOption.min_value, DEADLINE_MIN_BET);
+  assert.ok(cappedBetOptions.length > 0);
+  assert.ok(cappedBetOptions.every((option) => option.max_value === CASINO_MAX_BET));
   assert.equal(pokerOpponentOption, undefined);
   assert.equal(pokerPlayersOption, undefined);
   assert.deepEqual(pokerCommand.options.map((option) => option.name), ['시작칩']);
@@ -1907,6 +1913,62 @@ test('베팅 정산은 잔액 부족을 막고 지급액만큼 잔액을 갱신�
       }),
       /골드가 부족합니다/
     );
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('카지노 베팅은 1000조 골드를 넘길 수 없다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await fixture.store.save({
+      guilds: {
+        'guild-1': {
+          users: {
+            'user-1': {
+              userId: 'user-1',
+              username: '도박러',
+              level: 1,
+              xp: 0,
+              totalXp: 0,
+              balance: CASINO_MAX_BET + 1
+            },
+            'user-2': {
+              userId: 'user-2',
+              username: '상대',
+              level: 1,
+              xp: 0,
+              totalXp: 0,
+              balance: CASINO_MAX_BET + 1
+            }
+          }
+        }
+      }
+    });
+
+    await assert.rejects(
+      () => fixture.economy.settleWager({
+        guildId: 'guild-1',
+        userId: 'user-1',
+        username: '도박러',
+        bet: CASINO_MAX_BET + 1,
+        payout: 0
+      }),
+      /베팅액은 최대 1,000,000,000,000,000골드/
+    );
+    await assert.rejects(
+      () => fixture.economy.reservePlayerPot({
+        guildId: 'guild-1',
+        challenger: { userId: 'user-1', username: '도박러' },
+        opponent: { userId: 'user-2', username: '상대' },
+        bet: CASINO_MAX_BET + 1
+      }),
+      /베팅액은 최대 1,000,000,000,000,000골드/
+    );
+
+    const profile = await fixture.economy.getProfile('guild-1', 'user-1', '도박러');
+    assert.equal(profile.balance, CASINO_MAX_BET + 1);
   } finally {
     await fixture.cleanup();
   }

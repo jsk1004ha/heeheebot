@@ -35,6 +35,7 @@ const KENO_DRAW_COUNT = 10;
 const KENO_MAX_PICKS = 5;
 export const DEADLINE_MAX_SAFE_PRESSES = 12;
 export const DEADLINE_MIN_BET = 100;
+export const CASINO_MAX_BET = 1_000_000_000_000_000;
 export const DEADLINE_ROLL_MAX = 10_000;
 const DEADLINE_BASE_BUST_CHANCE_BPS = 1_000;
 const DEADLINE_BUST_CHANCE_STEP_BPS = 750;
@@ -2222,6 +2223,9 @@ function normalizePokerBet(bet) {
   if (!Number.isSafeInteger(normalized) || normalized <= 0) {
     throw new Error('포커 베팅액은 1 이상의 정수여야 합니다.');
   }
+  if (normalized > CASINO_MAX_BET) {
+    throw new Error(`포커 베팅액은 최대 ${CASINO_MAX_BET.toLocaleString()}골드까지 가능합니다.`);
+  }
 
   return normalized;
 }
@@ -3013,6 +3017,9 @@ function normalizeTimingBet(bet) {
   if (!Number.isSafeInteger(normalized) || normalized <= 0) {
     throw new Error('타이밍 베팅액은 1 이상의 정수여야 합니다.');
   }
+  if (normalized > CASINO_MAX_BET) {
+    throw new Error(`타이밍 베팅액은 최대 ${CASINO_MAX_BET.toLocaleString()}골드까지 가능합니다.`);
+  }
 
   return normalized;
 }
@@ -3073,7 +3080,18 @@ function normalizeDeadlineBet(bet) {
   if (!Number.isSafeInteger(normalized) || normalized < DEADLINE_MIN_BET) {
     throw new Error(`데드라인 베팅액은 ${DEADLINE_MIN_BET.toLocaleString()} 이상의 정수여야 합니다.`);
   }
+  if (normalized > CASINO_MAX_BET) {
+    throw new Error(`데드라인 베팅액은 최대 ${CASINO_MAX_BET.toLocaleString()}골드까지 가능합니다.`);
+  }
 
+  return normalized;
+}
+
+function normalizeCasinoBetAmount(value, label) {
+  const normalized = normalizePositiveSafeInteger(value, label);
+  if (normalized > CASINO_MAX_BET) {
+    throw new Error(`${label}은 최대 ${CASINO_MAX_BET.toLocaleString()}골드까지 가능합니다.`);
+  }
   return normalized;
 }
 
@@ -3125,7 +3143,7 @@ function normalizeEmojiRacePoolBets(bets) {
     const key = String(betEntry?.key ?? userId).trim();
     const username = String(betEntry?.username ?? userId).trim();
     const choice = normalizeEmojiRaceChoice(betEntry?.choice);
-    const bet = normalizePositiveSafeInteger(betEntry?.bet, `${username} 베팅액`);
+    const bet = normalizeCasinoBetAmount(betEntry?.bet, `${username} 베팅액`);
 
     if (!key || !userId || !username) {
       throw new Error('이모지 경마 베팅 참가자 정보가 올바르지 않습니다.');

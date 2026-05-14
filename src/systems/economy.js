@@ -120,6 +120,7 @@ import {
   isAccountSelectionRequiredError,
   resolveLinkedAccountSelection
 } from './accounts.js';
+import { CASINO_MAX_BET } from './casino.js';
 
 const RPG_SCHEMA_VERSION = 'heehee-rpg-v1';
 
@@ -3891,7 +3892,7 @@ export class EconomyService {
   }
 
   async settleWager({ guildId, userId, username, bet, payout }) {
-    const normalizedBet = normalizePositiveInteger(bet, '베팅액');
+    const normalizedBet = normalizeCasinoBet(bet, '베팅액');
     const normalizedPayout = normalizeNonNegativeInteger(payout, '지급액');
 
     return this.store.update((data) => {
@@ -3928,7 +3929,7 @@ export class EconomyService {
   }
 
   async reserveWager({ guildId, userId, username, bet }) {
-    const normalizedBet = normalizePositiveInteger(bet, '베팅액');
+    const normalizedBet = normalizeCasinoBet(bet, '베팅액');
 
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
@@ -3943,7 +3944,7 @@ export class EconomyService {
   }
 
   async resolveReservedWager({ guildId, userId, username, bet, payout }) {
-    const normalizedBet = normalizePositiveInteger(bet, '베팅액');
+    const normalizedBet = normalizeCasinoBet(bet, '베팅액');
     const normalizedPayout = normalizeNonNegativeInteger(payout, '지급액');
 
     return this.store.update((data) => {
@@ -3993,7 +3994,7 @@ export class EconomyService {
   }
 
   async reservePlayerPot({ guildId, challenger, opponent, bet }) {
-    const normalizedBet = normalizePositiveInteger(bet, '베팅액');
+    const normalizedBet = normalizeCasinoBet(bet, '베팅액');
 
     if (challenger.userId === opponent.userId) {
       throw new Error('자기 자신과는 대결할 수 없습니다.');
@@ -4024,7 +4025,7 @@ export class EconomyService {
   }
 
   async reservePlayerTablePot({ guildId, players, bet }) {
-    const normalizedBet = normalizePositiveInteger(bet, '베팅액');
+    const normalizedBet = normalizeCasinoBet(bet, '베팅액');
     const normalizedPlayers = normalizePlayerTableParticipants(players);
 
     return this.store.update((data) => {
@@ -4054,7 +4055,7 @@ export class EconomyService {
   }
 
   async resolveReservedPlayerPot({ guildId, challenger, opponent, bet, winnerUserId }) {
-    const normalizedBet = normalizePositiveInteger(bet, '베팅액');
+    const normalizedBet = normalizeCasinoBet(bet, '베팅액');
 
     return this.store.update((data) => {
       const challengerProfile = getOrCreateProfile(data, guildId, challenger.userId, challenger.username, this);
@@ -4127,7 +4128,7 @@ export class EconomyService {
     opponentPayout,
     winnerUserId = null
   }) {
-    const normalizedBet = normalizePositiveInteger(bet, '베팅액');
+    const normalizedBet = normalizeCasinoBet(bet, '베팅액');
     const normalizedChallengerPayout = normalizeNonNegativeInteger(challengerPayout, '도전자 반환 스택');
     const normalizedOpponentPayout = normalizeNonNegativeInteger(opponentPayout, '상대 반환 스택');
     const reservedTotal = normalizedBet * 2;
@@ -4190,7 +4191,7 @@ export class EconomyService {
     payouts,
     winnerUserIds = []
   }) {
-    const normalizedBet = normalizePositiveInteger(bet, '베팅액');
+    const normalizedBet = normalizeCasinoBet(bet, '베팅액');
     const normalizedPlayers = normalizePlayerTableParticipants(players);
     const normalizedPayouts = normalizePlayerTablePayouts(payouts, normalizedPlayers);
     const reservedTotal = normalizedBet * normalizedPlayers.length;
@@ -4244,7 +4245,7 @@ export class EconomyService {
   }
 
   async settlePlayerPot({ guildId, challenger, opponent, bet, winnerUserId }) {
-    const normalizedBet = normalizePositiveInteger(bet, '베팅액');
+    const normalizedBet = normalizeCasinoBet(bet, '베팅액');
 
     if (challenger.userId === opponent.userId) {
       throw new Error('자기 자신과는 대결할 수 없습니다.');
@@ -4325,6 +4326,16 @@ function normalizePositiveInteger(value, label) {
 
   if (!Number.isSafeInteger(normalized) || normalized <= 0) {
     throw new Error(`${label}은 1 이상의 정수여야 합니다.`);
+  }
+
+  return normalized;
+}
+
+function normalizeCasinoBet(value, label) {
+  const normalized = normalizePositiveInteger(value, label);
+
+  if (normalized > CASINO_MAX_BET) {
+    throw new Error(`${label}은 최대 ${CASINO_MAX_BET.toLocaleString()}골드까지 가능합니다.`);
   }
 
   return normalized;
@@ -4557,8 +4568,8 @@ function creditWagerSettlementPayout({
   economy,
   now = Date.now()
 }) {
-  const normalizedPayout = normalizeStoredNonNegativeInteger(payout);
-  const normalizedStakeBasis = normalizeStoredNonNegativeInteger(stakeBasis);
+  const normalizedPayout = normalizeNonNegativeInteger(payout, '지급액');
+  const normalizedStakeBasis = normalizeNonNegativeInteger(stakeBasis, '베팅 기준액');
   const returnedStake = Math.min(normalizedPayout, normalizedStakeBasis);
   const profit = Math.max(0, normalizedPayout - normalizedStakeBasis);
   const balanceBefore = profile.balance;
@@ -6272,7 +6283,7 @@ function getRpgCasinoSettlementModifier(profile) {
 }
 
 function applyRpgCasinoSettlementModifier({ bet, payout, modifier }) {
-  const normalizedBet = normalizePositiveInteger(bet, '베팅액');
+  const normalizedBet = normalizeCasinoBet(bet, '베팅액');
   const normalizedPayout = normalizeNonNegativeInteger(payout, '지급액');
   const safeModifier = modifier?.applied ? modifier : null;
   if (!safeModifier) {
