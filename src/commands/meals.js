@@ -22,7 +22,7 @@ const MEAL_STYLES = Object.freeze({
 export const mealCommands = [
   new SlashCommandBuilder()
     .setName('급식')
-    .setDescription('인천과학고등학교 오늘 급식을 알려줍니다.')
+    .setDescription('인천과학고등학교 오늘/내일 급식을 알려줍니다.')
     .addStringOption((option) =>
       option
         .setName('식사')
@@ -32,6 +32,15 @@ export const mealCommands = [
           { name: '조식', value: '1' },
           { name: '중식', value: '2' },
           { name: '석식', value: '3' }
+        )
+    )
+    .addStringOption((option) =>
+      option
+        .setName('날짜')
+        .setDescription('확인할 날짜')
+        .addChoices(
+          { name: '오늘', value: 'today' },
+          { name: '내일', value: 'tomorrow' }
         )
     ),
   new SlashCommandBuilder()
@@ -76,9 +85,16 @@ export async function handleMealCommand(interaction, meals) {
   }
 
   try {
-    const dailyMeals = await meals.getTodayMeals();
     const mealFilter = interaction.options.getString('식사') ?? 'all';
-    await interaction.reply(formatMealMessage(dailyMeals, { mealFilter }));
+    const mealDay = normalizeMealDay(interaction.options.getString('날짜'));
+    const dailyMeals = mealDay === 'tomorrow'
+      ? await meals.getTomorrowMeals()
+      : await meals.getTodayMeals();
+
+    await interaction.reply(formatMealMessage(dailyMeals, {
+      mealFilter,
+      dayLabel: mealDay === 'tomorrow' ? '내일' : '오늘'
+    }));
   } catch (error) {
     await interaction.reply({
       content: `급식 정보를 불러오지 못했습니다: ${error.message}`,
@@ -148,13 +164,14 @@ async function replyWithAutoMealPermissionError(interaction) {
   });
 }
 
-export function formatMealMessage(dailyMeals, { mealFilter = 'all' } = {}) {
+export function formatMealMessage(dailyMeals, { mealFilter = 'all', dayLabel = '오늘' } = {}) {
   const normalizedMealFilter = normalizeMealFilter(mealFilter);
   const filterLabel = MEAL_FILTERS[normalizedMealFilter];
+  const normalizedDayLabel = normalizeMealDayLabel(dayLabel);
   const title = normalizedMealFilter === 'all' ? '급식' : `${filterLabel} 급식`;
   const header = [
     `🍱 **${dailyMeals.school.name} ${title}**`,
-    `📅 \`${formatDisplayDate(dailyMeals.date)}\` · ${normalizedMealFilter === 'all' ? '오늘의 전체 식단' : `${filterLabel}만 보기`}`
+    `📅 \`${formatDisplayDate(dailyMeals.date)}\` · ${normalizedMealFilter === 'all' ? `${normalizedDayLabel}의 전체 식단` : `${normalizedDayLabel} ${filterLabel}만 보기`}`
   ].join('\n');
   const meals = normalizedMealFilter === 'all'
     ? dailyMeals.meals
@@ -174,7 +191,7 @@ export function formatMealMessage(dailyMeals, { mealFilter = 'all' } = {}) {
   return [
     header,
     ...sections,
-    '🍚 오늘도 맛있게 먹고 살아남자.',
+    `🍚 ${normalizedDayLabel}도 맛있게 먹고 살아남자.`,
     '🧾 괄호 안 숫자는 NEIS 알레르기 유발 식재료 번호입니다.'
   ].join('\n\n');
 }
@@ -197,4 +214,12 @@ function formatMealSection(meal) {
 function normalizeMealFilter(mealFilter) {
   const normalized = String(mealFilter ?? 'all');
   return Object.hasOwn(MEAL_FILTERS, normalized) ? normalized : 'all';
+}
+
+function normalizeMealDay(value) {
+  return value === 'tomorrow' ? 'tomorrow' : 'today';
+}
+
+function normalizeMealDayLabel(value) {
+  return value === '내일' ? '내일' : '오늘';
 }

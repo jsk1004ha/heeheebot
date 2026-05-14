@@ -43,6 +43,10 @@ const DEFAULT_SOCIAL_LOAN_INTEREST_TYPE = 'compound';
 const SOCIAL_LOAN_INTEREST_PERCENT_CHOICES = Object.freeze([3, 5, 10, 15, 20]);
 const SOCIAL_LOAN_TERM_HOUR_CHOICES = Object.freeze([24, 48, 72]);
 const SOCIAL_LOAN_INTEREST_PERIOD_HOUR_CHOICES = Object.freeze([1, 2, 3]);
+const SOCIAL_LOAN_INTEREST_TYPE_CHOICES = Object.freeze([
+  { name: '단리', value: 'simple' },
+  { name: '복리', value: 'compound' }
+]);
 
 export const economyCommands = [
   new SlashCommandBuilder()
@@ -91,7 +95,7 @@ export const economyCommands = [
     .addIntegerOption((option) =>
       option
         .setName('이자')
-        .setDescription('이자율(%). 기본 5%, 복리 고정')
+        .setDescription('이자율(%). 기본 5%')
         .addChoices(...SOCIAL_LOAN_INTEREST_PERCENT_CHOICES.map((value) => ({
           name: `${value}%`,
           value
@@ -114,6 +118,12 @@ export const economyCommands = [
           name: `${value}시간`,
           value
         })))
+    )
+    .addStringOption((option) =>
+      option
+        .setName('이자방식')
+        .setDescription('이자 계산 방식. 기본 복리')
+        .addChoices(...SOCIAL_LOAN_INTEREST_TYPE_CHOICES)
     ),
   new SlashCommandBuilder()
     .setName('돈빌려주기')
@@ -337,7 +347,7 @@ export async function handleEconomyCommand(interaction, economy, services = {}) 
       const interestPercent = interaction.options.getInteger('이자') ?? DEFAULT_SOCIAL_LOAN_INTEREST_PERCENT;
       const interestPeriodHours = interaction.options.getInteger('이자주기') ?? DEFAULT_SOCIAL_LOAN_INTEREST_PERIOD_HOURS;
       const repaymentMode = DEFAULT_SOCIAL_LOAN_REPAYMENT_MODE;
-      const interestType = DEFAULT_SOCIAL_LOAN_INTEREST_TYPE;
+      const interestType = interaction.options.getString('이자방식') ?? DEFAULT_SOCIAL_LOAN_INTEREST_TYPE;
 
       if (target.bot) {
         throw new Error('봇에게는 돈을 빌릴 수 없습니다.');

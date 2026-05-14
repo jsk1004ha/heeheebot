@@ -31,6 +31,15 @@ export class MealService {
     });
   }
 
+  async getTomorrowMeals() {
+    const now = this.now();
+    const timestamp = now instanceof Date ? now.getTime() : Number(now);
+
+    return this.getDailyMeals({
+      date: formatKoreaDate(timestamp + DAY_MS)
+    });
+  }
+
   async getDailyMeals({ date = formatKoreaDate(this.now()) } = {}) {
     const mealDate = normalizeMealDate(date);
     const response = await this.fetchFn(buildNeisMealUrl({

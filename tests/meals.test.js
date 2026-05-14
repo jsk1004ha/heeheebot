@@ -25,11 +25,13 @@ test('급식 명령 payload는 /급식을 등록한다', () => {
   const mealPayload = payloads.find((payload) => payload.name === '급식');
   const autoMealPayload = payloads.find((payload) => payload.name === '자동급식');
   const mealOption = mealPayload.options.find((option) => option.name === '식사');
+  const dateOption = mealPayload.options.find((option) => option.name === '날짜');
 
   assert.ok(mealPayload);
   assert.ok(autoMealPayload);
   assert.match(mealPayload.description, /인천과학고등학교/);
   assert.deepEqual(mealOption.choices.map((choice) => choice.value), ['all', '1', '2', '3']);
+  assert.deepEqual(dateOption.choices.map((choice) => choice.value), ['today', 'tomorrow']);
   assert.deepEqual(autoMealPayload.options.map((option) => option.name), ['설정', '해제', '상태']);
   assert.equal(autoMealPayload.default_member_permissions, undefined);
 });
@@ -71,6 +73,27 @@ test('급식 서비스는 한국 날짜로 오늘 식단을 조회하고 식사 
   assert.deepEqual(result.meals.map((meal) => meal.mealName), ['조식', '중식', '석식']);
   assert.deepEqual(result.meals[0].dishes, ['토스트 & 우유 (1.2.5.6)', '사과']);
   assert.equal(result.meals[1].calories, '700 Kcal');
+});
+
+test('급식 서비스는 한국 날짜 기준 내일 식단을 조회한다', async () => {
+  let requestedUrl = null;
+  const service = new MealService({
+    now: () => Date.parse('2026-05-06T15:30:00Z'),
+    fetchFn: async (url) => {
+      requestedUrl = new URL(url);
+      return {
+        ok: true,
+        async json() {
+          return createMealApiResponse();
+        }
+      };
+    }
+  });
+
+  const result = await service.getTomorrowMeals();
+
+  assert.equal(requestedUrl.searchParams.get('MLSV_YMD'), '20260508');
+  assert.equal(result.date, '20260508');
 });
 
 test('급식 메시지는 조식/중식/석식 섹션과 메뉴를 표시한다', () => {
@@ -117,6 +140,32 @@ test('급식 명령 핸들러는 오늘 급식 응답을 반환한다', async ()
   assert.match(interaction.replies[0], /인천과학고등학교 중식 급식/);
   assert.match(interaction.replies[0], /볶음밥/);
   assert.doesNotMatch(interaction.replies[0], /토스트/);
+});
+
+test('급식 명령 핸들러는 내일 급식도 조회할 수 있다', async () => {
+  const calls = [];
+  const interaction = createInteraction('급식', {
+    stringOptions: {
+      날짜: 'tomorrow',
+      식사: '1'
+    }
+  });
+  const handled = await handleMealCommand(interaction, {
+    async getTodayMeals() {
+      calls.push('today');
+      return parseNeisMealResponse(createMealApiResponse(), '20260507');
+    },
+    async getTomorrowMeals() {
+      calls.push('tomorrow');
+      return parseNeisMealResponse(createMealApiResponse(), '20260508');
+    }
+  });
+
+  assert.equal(handled, true);
+  assert.deepEqual(calls, ['tomorrow']);
+  assert.match(interaction.replies[0], /2026-05-08/);
+  assert.match(interaction.replies[0], /내일/);
+  assert.match(interaction.replies[0], /조식 급식/);
 });
 
 test('자동급식 명령은 서버별 알림 채널을 설정, 확인, 해제한다', async () => {
