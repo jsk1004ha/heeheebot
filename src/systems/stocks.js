@@ -1354,6 +1354,28 @@ export class StockService {
     });
   }
 
+  async getLeverageDebtSummary({ guildId, userId, username, now = Date.now() }) {
+    return this.store.update((data) => {
+      const guild = getOrCreateGuild(data, guildId);
+      const profile = getOrCreateMoneyProfile(data, guildId, userId, username, now);
+      const stockUser = getOrCreateStockUser(data, guildId, guild, userId, username, profile, now);
+      const positions = Object.values(stockUser.leveragedPositions ?? {});
+      const activeDebt = toCompatibleMoneyValue(addMoney(...positions.map((position) => position.debt ?? 0)));
+      const bankruptcy = getStockBankruptcySummary(profile);
+      const bankruptcyDebt = bankruptcy.debt;
+
+      return {
+        userId: profile.userId,
+        username: profile.username,
+        activeDebt,
+        bankruptcyDebt,
+        debtTotal: toCompatibleMoneyValue(addMoney(activeDebt, bankruptcyDebt)),
+        positionCount: positions.length,
+        bankruptcy
+      };
+    });
+  }
+
   async getPortfolio({ guildId, userId, username, now = Date.now() }) {
     return this.store.update((data) => {
       const guild = getOrCreateGuild(data, guildId);

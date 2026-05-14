@@ -4,7 +4,7 @@
 
 **희희봇은 라이빗을 침공한 터미네이터 희진이다.**
 
-![Version](https://img.shields.io/badge/version-v0.10.0-orange)
+![Version](https://img.shields.io/badge/version-v0.12.0-orange)
 ![Status](https://img.shields.io/badge/status-pre--1.0-yellow)
 ![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.5-339933?logo=nodedotjs&logoColor=white)
 ![discord.js](https://img.shields.io/badge/discord.js-v14-5865F2?logo=discord&logoColor=white)
@@ -47,7 +47,7 @@
 | 명령어 등록 | `npm start` 시 자동 동기화, 수동은 `npm run register` |
 | 테스트 | `node --test` 기반 도메인/라우팅/커맨드 테스트 |
 | 현재 커맨드 규모 | 최상위 slash command 97개 + 다수 subcommand |
-| 현재 버전 | `v0.10.0` — 1.0 이전 개발 버전 |
+| 현재 버전 | `v0.12.0` — 1.0 이전 개발 버전 |
 | 버전 산정 근거 | `v0.9.0` 마피아 기능 기준선에 이모지경마 다인 배당판 패치를 더해 `v0.9.1`로 산정 |
 
 ### 추천 첫 동선
@@ -74,6 +74,7 @@
 - 골드 송금, 랭킹, 계정 연동
 - 프로필 카드와 레벨 구간별 성장 배지
 - 통합 골드 사용처와 기존 지갑 정산 안내
+- 빌린돈·레버리지 채무·10조 클럽 기준 자동 역할 배정
 
 </td>
 <td width="50%" valign="top">
@@ -149,8 +150,8 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 현재 버전 | `v0.10.0` |
-| npm package version | `0.10.0` |
+| 현재 버전 | `v0.12.0` |
+| npm package version | `0.12.0` |
 | 기준 커밋 범위 | `d6b539a` → `919b758` + working tree |
 | 기준 커밋 수 | 119 commits + working tree |
 | 최신 기준 커밋 | `919b758` — `Merge branch 'main' of https://github.com/jsk1004ha/heeheebot` |
@@ -186,6 +187,14 @@ vMAJOR.MINOR.PATCH
 | `0.8` | `f8fa883` → `2ece970` | 계정 연동, 워들/숫자야구/투표 테스트, command startup sync, 자동급식 권한 체크, 도움말 개선 |
 
 ### 커밋 기록 기반 릴리스 노트
+
+#### `v0.12.0` — 경제 상태 역할 자동 배정
+
+- **경제 역할 자동화**: 활동 후 잔액과 부채를 다시 계산해 `노예`, `10조 클럽`, `일반인` 중 하나만 유지
+- **빌린돈 기준**: 유저 대출 남은 상환액 + 활성 레버리지 부채 + 레버리지 파산채무가 현재 골드보다 크면 `노예` 배정
+- **자산 기준**: 부채가 잔액보다 크지 않고 현재 골드가 10조를 초과하면 `10조 클럽`, 나머지는 `일반인` 배정
+- **역할 색상**: `노예`는 회색, `10조 클럽`은 금색, `일반인`은 Discord 기본 색으로 자동 생성/보정
+- **버전 관리**: npm package와 문서 표기를 `0.12.0`으로 갱신
 
 #### `v0.10.0` — Lavalink/yt-dlp 음악 시스템
 
@@ -250,13 +259,13 @@ vMAJOR.MINOR.PATCH
 git log --date=short --pretty=format:'%h %ad %s'
 
 # 2. package.json / package-lock.json 버전 갱신
-npm version 0.10.0 --no-git-tag-version
+npm version 0.12.0 --no-git-tag-version
 
 # 3. 테스트
 npm test
 
 # 4. 태그 생성 예시
-git tag -a v0.10.0 -m "HeeHeeBot v0.10.0"
+git tag -a v0.12.0 -m "HeeHeeBot v0.12.0"
 ```
 
 ---
@@ -564,7 +573,7 @@ npm run register
 /청소 30
 ```
 
-봇 역할은 관리 대상 유저보다 위에 있어야 하며, 필요한 권한은 `메시지 관리`, `멤버 타임아웃`, `킥`, `밴`, `서버 관리`입니다.
+봇 역할은 관리 대상 유저와 자동 배정 역할(`노예`, `10조 클럽`, `일반인`)보다 위에 있어야 하며, 필요한 권한은 `역할 관리`, `메시지 관리`, `멤버 타임아웃`, `킥`, `밴`, `서버 관리`입니다.
 
 </details>
 
@@ -621,7 +630,7 @@ npm start         # 명령어 자동 동기화 후 봇 시작
 - [ ] Application ID를 `DISCORD_CLIENT_ID`에 설정
 - [ ] 테스트 서버 빠른 등록이 필요하면 `DISCORD_GUILD_ID` 설정
 - [ ] **Message Content Intent** 활성화
-- [ ] 봇 초대 시 slash command, 메시지 전송, embed, 파일 첨부, 반응, 관리 권한 확인
+- [ ] 봇 초대 시 slash command, 메시지 전송, embed, 파일 첨부, 반응, 역할 관리, 관리 권한 확인
 
 ### 저장소·마이그레이션
 

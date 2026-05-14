@@ -97,6 +97,7 @@ import { TamagotchiService } from './systems/tamagotchi.js';
 import { TimetableService } from './systems/timetable.js';
 import { UnoGameManager } from './systems/uno.js';
 import { WordleService } from './systems/wordle.js';
+import { syncEconomicRoleForMember } from './systems/economic-roles.js';
 
 export function createBot({
   databasePath = 'data/profiles.sqlite',
@@ -221,7 +222,10 @@ export function createBot({
       }
 
       const handledAccountLinkComponent = await handleAccountLinkComponent(interaction, economy);
-      if (handledAccountLinkComponent) return;
+      if (handledAccountLinkComponent) {
+        await syncEconomicRoleAfterInteraction(interaction, economy, stocks, logger);
+        return;
+      }
 
       if (!checkedAccountSelectionBeforeDefer) {
         const needsAccountSelection = await replyWithAccountLinkSelectionIfNeeded(interaction, economy);
@@ -233,6 +237,7 @@ export function createBot({
       if (handledPrivateMiniGame) {
         await recordCommandActivity(interaction, economy, community, logger);
         await sendAutomaticAchievementNotice(interaction, community, logger, seasons);
+        await syncEconomicRoleAfterInteraction(interaction, economy, stocks, logger);
         return;
       }
 
@@ -249,6 +254,7 @@ export function createBot({
         }
         await recordCommandActivity(interaction, economy, community, logger);
         await sendAutomaticAchievementNotice(interaction, community, logger, seasons);
+        await syncEconomicRoleAfterInteraction(interaction, economy, stocks, logger);
         return;
       }
 
@@ -286,6 +292,7 @@ export function createBot({
       } else {
         await recordCommandActivity(interaction, economy, community, logger);
         await sendAutomaticAchievementNotice(interaction, community, logger, seasons);
+        await syncEconomicRoleAfterInteraction(interaction, economy, stocks, logger);
       }
     } catch (error) {
       if (isUnknownInteractionError(error)) {
@@ -337,6 +344,7 @@ export function createBot({
         ? false
         : await handleChoseongMessage(message, economy, logger);
       await rewardChatActivity(message, economy, community, logger);
+      await syncEconomicRoleAfterMessage(message, economy, stocks, logger);
       if (handledWordChain || handledLiarGame || handledChoseong) return;
     } catch (error) {
       logger.error('Failed to reward message activity:', error);
@@ -492,6 +500,42 @@ async function recordCommandActivity(interaction, economy, community, logger) {
     return result;
   } catch (error) {
     logger.error('Failed to reward command activity:', error);
+    return null;
+  }
+}
+
+async function syncEconomicRoleAfterInteraction(interaction, economy, stocks, logger) {
+  if (!interaction.inGuild?.() || !interaction.user?.id) return null;
+
+  try {
+    return await syncEconomicRoleForMember({
+      economy,
+      stocks,
+      guild: interaction.guild,
+      member: interaction.member,
+      userId: interaction.user.id,
+      username: interaction.user.username
+    });
+  } catch (error) {
+    logger.debug?.('Failed to sync economic Discord role after interaction:', error);
+    return null;
+  }
+}
+
+async function syncEconomicRoleAfterMessage(message, economy, stocks, logger) {
+  if (!message.inGuild?.() || !message.author?.id) return null;
+
+  try {
+    return await syncEconomicRoleForMember({
+      economy,
+      stocks,
+      guild: message.guild,
+      member: message.member,
+      userId: message.author.id,
+      username: message.author.username
+    });
+  } catch (error) {
+    logger.debug?.('Failed to sync economic Discord role after message:', error);
     return null;
   }
 }

@@ -16,7 +16,7 @@ export function loadConfig(env = process.env) {
         password: env.LAVALINK_PASSWORD ?? 'youshallnotpass',
         secure: parseBooleanEnv(env.LAVALINK_SECURE, false),
         sessionId: emptyToNull(env.LAVALINK_SESSION_ID),
-        clientName: env.LAVALINK_CLIENT_NAME ?? 'heeheebot/0.10',
+        clientName: env.LAVALINK_CLIENT_NAME ?? 'heeheebot/0.12',
         resumeTimeoutSeconds: parseIntegerEnv(env.LAVALINK_RESUME_TIMEOUT_SECONDS, 120),
         reconnectEnabled: parseBooleanEnv(env.LAVALINK_RECONNECT_ENABLED, true),
         reconnectInitialDelayMs: parseIntegerEnv(env.LAVALINK_RECONNECT_INITIAL_DELAY_MS, 1000),
