@@ -4344,11 +4344,11 @@ function normalizeCasinoBet(value, label) {
 function normalizeNonNegativeInteger(value, label) {
   const normalized = Number(value);
 
-  if (!Number.isSafeInteger(normalized) || normalized < 0) {
+  if (!Number.isFinite(normalized) || !Number.isInteger(normalized) || normalized < 0) {
     throw new Error(`${label}은 0 이상의 정수여야 합니다.`);
   }
 
-  return normalized;
+  return clampNonNegativeSafeInteger(normalized);
 }
 
 function normalizeRequiredId(value, label) {
@@ -4552,7 +4552,7 @@ function getSocialLoanRemaining(loan) {
 }
 
 function creditCurrencyWithoutIncomeRepayment(profile, currencyId, amount) {
-  const normalizedAmount = normalizeStoredNonNegativeInteger(amount);
+  const normalizedAmount = normalizeStoredMoneyAmount(amount);
   if (normalizedAmount <= 0) return getCurrencyBalance(profile, currencyId);
   const current = getCurrencyBalance(profile, currencyId);
   return setCurrencyBalance(profile, currencyId, current + normalizedAmount);
@@ -4633,7 +4633,7 @@ function creditCurrencyWithSocialLoanRepayment({
   economy,
   now = Date.now()
 }) {
-  const gross = normalizeStoredNonNegativeInteger(amount);
+  const gross = normalizeStoredMoneyAmount(amount);
   const balanceBefore = profile.balance;
   creditCurrency(profile, currencyId, gross);
   const socialLoanRepayments = repayEligibleSocialLoansFromIncome({
@@ -4935,7 +4935,7 @@ function normalizeEconomyProfile(profile, userId, username, economy, now = Date.
   profile.level = normalizeStoredPositiveInteger(profile.level, 1);
   profile.xp = normalizeStoredNonNegativeInteger(profile.xp);
   profile.totalXp = normalizeStoredNonNegativeInteger(profile.totalXp);
-  profile.balance = normalizeStoredNonNegativeInteger(profile.balance);
+  profile.balance = normalizeStoredMoneyAmount(profile.balance);
   migrateLegacyWalletsToGold(profile);
   profile.wallets = normalizeWallets(profile.wallets);
   profile.lastMessageRewardAt = normalizeStoredNonNegativeInteger(profile.lastMessageRewardAt);
@@ -6294,13 +6294,17 @@ function applyRpgCasinoSettlementModifier({ bet, payout, modifier }) {
   if (baseProfit > 0) {
     return {
       bet: normalizedBet,
-      payout: normalizedBet + Math.floor(baseProfit * Math.max(1, safeModifier.winMultiplier))
+      payout: clampNonNegativeSafeInteger(
+        normalizedBet + Math.floor(baseProfit * Math.max(1, safeModifier.winMultiplier))
+      )
     };
   }
   if (baseProfit < 0) {
     const loss = normalizedBet - normalizedPayout;
     return {
-      bet: normalizedPayout + Math.ceil(loss * Math.max(1, safeModifier.lossMultiplier)),
+      bet: Math.max(1, clampNonNegativeSafeInteger(
+        normalizedPayout + Math.ceil(loss * Math.max(1, safeModifier.lossMultiplier))
+      )),
       payout: normalizedPayout
     };
   }
@@ -6311,6 +6315,19 @@ function applyRpgCasinoSettlementModifier({ bet, payout, modifier }) {
 function normalizeStoredNonNegativeInteger(value) {
   const normalized = Number(value);
   return Number.isSafeInteger(normalized) && normalized >= 0 ? normalized : 0;
+}
+
+function normalizeStoredMoneyAmount(value) {
+  const normalized = Number(value);
+  return Number.isFinite(normalized) && normalized >= 0
+    ? clampNonNegativeSafeInteger(normalized)
+    : 0;
+}
+
+function clampNonNegativeSafeInteger(value) {
+  const normalized = Number(value);
+  if (!Number.isFinite(normalized)) return 0;
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(normalized)));
 }
 
 function normalizeStoredPositiveInteger(value, fallback) {

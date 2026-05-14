@@ -24,7 +24,9 @@ import {
   createScratchTicket,
   createTimingRound,
   CASINO_MAX_BET,
+  DEADLINE_MAX_SAFE_PRESSES,
   DEADLINE_MIN_BET,
+  DEADLINE_ROLL_MAX,
   formatEmojiRaceTrack,
   formatScratchPrizeShort,
   getScratchTicketProductStats,
@@ -1972,6 +1974,69 @@ test('카지노 베팅은 1000조 골드를 넘길 수 없다', async () => {
   } finally {
     await fixture.cleanup();
   }
+});
+
+test('베팅 정산은 안전 정수 한도를 넘어도 잔액을 0으로 초기화하지 않는다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await fixture.economy.getProfile('guild-1', 'user-1', '거액도박러');
+    await fixture.store.update((data) => {
+      data.accounts.users['user-1'].balance = Number.MAX_SAFE_INTEGER - 50;
+    });
+
+    const settlement = await fixture.economy.settleWager({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '거액도박러',
+      bet: 100,
+      payout: 190
+    });
+    const profile = await fixture.economy.getProfile('guild-1', 'user-1', '거액도박러');
+
+    assert.equal(settlement.profile.balance, Number.MAX_SAFE_INTEGER);
+    assert.equal(profile.balance, Number.MAX_SAFE_INTEGER);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('베팅 정산은 계산된 지급액이 안전 정수 한도를 넘어도 상한으로 정산한다', async () => {
+  const fixture = await createFixture();
+
+  try {
+    await fixture.economy.getProfile('guild-1', 'user-1', '거액도박러');
+    await fixture.store.update((data) => {
+      data.accounts.users['user-1'].balance = Number.MAX_SAFE_INTEGER;
+    });
+
+    const settlement = await fixture.economy.settleWager({
+      guildId: 'guild-1',
+      userId: 'user-1',
+      username: '거액도박러',
+      bet: 100,
+      payout: Number.MAX_SAFE_INTEGER + 1
+    });
+
+    assert.equal(settlement.payout, Number.MAX_SAFE_INTEGER);
+    assert.equal(settlement.profit, Number.MAX_SAFE_INTEGER - 100);
+    assert.equal(settlement.profile.balance, Number.MAX_SAFE_INTEGER);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test('데드라인은 최대 베팅에서도 누적 보상과 정산액을 안전 정수로 유지한다', () => {
+  let round = createDeadlineRound({ bet: CASINO_MAX_BET });
+
+  for (let index = 0; index < DEADLINE_MAX_SAFE_PRESSES; index += 1) {
+    round = pressDeadlineRound(round, { randomInt: () => DEADLINE_ROLL_MAX });
+  }
+
+  assert.equal(round.status, 'cashed_out');
+  assert.ok(Number.isSafeInteger(round.reward));
+  assert.ok(Number.isSafeInteger(round.payout));
+  assert.ok(round.payout >= CASINO_MAX_BET);
 });
 
 test('수동 게임용 예약 베팅은 먼저 차감한 뒤 정산 또는 환불한다', async () => {
