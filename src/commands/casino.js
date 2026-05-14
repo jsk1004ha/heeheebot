@@ -19,7 +19,6 @@ import {
   createScratchTicket,
   createTimingRound,
   DEADLINE_MAX_SAFE_PRESSES,
-  CASINO_MAX_BET,
   DEADLINE_MIN_BET,
   DEADLINE_ROLL_MAX,
   TIMING_PAYOUT_TIERS,
@@ -73,6 +72,12 @@ import {
   safeReplyToInteraction,
   sendInteractionUpdate
 } from './interactions.js';
+import {
+  addMoney,
+  compareMoney,
+  formatMoney,
+  toCompatibleMoneyValue
+} from '../systems/money.js';
 
 const CHALLENGE_TTL_MS = 60_000;
 const SCRATCH_TICKET_TTL_MS = 5 * 60_000;
@@ -107,7 +112,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     )
     .addStringOption((option) =>
@@ -128,7 +132,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     )
     .addStringOption((option) =>
@@ -149,7 +152,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     ),
   new SlashCommandBuilder()
@@ -160,7 +162,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription(`베팅할 골드 (최소 ${DEADLINE_MIN_BET.toLocaleString()}골드)`)
         .setMinValue(DEADLINE_MIN_BET)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     ),
   new SlashCommandBuilder()
@@ -171,7 +172,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     ),
   new SlashCommandBuilder()
@@ -182,7 +182,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     )
     .addStringOption((option) =>
@@ -204,7 +203,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     ),
   new SlashCommandBuilder()
@@ -215,7 +213,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     )
     .addStringOption((option) =>
@@ -236,7 +233,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     )
     .addUserOption((option) =>
@@ -252,7 +248,6 @@ export const casinoCommands = [
         .setName('시작칩')
         .setDescription('포커방 시작 스택으로 사용할 칩. 시작하면 같은 수의 골드가 칩으로 바뀝니다.')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     ),
   new SlashCommandBuilder()
@@ -263,7 +258,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     )
     .addStringOption((option) =>
@@ -289,7 +283,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     )
     .addStringOption((option) =>
@@ -311,7 +304,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     )
     .addStringOption((option) =>
@@ -332,7 +324,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     )
     .addStringOption((option) =>
@@ -354,7 +345,6 @@ export const casinoCommands = [
         .setName('돈')
         .setDescription('베팅할 골드')
         .setMinValue(1)
-        .setMaxValue(CASINO_MAX_BET)
         .setRequired(true)
     )
     .addStringOption((option) =>
@@ -596,10 +586,6 @@ function normalizeCasinoBetInput(value, label = '베팅액') {
   if (!Number.isSafeInteger(normalized) || normalized <= 0) {
     throw new Error(`${label}은 1 이상의 정수여야 합니다.`);
   }
-  if (normalized > CASINO_MAX_BET) {
-    throw new Error(`${label}은 최대 ${CASINO_MAX_BET.toLocaleString()}골드까지 가능합니다.`);
-  }
-
   return normalized;
 }
 
@@ -869,7 +855,6 @@ function formatCasinoInfo() {
     '🎰 **카지노 게임 정보**',
     '모든 게임은 봇 내부 골드만 사용하며 실제 현금 결제/현금 환전 기능은 없습니다.',
     '골드는 모든 컨텐츠가 공유하는 단일 잔액입니다.',
-    `최대 베팅/시작칩은 **${CASINO_MAX_BET.toLocaleString()}골드**입니다.`,
     '',
     '- `/홀짝`: 홀/짝 적중 시 1.9배, 99~100은 하우스 승리',
     '- `/주사위`: 높음(4~6) 또는 낮음(1~3) 적중 시 1.9배',
@@ -3727,9 +3712,9 @@ function formatDeadlineProgress(user, game) {
   return [
     `⏳ **데드라인 버튼** — ${formatUserMention(user, user.username)}`,
     `안전 누름: **${game.presses}/${DEADLINE_MAX_SAFE_PRESSES}회**`,
-    `베팅금: **${game.bet.toLocaleString()}골드** / 누적 보상: **${game.reward.toLocaleString()}골드** / 지금 수령: **${(game.bet + game.reward).toLocaleString()}골드**`,
-    game.lastReward > 0 ? `방금 안전했습니다: **+${game.lastReward.toLocaleString()}골드**` : null,
-    `다음 안전 보상: **+${game.nextReward.toLocaleString()}골드** / 다음 꽝 확률: **${formatBasisPoints(game.bustChanceBps)}**`,
+    `베팅금: **${formatCasinoMoney(game.bet)}골드** / 누적 보상: **${formatCasinoMoney(game.reward)}골드** / 지금 수령: **${formatCasinoMoney(addCasinoDisplayMoney(game.bet, game.reward))}골드**`,
+    isPositiveCasinoMoney(game.lastReward) ? `방금 안전했습니다: **+${formatCasinoMoney(game.lastReward)}골드**` : null,
+    `다음 안전 보상: **+${formatCasinoMoney(game.nextReward)}골드** / 다음 꽝 확률: **${formatBasisPoints(game.bustChanceBps)}**`,
     '누르면 보상이 커지지만, 꽝이면 이번 판 누적 보상을 모두 잃습니다. 멈추면 베팅금+누적 보상을 수령합니다.'
   ].filter(Boolean).join('\n');
 }
@@ -3740,7 +3725,7 @@ function formatDeadlineResult(user, game, settlement) {
       `💥 **데드라인 폭발** — ${formatUserMention(user, user.username)}`,
       `안전 누름: **${game.presses}/${DEADLINE_MAX_SAFE_PRESSES}회**`,
       `판정: ${game.lastRoll.toLocaleString()} / ${DEADLINE_ROLL_MAX.toLocaleString()} (꽝 확률 ${formatBasisPoints(game.bustChanceBps)})`,
-      `잃은 누적 보상: **${game.lostReward.toLocaleString()}골드**`,
+      `잃은 누적 보상: **${formatCasinoMoney(game.lostReward)}골드**`,
       formatSettlement(false, settlement)
     ].join('\n');
   }
@@ -3748,7 +3733,7 @@ function formatDeadlineResult(user, game, settlement) {
   return [
     `${game.autoCashedOut ? '🏁 **데드라인 한계 도달 자동 수령**' : '🛑 **데드라인 수령**'} — ${formatUserMention(user, user.username)}`,
     `안전 누름: **${game.presses}/${DEADLINE_MAX_SAFE_PRESSES}회**`,
-    `누적 보상: **${game.reward.toLocaleString()}골드**`,
+    `누적 보상: **${formatCasinoMoney(game.reward)}골드**`,
     formatSettlement(true, settlement)
   ].join('\n');
 }
@@ -3756,8 +3741,8 @@ function formatDeadlineResult(user, game, settlement) {
 function formatDeadlineExpiredResult(user, game, settlement) {
   return [
     `⏰ **데드라인 시간 만료** — ${formatUserMention(user, user.username)}`,
-    game.reward > 0
-      ? `60초 동안 추가 입력이 없어 누적 보상 **${game.reward.toLocaleString()}골드**를 자동 수령했습니다.`
+    isPositiveCasinoMoney(game.reward)
+      ? `60초 동안 추가 입력이 없어 누적 보상 **${formatCasinoMoney(game.reward)}골드**를 자동 수령했습니다.`
       : '60초 동안 버튼을 누르지 않아 베팅금만 환불되었습니다.',
     formatSettlement(true, settlement)
   ].join('\n');
@@ -3993,22 +3978,44 @@ async function settleGame(interaction, economy, bet, payout, game = null) {
 
 function formatSettlement(success, settlement) {
   const profit = settlement.profit;
-  const profitText = profit >= 0
-    ? `+${profit.toLocaleString()}골드`
-    : `${profit.toLocaleString()}골드`;
+  const profitText = formatSignedCasinoMoney(profit);
   const modifier = settlement.rpgCasinoModifier
     ? `\n타짜 정산 효과: **${settlement.rpgCasinoModifier.label}** (확률 변화 없음, 정산 금액만 적용)`
     : '';
 
   return [
     success ? '✅ 성공' : '❌ 실패',
-    `베팅: ${settlement.bet.toLocaleString()}골드 / 지급: ${settlement.payout.toLocaleString()}골드 / 손익: **${profitText}**`,
-    `현재 골드: **${getCasinoChips(settlement.profile).toLocaleString()}골드**${modifier}`
+    `베팅: ${formatCasinoMoney(settlement.bet)}골드 / 지급: ${formatCasinoMoney(settlement.payout)}골드 / 손익: **${profitText}**`,
+    `현재 골드: **${formatCasinoMoney(getCasinoChips(settlement.profile))}골드**${modifier}`
   ].join('\n');
 }
 
 function getCasinoChips(profile) {
   return profile.balance ?? profile.currencyBalances?.main ?? profile.currencyBalances?.casino ?? 0;
+}
+
+function formatCasinoMoney(amount) {
+  const text = String(amount ?? 0);
+  if (text.startsWith('-')) return `-${formatMoney(text.slice(1) || 0)}`;
+  return formatMoney(amount ?? 0);
+}
+
+function formatSignedCasinoMoney(amount) {
+  const text = String(amount ?? 0);
+  if (text.startsWith('-')) return `${formatCasinoMoney(text)}골드`;
+  return `+${formatCasinoMoney(amount)}골드`;
+}
+
+function addCasinoDisplayMoney(...amounts) {
+  return toCompatibleMoneyValue(addMoney(...amounts));
+}
+
+function isPositiveCasinoMoney(amount) {
+  try {
+    return compareMoney(amount, 0) > 0;
+  } catch {
+    return false;
+  }
 }
 
 

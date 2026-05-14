@@ -1,3 +1,12 @@
+import {
+  addMoney,
+  compareMoney,
+  multiplyMoneyFloor,
+  subtractMoney,
+  toCompatibleMoneyValue,
+  toMoney
+} from './money.js';
+
 const CARD_RANKS = Object.freeze(['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']);
 const POKER_SUITS = Object.freeze(['♠', '♥', '♦', '♣']);
 const POKER_HAND_SIZE = 5;
@@ -35,7 +44,6 @@ const KENO_DRAW_COUNT = 10;
 const KENO_MAX_PICKS = 5;
 export const DEADLINE_MAX_SAFE_PRESSES = 12;
 export const DEADLINE_MIN_BET = 100;
-export const CASINO_MAX_BET = 1_000_000_000_000_000;
 export const DEADLINE_ROLL_MAX = 10_000;
 const DEADLINE_BASE_BUST_CHANCE_BPS = 1_050;
 const DEADLINE_BUST_CHANCE_STEP_BPS = 775;
@@ -952,7 +960,8 @@ export function getDeadlineNextReward(bet, presses) {
   const normalizedPresses = normalizeNonNegativeSafeInteger(presses, '누른 횟수');
   const rewardBps = DEADLINE_BASE_REWARD_BPS + normalizedPresses * DEADLINE_REWARD_STEP_BPS;
 
-  return Math.max(1, calculateCasinoPayout(normalizedBet, rewardBps / 10_000));
+  const payout = calculateCasinoPayout(normalizedBet, rewardBps / 10_000);
+  return compareMoney(payout, 1) < 0 ? 1 : payout;
 }
 
 
@@ -2223,10 +2232,6 @@ function normalizePokerBet(bet) {
   if (!Number.isSafeInteger(normalized) || normalized <= 0) {
     throw new Error('포커 베팅액은 1 이상의 정수여야 합니다.');
   }
-  if (normalized > CASINO_MAX_BET) {
-    throw new Error(`포커 베팅액은 최대 ${CASINO_MAX_BET.toLocaleString()}골드까지 가능합니다.`);
-  }
-
   return normalized;
 }
 
@@ -3017,10 +3022,6 @@ function normalizeTimingBet(bet) {
   if (!Number.isSafeInteger(normalized) || normalized <= 0) {
     throw new Error('타이밍 베팅액은 1 이상의 정수여야 합니다.');
   }
-  if (normalized > CASINO_MAX_BET) {
-    throw new Error(`타이밍 베팅액은 최대 ${CASINO_MAX_BET.toLocaleString()}골드까지 가능합니다.`);
-  }
-
   return normalized;
 }
 
@@ -3048,7 +3049,7 @@ function buildDeadlineRound(round) {
   const status = round.status ?? 'pressing';
   const presses = normalizeNonNegativeSafeInteger(round.presses ?? 0, '누른 횟수');
   const bet = normalizeDeadlineBet(round.bet);
-  const reward = normalizeNonNegativeSafeInteger(round.reward ?? 0, '누적 보상');
+  const reward = normalizeCasinoMoney(round.reward ?? 0, '누적 보상');
 
   return {
     game: '데드라인',
@@ -3059,9 +3060,9 @@ function buildDeadlineRound(round) {
     status,
     nextReward: status === 'pressing' ? getDeadlineNextReward(bet, presses) : 0,
     bustChanceBps: status === 'pressing' ? getDeadlineBustChanceBps(presses) : (round.bustChanceBps ?? getDeadlineBustChanceBps(presses)),
-    payout: normalizeNonNegativeSafeInteger(round.payout ?? 0, '지급액'),
-    lastReward: normalizeNonNegativeSafeInteger(round.lastReward ?? 0, '마지막 보상'),
-    lostReward: normalizeNonNegativeSafeInteger(round.lostReward ?? 0, '잃은 보상'),
+    payout: normalizeCasinoMoney(round.payout ?? 0, '지급액'),
+    lastReward: normalizeCasinoMoney(round.lastReward ?? 0, '마지막 보상'),
+    lostReward: normalizeCasinoMoney(round.lostReward ?? 0, '잃은 보상'),
     lastRoll: round.lastRoll ?? null,
     busted: round.busted === true,
     autoCashedOut: round.autoCashedOut === true
@@ -3075,47 +3076,31 @@ function assertDeadlinePressingRound(round) {
 }
 
 function normalizeDeadlineBet(bet) {
-  const normalized = Number(bet);
+  const normalized = toMoney(bet, '데드라인 베팅액');
 
-  if (!Number.isSafeInteger(normalized) || normalized < DEADLINE_MIN_BET) {
+  if (normalized < BigInt(DEADLINE_MIN_BET)) {
     throw new Error(`데드라인 베팅액은 ${DEADLINE_MIN_BET.toLocaleString()} 이상의 정수여야 합니다.`);
   }
-  if (normalized > CASINO_MAX_BET) {
-    throw new Error(`데드라인 베팅액은 최대 ${CASINO_MAX_BET.toLocaleString()}골드까지 가능합니다.`);
-  }
-
-  return normalized;
+  return toCompatibleMoneyValue(normalized);
 }
 
 function normalizeCasinoBetAmount(value, label) {
   const normalized = normalizePositiveSafeInteger(value, label);
-  if (normalized > CASINO_MAX_BET) {
-    throw new Error(`${label}은 최대 ${CASINO_MAX_BET.toLocaleString()}골드까지 가능합니다.`);
-  }
   return normalized;
 }
 
 function calculateCasinoPayout(amount, multiplier) {
-  return clampCasinoMoney(Number(amount) * Number(multiplier));
+  const multiplierBps = BigInt(Math.max(0, Math.round(Number(multiplier) * 10_000)));
+  if (multiplierBps <= 0n) return 0;
+  return toCompatibleMoneyValue(multiplyMoneyFloor(amount, multiplierBps, 10_000n));
 }
 
 function addCasinoMoney(...amounts) {
-  let total = 0;
-
-  for (const amount of amounts) {
-    const normalized = Number(amount);
-    if (!Number.isFinite(normalized) || normalized <= 0) continue;
-    total += normalized;
-    if (total >= Number.MAX_SAFE_INTEGER) return Number.MAX_SAFE_INTEGER;
-  }
-
-  return clampCasinoMoney(total);
+  return toCompatibleMoneyValue(addMoney(...amounts));
 }
 
-function clampCasinoMoney(value) {
-  const normalized = Number(value);
-  if (!Number.isFinite(normalized) || normalized <= 0) return 0;
-  return Math.min(Number.MAX_SAFE_INTEGER, Math.floor(normalized));
+function normalizeCasinoMoney(value, label) {
+  return toCompatibleMoneyValue(toMoney(value, label));
 }
 
 function normalizeNonNegativeSafeInteger(value, label) {
@@ -3194,9 +3179,9 @@ function normalizeEmojiRacePoolBets(bets) {
 function calculateEmojiRacePoolPayouts(bets, winnerId, market) {
   const winners = bets.filter((betEntry) => betEntry.choice === winnerId);
   const byKey = Object.fromEntries(bets.map((betEntry) => [betEntry.key, 0]));
-  const winnerStake = winners.reduce((total, betEntry) => total + betEntry.bet, 0);
+  const winnerStake = toCompatibleMoneyValue(addMoney(...winners.map((betEntry) => betEntry.bet)));
 
-  if (winners.length === 0 || winnerStake <= 0 || market.payoutPool <= 0) {
+  if (winners.length === 0 || compareMoney(winnerStake, 0) <= 0 || compareMoney(market.payoutPool, 0) <= 0) {
     return {
       byKey,
       winnerStake,
@@ -3204,31 +3189,35 @@ function calculateEmojiRacePoolPayouts(bets, winnerId, market) {
     };
   }
 
+  const winnerStakeMoney = toMoney(winnerStake);
+  const payoutPoolMoney = toMoney(market.payoutPool);
   const allocations = winners.map((betEntry, index) => {
-    const weighted = betEntry.bet * market.payoutPool;
+    const weighted = toMoney(betEntry.bet) * payoutPoolMoney;
     return {
       key: betEntry.key,
       index,
-      basePayout: clampCasinoMoney(Math.floor(weighted / winnerStake)),
-      remainder: weighted % winnerStake
+      basePayout: toCompatibleMoneyValue(weighted / winnerStakeMoney),
+      remainder: weighted % winnerStakeMoney
     };
   });
   let allocated = 0;
 
   for (const allocation of allocations) {
     byKey[allocation.key] = allocation.basePayout;
-    allocated += allocation.basePayout;
+    allocated = toCompatibleMoneyValue(addMoney(allocated, allocation.basePayout));
   }
 
-  let remainderPool = market.payoutPool - allocated;
+  let remainderPool = compareMoney(market.payoutPool, allocated) > 0
+    ? toCompatibleMoneyValue(subtractMoney(market.payoutPool, allocated))
+    : 0;
   const remainderOrder = [...allocations].sort((a, b) =>
-    b.remainder - a.remainder || a.index - b.index
+    (b.remainder > a.remainder ? 1 : b.remainder < a.remainder ? -1 : 0) || a.index - b.index
   );
 
   for (const allocation of remainderOrder) {
-    if (remainderPool <= 0) break;
-    byKey[allocation.key] += 1;
-    remainderPool -= 1;
+    if (compareMoney(remainderPool, 0) <= 0) break;
+    byKey[allocation.key] = toCompatibleMoneyValue(addMoney(byKey[allocation.key], 1));
+    remainderPool = toCompatibleMoneyValue(subtractMoney(remainderPool, 1));
   }
 
   return {

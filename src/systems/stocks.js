@@ -20,6 +20,14 @@ import {
   getOrCreateLinkedFeatureUserProfile,
   isAccountSelectionRequiredError
 } from './accounts.js';
+import {
+  addMoney,
+  compareMoney,
+  formatMoney,
+  normalizeStoredMoney,
+  toCompatibleMoneyValue,
+  toMoney
+} from './money.js';
 
 const DEFAULT_TICK_MS = 3 * 60 * 1000;
 const DEFAULT_STOCK_ALERT_INTERVAL_MS = 60 * 1000;
@@ -641,7 +649,7 @@ export class StockService {
       const fee = calculateFee(subtotal, this.feeBps);
       const totalCost = subtotal + fee;
 
-      if (getCurrencyBalance(profile, CURRENCY_STOCK) < totalCost) {
+      if (compareMoney(getCurrencyBalance(profile, CURRENCY_STOCK), totalCost) < 0) {
         throw new Error(`골드가 부족합니다. 필요 금액: ${totalCost.toLocaleString()}골드`);
       }
 
@@ -798,7 +806,7 @@ export class StockService {
         const subtotal = normalizedLimitPrice * normalizedQuantity;
         const fee = calculateFee(subtotal, this.feeBps);
         const reservedCash = subtotal + fee;
-        if (getCurrencyBalance(profile, CURRENCY_STOCK) < reservedCash) {
+        if (compareMoney(getCurrencyBalance(profile, CURRENCY_STOCK), reservedCash) < 0) {
           throw new Error(`골드가 부족합니다. 필요 예약금: ${reservedCash.toLocaleString()}골드`);
         }
         debitCurrency(profile, CURRENCY_STOCK, reservedCash);
@@ -1179,7 +1187,7 @@ export class StockService {
       assertNoOpposingLeveragedPosition(stockUser, normalizedStockId, normalizedSide, quote);
       assertNoStockBankruptcyDebt(profile);
 
-      if (getCurrencyBalance(profile, CURRENCY_STOCK) < totalCost) {
+      if (compareMoney(getCurrencyBalance(profile, CURRENCY_STOCK), totalCost) < 0) {
         throw new Error(`골드가 부족합니다. 필요 금액: ${totalCost.toLocaleString()}골드`);
       }
 
@@ -1321,9 +1329,9 @@ export class StockService {
       settleMaturedLeveragedPositions(profile, stockUser, market);
       const settled = getNewLeverageSettlementEntries(stockUser, market, previousTradeIds);
       const positions = getEvaluatedLeveragedPositions(stockUser, market);
-      const marginTotal = positions.reduce((sum, position) => sum + position.margin, 0);
-      const notionalTotal = positions.reduce((sum, position) => sum + position.notional, 0);
-      const debtTotal = positions.reduce((sum, position) => sum + position.debt, 0);
+      const marginTotal = toCompatibleMoneyValue(addMoney(...positions.map((position) => position.margin)));
+      const notionalTotal = toCompatibleMoneyValue(addMoney(...positions.map((position) => position.notional)));
+      const debtTotal = toCompatibleMoneyValue(addMoney(...positions.map((position) => position.debt)));
       const equityTotal = positions.reduce((sum, position) => sum + position.equity, 0);
       const unrealizedProfit = positions.reduce((sum, position) => sum + position.unrealizedProfit, 0);
 
@@ -1384,13 +1392,14 @@ export class StockService {
         })
         .filter(Boolean)
         .filter((portfolio) =>
-          portfolio.cash > 0 ||
+          compareMoney(portfolio.cash, 0) > 0 ||
           portfolio.positions.length > 0 ||
           portfolio.leveragedPositions.length > 0 ||
           portfolio.pendingDividends > 0
         )
         .sort((a, b) => {
-          if (b.totalAssets !== a.totalAssets) return b.totalAssets - a.totalAssets;
+          const totalAssetsOrder = compareMoney(b.totalAssets, a.totalAssets);
+          if (totalAssetsOrder !== 0) return totalAssetsOrder;
           if (b.stockValue !== a.stockValue) return b.stockValue - a.stockValue;
           return a.username.localeCompare(b.username, 'ko-KR');
         })
@@ -2716,7 +2725,7 @@ function getOrCreateMoneyProfile(data, guildId, userId, username, now) {
   });
   profile.userId = String(userId ?? '').trim();
   profile.username = username || profile.username || 'Unknown';
-  profile.balance = normalizeNonNegativeInteger(profile.balance);
+  profile.balance = normalizeStockMoney(profile.balance);
   migrateLegacyWalletsToGold(profile, { now });
   profile.wallets = normalizeWallets(profile.wallets);
   profile.level = normalizePositiveStoredInteger(profile.level, 1);
@@ -3099,14 +3108,14 @@ function normalizeTradeHistoryEntry(entry = {}, fallbackId = null, guild = null)
     price: normalizeNonNegativeInteger(safeEntry.price),
     fee: normalizeNonNegativeInteger(safeEntry.fee),
     penalty: normalizeNonNegativeInteger(safeEntry.penalty),
-    total: normalizeNonNegativeInteger(safeEntry.total),
+    total: normalizeStockMoney(safeEntry.total),
     realizedProfit: normalizeInteger(safeEntry.realizedProfit),
     at: normalizeNonNegativeInteger(safeEntry.at),
     positionId: typeof safeEntry.positionId === 'string' ? safeEntry.positionId : null,
     side: typeof safeEntry.side === 'string' ? safeEntry.side : null,
     leverage: normalizeNonNegativeInteger(safeEntry.leverage),
-    margin: normalizeNonNegativeInteger(safeEntry.margin),
-    bankruptcyDebtAdded: normalizeNonNegativeInteger(safeEntry.bankruptcyDebtAdded)
+    margin: normalizeStockMoney(safeEntry.margin),
+    bankruptcyDebtAdded: normalizeStockMoney(safeEntry.bankruptcyDebtAdded)
   };
 }
 
@@ -3460,7 +3469,7 @@ function buildPortfolio(profile, stockUser, market) {
   const costBasis = positions.reduce((sum, position) => sum + position.costBasis, 0);
   const leveragedPositions = getEvaluatedLeveragedPositions(stockUser, market);
   const leveragedEquity = leveragedPositions.reduce((sum, position) => sum + position.equity, 0);
-  const leveragedDebt = leveragedPositions.reduce((sum, position) => sum + position.debt, 0);
+  const leveragedDebt = toCompatibleMoneyValue(addMoney(...leveragedPositions.map((position) => position.debt)));
   const leveragedUnrealizedProfit = leveragedPositions.reduce((sum, position) => sum + position.unrealizedProfit, 0);
   const pendingDividends = normalizeNonNegativeInteger(stockUser.pendingDividends);
 
@@ -3473,7 +3482,12 @@ function buildPortfolio(profile, stockUser, market) {
     leveragedEquity,
     leveragedDebt,
     pendingDividends,
-    totalAssets: getCurrencyBalance(profile, CURRENCY_STOCK) + stockValue + leveragedEquity + pendingDividends,
+    totalAssets: toCompatibleMoneyValue(addMoney(
+      getCurrencyBalance(profile, CURRENCY_STOCK),
+      stockValue,
+      leveragedEquity,
+      pendingDividends
+    )),
     costBasis,
     unrealizedProfit: stockValue - costBasis,
     leveragedUnrealizedProfit,
@@ -3993,9 +4007,9 @@ function assertNoOpposingLeveragedPosition(stockUser, stockId, side, quote = nul
 
 function assertNoStockBankruptcyDebt(profile) {
   const bankruptcy = getStockBankruptcySummary(profile);
-  if (bankruptcy.debt <= 0 && !hasStockBankruptcyDebt(profile)) return;
+  if (compareMoney(bankruptcy.debt, 0) <= 0 && !hasStockBankruptcyDebt(profile)) return;
 
-  throw new Error(`파산채무 ${bankruptcy.debt.toLocaleString()}골드가 남아 있어 새 레버리지 진입이 막혔습니다. 골드 수익을 받으면 25%가 자동 상환됩니다.`);
+  throw new Error(`파산채무 ${formatMoney(bankruptcy.debt)}골드가 남아 있어 새 레버리지 진입이 막혔습니다. 골드 수익을 받으면 25%가 자동 상환됩니다.`);
 }
 
 function settleMaturedLeveragedPositions(profile, stockUser, market) {
@@ -4066,7 +4080,7 @@ function settleLeveragedPosition(profile, stockUser, position, evaluated, {
   const payout = costs.payout;
   const realizedProfit = payout - position.margin;
   const bankruptcyDebtAdded = evaluated.liquidated ? calculateLeverageBankruptcyDebt(position, evaluated) : 0;
-  const bankruptcyAfterDebt = bankruptcyDebtAdded > 0
+  const bankruptcyAfterDebt = compareMoney(bankruptcyDebtAdded, 0) > 0
     ? addStockBankruptcyDebt(profile, bankruptcyDebtAdded, at)
     : getStockBankruptcySummary(profile);
   const credit = payout > 0
@@ -4150,8 +4164,8 @@ function calculateLeverageBankruptcyDebt(position, evaluated = {}) {
   if (margin <= 0) return 0;
   const exposure = calculateLeveragedExposure(margin, position?.leverage);
   const debt = normalizeStoredDebt(evaluated.debt ?? position?.debt, exposure.debt);
-  const leveragedLoss = margin + normalizeNonNegativeInteger(evaluated.bankruptcyShortfall);
-  return Math.min(Number.MAX_SAFE_INTEGER, debt + leveragedLoss);
+  const leveragedLoss = addMoney(margin, normalizeNonNegativeInteger(evaluated.bankruptcyShortfall));
+  return toCompatibleMoneyValue(addMoney(debt, leveragedLoss));
 }
 
 function evaluateLeveragedPosition(position, quote, options = {}) {
@@ -4202,12 +4216,12 @@ function getLeveragedPositionRemainingTurns(position, currentTick) {
 }
 
 function calculateLeveragedExposure(margin, leverage) {
-  const safeMargin = Math.max(1, Number(margin) || 1);
+  const safeMargin = toMoney(normalizePositiveInteger(margin, '증거금'));
   const safeLeverage = Math.max(1, Number(leverage) || 1);
-  const notional = Math.min(Number.MAX_SAFE_INTEGER, safeMargin * safeLeverage);
+  const notional = safeMargin * BigInt(safeLeverage);
   return {
-    notional,
-    debt: Math.max(0, notional - safeMargin)
+    notional: toCompatibleMoneyValue(notional),
+    debt: toCompatibleMoneyValue(notional > safeMargin ? notional - safeMargin : 0n)
   };
 }
 
@@ -4225,6 +4239,10 @@ function cloneHolding(holding) {
 function calculateFee(amount, feeBps) {
   if (amount <= 0 || feeBps <= 0) return 0;
   return Math.ceil(amount * feeBps / 10_000);
+}
+
+function normalizeStockMoney(value) {
+  return toCompatibleMoneyValue(normalizeStoredMoney(value));
 }
 
 function calculateChangeBps(price, previousPrice) {
@@ -4337,8 +4355,11 @@ function normalizeNonNegativeInteger(value) {
 }
 
 function normalizeStoredDebt(value, fallback) {
-  const normalized = Number(value);
-  return Number.isSafeInteger(normalized) && normalized >= 0 ? normalized : fallback;
+  try {
+    return toCompatibleMoneyValue(toMoney(value));
+  } catch {
+    return fallback;
+  }
 }
 
 function normalizeOptionalStringId(value) {

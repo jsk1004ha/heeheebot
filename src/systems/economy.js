@@ -120,7 +120,17 @@ import {
   isAccountSelectionRequiredError,
   resolveLinkedAccountSelection
 } from './accounts.js';
-import { CASINO_MAX_BET } from './casino.js';
+import {
+  addMoney,
+  compareMoney,
+  isPositiveMoney,
+  minMoney,
+  multiplyMoneyFloor,
+  normalizeStoredMoney,
+  subtractMoney,
+  toMoney,
+  toCompatibleMoneyValue
+} from './money.js';
 
 const RPG_SCHEMA_VERSION = 'heehee-rpg-v1';
 
@@ -177,6 +187,7 @@ const DEFAULT_OPTIONS = Object.freeze({
 const DAY_MS = 24 * 60 * 60 * 1000;
 const SWORD_PROTECTION_SCROLL_COST = 15_000;
 const SOCIAL_LOAN_AUTO_REPAYMENT_BPS = 3_500;
+const SOCIAL_LOAN_LENDER_EXPOSURE_DENOMINATOR = 1_000n;
 const SOCIAL_LOAN_MAX_INTEREST_BPS = 10_000;
 const SOCIAL_LOAN_MIN_TERM_MS = 60 * 60 * 1000;
 const SOCIAL_LOAN_MAX_TERM_MS = 30 * DAY_MS;
@@ -3265,7 +3276,7 @@ export class EconomyService {
             return b.sword.highestLevel - a.sword.highestLevel;
           }
           if (b.level !== a.level) return b.level - a.level;
-          return b.balance - a.balance;
+          return compareMoney(b.balance, a.balance);
         })
         .slice(0, safeLimit);
     });
@@ -3412,7 +3423,7 @@ export class EconomyService {
         successBonusRate: successBonus?.rate ?? 0
       });
 
-      if (getCurrencyBalance(profile, CURRENCY_SWORD) < enhancement.moneyCost) {
+      if (compareMoney(getCurrencyBalance(profile, CURRENCY_SWORD), enhancement.moneyCost) < 0) {
         throw new Error(`골드가 부족합니다. 필요 금액: ${enhancement.moneyCost.toLocaleString()}골드`);
       }
 
@@ -3625,11 +3636,7 @@ export class EconomyService {
   }
 
   async transfer({ guildId, fromUserId, fromUsername, toUserId, toUsername, amount }) {
-    const normalizedAmount = Number(amount);
-
-    if (!Number.isSafeInteger(normalizedAmount) || normalizedAmount <= 0) {
-      throw new Error('송금액은 1 이상의 정수여야 합니다.');
-    }
+    const normalizedAmount = normalizePositiveMoneyValue(amount, '송금액');
 
     if (fromUserId === toUserId) {
       throw new Error('자기 자신에게는 송금할 수 없습니다.');
@@ -3639,11 +3646,11 @@ export class EconomyService {
       const from = getOrCreateProfile(data, guildId, fromUserId, fromUsername, this);
       const to = getOrCreateProfile(data, guildId, toUserId, toUsername, this);
 
-      if (from.balance < normalizedAmount) {
+      if (compareMoney(from.balance, normalizedAmount) < 0) {
         throw new Error('잔액이 부족합니다.');
       }
 
-      from.balance -= normalizedAmount;
+      debitCurrency(from, CURRENCY_MAIN, normalizedAmount, '잔액이 부족합니다.');
       creditCurrency(to, CURRENCY_MAIN, normalizedAmount);
 
       return {
@@ -3665,7 +3672,7 @@ export class EconomyService {
     repaymentMode,
     now = Date.now()
   }) {
-    const normalizedAmount = normalizePositiveInteger(amount, '대출 요청 금액');
+    const normalizedAmount = normalizePositiveMoneyValue(amount, '대출 요청 금액');
     const termMs = normalizeLoanTermHours(termHours);
     const normalizedRepaymentMode = normalizeSocialLoanRepaymentMode(repaymentMode);
     const borrowerId = normalizeRequiredId(borrowerUserId, '빌리는 유저');
@@ -3681,6 +3688,13 @@ export class EconomyService {
       const loans = normalizeSocialLoans(borrower.socialLoans);
       borrower.socialLoans = loans;
       assertNoOpenLoanRequest(loans, lenderId);
+      assertSocialLoanLenderExposureLimit({
+        data,
+        guildId,
+        lenderId,
+        lender,
+        amount: normalizedAmount
+      });
 
       const request = {
         id: createSocialLoanId(now, borrowerId, lenderId),
@@ -3737,7 +3751,15 @@ export class EconomyService {
         throw new Error('수락할 대출 요청을 찾을 수 없습니다.');
       }
 
-      if (lender.balance < request.amount) {
+      assertSocialLoanLenderExposureLimit({
+        data,
+        guildId,
+        lenderId,
+        lender,
+        amount: request.amount
+      });
+
+      if (compareMoney(lender.balance, request.amount) < 0) {
         throw new Error('대출 요청 금액보다 잔액이 부족합니다.');
       }
 
@@ -3801,7 +3823,15 @@ export class EconomyService {
         };
       }
 
-      if (lender.balance < request.amount) {
+      assertSocialLoanLenderExposureLimit({
+        data,
+        guildId,
+        lenderId,
+        lender,
+        amount: request.amount
+      });
+
+      if (compareMoney(lender.balance, request.amount) < 0) {
         throw new Error('빌려줄 유저의 잔액이 부족해 대출을 실행할 수 없습니다.');
       }
 
@@ -3849,7 +3879,7 @@ export class EconomyService {
     const lenderId = normalizeRequiredId(lenderUserId, '빌려준 유저');
     const requested = amount === null || amount === undefined
       ? null
-      : normalizePositiveInteger(amount, '상환 금액');
+      : normalizePositiveMoneyValue(amount, '상환 금액');
 
     return this.store.update((data) => {
       const borrower = getOrCreateProfile(data, guildId, borrowerId, borrowerUsername, this, now);
@@ -3858,16 +3888,16 @@ export class EconomyService {
       borrower.socialLoans = loans;
       accrueSocialLoansInterest(loans, now);
       const targetLoans = loans.loans
-        .filter((loan) => loan.lenderUserId === lenderId && getSocialLoanRemaining(loan) > 0)
+        .filter((loan) => loan.lenderUserId === lenderId && compareMoney(getSocialLoanRemaining(loan), 0) > 0)
         .sort(compareSocialLoansForRepayment);
-      const remaining = targetLoans.reduce((sum, loan) => sum + getSocialLoanRemaining(loan), 0);
+      const remaining = toCompatibleMoneyValue(targetLoans.reduce((sum, loan) => sum + toMoney(getSocialLoanRemaining(loan)), 0n));
 
-      if (remaining <= 0) {
+      if (!isPositiveMoney(remaining)) {
         throw new Error('상환할 대출이 없습니다.');
       }
 
-      const requestedAmount = requested ?? Math.min(borrower.balance, remaining);
-      if (borrower.balance <= 0) {
+      const requestedAmount = requested ?? toCompatibleMoneyValue(minMoney(borrower.balance, remaining));
+      if (compareMoney(borrower.balance, 0) <= 0) {
         throw new Error('상환할 골드가 부족합니다.');
       }
 
@@ -3875,16 +3905,18 @@ export class EconomyService {
         borrower,
         lender,
         targetLoans,
-        amount: Math.min(requestedAmount, borrower.balance, remaining),
+        amount: toCompatibleMoneyValue(minMoney(requestedAmount, borrower.balance, remaining)),
         now
       });
 
-      loans.loans = loans.loans.filter((loan) => getSocialLoanRemaining(loan) > 0);
+      loans.loans = loans.loans.filter((loan) => compareMoney(getSocialLoanRemaining(loan), 0) > 0);
 
       return {
         requested: requestedAmount,
         repaid,
-        remaining: Math.max(0, remaining - repaid),
+        remaining: compareMoney(remaining, repaid) > 0
+          ? toCompatibleMoneyValue(subtractMoney(remaining, repaid))
+          : 0,
         borrower: cloneProfile(borrower),
         lender: cloneProfile(lender)
       };
@@ -3893,7 +3925,7 @@ export class EconomyService {
 
   async settleWager({ guildId, userId, username, bet, payout }) {
     const normalizedBet = normalizeCasinoBet(bet, '베팅액');
-    const normalizedPayout = normalizeNonNegativeInteger(payout, '지급액');
+    const normalizedPayout = normalizeNonNegativeMoneyInput(payout, '지급액');
 
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
@@ -3918,10 +3950,10 @@ export class EconomyService {
       return {
         bet: adjusted.bet,
         payout: adjusted.payout,
-        profit: adjusted.payout - adjusted.bet,
+        profit: diffMoneyValue(adjusted.payout, adjusted.bet),
         baseBet: normalizedBet,
         basePayout: normalizedPayout,
-        baseProfit: normalizedPayout - normalizedBet,
+        baseProfit: diffMoneyValue(normalizedPayout, normalizedBet),
         rpgCasinoModifier: modifier.applied ? modifier : null,
         profile: cloneProfile(profile)
       };
@@ -3945,7 +3977,7 @@ export class EconomyService {
 
   async resolveReservedWager({ guildId, userId, username, bet, payout }) {
     const normalizedBet = normalizeCasinoBet(bet, '베팅액');
-    const normalizedPayout = normalizeNonNegativeInteger(payout, '지급액');
+    const normalizedPayout = normalizeNonNegativeMoneyInput(payout, '지급액');
 
     return this.store.update((data) => {
       const profile = getOrCreateProfile(data, guildId, userId, username, this);
@@ -3955,9 +3987,11 @@ export class EconomyService {
         payout: normalizedPayout,
         modifier
       });
-      const extraReservedLoss = Math.max(0, adjusted.bet - normalizedBet);
+      const extraReservedLoss = compareMoney(adjusted.bet, normalizedBet) > 0
+        ? toCompatibleMoneyValue(subtractMoney(adjusted.bet, normalizedBet))
+        : 0;
 
-      if (extraReservedLoss > 0) {
+      if (isPositiveMoney(extraReservedLoss)) {
         debitCurrency(profile, CURRENCY_CASINO, extraReservedLoss, '골드가 부족합니다.');
       }
       creditWagerSettlementPayout({
@@ -3973,10 +4007,10 @@ export class EconomyService {
       return {
         bet: adjusted.bet,
         payout: adjusted.payout,
-        profit: adjusted.payout - adjusted.bet,
+        profit: diffMoneyValue(adjusted.payout, adjusted.bet),
         baseBet: normalizedBet,
         basePayout: normalizedPayout,
-        baseProfit: normalizedPayout - normalizedBet,
+        baseProfit: diffMoneyValue(normalizedPayout, normalizedBet),
         rpgCasinoModifier: modifier.applied ? modifier : null,
         profile: cloneProfile(profile)
       };
@@ -4004,11 +4038,11 @@ export class EconomyService {
       const challengerProfile = getOrCreateProfile(data, guildId, challenger.userId, challenger.username, this);
       const opponentProfile = getOrCreateProfile(data, guildId, opponent.userId, opponent.username, this);
 
-      if (getCurrencyBalance(challengerProfile, CURRENCY_CASINO) < normalizedBet) {
+      if (compareMoney(getCurrencyBalance(challengerProfile, CURRENCY_CASINO), normalizedBet) < 0) {
         throw new Error(`${challengerProfile.username}님의 골드가 부족합니다.`);
       }
 
-      if (getCurrencyBalance(opponentProfile, CURRENCY_CASINO) < normalizedBet) {
+      if (compareMoney(getCurrencyBalance(opponentProfile, CURRENCY_CASINO), normalizedBet) < 0) {
         throw new Error(`${opponentProfile.username}님의 골드가 부족합니다.`);
       }
 
@@ -4017,7 +4051,7 @@ export class EconomyService {
 
       return {
         bet: normalizedBet,
-        pot: normalizedBet * 2,
+        pot: toCompatibleMoneyValue(addMoney(normalizedBet, normalizedBet)),
         challenger: cloneProfile(challengerProfile),
         opponent: cloneProfile(opponentProfile)
       };
@@ -4034,7 +4068,7 @@ export class EconomyService {
       );
 
       for (const profile of profiles) {
-        if (getCurrencyBalance(profile, CURRENCY_CASINO) < normalizedBet) {
+        if (compareMoney(getCurrencyBalance(profile, CURRENCY_CASINO), normalizedBet) < 0) {
           throw new Error(`${profile.username}님의 골드가 부족합니다.`);
         }
       }
@@ -4045,7 +4079,7 @@ export class EconomyService {
 
       return {
         bet: normalizedBet,
-        pot: normalizedBet * normalizedPlayers.length,
+        pot: toCompatibleMoneyValue(multiplyMoneyFloor(normalizedBet, BigInt(normalizedPlayers.length))),
         players: profiles.map((profile, index) => ({
           ...normalizedPlayers[index],
           ...cloneProfile(profile)
@@ -4060,7 +4094,7 @@ export class EconomyService {
     return this.store.update((data) => {
       const challengerProfile = getOrCreateProfile(data, guildId, challenger.userId, challenger.username, this);
       const opponentProfile = getOrCreateProfile(data, guildId, opponent.userId, opponent.username, this);
-      const pot = normalizedBet * 2;
+      const pot = toCompatibleMoneyValue(addMoney(normalizedBet, normalizedBet));
 
       if (!winnerUserId) {
         creditWagerSettlementPayout({
@@ -4129,14 +4163,17 @@ export class EconomyService {
     winnerUserId = null
   }) {
     const normalizedBet = normalizeCasinoBet(bet, '베팅액');
-    const normalizedChallengerPayout = normalizeNonNegativeInteger(challengerPayout, '도전자 반환 스택');
-    const normalizedOpponentPayout = normalizeNonNegativeInteger(opponentPayout, '상대 반환 스택');
-    const reservedTotal = normalizedBet * 2;
+    const normalizedChallengerPayout = normalizeNonNegativeMoneyInput(challengerPayout, '도전자 반환 스택');
+    const normalizedOpponentPayout = normalizeNonNegativeMoneyInput(opponentPayout, '상대 반환 스택');
+    const reservedTotal = toCompatibleMoneyValue(addMoney(normalizedBet, normalizedBet));
     const normalizedPot = pot === null || pot === undefined
-      ? Math.abs(normalizedChallengerPayout - normalizedBet) + Math.abs(normalizedOpponentPayout - normalizedBet)
-      : normalizeNonNegativeInteger(pot, '포커 팟');
+      ? toCompatibleMoneyValue(addMoney(
+        absMoneyDifference(normalizedChallengerPayout, normalizedBet),
+        absMoneyDifference(normalizedOpponentPayout, normalizedBet)
+      ))
+      : normalizeNonNegativeMoneyInput(pot, '포커 팟');
 
-    if (normalizedChallengerPayout + normalizedOpponentPayout !== reservedTotal) {
+    if (compareMoney(addMoney(normalizedChallengerPayout, normalizedOpponentPayout), reservedTotal) !== 0) {
       throw new Error('포커 스택 정산 합계가 예약 시작칩과 일치해야 합니다.');
     }
 
@@ -4194,14 +4231,14 @@ export class EconomyService {
     const normalizedBet = normalizeCasinoBet(bet, '베팅액');
     const normalizedPlayers = normalizePlayerTableParticipants(players);
     const normalizedPayouts = normalizePlayerTablePayouts(payouts, normalizedPlayers);
-    const reservedTotal = normalizedBet * normalizedPlayers.length;
-    const payoutTotal = Object.values(normalizedPayouts).reduce((total, payout) => total + payout, 0);
+    const reservedTotal = toCompatibleMoneyValue(multiplyMoneyFloor(normalizedBet, BigInt(normalizedPlayers.length)));
+    const payoutTotal = toCompatibleMoneyValue(addMoney(...Object.values(normalizedPayouts)));
     const normalizedPot = pot === null || pot === undefined
       ? reservedTotal
-      : normalizeNonNegativeInteger(pot, '포커 팟');
+      : normalizeNonNegativeMoneyInput(pot, '포커 팟');
     const winnerSet = new Set(winnerUserIds ?? []);
 
-    if (payoutTotal !== reservedTotal) {
+    if (compareMoney(payoutTotal, reservedTotal) !== 0) {
       throw new Error('포커 스택 정산 합계가 예약 시작칩과 일치해야 합니다.');
     }
 
@@ -4255,18 +4292,18 @@ export class EconomyService {
       const challengerProfile = getOrCreateProfile(data, guildId, challenger.userId, challenger.username, this);
       const opponentProfile = getOrCreateProfile(data, guildId, opponent.userId, opponent.username, this);
 
-      if (getCurrencyBalance(challengerProfile, CURRENCY_CASINO) < normalizedBet) {
+      if (compareMoney(getCurrencyBalance(challengerProfile, CURRENCY_CASINO), normalizedBet) < 0) {
         throw new Error(`${challengerProfile.username}님의 골드가 부족합니다.`);
       }
 
-      if (getCurrencyBalance(opponentProfile, CURRENCY_CASINO) < normalizedBet) {
+      if (compareMoney(getCurrencyBalance(opponentProfile, CURRENCY_CASINO), normalizedBet) < 0) {
         throw new Error(`${opponentProfile.username}님의 골드가 부족합니다.`);
       }
 
       if (!winnerUserId) {
         return {
           bet: normalizedBet,
-          pot: normalizedBet * 2,
+          pot: toCompatibleMoneyValue(addMoney(normalizedBet, normalizedBet)),
           winner: null,
           challenger: cloneProfile(challengerProfile),
           opponent: cloneProfile(opponentProfile)
@@ -4288,14 +4325,14 @@ export class EconomyService {
         guildId,
         profile: winnerProfile,
         currencyId: CURRENCY_CASINO,
-        payout: normalizedBet * 2,
+        payout: toCompatibleMoneyValue(addMoney(normalizedBet, normalizedBet)),
         stakeBasis: normalizedBet,
         economy: this
       });
 
       return {
         bet: normalizedBet,
-        pot: normalizedBet * 2,
+        pot: toCompatibleMoneyValue(addMoney(normalizedBet, normalizedBet)),
         winner: cloneProfile(winnerProfile),
         challenger: cloneProfile(challengerProfile),
         opponent: cloneProfile(opponentProfile)
@@ -4314,7 +4351,7 @@ export class EconomyService {
         .sort((a, b) => {
           if (b.level !== a.level) return b.level - a.level;
           if (b.totalXp !== a.totalXp) return b.totalXp - a.totalXp;
-          return b.balance - a.balance;
+          return compareMoney(b.balance, a.balance);
         })
         .slice(0, limit);
     });
@@ -4332,11 +4369,7 @@ function normalizePositiveInteger(value, label) {
 }
 
 function normalizeCasinoBet(value, label) {
-  const normalized = normalizePositiveInteger(value, label);
-
-  if (normalized > CASINO_MAX_BET) {
-    throw new Error(`${label}은 최대 ${CASINO_MAX_BET.toLocaleString()}골드까지 가능합니다.`);
-  }
+  const normalized = normalizePositiveMoneyValue(value, label);
 
   return normalized;
 }
@@ -4349,6 +4382,48 @@ function normalizeNonNegativeInteger(value, label) {
   }
 
   return clampNonNegativeSafeInteger(normalized);
+}
+
+function normalizeNonNegativeMoneyInput(value, label) {
+  return toCompatibleMoneyValue(toMoney(value, label));
+}
+
+function normalizePositiveMoneyValue(value, label) {
+  const money = toMoney(value, label);
+  if (money <= 0n) {
+    throw new Error(`${label}은 1 이상의 정수여야 합니다.`);
+  }
+  return toCompatibleMoneyValue(money);
+}
+
+function diffMoneyValue(left, right) {
+  const difference = toMoney(left) - toMoney(right);
+  const abs = difference < 0n ? -difference : difference;
+  const value = toCompatibleMoneyValue(abs);
+  if (difference >= 0n) return value;
+  return typeof value === 'number' ? -value : `-${value}`;
+}
+
+function absMoneyDifference(left, right) {
+  const difference = toMoney(left) - toMoney(right);
+  return difference < 0n ? -difference : difference;
+}
+
+function divideBigIntCeil(numerator, denominator) {
+  if (denominator <= 0n) throw new Error('나눗수는 1 이상의 정수여야 합니다.');
+  return (numerator + denominator - 1n) / denominator;
+}
+
+function powBigInt(base, exponent) {
+  let safeExponent = normalizeStoredNonNegativeInteger(exponent);
+  let result = 1n;
+  let factor = BigInt(base);
+  while (safeExponent > 0) {
+    if (safeExponent % 2 === 1) result *= factor;
+    safeExponent = Math.floor(safeExponent / 2);
+    if (safeExponent > 0) factor *= factor;
+  }
+  return result;
 }
 
 function normalizeRequiredId(value, label) {
@@ -4438,24 +4513,23 @@ function calculateSocialLoanTotalDue({
   interestType,
   extraPeriods = 0
 }) {
-  const normalizedPrincipal = normalizePositiveInteger(principal, '대출 원금');
+  const normalizedPrincipal = toMoney(normalizePositiveMoneyValue(principal, '대출 원금'));
   const normalizedInterestBps = normalizeStoredNonNegativeInteger(interestBps);
-  if (normalizedInterestBps <= 0) return normalizedPrincipal;
+  if (normalizedInterestBps <= 0) return toCompatibleMoneyValue(normalizedPrincipal);
 
   const normalizedTermMs = normalizeStoredNonNegativeInteger(termMs);
   const normalizedInterestPeriodMs = normalizeStoredSocialLoanInterestPeriodMs(interestPeriodMs);
   const periods = Math.max(1, Math.ceil(normalizedTermMs / normalizedInterestPeriodMs))
     + normalizeStoredNonNegativeInteger(extraPeriods);
   if (interestType === SOCIAL_LOAN_INTEREST_COMPOUND) {
-    const multiplier = (1 + normalizedInterestBps / 10_000) ** periods;
-    const compounded = normalizedPrincipal * multiplier;
-    return Math.max(
-      normalizedPrincipal,
-      Math.ceil(compounded - 1e-9)
-    );
+    const numerator = powBigInt(BigInt(10_000 + normalizedInterestBps), periods);
+    const denominator = powBigInt(10_000n, periods);
+    const compounded = divideBigIntCeil(normalizedPrincipal * numerator, denominator);
+    return toCompatibleMoneyValue(compounded > normalizedPrincipal ? compounded : normalizedPrincipal);
   }
 
-  return normalizedPrincipal + Math.ceil(normalizedPrincipal * normalizedInterestBps * periods / 10_000);
+  const interest = divideBigIntCeil(normalizedPrincipal * BigInt(normalizedInterestBps) * BigInt(periods), 10_000n);
+  return toCompatibleMoneyValue(normalizedPrincipal + interest);
 }
 
 function accrueSocialLoansInterest(loans, now = Date.now()) {
@@ -4468,19 +4542,19 @@ function accrueSocialLoansInterest(loans, now = Date.now()) {
 
 function accrueSocialLoanInterest(loan, now = Date.now()) {
   if (!loan || typeof loan !== 'object') return loan;
-  const principal = normalizeStoredNonNegativeInteger(loan.principal);
-  if (principal <= 0) return loan;
+  const principal = normalizeStoredMoneyAmount(loan.principal);
+  if (!isPositiveMoney(principal)) return loan;
 
   const accruedTotalDue = calculateSocialLoanAccruedTotalDue(loan, now);
-  if (accruedTotalDue > normalizeStoredNonNegativeInteger(loan.totalDue)) {
+  if (compareMoney(accruedTotalDue, normalizeStoredMoneyAmount(loan.totalDue)) > 0) {
     loan.totalDue = accruedTotalDue;
   }
   return loan;
 }
 
 function calculateSocialLoanAccruedTotalDue(loan, now = Date.now()) {
-  const principal = normalizeStoredNonNegativeInteger(loan.principal);
-  if (principal <= 0) return 0;
+  const principal = normalizeStoredMoneyAmount(loan.principal);
+  if (!isPositiveMoney(principal)) return 0;
 
   return calculateSocialLoanTotalDue({
     principal,
@@ -4520,6 +4594,47 @@ function assertNoOpenLoanRequest(loans, lenderUserId) {
   }
 }
 
+function assertSocialLoanLenderExposureLimit({
+  data,
+  guildId,
+  lenderId,
+  lender,
+  amount
+}) {
+  const requestedAmount = toMoney(amount, '대출 요청 금액');
+  const exposure = getSocialLoanLenderPrincipalExposure(data, guildId, lenderId);
+  const limit = toMoney(lender.balance) / SOCIAL_LOAN_LENDER_EXPOSURE_DENOMINATOR;
+  const projectedExposure = exposure + requestedAmount;
+
+  if (projectedExposure <= limit) return;
+
+  const available = limit > exposure ? limit - exposure : 0n;
+  throw new Error(
+    `대출 한도 초과: 빌려주는 유저의 진행 중 대출 한도는 보유 골드의 0.1%입니다. `
+    + `추가 가능 금액은 ${toCompatibleMoneyValue(available)}골드입니다.`
+  );
+}
+
+function getSocialLoanLenderPrincipalExposure(data, guildId, lenderId) {
+  let exposure = 0n;
+
+  for (const borrowerUserId of getAccountUserIdsForGuild(data, guildId)) {
+    const borrower = data?.accounts?.users?.[borrowerUserId]
+      ?? data?.guilds?.[guildId]?.users?.[borrowerUserId]
+      ?? null;
+    if (!borrower) continue;
+
+    const loans = normalizeSocialLoans(borrower.socialLoans);
+    for (const loan of loans.loans) {
+      if (loan.lenderUserId !== lenderId) continue;
+      if (compareMoney(getSocialLoanRemaining(loan), 0) <= 0) continue;
+      exposure += toMoney(loan.principal);
+    }
+  }
+
+  return exposure;
+}
+
 function findOpenLoanRequest(loans, lenderUserId, status) {
   return loans.requests.find((request) =>
     request.lenderUserId === lenderUserId && request.status === status
@@ -4548,14 +4663,18 @@ function compareSocialLoanRequestsForStatus(a, b) {
 }
 
 function getSocialLoanRemaining(loan) {
-  return Math.max(0, normalizeStoredNonNegativeInteger(loan.totalDue) - normalizeStoredNonNegativeInteger(loan.repaid));
+  const totalDue = normalizeStoredMoneyAmount(loan.totalDue);
+  const repaid = normalizeStoredMoneyAmount(loan.repaid);
+  return compareMoney(totalDue, repaid) > 0
+    ? toCompatibleMoneyValue(subtractMoney(totalDue, repaid))
+    : 0;
 }
 
 function creditCurrencyWithoutIncomeRepayment(profile, currencyId, amount) {
   const normalizedAmount = normalizeStoredMoneyAmount(amount);
-  if (normalizedAmount <= 0) return getCurrencyBalance(profile, currencyId);
-  const current = getCurrencyBalance(profile, currencyId);
-  return setCurrencyBalance(profile, currencyId, current + normalizedAmount);
+  if (!isPositiveMoney(normalizedAmount)) return getCurrencyBalance(profile, currencyId);
+  const current = toMoney(getCurrencyBalance(profile, currencyId));
+  return setCurrencyBalance(profile, currencyId, current + toMoney(normalizedAmount));
 }
 
 function creditWagerSettlementPayout({
@@ -4568,18 +4687,20 @@ function creditWagerSettlementPayout({
   economy,
   now = Date.now()
 }) {
-  const normalizedPayout = normalizeNonNegativeInteger(payout, '지급액');
-  const normalizedStakeBasis = normalizeNonNegativeInteger(stakeBasis, '베팅 기준액');
-  const returnedStake = Math.min(normalizedPayout, normalizedStakeBasis);
-  const profit = Math.max(0, normalizedPayout - normalizedStakeBasis);
+  const normalizedPayout = normalizeStoredMoneyAmount(payout);
+  const normalizedStakeBasis = normalizeStoredMoneyAmount(stakeBasis);
+  const returnedStake = toCompatibleMoneyValue(minMoney(normalizedPayout, normalizedStakeBasis));
+  const profit = compareMoney(normalizedPayout, normalizedStakeBasis) > 0
+    ? toCompatibleMoneyValue(subtractMoney(normalizedPayout, normalizedStakeBasis))
+    : 0;
   const balanceBefore = profile.balance;
   let incomeReceipt = null;
 
-  if (returnedStake > 0) {
+  if (isPositiveMoney(returnedStake)) {
     creditCurrencyWithoutIncomeRepayment(profile, currencyId, returnedStake);
   }
 
-  if (profit > 0) {
+  if (isPositiveMoney(profit)) {
     incomeReceipt = creditCurrencyWithSocialLoanRepayment({
       data,
       guildId,
@@ -4604,21 +4725,21 @@ function creditWagerSettlementPayout({
 }
 
 function repaySocialLoansToLender({ borrower, lender, targetLoans, amount, now }) {
-  let remainingBudget = normalizeStoredNonNegativeInteger(amount);
+  let remainingBudget = normalizeStoredMoneyAmount(amount);
   let repaidTotal = 0;
 
   for (const loan of targetLoans) {
-    if (remainingBudget <= 0) break;
+    if (!isPositiveMoney(remainingBudget)) break;
     const remainingLoan = getSocialLoanRemaining(loan);
-    const payment = Math.min(remainingLoan, remainingBudget, borrower.balance);
-    if (payment <= 0) break;
+    const payment = toCompatibleMoneyValue(minMoney(remainingLoan, remainingBudget, borrower.balance));
+    if (!isPositiveMoney(payment)) break;
 
     debitCurrency(borrower, CURRENCY_MAIN, payment, '상환할 골드가 부족합니다.');
     creditCurrency(lender, CURRENCY_MAIN, payment);
-    loan.repaid = normalizeStoredNonNegativeInteger(loan.repaid) + payment;
+    loan.repaid = toCompatibleMoneyValue(addMoney(loan.repaid, payment));
     loan.lastRepaymentAt = normalizeStoredNonNegativeInteger(now);
-    remainingBudget -= payment;
-    repaidTotal += payment;
+    remainingBudget = toCompatibleMoneyValue(subtractMoney(remainingBudget, payment));
+    repaidTotal = toCompatibleMoneyValue(addMoney(repaidTotal, payment));
   }
 
   return repaidTotal;
@@ -4649,23 +4770,23 @@ function creditCurrencyWithSocialLoanRepayment({
     gross,
     balanceBefore,
     balance: profile.balance,
-    socialLoanRepayment: socialLoanRepayments.reduce((sum, entry) => sum + entry.amount, 0),
+    socialLoanRepayment: toCompatibleMoneyValue(addMoney(...socialLoanRepayments.map((entry) => entry.amount))),
     socialLoanRepayments,
     bankruptcy: getStockBankruptcySummary(profile)
   };
 }
 
 function repayEligibleSocialLoansFromIncome({ data, guildId, borrower, gross, economy, now }) {
-  if (gross <= 0) return [];
+  if (!isPositiveMoney(gross)) return [];
 
   const loans = normalizeSocialLoans(borrower.socialLoans);
   borrower.socialLoans = loans;
   accrueSocialLoansInterest(loans, now);
-  let budget = Math.min(
+  let budget = toCompatibleMoneyValue(minMoney(
     borrower.balance,
-    Math.floor(gross * SOCIAL_LOAN_AUTO_REPAYMENT_BPS / 10_000)
-  );
-  if (budget <= 0) return [];
+    multiplyMoneyFloor(gross, BigInt(SOCIAL_LOAN_AUTO_REPAYMENT_BPS), 10_000n)
+  ));
+  if (!isPositiveMoney(budget)) return [];
 
   const eligibleLoans = loans.loans
     .filter((loan) => isSocialLoanAutoRepaymentEligible(loan, now))
@@ -4673,10 +4794,10 @@ function repayEligibleSocialLoansFromIncome({ data, guildId, borrower, gross, ec
   const repayments = [];
 
   for (const loan of eligibleLoans) {
-    if (budget <= 0 || borrower.balance <= 0) break;
+    if (!isPositiveMoney(budget) || compareMoney(borrower.balance, 0) <= 0) break;
     const remaining = getSocialLoanRemaining(loan);
-    const payment = Math.min(remaining, budget, borrower.balance);
-    if (payment <= 0) continue;
+    const payment = toCompatibleMoneyValue(minMoney(remaining, budget, borrower.balance));
+    if (!isPositiveMoney(payment)) continue;
 
     const lender = getOrCreateProfile(
       data,
@@ -4688,9 +4809,9 @@ function repayEligibleSocialLoansFromIncome({ data, guildId, borrower, gross, ec
     );
     debitCurrency(borrower, CURRENCY_MAIN, payment, '상환할 골드가 부족합니다.');
     creditCurrency(lender, CURRENCY_MAIN, payment);
-    loan.repaid = normalizeStoredNonNegativeInteger(loan.repaid) + payment;
+    loan.repaid = toCompatibleMoneyValue(addMoney(loan.repaid, payment));
     loan.lastRepaymentAt = normalizeStoredNonNegativeInteger(now);
-    budget -= payment;
+    budget = toCompatibleMoneyValue(subtractMoney(budget, payment));
     repayments.push({
       loanId: loan.id,
       lenderUserId: loan.lenderUserId,
@@ -4701,12 +4822,12 @@ function repayEligibleSocialLoansFromIncome({ data, guildId, borrower, gross, ec
     });
   }
 
-  loans.loans = loans.loans.filter((loan) => getSocialLoanRemaining(loan) > 0);
+  loans.loans = loans.loans.filter((loan) => compareMoney(getSocialLoanRemaining(loan), 0) > 0);
   return repayments;
 }
 
 function isSocialLoanAutoRepaymentEligible(loan, now) {
-  if (getSocialLoanRemaining(loan) <= 0) return false;
+  if (compareMoney(getSocialLoanRemaining(loan), 0) <= 0) return false;
   if (loan.repaymentMode === SOCIAL_LOAN_REPAYMENT_INSTALLMENT) return true;
   return normalizeStoredNonNegativeInteger(now) >= normalizeStoredNonNegativeInteger(loan.dueAt);
 }
@@ -4746,7 +4867,7 @@ function normalizePlayerTablePayouts(payouts, players) {
 
   return Object.fromEntries(players.map((player) => [
     player.key,
-    normalizeNonNegativeInteger(payouts[player.key] ?? 0, `${player.username} 반환 스택`)
+    normalizeNonNegativeMoneyInput(payouts[player.key] ?? 0, `${player.username} 반환 스택`)
   ]));
 }
 
@@ -5084,9 +5205,9 @@ function normalizeSocialLoanRequest(value) {
   if (!value || typeof value !== 'object') return null;
   const borrowerUserId = String(value.borrowerUserId ?? '').trim();
   const lenderUserId = String(value.lenderUserId ?? '').trim();
-  const amount = normalizeStoredNonNegativeInteger(value.amount);
+  const amount = normalizeStoredMoneyAmount(value.amount);
   const termMs = normalizeStoredNonNegativeInteger(value.termMs);
-  if (!borrowerUserId || !lenderUserId || amount <= 0 || termMs <= 0) return null;
+  if (!borrowerUserId || !lenderUserId || !isPositiveMoney(amount) || termMs <= 0) return null;
 
   const status = value.status === SOCIAL_LOAN_STATUS_OFFERED
     ? SOCIAL_LOAN_STATUS_OFFERED
@@ -5094,8 +5215,10 @@ function normalizeSocialLoanRequest(value) {
   const interestType = normalizeStoredSocialLoanInterestType(value.interestType ?? SOCIAL_LOAN_INTEREST_SIMPLE);
   const interestBps = normalizeStoredNonNegativeInteger(value.interestBps);
   const interestPeriodMs = normalizeStoredSocialLoanInterestPeriodMs(value.interestPeriodMs);
-  const totalDue = normalizeStoredNonNegativeInteger(value.totalDue)
-    || calculateSocialLoanTotalDue({
+  const storedTotalDue = normalizeStoredMoneyAmount(value.totalDue);
+  const totalDue = isPositiveMoney(storedTotalDue)
+    ? storedTotalDue
+    : calculateSocialLoanTotalDue({
       principal: amount,
       termMs,
       interestBps,
@@ -5125,9 +5248,10 @@ function normalizeSocialLoanRequest(value) {
 function normalizeSocialLoan(value) {
   if (!value || typeof value !== 'object') return null;
   const lenderUserId = String(value.lenderUserId ?? '').trim();
-  const principal = normalizeStoredNonNegativeInteger(value.principal);
-  const totalDue = normalizeStoredNonNegativeInteger(value.totalDue);
-  if (!lenderUserId || principal <= 0 || totalDue <= 0) return null;
+  const principal = normalizeStoredMoneyAmount(value.principal);
+  const totalDue = normalizeStoredMoneyAmount(value.totalDue);
+  if (!lenderUserId || !isPositiveMoney(principal) || !isPositiveMoney(totalDue)) return null;
+  const storedRepaid = normalizeStoredMoneyAmount(value.repaid);
 
   return {
     id: String(value.id ?? createSocialLoanId(value.acceptedAt, value.borrowerUserId, lenderUserId)).trim(),
@@ -5135,7 +5259,7 @@ function normalizeSocialLoan(value) {
     lenderUsername: String(value.lenderUsername ?? lenderUserId).trim() || lenderUserId,
     principal,
     totalDue,
-    repaid: Math.min(totalDue, normalizeStoredNonNegativeInteger(value.repaid)),
+    repaid: toCompatibleMoneyValue(minMoney(totalDue, storedRepaid)),
     interestBps: normalizeStoredNonNegativeInteger(value.interestBps),
     interestPeriodMs: normalizeStoredSocialLoanInterestPeriodMs(value.interestPeriodMs),
     interestType: normalizeStoredSocialLoanInterestType(value.interestType ?? SOCIAL_LOAN_INTEREST_SIMPLE),
@@ -6284,26 +6408,29 @@ function getRpgCasinoSettlementModifier(profile) {
 
 function applyRpgCasinoSettlementModifier({ bet, payout, modifier }) {
   const normalizedBet = normalizeCasinoBet(bet, '베팅액');
-  const normalizedPayout = normalizeNonNegativeInteger(payout, '지급액');
+  const normalizedPayout = normalizeNonNegativeMoneyInput(payout, '지급액');
   const safeModifier = modifier?.applied ? modifier : null;
   if (!safeModifier) {
     return { bet: normalizedBet, payout: normalizedPayout };
   }
 
-  const baseProfit = normalizedPayout - normalizedBet;
-  if (baseProfit > 0) {
+  const baseProfitComparison = compareMoney(normalizedPayout, normalizedBet);
+  if (baseProfitComparison > 0) {
+    const baseProfit = subtractMoney(normalizedPayout, normalizedBet);
     return {
       bet: normalizedBet,
-      payout: clampNonNegativeSafeInteger(
-        normalizedBet + Math.floor(baseProfit * Math.max(1, safeModifier.winMultiplier))
-      )
+      payout: toCompatibleMoneyValue(addMoney(
+        normalizedBet,
+        multiplyMoneyFloor(baseProfit, BigInt(Math.round(Math.max(1, safeModifier.winMultiplier) * 10_000)), 10_000n)
+      ))
     };
   }
-  if (baseProfit < 0) {
-    const loss = normalizedBet - normalizedPayout;
+  if (baseProfitComparison < 0) {
+    const loss = subtractMoney(normalizedBet, normalizedPayout);
     return {
-      bet: Math.max(1, clampNonNegativeSafeInteger(
-        normalizedPayout + Math.ceil(loss * Math.max(1, safeModifier.lossMultiplier))
+      bet: toCompatibleMoneyValue(addMoney(
+        normalizedPayout,
+        multiplyMoneyCeil(loss, BigInt(Math.round(Math.max(1, safeModifier.lossMultiplier) * 10_000)), 10_000n)
       )),
       payout: normalizedPayout
     };
@@ -6318,16 +6445,21 @@ function normalizeStoredNonNegativeInteger(value) {
 }
 
 function normalizeStoredMoneyAmount(value) {
-  const normalized = Number(value);
-  return Number.isFinite(normalized) && normalized >= 0
-    ? clampNonNegativeSafeInteger(normalized)
-    : 0;
+  return toCompatibleMoneyValue(normalizeStoredMoney(value));
 }
 
 function clampNonNegativeSafeInteger(value) {
   const normalized = Number(value);
   if (!Number.isFinite(normalized)) return 0;
   return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(normalized)));
+}
+
+function multiplyMoneyCeil(amount, numerator, denominator = 1n) {
+  const safeAmount = toMoney(amount);
+  const safeNumerator = toMoney(numerator, '배율 분자');
+  const safeDenominator = toMoney(denominator, '배율 분모');
+  if (safeDenominator <= 0n) throw new Error('배율 분모는 1 이상의 정수여야 합니다.');
+  return (safeAmount * safeNumerator + safeDenominator - 1n) / safeDenominator;
 }
 
 function normalizeStoredPositiveInteger(value, fallback) {

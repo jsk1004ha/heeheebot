@@ -9,6 +9,10 @@ import {
   getOrCreateLinkedAccountProfile,
   getOrCreateLinkedFeatureUserProfile
 } from './accounts.js';
+import {
+  normalizeStoredMoney,
+  toCompatibleMoneyValue
+} from './money.js';
 
 const MAX_PICKAXE_LEVEL = 100;
 const MIN_LEGENDARY_PICKAXE_LEVEL = 40;
@@ -508,7 +512,7 @@ function getOrCreateGoldProfile(data, guildId, userId, username = 'Unknown') {
   const profile = getOrCreateLinkedAccountProfile(data, { guildId, userId, username, now, createDefaultProfile: createDefaultGoldProfile });
   profile.userId = String(userId ?? '').trim();
   profile.username = username || profile.username || 'Unknown';
-  profile.balance = normalizeNonNegativeInteger(profile.balance);
+  profile.balance = normalizeGoldBalance(profile.balance);
   profile.wallets = normalizeWallets(profile.wallets);
   migrateLegacyWalletsToGold(profile, { now });
   return profile;
@@ -932,6 +936,10 @@ function clampInteger(value, min, max) {
 function normalizeNonNegativeInteger(value) {
   const normalized = Number(value);
   return Number.isSafeInteger(normalized) && normalized >= 0 ? normalized : 0;
+}
+
+function normalizeGoldBalance(value) {
+  return toCompatibleMoneyValue(normalizeStoredMoney(value));
 }
 
 function randomInt(min, max) {
