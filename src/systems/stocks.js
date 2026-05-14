@@ -4148,7 +4148,10 @@ function isEarlyClose(position, evaluated) {
 function calculateLeverageBankruptcyDebt(position, evaluated = {}) {
   const margin = normalizeNonNegativeInteger(position?.margin);
   if (margin <= 0) return 0;
-  return normalizeNonNegativeInteger(evaluated.bankruptcyShortfall);
+  const exposure = calculateLeveragedExposure(margin, position?.leverage);
+  const debt = normalizeStoredDebt(evaluated.debt ?? position?.debt, exposure.debt);
+  const leveragedLoss = margin + normalizeNonNegativeInteger(evaluated.bankruptcyShortfall);
+  return Math.min(Number.MAX_SAFE_INTEGER, debt + leveragedLoss);
 }
 
 function evaluateLeveragedPosition(position, quote, options = {}) {
