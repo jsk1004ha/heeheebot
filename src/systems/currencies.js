@@ -368,9 +368,8 @@ function normalizeStockBankruptcyState(value = {}) {
 
 function normalizeNonNegativeInteger(value) {
   const number = Number(value);
-  return Number.isFinite(number)
-    ? Math.max(0, Math.floor(number))
-    : 0;
+  if (!Number.isFinite(number)) return 0;
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(number)));
 }
 
 function normalizePositiveInteger(value, label) {

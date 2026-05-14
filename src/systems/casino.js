@@ -138,7 +138,7 @@ export function playOddEven({ choice, bet, randomInt = defaultRandomInt }) {
   const roll = randomInt(1, 100);
   const parity = roll % 2 === 0 ? 'even' : 'odd';
   const win = roll <= 98 && normalizedChoice === parity;
-  const payout = win ? Math.floor(bet * 1.9) : 0;
+  const payout = win ? calculateCasinoPayout(bet, 1.9) : 0;
 
   return {
     game: '홀짝',
@@ -156,7 +156,7 @@ export function playDice({ choice, bet, randomInt = defaultRandomInt }) {
   const roll = randomInt(1, 6);
   const outcome = roll >= 4 ? 'high' : 'low';
   const win = normalizedChoice === outcome;
-  const payout = win ? Math.floor(bet * 1.9) : 0;
+  const payout = win ? calculateCasinoPayout(bet, 1.9) : 0;
 
   return {
     game: '주사위',
@@ -189,7 +189,7 @@ export function playSlots({ bet, randomInt = defaultRandomInt }) {
     reels,
     win: multiplier > 0,
     multiplier,
-    payout: bet * multiplier
+    payout: calculateCasinoPayout(bet, multiplier)
   };
 }
 
@@ -208,7 +208,7 @@ export function playLuckySeven({ bet, randomInt = defaultRandomInt }) {
     total,
     win,
     multiplier,
-    payout: win ? Math.floor(bet * multiplier) : 0
+    payout: win ? calculateCasinoPayout(bet, multiplier) : 0
   };
 }
 
@@ -238,7 +238,7 @@ export function playHighLow({ choice, bet, randomInt = defaultRandomInt }) {
     win,
     push,
     multiplier,
-    payout: Math.floor(bet * multiplier)
+    payout: calculateCasinoPayout(bet, multiplier)
   };
 }
 
@@ -256,7 +256,7 @@ export function playRoulette({ choice, bet, randomInt = defaultRandomInt }) {
     color,
     win,
     multiplier: win ? multiplier : 0,
-    payout: win ? bet * multiplier : 0
+    payout: win ? calculateCasinoPayout(bet, multiplier) : 0
   };
 }
 
@@ -363,7 +363,7 @@ export function playSicBo({ choice, bet, randomInt = defaultRandomInt }) {
     triple,
     win,
     multiplier: win ? multiplier : 0,
-    payout: win ? bet * multiplier : 0
+    payout: win ? calculateCasinoPayout(bet, multiplier) : 0
   };
 }
 
@@ -381,7 +381,7 @@ export function playKeno({ numbers, bet, randomInt = defaultRandomInt }) {
     hits,
     win: multiplier > 0,
     multiplier,
-    payout: bet * multiplier
+    payout: calculateCasinoPayout(bet, multiplier)
   };
 }
 
@@ -469,7 +469,7 @@ export function drawPokerRound(round) {
     drawCount: current.drawCount + 1,
     replacedCount,
     handRank,
-    payout: Math.floor(current.bet * handRank.multiplier)
+    payout: calculateCasinoPayout(current.bet, handRank.multiplier)
   });
 }
 
@@ -908,7 +908,7 @@ export function pressDeadlineRound(round, { randomInt = defaultRandomInt } = {})
 
   const lastReward = getDeadlineNextReward(round.bet, round.presses);
   const presses = round.presses + 1;
-  const reward = round.reward + lastReward;
+  const reward = addCasinoMoney(round.reward, lastReward);
   const autoCashedOut = presses >= DEADLINE_MAX_SAFE_PRESSES;
   const status = autoCashedOut ? 'cashed_out' : 'pressing';
 
@@ -921,7 +921,7 @@ export function pressDeadlineRound(round, { randomInt = defaultRandomInt } = {})
     lastReward,
     lostReward: 0,
     busted: false,
-    payout: status === 'cashed_out' ? round.bet + reward : 0,
+    payout: status === 'cashed_out' ? addCasinoMoney(round.bet, reward) : 0,
     autoCashedOut
   });
 }
@@ -932,7 +932,7 @@ export function cashOutDeadlineRound(round) {
   return buildDeadlineRound({
     ...round,
     status: 'cashed_out',
-    payout: round.bet + round.reward,
+    payout: addCasinoMoney(round.bet, round.reward),
     autoCashedOut: false
   });
 }
@@ -951,7 +951,7 @@ export function getDeadlineNextReward(bet, presses) {
   const normalizedPresses = normalizeNonNegativeSafeInteger(presses, '누른 횟수');
   const rewardBps = DEADLINE_BASE_REWARD_BPS + normalizedPresses * DEADLINE_REWARD_STEP_BPS;
 
-  return Math.max(1, Math.floor(normalizedBet * rewardBps / 10_000));
+  return Math.max(1, calculateCasinoPayout(normalizedBet, rewardBps / 10_000));
 }
 
 
@@ -995,7 +995,7 @@ export function resolveTimingRound(round, { nowMs = defaultNowMs } = {}) {
   const differenceMs = Math.abs(elapsedMs - round.targetMs);
   const tier = getTimingPayoutTier(differenceMs);
   const multiplier = tier?.multiplier ?? 0;
-  const payout = multiplier > 0 ? Math.floor(round.bet * multiplier) : 0;
+  const payout = multiplier > 0 ? calculateCasinoPayout(round.bet, multiplier) : 0;
 
   return buildTimingRound({
     ...round,
@@ -1073,13 +1073,13 @@ export function getEmojiRacePoolMarket(bets, {
 } = {}) {
   const normalizedBets = normalizeEmojiRacePoolBets(bets);
   const normalizedPayoutBps = normalizeBasisPoints(payoutBps, '이모지 경마 배당률');
-  const totalPool = normalizedBets.reduce((total, betEntry) => total + betEntry.bet, 0);
-  const payoutPool = Math.floor(totalPool * normalizedPayoutBps / 10_000);
+  const totalPool = normalizedBets.reduce((total, betEntry) => addCasinoMoney(total, betEntry.bet), 0);
+  const payoutPool = calculateCasinoPayout(totalPool, normalizedPayoutBps / 10_000);
   const stakeByChoice = Object.fromEntries(EMOJI_RACE_RACERS.map((racer) => [racer.id, 0]));
   const countByChoice = Object.fromEntries(EMOJI_RACE_RACERS.map((racer) => [racer.id, 0]));
 
   for (const betEntry of normalizedBets) {
-    stakeByChoice[betEntry.choice] += betEntry.bet;
+    stakeByChoice[betEntry.choice] = addCasinoMoney(stakeByChoice[betEntry.choice], betEntry.bet);
     countByChoice[betEntry.choice] += 1;
   }
 
@@ -2567,7 +2567,7 @@ function assertBlackjackTurn(round) {
 function settleBlackjackRound(round) {
   const result = decideBlackjackWinner(round.playerHand, round.dealerHand);
   const multiplier = getBlackjackMultiplier(result, round.playerHand);
-  const payout = result === 'push' ? round.bet : Math.floor(round.bet * multiplier);
+  const payout = result === 'push' ? round.bet : calculateCasinoPayout(round.bet, multiplier);
 
   return annotateBlackjackRound({
     ...round,
@@ -2702,9 +2702,9 @@ function shouldBankerDraw(bankerValue, playerThird) {
 }
 
 function getBaccaratPayout(choice, bet) {
-  if (choice === 'player') return bet * 2;
-  if (choice === 'banker') return Math.floor(bet * 1.95);
-  return bet * 9;
+  if (choice === 'player') return calculateCasinoPayout(bet, 2);
+  if (choice === 'banker') return calculateCasinoPayout(bet, 1.95);
+  return calculateCasinoPayout(bet, 9);
 }
 
 function rollDicePair(randomInt) {
@@ -2725,7 +2725,7 @@ function formatCrapsResult(choice, bet, rolls, outcome, point = null) {
     win: outcome === 'win',
     push: outcome === 'push',
     payout: outcome === 'win'
-      ? bet * 2
+      ? calculateCasinoPayout(bet, 2)
       : outcome === 'push'
         ? bet
         : 0
@@ -3077,6 +3077,29 @@ function normalizeDeadlineBet(bet) {
   return normalized;
 }
 
+function calculateCasinoPayout(amount, multiplier) {
+  return clampCasinoMoney(Number(amount) * Number(multiplier));
+}
+
+function addCasinoMoney(...amounts) {
+  let total = 0;
+
+  for (const amount of amounts) {
+    const normalized = Number(amount);
+    if (!Number.isFinite(normalized) || normalized <= 0) continue;
+    total += normalized;
+    if (total >= Number.MAX_SAFE_INTEGER) return Number.MAX_SAFE_INTEGER;
+  }
+
+  return clampCasinoMoney(total);
+}
+
+function clampCasinoMoney(value) {
+  const normalized = Number(value);
+  if (!Number.isFinite(normalized) || normalized <= 0) return 0;
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.floor(normalized));
+}
+
 function normalizeNonNegativeSafeInteger(value, label) {
   const normalized = Number(value);
 
@@ -3168,7 +3191,7 @@ function calculateEmojiRacePoolPayouts(bets, winnerId, market) {
     return {
       key: betEntry.key,
       index,
-      basePayout: Math.floor(weighted / winnerStake),
+      basePayout: clampCasinoMoney(Math.floor(weighted / winnerStake)),
       remainder: weighted % winnerStake
     };
   });
@@ -3237,7 +3260,7 @@ function createEmojiRaceResult({
     winnerId: winner.id,
     win,
     multiplier: win ? EMOJI_RACE_MULTIPLIER : 0,
-    payout: win ? Math.floor(bet * EMOJI_RACE_MULTIPLIER) : 0
+    payout: win ? calculateCasinoPayout(bet, EMOJI_RACE_MULTIPLIER) : 0
   };
 }
 
