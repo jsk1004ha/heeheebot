@@ -187,6 +187,7 @@ const DEFAULT_OPTIONS = Object.freeze({
 const DAY_MS = 24 * 60 * 60 * 1000;
 const SWORD_PROTECTION_SCROLL_COST = 15_000;
 const SOCIAL_LOAN_AUTO_REPAYMENT_BPS = 3_500;
+const SOCIAL_LOAN_LENDER_EXPOSURE_DENOMINATOR = 1_000n;
 const SOCIAL_LOAN_MAX_INTEREST_BPS = 10_000;
 const SOCIAL_LOAN_MIN_TERM_MS = 60 * 60 * 1000;
 const SOCIAL_LOAN_MAX_TERM_MS = 30 * DAY_MS;
@@ -3687,6 +3688,13 @@ export class EconomyService {
       const loans = normalizeSocialLoans(borrower.socialLoans);
       borrower.socialLoans = loans;
       assertNoOpenLoanRequest(loans, lenderId);
+      assertSocialLoanLenderExposureLimit({
+        data,
+        guildId,
+        lenderId,
+        lender,
+        amount: normalizedAmount
+      });
 
       const request = {
         id: createSocialLoanId(now, borrowerId, lenderId),
@@ -3742,6 +3750,14 @@ export class EconomyService {
       if (!request) {
         throw new Error('수락할 대출 요청을 찾을 수 없습니다.');
       }
+
+      assertSocialLoanLenderExposureLimit({
+        data,
+        guildId,
+        lenderId,
+        lender,
+        amount: request.amount
+      });
 
       if (compareMoney(lender.balance, request.amount) < 0) {
         throw new Error('대출 요청 금액보다 잔액이 부족합니다.');
@@ -3806,6 +3822,14 @@ export class EconomyService {
           lender: cloneProfile(lender)
         };
       }
+
+      assertSocialLoanLenderExposureLimit({
+        data,
+        guildId,
+        lenderId,
+        lender,
+        amount: request.amount
+      });
 
       if (compareMoney(lender.balance, request.amount) < 0) {
         throw new Error('빌려줄 유저의 잔액이 부족해 대출을 실행할 수 없습니다.');
@@ -4568,6 +4592,47 @@ function assertNoOpenLoanRequest(loans, lenderUserId) {
   if (existing) {
     throw new Error('이미 해당 유저에게 진행 중인 대출 요청이 있습니다.');
   }
+}
+
+function assertSocialLoanLenderExposureLimit({
+  data,
+  guildId,
+  lenderId,
+  lender,
+  amount
+}) {
+  const requestedAmount = toMoney(amount, '대출 요청 금액');
+  const exposure = getSocialLoanLenderPrincipalExposure(data, guildId, lenderId);
+  const limit = toMoney(lender.balance) / SOCIAL_LOAN_LENDER_EXPOSURE_DENOMINATOR;
+  const projectedExposure = exposure + requestedAmount;
+
+  if (projectedExposure <= limit) return;
+
+  const available = limit > exposure ? limit - exposure : 0n;
+  throw new Error(
+    `대출 한도 초과: 빌려주는 유저의 진행 중 대출 한도는 보유 골드의 0.1%입니다. `
+    + `추가 가능 금액은 ${toCompatibleMoneyValue(available)}골드입니다.`
+  );
+}
+
+function getSocialLoanLenderPrincipalExposure(data, guildId, lenderId) {
+  let exposure = 0n;
+
+  for (const borrowerUserId of getAccountUserIdsForGuild(data, guildId)) {
+    const borrower = data?.accounts?.users?.[borrowerUserId]
+      ?? data?.guilds?.[guildId]?.users?.[borrowerUserId]
+      ?? null;
+    if (!borrower) continue;
+
+    const loans = normalizeSocialLoans(borrower.socialLoans);
+    for (const loan of loans.loans) {
+      if (loan.lenderUserId !== lenderId) continue;
+      if (compareMoney(getSocialLoanRemaining(loan), 0) <= 0) continue;
+      exposure += toMoney(loan.principal);
+    }
+  }
+
+  return exposure;
 }
 
 function findOpenLoanRequest(loans, lenderUserId, status) {
