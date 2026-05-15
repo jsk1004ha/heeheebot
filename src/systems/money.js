@@ -3,10 +3,25 @@ const KOREAN_MONEY_UNITS = Object.freeze(new Map([
   ['만', 10_000n],
   ['억', 100_000_000n],
   ['조', 1_000_000_000_000n],
-  ['경', 10_000_000_000_000_000n]
+  ['경', 10_000_000_000_000_000n],
+  ['해', 10n ** 20n],
+  ['자', 10n ** 24n],
+  ['양', 10n ** 28n],
+  ['구', 10n ** 32n],
+  ['간', 10n ** 36n],
+  ['정', 10n ** 40n],
+  ['재', 10n ** 44n],
+  ['극', 10n ** 48n],
+  ['항하사', 10n ** 52n],
+  ['아승기', 10n ** 56n],
+  ['나유타', 10n ** 60n],
+  ['불가사의', 10n ** 64n],
+  ['무량대수', 10n ** 68n]
 ]));
-const KOREAN_MONEY_UNIT_PATTERN = /[만억조경]/u;
-const KOREAN_MONEY_CHUNK_PATTERN = /(\d+)([만억조경]?)/gu;
+const KOREAN_MONEY_UNIT_NAMES = Object.freeze(
+  [...KOREAN_MONEY_UNITS.keys()].sort((left, right) => right.length - left.length)
+);
+const KOREAN_MONEY_UNIT_PATTERN = /(?:무량대수|불가사의|나유타|아승기|항하사|[만억조경해자양구간정재극])/u;
 
 export function toMoney(value, label = '금액') {
   if (typeof value === 'bigint') {
@@ -125,26 +140,32 @@ function parseMoneyString(value, label) {
   let index = 0;
   let total = 0n;
 
-  for (const match of normalized.matchAll(KOREAN_MONEY_CHUNK_PATTERN)) {
-    if (match.index !== index) {
+  while (index < normalized.length) {
+    const digitMatch = /^\d+/u.exec(normalized.slice(index));
+    if (!digitMatch) {
       throw createMoneyError(label);
     }
 
-    const [, digits, unit] = match;
+    const digits = digitMatch[0];
+    index += digits.length;
+    const unit = matchKoreanMoneyUnitAt(normalized, index);
     const multiplier = unit ? KOREAN_MONEY_UNITS.get(unit) : 1n;
     if (!multiplier) {
       throw createMoneyError(label);
     }
 
     total += BigInt(digits) * multiplier;
-    index += match[0].length;
-  }
-
-  if (index !== normalized.length) {
-    throw createMoneyError(label);
+    index += unit?.length ?? 0;
   }
 
   return total;
+}
+
+function matchKoreanMoneyUnitAt(value, index) {
+  for (const unit of KOREAN_MONEY_UNIT_NAMES) {
+    if (value.startsWith(unit, index)) return unit;
+  }
+  return '';
 }
 
 function createMoneyError(label) {

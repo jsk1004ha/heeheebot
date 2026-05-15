@@ -1582,23 +1582,18 @@ async function playTiming(interaction, economy, bet, options = {}) {
     });
     reserved = true;
 
-    const game = createTimingRound({
-      bet,
-      randomInt: options.randomInt,
-      nowMs: getNowMsProvider(options)
-    });
     gameId = createChallengeId();
     pendingTimingGames.set(gameId, {
       guildId: interaction.guildId,
       userId: interaction.user.id,
       username: interaction.user.username,
       bet,
-      game,
+      game: null,
       reserved: true,
-      expiresAt: Date.now() + game.targetMs + CHALLENGE_TTL_MS
+      expiresAt: Date.now() + CHALLENGE_TTL_MS
     });
 
-    await interaction.reply(createTimingProgressPayload(interaction.user, game, gameId));
+    await interaction.reply(createTimingReadyPayload(interaction.user, bet, gameId));
   } catch (error) {
     if (gameId) pendingTimingGames.delete(gameId);
     if (reserved) {
@@ -1633,9 +1628,48 @@ async function handleTimingButton(interaction, economy, logger, options = {}) {
     return true;
   }
 
+  if (action === 'timing_start') {
+    try {
+      const game = createTimingRound({
+        bet: pending.bet,
+        randomInt: options.randomInt,
+        nowMs: getNowMsProvider(options)
+      });
+      pending.game = game;
+      pending.expiresAt = Date.now() + game.targetMs + CHALLENGE_TTL_MS;
+
+      await interaction.update(createTimingProgressPayload(interaction.user, game, gameId));
+    } catch (error) {
+      pendingTimingGames.delete(gameId);
+      if (pending.reserved) {
+        await economy.refundReservedWager({
+          guildId: pending.guildId,
+          userId: pending.userId,
+          username: pending.username,
+          bet: pending.bet
+        }).catch((refundError) => logger.error('Failed to refund timing wager:', refundError));
+      }
+      logger.error(error);
+      await interaction.update({
+        content: `타이밍 게임 시작 실패: ${error.message}`,
+        components: []
+      });
+    }
+
+    return true;
+  }
+
   if (action !== 'timing_press') {
     await interaction.reply({
       content: '알 수 없는 타이밍 버튼입니다.',
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (!pending.game) {
+    await interaction.reply({
+      content: '시작 버튼을 먼저 눌러야 타이밍 측정이 시작됩니다.',
       flags: MessageFlags.Ephemeral
     });
     return true;
@@ -3646,6 +3680,24 @@ function createTimingProgressPayload(user, game, gameId) {
   };
 }
 
+function createTimingReadyPayload(user, bet, gameId) {
+  return {
+    content: formatTimingReady(user, bet),
+    allowedMentions: createAllowedMentionsForUsers([user.id]),
+    components: [createTimingStartRow(gameId)]
+  };
+}
+
+function formatTimingReady(user, bet) {
+  return [
+    `🎯 **타이밍 준비** — ${formatUserMention(user, user.username)}`,
+    '시작하기 버튼을 누르는 순간부터 시간이 측정됩니다.',
+    `베팅금: **${formatMoney(bet, { unit: '골드' })}**`,
+    `배율표: ${formatTimingPayoutTable()}`,
+    '목표 시간은 시작 후 공개됩니다.'
+  ].join('\n');
+}
+
 function formatTimingProgress(user, game) {
   return [
     `🎯 **타이밍 게임** — ${formatUserMention(user, user.username)}`,
@@ -3994,6 +4046,15 @@ function isPositiveCasinoMoney(amount) {
 }
 
 
+
+function createTimingStartRow(gameId) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`timing_start:${gameId}`)
+      .setLabel('시작하기')
+      .setStyle(ButtonStyle.Success)
+  );
+}
 
 function createTimingActionRow(gameId) {
   return new ActionRowBuilder().addComponents(

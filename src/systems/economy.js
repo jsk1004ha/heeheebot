@@ -3738,6 +3738,124 @@ export class EconomyService {
     });
   }
 
+  async createUserLoanOffer({
+    guildId,
+    lenderUserId,
+    lenderUsername,
+    borrowerUserId,
+    borrowerUsername,
+    amount,
+    termHours,
+    repaymentMode,
+    interestPercent = DEFAULT_SOCIAL_LOAN_INTEREST_PERCENT,
+    interestPeriodHours = DEFAULT_SOCIAL_LOAN_INTEREST_PERIOD_HOURS,
+    interestType = DEFAULT_SOCIAL_LOAN_INTEREST_TYPE,
+    now = Date.now()
+  }) {
+    const normalizedAmount = normalizePositiveMoneyValue(amount, '대출 제안 금액');
+    const termMs = normalizeLoanTermHours(termHours);
+    const normalizedRepaymentMode = normalizeSocialLoanRepaymentMode(repaymentMode);
+    const lenderId = normalizeRequiredId(lenderUserId, '빌려줄 유저');
+    const borrowerId = normalizeRequiredId(borrowerUserId, '빌릴 유저');
+    const interestBps = normalizeSocialLoanInterestPercent(interestPercent);
+    const interestPeriodMs = normalizeSocialLoanInterestPeriodHours(interestPeriodHours);
+    const normalizedInterestType = normalizeSocialLoanInterestType(interestType);
+
+    if (lenderId === borrowerId) {
+      throw new Error('자기 자신에게는 대출 조건을 제시할 수 없습니다.');
+    }
+
+    return this.store.update((data) => {
+      const borrower = getOrCreateProfile(data, guildId, borrowerId, borrowerUsername, this, now);
+      const lender = getOrCreateProfile(data, guildId, lenderId, lenderUsername, this, now);
+      const loans = normalizeSocialLoans(borrower.socialLoans);
+      borrower.socialLoans = loans;
+      assertNoOpenLoanRequest(loans, lenderId);
+      assertSocialLoanLenderExposureLimit({
+        data,
+        guildId,
+        lenderId,
+        lender,
+        amount: normalizedAmount
+      });
+
+      if (compareMoney(lender.balance, normalizedAmount) < 0) {
+        throw new Error('대출 제안 금액보다 잔액이 부족합니다.');
+      }
+
+      const offer = {
+        id: createSocialLoanId(now, borrowerId, lenderId),
+        status: SOCIAL_LOAN_STATUS_OFFERED,
+        borrowerUserId: borrowerId,
+        borrowerUsername: borrower.username,
+        lenderUserId: lenderId,
+        lenderUsername: lender.username,
+        amount: normalizedAmount,
+        termMs,
+        repaymentMode: normalizedRepaymentMode,
+        requestedAt: normalizeStoredNonNegativeInteger(now),
+        offeredAt: normalizeStoredNonNegativeInteger(now),
+        interestBps,
+        interestPeriodMs,
+        interestType: normalizedInterestType,
+        totalDue: calculateSocialLoanTotalDue({
+          principal: normalizedAmount,
+          termMs,
+          interestBps,
+          interestPeriodMs,
+          interestType: normalizedInterestType
+        })
+      };
+
+      loans.requests.push(offer);
+
+      return {
+        offer: cloneSocialLoanRequest(offer),
+        borrower: cloneProfile(borrower),
+        lender: cloneProfile(lender)
+      };
+    });
+  }
+
+  async rejectUserLoanRequest({
+    guildId,
+    lenderUserId,
+    lenderUsername,
+    borrowerUserId,
+    borrowerUsername,
+    now = Date.now()
+  }) {
+    const lenderId = normalizeRequiredId(lenderUserId, '빌려줄 유저');
+    const borrowerId = normalizeRequiredId(borrowerUserId, '빌리는 유저');
+
+    if (lenderId === borrowerId) {
+      throw new Error('자기 자신의 대출 요청은 거절할 수 없습니다.');
+    }
+
+    return this.store.update((data) => {
+      const borrower = getOrCreateProfile(data, guildId, borrowerId, borrowerUsername, this, now);
+      const lender = getOrCreateProfile(data, guildId, lenderId, lenderUsername, this, now);
+      const loans = normalizeSocialLoans(borrower.socialLoans);
+      borrower.socialLoans = loans;
+      const requestIndex = loans.requests.findIndex((request) =>
+        request.lenderUserId === lenderId && request.status === SOCIAL_LOAN_STATUS_REQUESTED
+      );
+
+      if (requestIndex < 0) {
+        throw new Error('거절할 대출 요청을 찾을 수 없습니다.');
+      }
+
+      const [request] = loans.requests.splice(requestIndex, 1);
+
+      return {
+        rejected: true,
+        request: cloneSocialLoanRequest(request),
+        borrower: cloneProfile(borrower),
+        lender: cloneProfile(lender)
+      };
+    });
+  }
+
   async offerUserLoan({
     guildId,
     lenderUserId,
