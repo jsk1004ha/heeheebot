@@ -76,6 +76,7 @@ import {
   addMoney,
   compareMoney,
   formatMoney,
+  multiplyMoneyFloor,
   toCompatibleMoneyValue,
   toMoney
 } from '../systems/money.js';
@@ -95,9 +96,14 @@ const TIMING_DIFFICULTY_NORMAL = 'normal';
 const TIMING_DIFFICULTY_HARD = 'hard';
 const TIMING_DIFFICULTY_VERY_HARD = 'very_hard';
 const TIMING_DIFFICULTY_LABELS = Object.freeze({
-  [TIMING_DIFFICULTY_NORMAL]: '보통',
+  [TIMING_DIFFICULTY_NORMAL]: '쉬움',
   [TIMING_DIFFICULTY_HARD]: '어려움',
   [TIMING_DIFFICULTY_VERY_HARD]: '매우어려움'
+});
+const TIMING_DIFFICULTY_PAYOUT_MULTIPLIERS = Object.freeze({
+  [TIMING_DIFFICULTY_NORMAL]: 1,
+  [TIMING_DIFFICULTY_HARD]: 1.5,
+  [TIMING_DIFFICULTY_VERY_HARD]: 2.5
 });
 const TIMING_DIFFICULTY_VALUES = new Set(Object.keys(TIMING_DIFFICULTY_LABELS));
 const DEFAULT_CASINO_LUCK_MULTIPLIER = 5;
@@ -184,9 +190,9 @@ export const casinoCommands = [
         .setDescription('목표 시간 표시 방식')
         .setRequired(false)
         .addChoices(
-          { name: '보통', value: TIMING_DIFFICULTY_NORMAL },
-          { name: '어려움 · 목표를 문제로 표시', value: TIMING_DIFFICULTY_HARD },
-          { name: '매우어려움 · 수학 문제로 표시', value: TIMING_DIFFICULTY_VERY_HARD }
+          { name: '쉬움 · 기본 배율', value: TIMING_DIFFICULTY_NORMAL },
+          { name: '어려움 · 목표 문제 · 보상 1.5배', value: TIMING_DIFFICULTY_HARD },
+          { name: '매우어려움 · 수학 문제 · 보상 2.5배', value: TIMING_DIFFICULTY_VERY_HARD }
         )
     ),
   new SlashCommandBuilder()
@@ -855,7 +861,7 @@ function formatCasinoInfo() {
     '- `/주사위`: 높음(4~6) 또는 낮음(1~3) 적중 시 1.9배',
     '- `/슬롯`: 페어 3배, 트리플 10배, 7️⃣ 트리플 20배',
     `- \`/데드라인\`: 최소 ${DEADLINE_MIN_BET.toLocaleString()}골드, 버튼을 누를수록 누적 보상과 꽝 확률이 함께 상승, 멈추면 수령`,
-    `- \`/타이밍\`: ${TIMING_TARGET_MIN_SECONDS}~${TIMING_TARGET_MAX_SECONDS}초 랜덤 목표에 가깝게 누를수록 최대 ${formatMultiplier(TIMING_PAYOUT_TIERS[0].multiplier)}배, 어려움 이상은 목표 시간이 문제로 표시`,
+    `- \`/타이밍\`: ${TIMING_TARGET_MIN_SECONDS}~${TIMING_TARGET_MAX_SECONDS}초 랜덤 목표, 쉬움 최대 5배 / 어려움 7.5배 / 매우어려움 12.5배`,
     '- `/이모지경마`: 여러 명이 같은 판에 베팅, 총 베팅금에서 운영 수수료를 뺀 배당풀을 1등 동물 적중자끼리 지분 비례 분배',
     '- `/럭키세븐`: 주사위 2개 합이 7이면 5.5배',
     '- `/하이로우`: 두 번째 카드가 높음/낮음 적중 시 1.9배, 같은 숫자는 환불',
@@ -1700,9 +1706,9 @@ async function handleTimingButton(interaction, economy, logger, options = {}) {
   }
 
   try {
-    const game = resolveTimingRound(pending.game, {
+    const game = applyTimingDifficultyPayout(resolveTimingRound(pending.game, {
       nowMs: getNowMsProvider(options)
-    });
+    }));
     pendingTimingGames.delete(gameId);
     const settlement = await economy.resolveReservedWager({
       guildId: pending.guildId,
@@ -3718,28 +3724,32 @@ function formatTimingReady(user, bet, difficulty = TIMING_DIFFICULTY_NORMAL) {
   return [
     `🎯 **타이밍 준비** — ${formatUserMention(user, user.username)}`,
     '시작하기 버튼을 누르는 순간부터 시간이 측정됩니다.',
-    `난이도: **${TIMING_DIFFICULTY_LABELS[normalizedDifficulty]}**${normalizedDifficulty !== TIMING_DIFFICULTY_NORMAL ? ' · 목표 시간이 문제로 표시됩니다.' : ''}`,
+    formatTimingDifficultyLine(normalizedDifficulty),
     `베팅금: **${formatMoney(bet, { unit: '골드' })}**`,
-    `배율표: ${formatTimingPayoutTable()}`,
+    `배율표: ${formatTimingPayoutTable(normalizedDifficulty)}`,
     '목표 시간은 시작 후 공개됩니다.'
   ].join('\n');
 }
 
 function formatTimingProgress(user, game) {
+  const difficulty = normalizeTimingDifficulty(game.difficulty);
+
   return [
     `🎯 **타이밍 게임** — ${formatUserMention(user, user.username)}`,
-    `난이도: **${TIMING_DIFFICULTY_LABELS[normalizeTimingDifficulty(game.difficulty)]}**`,
+    formatTimingDifficultyLine(difficulty),
     formatTimingTargetProgress(game),
     `베팅금: **${game.bet.toLocaleString()}골드**`,
-    `배율표: ${formatTimingPayoutTable()}`,
+    `배율표: ${formatTimingPayoutTable(difficulty)}`,
     '누른 순간의 기록은 소수점 4자리까지 공개됩니다.'
   ].join('\n');
 }
 
 function formatTimingResult(user, game, settlement) {
+  const difficulty = normalizeTimingDifficulty(game.difficulty);
+
   return [
     `🎯 **타이밍 결과** — ${formatUserMention(user, user.username)}`,
-    `난이도: **${TIMING_DIFFICULTY_LABELS[normalizeTimingDifficulty(game.difficulty)]}**`,
+    formatTimingDifficultyLine(difficulty),
     formatTimingTargetResult(game),
     `기록: **${formatSeconds4(game.elapsedSeconds)}**`,
     `오차: **${formatSeconds4(game.differenceSeconds)}**`,
@@ -3750,9 +3760,11 @@ function formatTimingResult(user, game, settlement) {
   ].join('\n');
 }
 
-function formatTimingPayoutTable() {
+function formatTimingPayoutTable(difficulty = TIMING_DIFFICULTY_NORMAL) {
+  const payoutMultiplier = getTimingDifficultyPayoutMultiplier(difficulty);
+
   return TIMING_PAYOUT_TIERS
-    .map((tier) => `${tier.label} ${formatMultiplier(tier.multiplier)}배`)
+    .map((tier) => `${tier.label} ${formatMultiplier(tier.multiplier * payoutMultiplier)}배`)
     .join(' / ');
 }
 
@@ -4120,6 +4132,40 @@ function attachTimingDifficulty(game, difficulty, options = {}) {
   };
 }
 
+function applyTimingDifficultyPayout(game) {
+  const difficulty = normalizeTimingDifficulty(game.difficulty);
+  const difficultyPayoutMultiplier = getTimingDifficultyPayoutMultiplier(difficulty);
+  const baseMultiplier = Number(game.multiplier ?? 0);
+
+  if (!game.win || baseMultiplier <= 0 || difficultyPayoutMultiplier === 1) {
+    return {
+      ...game,
+      difficulty,
+      baseMultiplier,
+      difficultyPayoutMultiplier
+    };
+  }
+
+  const multiplier = normalizeDisplayMultiplier(baseMultiplier * difficultyPayoutMultiplier);
+
+  return {
+    ...game,
+    difficulty,
+    baseMultiplier,
+    difficultyPayoutMultiplier,
+    multiplier,
+    payout: calculateTimingPayout(game.bet, multiplier),
+    win: multiplier > 0
+  };
+}
+
+function calculateTimingPayout(bet, multiplier) {
+  const multiplierBps = BigInt(Math.max(0, Math.round(Number(multiplier) * 10_000)));
+  if (multiplierBps <= 0n) return 0;
+
+  return toCompatibleMoneyValue(multiplyMoneyFloor(bet, multiplierBps, 10_000n, '타이밍 지급액'));
+}
+
 function normalizeTimingDifficulty(value) {
   const normalized = String(value ?? TIMING_DIFFICULTY_NORMAL).trim() || TIMING_DIFFICULTY_NORMAL;
 
@@ -4128,6 +4174,20 @@ function normalizeTimingDifficulty(value) {
   }
 
   return normalized;
+}
+
+function getTimingDifficultyPayoutMultiplier(difficulty) {
+  return TIMING_DIFFICULTY_PAYOUT_MULTIPLIERS[normalizeTimingDifficulty(difficulty)];
+}
+
+function formatTimingDifficultyLine(difficulty) {
+  const normalizedDifficulty = normalizeTimingDifficulty(difficulty);
+  const payoutMultiplier = getTimingDifficultyPayoutMultiplier(normalizedDifficulty);
+  const suffix = normalizedDifficulty === TIMING_DIFFICULTY_NORMAL
+    ? ''
+    : ` · 문제 목표 · 보상 ${formatMultiplier(payoutMultiplier)}배`;
+
+  return `난이도: **${TIMING_DIFFICULTY_LABELS[normalizedDifficulty]}**${suffix}`;
 }
 
 function createTimingTargetPromptForDifficulty(targetSeconds, difficulty, options = {}) {
@@ -4218,10 +4278,14 @@ function formatSeconds4(seconds) {
   return `${Number(seconds).toFixed(4)}초`;
 }
 
+function normalizeDisplayMultiplier(multiplier) {
+  return Number(Number(multiplier).toFixed(4));
+}
+
 function formatMultiplier(multiplier) {
-  return Number.isInteger(multiplier)
-    ? multiplier.toFixed(0)
-    : multiplier.toFixed(1);
+  const normalized = normalizeDisplayMultiplier(multiplier);
+  if (Number.isInteger(normalized)) return normalized.toFixed(0);
+  return normalized.toFixed(2).replace(/0+$/u, '').replace(/\.$/u, '');
 }
 
 function getNowMsProvider(options = {}) {
