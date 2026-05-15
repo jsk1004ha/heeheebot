@@ -925,6 +925,48 @@ test('타이밍 어려움 난이도는 목표 시간을 숫자 대신 문제로 
   assert.match(press.updated.content, /지급: 750골드/);
 });
 
+test('타이밍 어려움 후반 문제 풀도 여러 계산 유형을 섞는다', async () => {
+  const fakeEconomy = {
+    async reserveWager(payload) {
+      return { bet: payload.bet, profile: { balance: 900 } };
+    },
+    async resolveReservedWager(payload) {
+      return {
+        bet: payload.bet,
+        payout: payload.payout,
+        profit: payload.payout - payload.bet,
+        profile: { balance: 900 + payload.payout }
+      };
+    },
+    async refundReservedWager(payload) {
+      return { bet: payload.bet, payout: payload.bet, profit: 0, profile: { balance: 1000 } };
+    }
+  };
+  const contents = [];
+
+  for (const promptIndex of [14, 15, 16, 17]) {
+    const interaction = createChatInputInteraction('타이밍', {
+      integers: { 돈: 100 },
+      strings: { 난이도: 'hard' }
+    });
+
+    assert.equal(await handleCasinoCommand(interaction, fakeEconomy, quietLogger), true);
+    const startButtonId = interaction.replied.components[0].components[0].data.custom_id;
+    const start = createCasinoButtonInteraction({ customId: startButtonId });
+    assert.equal(await handleCasinoCommand(start, fakeEconomy, quietLogger, {
+      randomInt: createSequenceRandom([10, promptIndex]),
+      nowMs: () => 1000
+    }), true);
+    contents.push(start.updated.content);
+  }
+
+  assert.match(contents[0], /방정식/);
+  assert.match(contents[1], /등차수열/);
+  assert.match(contents[2], /짝수 눈/);
+  assert.match(contents[3], /동전 2번/);
+  assert.equal(new Set(contents).size, contents.length);
+});
+
 test('타이밍 매우어려움 난이도는 고급 수학 문제로 목표 시간을 숨긴다', async () => {
   const calls = [];
   const fakeEconomy = {
@@ -1068,6 +1110,82 @@ test('타이밍 매우어려움은 확률과 통계형 문장 문제도 낸다',
 
   assert.match(start.updated.content, /공정한 동전을 5번 던질 때 앞면이 홀수 번 나오는 경우의 수 - 6초/);
   assert.doesNotMatch(start.updated.content, /목표: \*\*10\.0000초\*\*/);
+});
+
+test('타이밍 매우어려움 조합 문제는 C 괄호 표기 대신 nCr 표기를 쓴다', async () => {
+  const fakeEconomy = {
+    async reserveWager(payload) {
+      return { bet: payload.bet, profile: { balance: 900 } };
+    },
+    async resolveReservedWager(payload) {
+      return {
+        bet: payload.bet,
+        payout: payload.payout,
+        profit: payload.payout - payload.bet,
+        profile: { balance: 900 + payload.payout }
+      };
+    },
+    async refundReservedWager(payload) {
+      return { bet: payload.bet, payout: payload.bet, profit: 0, profile: { balance: 1000 } };
+    }
+  };
+  const interaction = createChatInputInteraction('타이밍', {
+    integers: { 돈: 100 },
+    strings: { 난이도: 'very_hard' }
+  });
+
+  assert.equal(await handleCasinoCommand(interaction, fakeEconomy, quietLogger), true);
+  const startButtonId = interaction.replied.components[0].components[0].data.custom_id;
+  const start = createCasinoButtonInteraction({ customId: startButtonId });
+  assert.equal(await handleCasinoCommand(start, fakeEconomy, quietLogger, {
+    randomInt: createSequenceRandom([10, 2]),
+    nowMs: () => 1000
+  }), true);
+
+  assert.match(start.updated.content, /12C2 - 11C2 - 1초/);
+  assert.doesNotMatch(start.updated.content, /C\(12, 2\)/);
+});
+
+test('타이밍 매우어려움 후반 문제 풀은 다른 수학 유형을 섞는다', async () => {
+  const fakeEconomy = {
+    async reserveWager(payload) {
+      return { bet: payload.bet, profile: { balance: 900 } };
+    },
+    async resolveReservedWager(payload) {
+      return {
+        bet: payload.bet,
+        payout: payload.payout,
+        profit: payload.payout - payload.bet,
+        profile: { balance: 900 + payload.payout }
+      };
+    },
+    async refundReservedWager(payload) {
+      return { bet: payload.bet, payout: payload.bet, profit: 0, profile: { balance: 1000 } };
+    }
+  };
+  const contents = [];
+
+  for (const promptIndex of [23, 24, 25, 26]) {
+    const interaction = createChatInputInteraction('타이밍', {
+      integers: { 돈: 100 },
+      strings: { 난이도: 'very_hard' }
+    });
+
+    assert.equal(await handleCasinoCommand(interaction, fakeEconomy, quietLogger), true);
+    const startButtonId = interaction.replied.components[0].components[0].data.custom_id;
+    const start = createCasinoButtonInteraction({ customId: startButtonId });
+    assert.equal(await handleCasinoCommand(start, fakeEconomy, quietLogger, {
+      randomInt: createSequenceRandom([10, promptIndex]),
+      nowMs: () => 1000
+    }), true);
+    contents.push(start.updated.content);
+  }
+
+  assert.match(contents[0], /행렬식/);
+  assert.match(contents[1], /합동식/);
+  assert.match(contents[2], /삼각수/);
+  assert.match(contents[3], /조건부확률/);
+  assert.equal(new Set(contents).size, contents.length);
 });
 
 test('타이밍 매우어려움 교란수 문제는 사람 수가 아니라 번째로 표현한다', async () => {
