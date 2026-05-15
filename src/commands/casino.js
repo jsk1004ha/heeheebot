@@ -91,6 +91,15 @@ const EMOJI_RACE_FRAME_DELAY_MS = 500;
 const EMOJI_RACE_LOBBY_MAX_PLAYERS = 12;
 const EMOJI_RACE_LOBBY_MIN_PLAYERS = 2;
 const POKER_LOBBY_MAX_PLAYERS = 6;
+const TIMING_DIFFICULTY_NORMAL = 'normal';
+const TIMING_DIFFICULTY_HARD = 'hard';
+const TIMING_DIFFICULTY_VERY_HARD = 'very_hard';
+const TIMING_DIFFICULTY_LABELS = Object.freeze({
+  [TIMING_DIFFICULTY_NORMAL]: '보통',
+  [TIMING_DIFFICULTY_HARD]: '어려움',
+  [TIMING_DIFFICULTY_VERY_HARD]: '매우어려움'
+});
+const TIMING_DIFFICULTY_VALUES = new Set(Object.keys(TIMING_DIFFICULTY_LABELS));
 const DEFAULT_CASINO_LUCK_MULTIPLIER = 5;
 const MAX_CASINO_LUCK_MULTIPLIER = 50;
 const pendingBlackjackChallenges = new Map();
@@ -168,7 +177,18 @@ export const casinoCommands = [
       name: '돈',
       description: '베팅할 골드',
       required: true
-    })),
+    }))
+    .addStringOption((option) =>
+      option
+        .setName('난이도')
+        .setDescription('목표 시간 표시 방식')
+        .setRequired(false)
+        .addChoices(
+          { name: '보통', value: TIMING_DIFFICULTY_NORMAL },
+          { name: '어려움 · 목표를 문제로 표시', value: TIMING_DIFFICULTY_HARD },
+          { name: '매우어려움 · 수학 문제로 표시', value: TIMING_DIFFICULTY_VERY_HARD }
+        )
+    ),
   new SlashCommandBuilder()
     .setName('이모지경마')
     .setDescription('여러 유저가 같은 판에 베팅하고 1등 동물 적중자끼리 배당풀을 나눕니다.')
@@ -835,7 +855,7 @@ function formatCasinoInfo() {
     '- `/주사위`: 높음(4~6) 또는 낮음(1~3) 적중 시 1.9배',
     '- `/슬롯`: 페어 3배, 트리플 10배, 7️⃣ 트리플 20배',
     `- \`/데드라인\`: 최소 ${DEADLINE_MIN_BET.toLocaleString()}골드, 버튼을 누를수록 누적 보상과 꽝 확률이 함께 상승, 멈추면 수령`,
-    `- \`/타이밍\`: ${TIMING_TARGET_MIN_SECONDS}~${TIMING_TARGET_MAX_SECONDS}초 랜덤 목표에 가깝게 누를수록 최대 ${formatMultiplier(TIMING_PAYOUT_TIERS[0].multiplier)}배`,
+    `- \`/타이밍\`: ${TIMING_TARGET_MIN_SECONDS}~${TIMING_TARGET_MAX_SECONDS}초 랜덤 목표에 가깝게 누를수록 최대 ${formatMultiplier(TIMING_PAYOUT_TIERS[0].multiplier)}배, 어려움 이상은 목표 시간이 문제로 표시`,
     '- `/이모지경마`: 여러 명이 같은 판에 베팅, 총 베팅금에서 운영 수수료를 뺀 배당풀을 1등 동물 적중자끼리 지분 비례 분배',
     '- `/럭키세븐`: 주사위 2개 합이 7이면 5.5배',
     '- `/하이로우`: 두 번째 카드가 높음/낮음 적중 시 1.9배, 같은 숫자는 환불',
@@ -1572,6 +1592,7 @@ async function handleScratchTicketButton(interaction, economy, logger) {
 async function playTiming(interaction, economy, bet, options = {}) {
   let reserved = false;
   let gameId = null;
+  const difficulty = normalizeTimingDifficulty(interaction.options.getString('난이도') ?? TIMING_DIFFICULTY_NORMAL);
 
   try {
     await economy.reserveWager({
@@ -1588,12 +1609,13 @@ async function playTiming(interaction, economy, bet, options = {}) {
       userId: interaction.user.id,
       username: interaction.user.username,
       bet,
+      difficulty,
       game: null,
       reserved: true,
       expiresAt: Date.now() + CHALLENGE_TTL_MS
     });
 
-    await interaction.reply(createTimingReadyPayload(interaction.user, bet, gameId));
+    await interaction.reply(createTimingReadyPayload(interaction.user, bet, gameId, difficulty));
   } catch (error) {
     if (gameId) pendingTimingGames.delete(gameId);
     if (reserved) {
@@ -1630,10 +1652,12 @@ async function handleTimingButton(interaction, economy, logger, options = {}) {
 
   if (action === 'timing_start') {
     try {
-      const game = createTimingRound({
+      const game = attachTimingDifficulty(createTimingRound({
         bet: pending.bet,
         randomInt: options.randomInt,
         nowMs: getNowMsProvider(options)
+      }), pending.difficulty, {
+        randomInt: options.randomInt
       });
       pending.game = game;
       pending.expiresAt = Date.now() + game.targetMs + CHALLENGE_TTL_MS;
@@ -3680,18 +3704,21 @@ function createTimingProgressPayload(user, game, gameId) {
   };
 }
 
-function createTimingReadyPayload(user, bet, gameId) {
+function createTimingReadyPayload(user, bet, gameId, difficulty = TIMING_DIFFICULTY_NORMAL) {
   return {
-    content: formatTimingReady(user, bet),
+    content: formatTimingReady(user, bet, difficulty),
     allowedMentions: createAllowedMentionsForUsers([user.id]),
     components: [createTimingStartRow(gameId)]
   };
 }
 
-function formatTimingReady(user, bet) {
+function formatTimingReady(user, bet, difficulty = TIMING_DIFFICULTY_NORMAL) {
+  const normalizedDifficulty = normalizeTimingDifficulty(difficulty);
+
   return [
     `🎯 **타이밍 준비** — ${formatUserMention(user, user.username)}`,
     '시작하기 버튼을 누르는 순간부터 시간이 측정됩니다.',
+    `난이도: **${TIMING_DIFFICULTY_LABELS[normalizedDifficulty]}**${normalizedDifficulty !== TIMING_DIFFICULTY_NORMAL ? ' · 목표 시간이 문제로 표시됩니다.' : ''}`,
     `베팅금: **${formatMoney(bet, { unit: '골드' })}**`,
     `배율표: ${formatTimingPayoutTable()}`,
     '목표 시간은 시작 후 공개됩니다.'
@@ -3701,7 +3728,8 @@ function formatTimingReady(user, bet) {
 function formatTimingProgress(user, game) {
   return [
     `🎯 **타이밍 게임** — ${formatUserMention(user, user.username)}`,
-    `목표: **${formatSeconds4(game.targetSeconds)}** 뒤에 버튼을 누르세요.`,
+    `난이도: **${TIMING_DIFFICULTY_LABELS[normalizeTimingDifficulty(game.difficulty)]}**`,
+    formatTimingTargetProgress(game),
     `베팅금: **${game.bet.toLocaleString()}골드**`,
     `배율표: ${formatTimingPayoutTable()}`,
     '누른 순간의 기록은 소수점 4자리까지 공개됩니다.'
@@ -3711,7 +3739,8 @@ function formatTimingProgress(user, game) {
 function formatTimingResult(user, game, settlement) {
   return [
     `🎯 **타이밍 결과** — ${formatUserMention(user, user.username)}`,
-    `목표: **${formatSeconds4(game.targetSeconds)}**`,
+    `난이도: **${TIMING_DIFFICULTY_LABELS[normalizeTimingDifficulty(game.difficulty)]}**`,
+    formatTimingTargetResult(game),
     `기록: **${formatSeconds4(game.elapsedSeconds)}**`,
     `오차: **${formatSeconds4(game.differenceSeconds)}**`,
     game.win
@@ -3725,6 +3754,22 @@ function formatTimingPayoutTable() {
   return TIMING_PAYOUT_TIERS
     .map((tier) => `${tier.label} ${formatMultiplier(tier.multiplier)}배`)
     .join(' / ');
+}
+
+function formatTimingTargetProgress(game) {
+  if (game.difficulty !== TIMING_DIFFICULTY_NORMAL && game.targetPrompt) {
+    return `목표 문제: **${game.targetPrompt}** — 계산한 시간에 버튼을 누르세요.`;
+  }
+
+  return `목표: **${formatSeconds4(game.targetSeconds)}** 뒤에 버튼을 누르세요.`;
+}
+
+function formatTimingTargetResult(game) {
+  if (game.difficulty !== TIMING_DIFFICULTY_NORMAL && game.targetPrompt) {
+    return `목표: **${formatSeconds4(game.targetSeconds)}** (문제: **${game.targetPrompt}**)`;
+  }
+
+  return `목표: **${formatSeconds4(game.targetSeconds)}**`;
 }
 
 function createDeadlineProgressPayload(user, game, gameId) {
@@ -4063,6 +4108,110 @@ function createTimingActionRow(gameId) {
       .setLabel('지금 누르기')
       .setStyle(ButtonStyle.Primary)
   );
+}
+
+function attachTimingDifficulty(game, difficulty, options = {}) {
+  const normalizedDifficulty = normalizeTimingDifficulty(difficulty);
+
+  return {
+    ...game,
+    difficulty: normalizedDifficulty,
+    targetPrompt: createTimingTargetPromptForDifficulty(game.targetSeconds, normalizedDifficulty, options)
+  };
+}
+
+function normalizeTimingDifficulty(value) {
+  const normalized = String(value ?? TIMING_DIFFICULTY_NORMAL).trim() || TIMING_DIFFICULTY_NORMAL;
+
+  if (!TIMING_DIFFICULTY_VALUES.has(normalized)) {
+    throw new Error('타이밍 난이도는 보통, 어려움, 매우어려움만 선택할 수 있습니다.');
+  }
+
+  return normalized;
+}
+
+function createTimingTargetPromptForDifficulty(targetSeconds, difficulty, options = {}) {
+  if (difficulty === TIMING_DIFFICULTY_HARD) {
+    return createTimingHardTargetPrompt(targetSeconds, options);
+  }
+
+  if (difficulty === TIMING_DIFFICULTY_VERY_HARD) {
+    return createTimingVeryHardTargetPrompt(targetSeconds, options);
+  }
+
+  return null;
+}
+
+function createTimingHardTargetPrompt(targetSeconds, options = {}) {
+  const target = Number(targetSeconds);
+  const prompts = [
+    `√${(target + 4) ** 2}초 - 4초`,
+    `3! + √${(target - 6) ** 2}초`,
+    `2³ + √${(target - 8) ** 2}초`,
+    `(${target - 1}² - ${(target - 1) ** 2 - target})초`,
+    `√${(target + 5) ** 2}초 - 5초`,
+    `(4! ÷ 2)${formatTimingSignedSeconds(target - 12)}`,
+    `(${target + 6}초 × 2 - 12초) ÷ 2`,
+    `(${target * 3 + 9}초 ÷ 3) - 3초`,
+    `(1분 - ${60 - target - 4}초) - 4초`,
+    `(${target + 9}초 + ${target - 1}초) ÷ 2 - 4초`,
+    `(${target + 2}² - ${target ** 2 + 4 * target + 4 - target})초`,
+    `√${(target * 2) ** 2}초 ÷ 2`,
+    `(${target + 12}초 - 3!초) ÷ 2 + ${Math.floor((target - 6) / 2)}초`,
+    `(${target + 10}초 × 3 - 30초) ÷ 3`
+  ];
+
+  return selectTimingTargetPrompt(prompts, options.randomInt);
+}
+
+function createTimingVeryHardTargetPrompt(targetSeconds, options = {}) {
+  const target = Number(targetSeconds);
+  const prompts = [
+    `이차방정식 2x² - ${2 * (target + 6)}x + ${6 * (target + 3)} = 0의 두 양근의 차`,
+    `이차방정식 3x² - ${3 * (target + 8)}x + ${12 * (target + 4)} = 0의 두 양근의 차`,
+    `C(${target + 2}, 2) - C(${target + 1}, 2) - 1초`,
+    `서로 다른 ${target + 2}명 중 2명을 뽑는 경우의 수 - 서로 다른 ${target + 1}명 중 2명을 뽑는 경우의 수 - 1초`,
+    `5번째 카탈란 수 - 4번째 카탈란 수${formatTimingSignedSeconds(target - 28)}`,
+    `공정한 동전을 5번 던질 때 앞면이 홀수 번 나오는 경우의 수${formatTimingSignedSeconds(target - 16)}`,
+    `5명의 교란수 - 4명의 교란수${formatTimingSignedSeconds(target - 35)}`,
+    `9번째 피보나치 수 - 7번째 피보나치 수${formatTimingSignedSeconds(target - 21)}`,
+    `1~${target + 5} 중에서 서로 다른 두 수를 골라 합이 ${target + 6}이 되는 경우의 수 + ${target - Math.floor((target + 5) / 2)}초`,
+    `이항정리 (1+x)^${target + 2}의 x² 계수 - (1+x)^${target + 1}의 x² 계수 - 1초`,
+    `서로 다른 주사위 2개를 던져 눈의 합이 7이 되는 경우의 수${formatTimingSignedSeconds(target - 6)}`,
+    `함수 f(x)=x³-3x²+${target + 3}x에서 x=1일 때 접선의 기울기초`,
+    `함수 f(x)=x²+${target - 4}x+1에서 x=2일 때 순간변화율초`,
+    `수열 aₙ=n²-n에서 a₅-a₄${formatTimingSignedSeconds(target - 8)}`,
+    `log₂32${formatTimingSignedSeconds(target - 5)}`,
+    `3×2 격자에서 최단경로의 수${formatTimingSignedSeconds(target - 10)}`,
+    `서로 다른 6명 중 대표 2명을 뽑는 경우의 수${formatTimingSignedSeconds(target - 15)}`,
+    `공정한 동전을 6번 던질 때 앞면이 정확히 3번 나오는 경우의 수${formatTimingSignedSeconds(target - 20)}`,
+    `이차방정식 5x² - ${5 * (target + 2)}x + ${10 * target} = 0의 두 양근의 차`,
+    `10번째 피보나치 수 - 8번째 피보나치 수${formatTimingSignedSeconds(target - 34)}`,
+    `6명의 교란수 - 5명의 교란수${formatTimingSignedSeconds(target - 221)}`,
+    `6번째 카탈란 수 - 5번째 카탈란 수${formatTimingSignedSeconds(target - 90)}`,
+    `집합 {1,2,3,4,5,6}의 부분집합 중 원소가 2개인 것의 개수${formatTimingSignedSeconds(target - 15)}`
+  ];
+
+  return selectTimingTargetPrompt(prompts, options.randomInt);
+}
+
+function selectTimingTargetPrompt(prompts, randomInt = createCommandRandomInt) {
+  if (!Array.isArray(prompts) || prompts.length === 0) return null;
+
+  const rawIndex = Number(randomInt(0, prompts.length - 1));
+  const index = Number.isSafeInteger(rawIndex) ? Math.abs(rawIndex) % prompts.length : 0;
+  return prompts[index];
+}
+
+function createCommandRandomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function formatTimingSignedSeconds(deltaSeconds) {
+  const normalized = Number(deltaSeconds);
+  if (normalized === 0) return '초';
+  if (normalized > 0) return ` + ${normalized}초`;
+  return ` - ${Math.abs(normalized)}초`;
 }
 
 function formatSeconds4(seconds) {

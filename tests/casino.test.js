@@ -162,6 +162,8 @@ test('카지노 명령 payload는 다양한 게임을 등록한다', () => {
 
   const deadlineCommand = payloads.find((command) => command.name === '데드라인');
   const deadlineBetOption = deadlineCommand.options.find((option) => option.name === '돈');
+  const timingCommand = payloads.find((command) => command.name === '타이밍');
+  const timingDifficultyOption = timingCommand.options.find((option) => option.name === '난이도');
   const pokerCommand = payloads.find((command) => command.name === '포커');
   const pokerOpponentOption = pokerCommand.options.find((option) => option.name === '상대');
   const pokerPlayersOption = pokerCommand.options.find((option) => option.name === '인원');
@@ -174,6 +176,8 @@ test('카지노 명령 payload는 다양한 게임을 등록한다', () => {
   assert.ok(betOptions.length > 0);
   assert.ok(betOptions.every((option) => option.max_value === undefined));
   assert.ok(betOptions.every((option) => option.type === 3));
+  assert.equal(timingDifficultyOption.required, false);
+  assert.deepEqual(timingDifficultyOption.choices.map((choice) => choice.value), ['normal', 'hard', 'very_hard']);
   assert.equal(pokerOpponentOption, undefined);
   assert.equal(pokerPlayersOption, undefined);
   assert.deepEqual(pokerCommand.options.map((option) => option.name), ['시작칩']);
@@ -860,6 +864,286 @@ test('타이밍 명령은 시작 버튼을 누른 순간부터 기록을 재고 
   assert.match(press.updated.content, /오차: \*\*0\.0001초\*\*/);
   assert.match(press.updated.content, /배율 \*\*5배\*\*/);
   assert.match(press.updated.content, /지급: 500골드/);
+});
+
+test('타이밍 어려움 난이도는 목표 시간을 숫자 대신 문제로 보여준다', async () => {
+  const calls = [];
+  const fakeEconomy = {
+    async reserveWager(payload) {
+      calls.push(['reserve', payload]);
+      return { bet: payload.bet, profile: { balance: 900 } };
+    },
+    async resolveReservedWager(payload) {
+      calls.push(['resolve', payload]);
+      return {
+        bet: payload.bet,
+        payout: payload.payout,
+        profit: payload.payout - payload.bet,
+        profile: { balance: 900 + payload.payout }
+      };
+    },
+    async refundReservedWager(payload) {
+      calls.push(['refund', payload]);
+      return { bet: payload.bet, payout: payload.bet, profit: 0, profile: { balance: 1000 } };
+    }
+  };
+  const interaction = createChatInputInteraction('타이밍', {
+    integers: { 돈: 100 },
+    strings: { 난이도: 'hard' }
+  });
+
+  assert.equal(await handleCasinoCommand(interaction, fakeEconomy, quietLogger, {
+    randomInt: () => 10,
+    nowMs: () => 1000
+  }), true);
+  assert.match(interaction.replied.content, /난이도: \*\*어려움\*\*/);
+
+  const startButtonId = interaction.replied.components[0].components[0].data.custom_id;
+  const start = createCasinoButtonInteraction({ customId: startButtonId });
+  assert.equal(await handleCasinoCommand(start, fakeEconomy, quietLogger, {
+    randomInt: createSequenceRandom([10, 0]),
+    nowMs: () => 1000
+  }), true);
+
+  assert.match(start.updated.content, /목표 문제:/);
+  assert.match(start.updated.content, /√196초 - 4초/);
+  assert.doesNotMatch(start.updated.content, /목표: \*\*10\.0000초\*\*/);
+
+  const pressButtonId = start.updated.components[0].components[0].data.custom_id;
+  const press = createCasinoButtonInteraction({ customId: pressButtonId });
+  assert.equal(await handleCasinoCommand(press, fakeEconomy, quietLogger, {
+    nowMs: () => 10999.9
+  }), true);
+
+  assert.match(press.updated.content, /목표: \*\*10\.0000초\*\*/);
+  assert.match(press.updated.content, /문제:/);
+  assert.match(press.updated.content, /지급: 500골드/);
+});
+
+test('타이밍 매우어려움 난이도는 고급 수학 문제로 목표 시간을 숨긴다', async () => {
+  const calls = [];
+  const fakeEconomy = {
+    async reserveWager(payload) {
+      calls.push(['reserve', payload]);
+      return { bet: payload.bet, profile: { balance: 900 } };
+    },
+    async resolveReservedWager(payload) {
+      calls.push(['resolve', payload]);
+      return {
+        bet: payload.bet,
+        payout: payload.payout,
+        profit: payload.payout - payload.bet,
+        profile: { balance: 900 + payload.payout }
+      };
+    },
+    async refundReservedWager(payload) {
+      calls.push(['refund', payload]);
+      return { bet: payload.bet, payout: payload.bet, profit: 0, profile: { balance: 1000 } };
+    }
+  };
+  const interaction = createChatInputInteraction('타이밍', {
+    integers: { 돈: 100 },
+    strings: { 난이도: 'very_hard' }
+  });
+
+  assert.equal(await handleCasinoCommand(interaction, fakeEconomy, quietLogger, {
+    randomInt: () => 16,
+    nowMs: () => 1000
+  }), true);
+  assert.match(interaction.replied.content, /난이도: \*\*매우어려움\*\*/);
+
+  const startButtonId = interaction.replied.components[0].components[0].data.custom_id;
+  const start = createCasinoButtonInteraction({ customId: startButtonId });
+  assert.equal(await handleCasinoCommand(start, fakeEconomy, quietLogger, {
+    randomInt: createSequenceRandom([16, 4]),
+    nowMs: () => 1000
+  }), true);
+
+  assert.match(start.updated.content, /목표 문제:/);
+  assert.match(start.updated.content, /5번째 카탈란 수 - 4번째 카탈란 수/);
+  assert.doesNotMatch(start.updated.content, /제\d|완전수/);
+  assert.doesNotMatch(start.updated.content, /목표: \*\*16\.0000초\*\*/);
+
+  const pressButtonId = start.updated.components[0].components[0].data.custom_id;
+  const press = createCasinoButtonInteraction({ customId: pressButtonId });
+  assert.equal(await handleCasinoCommand(press, fakeEconomy, quietLogger, {
+    nowMs: () => 16999.9
+  }), true);
+
+  assert.deepEqual(calls.map(([type]) => type), ['reserve', 'resolve']);
+  assert.equal(calls[1][1].payout, 500);
+  assert.match(press.updated.content, /목표: \*\*16\.0000초\*\*/);
+  assert.match(press.updated.content, /카탈란/);
+  assert.match(press.updated.content, /지급: 500골드/);
+});
+
+test('타이밍 매우어려움 이차방정식 문제는 선도계수를 1로 두지 않는다', async () => {
+  const fakeEconomy = {
+    async reserveWager(payload) {
+      return { bet: payload.bet, profile: { balance: 900 } };
+    },
+    async resolveReservedWager(payload) {
+      return {
+        bet: payload.bet,
+        payout: payload.payout,
+        profit: payload.payout - payload.bet,
+        profile: { balance: 900 + payload.payout }
+      };
+    },
+    async refundReservedWager(payload) {
+      return { bet: payload.bet, payout: payload.bet, profit: 0, profile: { balance: 1000 } };
+    }
+  };
+  const interaction = createChatInputInteraction('타이밍', {
+    integers: { 돈: 100 },
+    strings: { 난이도: 'very_hard' }
+  });
+
+  assert.equal(await handleCasinoCommand(interaction, fakeEconomy, quietLogger, {
+    randomInt: () => 7,
+    nowMs: () => 1000
+  }), true);
+
+  const startButtonId = interaction.replied.components[0].components[0].data.custom_id;
+  const start = createCasinoButtonInteraction({ customId: startButtonId });
+  assert.equal(await handleCasinoCommand(start, fakeEconomy, quietLogger, {
+    randomInt: createSequenceRandom([7, 0]),
+    nowMs: () => 1000
+  }), true);
+
+  assert.match(start.updated.content, /이차방정식 2x²/);
+  assert.match(start.updated.content, /두 양근의 차/);
+  assert.doesNotMatch(start.updated.content, /이차방정식 x²/);
+  assert.doesNotMatch(start.updated.content, /목표: \*\*7\.0000초\*\*/);
+
+  const pressButtonId = start.updated.components[0].components[0].data.custom_id;
+  const press = createCasinoButtonInteraction({ customId: pressButtonId });
+  assert.equal(await handleCasinoCommand(press, fakeEconomy, quietLogger, {
+    nowMs: () => 7999.9
+  }), true);
+  assert.match(press.updated.content, /목표: \*\*7\.0000초\*\*/);
+});
+
+test('타이밍 매우어려움은 확률과 통계형 문장 문제도 낸다', async () => {
+  const fakeEconomy = {
+    async reserveWager(payload) {
+      return { bet: payload.bet, profile: { balance: 900 } };
+    },
+    async resolveReservedWager(payload) {
+      return {
+        bet: payload.bet,
+        payout: payload.payout,
+        profit: payload.payout - payload.bet,
+        profile: { balance: 900 + payload.payout }
+      };
+    },
+    async refundReservedWager(payload) {
+      return { bet: payload.bet, payout: payload.bet, profit: 0, profile: { balance: 1000 } };
+    }
+  };
+  const interaction = createChatInputInteraction('타이밍', {
+    integers: { 돈: 100 },
+    strings: { 난이도: 'very_hard' }
+  });
+
+  assert.equal(await handleCasinoCommand(interaction, fakeEconomy, quietLogger, {
+    randomInt: () => 10,
+    nowMs: () => 1000
+  }), true);
+
+  const startButtonId = interaction.replied.components[0].components[0].data.custom_id;
+  const start = createCasinoButtonInteraction({ customId: startButtonId });
+  assert.equal(await handleCasinoCommand(start, fakeEconomy, quietLogger, {
+    randomInt: createSequenceRandom([10, 5]),
+    nowMs: () => 1000
+  }), true);
+
+  assert.match(start.updated.content, /공정한 동전을 5번 던질 때 앞면이 홀수 번 나오는 경우의 수 - 6초/);
+  assert.doesNotMatch(start.updated.content, /목표: \*\*10\.0000초\*\*/);
+});
+
+test('타이밍 매우어려움은 쉬운 1차방정식 대신 수능형 함수 문제도 낸다', async () => {
+  const fakeEconomy = {
+    async reserveWager(payload) {
+      return { bet: payload.bet, profile: { balance: 900 } };
+    },
+    async resolveReservedWager(payload) {
+      return {
+        bet: payload.bet,
+        payout: payload.payout,
+        profit: payload.payout - payload.bet,
+        profile: { balance: 900 + payload.payout }
+      };
+    },
+    async refundReservedWager(payload) {
+      return { bet: payload.bet, payout: payload.bet, profit: 0, profile: { balance: 1000 } };
+    }
+  };
+  const interaction = createChatInputInteraction('타이밍', {
+    integers: { 돈: 100 },
+    strings: { 난이도: 'very_hard' }
+  });
+
+  assert.equal(await handleCasinoCommand(interaction, fakeEconomy, quietLogger), true);
+  const startButtonId = interaction.replied.components[0].components[0].data.custom_id;
+  const start = createCasinoButtonInteraction({ customId: startButtonId });
+  assert.equal(await handleCasinoCommand(start, fakeEconomy, quietLogger, {
+    randomInt: createSequenceRandom([12, 11]),
+    nowMs: () => 1000
+  }), true);
+
+  assert.match(start.updated.content, /함수 f\(x\)=x³-3x²\+15x에서 x=1일 때 접선의 기울기초/);
+  assert.doesNotMatch(start.updated.content, /3n \+ 7|직사각형의 둘레/);
+  assert.doesNotMatch(start.updated.content, /목표: \*\*12\.0000초\*\*/);
+});
+
+test('타이밍 매우어려움은 같은 목표 초에도 여러 문제를 낸다', async () => {
+  const fakeEconomy = {
+    async reserveWager(payload) {
+      return { bet: payload.bet, profile: { balance: 900 } };
+    },
+    async resolveReservedWager(payload) {
+      return {
+        bet: payload.bet,
+        payout: payload.payout,
+        profit: payload.payout - payload.bet,
+        profile: { balance: 900 + payload.payout }
+      };
+    },
+    async refundReservedWager(payload) {
+      return { bet: payload.bet, payout: payload.bet, profit: 0, profile: { balance: 1000 } };
+    }
+  };
+  const firstInteraction = createChatInputInteraction('타이밍', {
+    integers: { 돈: 100 },
+    strings: { 난이도: 'very_hard' }
+  });
+  const secondInteraction = createChatInputInteraction('타이밍', {
+    integers: { 돈: 100 },
+    strings: { 난이도: 'very_hard' }
+  });
+
+  assert.equal(await handleCasinoCommand(firstInteraction, fakeEconomy, quietLogger), true);
+  const firstStartButtonId = firstInteraction.replied.components[0].components[0].data.custom_id;
+  const firstStart = createCasinoButtonInteraction({ customId: firstStartButtonId });
+  assert.equal(await handleCasinoCommand(firstStart, fakeEconomy, quietLogger, {
+    randomInt: createSequenceRandom([10, 0]),
+    nowMs: () => 1000
+  }), true);
+
+  assert.equal(await handleCasinoCommand(secondInteraction, fakeEconomy, quietLogger), true);
+  const secondStartButtonId = secondInteraction.replied.components[0].components[0].data.custom_id;
+  const secondStart = createCasinoButtonInteraction({ customId: secondStartButtonId });
+  assert.equal(await handleCasinoCommand(secondStart, fakeEconomy, quietLogger, {
+    randomInt: createSequenceRandom([10, 5]),
+    nowMs: () => 1000
+  }), true);
+
+  assert.match(firstStart.updated.content, /목표 문제:/);
+  assert.match(secondStart.updated.content, /목표 문제:/);
+  assert.notEqual(firstStart.updated.content, secondStart.updated.content);
+  assert.doesNotMatch(firstStart.updated.content, /목표: \*\*10\.0000초\*\*/);
+  assert.doesNotMatch(secondStart.updated.content, /목표: \*\*10\.0000초\*\*/);
 });
 
 test('이모지 경마는 트랙 프레임으로 동물을 전진시키고 적중 시 2.7배를 지급한다', () => {
