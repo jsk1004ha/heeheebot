@@ -4233,7 +4233,7 @@ function createTimingVeryHardTargetPrompt(targetSeconds, options = {}) {
     `서로 다른 ${target + 2}명 중 2명을 뽑는 경우의 수 - 서로 다른 ${target + 1}명 중 2명을 뽑는 경우의 수 - 1초`,
     `5번째 카탈란 수 - 4번째 카탈란 수${formatTimingSignedSeconds(target - 28)}`,
     `공정한 동전을 5번 던질 때 앞면이 홀수 번 나오는 경우의 수${formatTimingSignedSeconds(target - 16)}`,
-    `5명의 교란수 - 4명의 교란수${formatTimingSignedSeconds(target - 35)}`,
+    `5번째 교란수 - 4번째 교란수${formatTimingSignedSeconds(target - 35)}`,
     `9번째 피보나치 수 - 7번째 피보나치 수${formatTimingSignedSeconds(target - 21)}`,
     `1~${target + 5} 중에서 서로 다른 두 수를 골라 합이 ${target + 6}이 되는 경우의 수 + ${target - Math.floor((target + 5) / 2)}초`,
     `이항정리 (1+x)^${target + 2}의 x² 계수 - (1+x)^${target + 1}의 x² 계수 - 1초`,
@@ -4247,7 +4247,7 @@ function createTimingVeryHardTargetPrompt(targetSeconds, options = {}) {
     `공정한 동전을 6번 던질 때 앞면이 정확히 3번 나오는 경우의 수${formatTimingSignedSeconds(target - 20)}`,
     `이차방정식 5x² - ${5 * (target + 2)}x + ${10 * target} = 0의 두 양근의 차`,
     `10번째 피보나치 수 - 8번째 피보나치 수${formatTimingSignedSeconds(target - 34)}`,
-    `6명의 교란수 - 5명의 교란수${formatTimingSignedSeconds(target - 221)}`,
+    `6번째 교란수 - 5번째 교란수${formatTimingSignedSeconds(target - 221)}`,
     `6번째 카탈란 수 - 5번째 카탈란 수${formatTimingSignedSeconds(target - 90)}`,
     `집합 {1,2,3,4,5,6}의 부분집합 중 원소가 2개인 것의 개수${formatTimingSignedSeconds(target - 15)}`
   ];

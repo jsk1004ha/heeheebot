@@ -1070,6 +1070,40 @@ test('타이밍 매우어려움은 확률과 통계형 문장 문제도 낸다',
   assert.doesNotMatch(start.updated.content, /목표: \*\*10\.0000초\*\*/);
 });
 
+test('타이밍 매우어려움 교란수 문제는 사람 수가 아니라 번째로 표현한다', async () => {
+  const fakeEconomy = {
+    async reserveWager(payload) {
+      return { bet: payload.bet, profile: { balance: 900 } };
+    },
+    async resolveReservedWager(payload) {
+      return {
+        bet: payload.bet,
+        payout: payload.payout,
+        profit: payload.payout - payload.bet,
+        profile: { balance: 900 + payload.payout }
+      };
+    },
+    async refundReservedWager(payload) {
+      return { bet: payload.bet, payout: payload.bet, profit: 0, profile: { balance: 1000 } };
+    }
+  };
+  const interaction = createChatInputInteraction('타이밍', {
+    integers: { 돈: 100 },
+    strings: { 난이도: 'very_hard' }
+  });
+
+  assert.equal(await handleCasinoCommand(interaction, fakeEconomy, quietLogger), true);
+  const startButtonId = interaction.replied.components[0].components[0].data.custom_id;
+  const start = createCasinoButtonInteraction({ customId: startButtonId });
+  assert.equal(await handleCasinoCommand(start, fakeEconomy, quietLogger, {
+    randomInt: createSequenceRandom([10, 6]),
+    nowMs: () => 1000
+  }), true);
+
+  assert.match(start.updated.content, /5번째 교란수 - 4번째 교란수/);
+  assert.doesNotMatch(start.updated.content, /명의 교란수/);
+});
+
 test('타이밍 매우어려움은 쉬운 1차방정식 대신 수능형 함수 문제도 낸다', async () => {
   const fakeEconomy = {
     async reserveWager(payload) {
